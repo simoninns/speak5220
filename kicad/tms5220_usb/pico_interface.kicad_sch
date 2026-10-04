@@ -4110,9 +4110,10 @@
 						)
 					)
 				)
-				(pin power_in line
+				(pin passive line
 					(at -2.54 27.94 270)
 					(length 2.54)
+					(hide yes)
 					(name "V_{CCB}"
 						(effects
 							(font
@@ -4128,10 +4129,9 @@
 						)
 					)
 				)
-				(pin passive line
+				(pin power_in line
 					(at -2.54 27.94 270)
 					(length 2.54)
-					(hide yes)
 					(name "V_{CCB}"
 						(effects
 							(font
