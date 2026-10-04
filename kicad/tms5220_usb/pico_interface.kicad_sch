@@ -4170,6 +4170,12 @@
 		(uuid "09bb6c74-4155-4d20-bb72-518a509b3a13")
 	)
 	(junction
+		(at 66.04 144.78)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "18cea0fa-bcb8-44aa-88e7-abe718a64c56")
+	)
+	(junction
 		(at 147.32 36.83)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -4779,6 +4785,16 @@
 	)
 	(wire
 		(pts
+			(xy 66.04 144.78) (xy 72.39 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2f4df34d-17b8-44a5-98da-27fc47406e70")
+	)
+	(wire
+		(pts
 			(xy 39.37 144.78) (xy 29.21 144.78)
 		)
 		(stroke
@@ -5219,7 +5235,7 @@
 	)
 	(wire
 		(pts
-			(xy 59.69 144.78) (xy 72.39 144.78)
+			(xy 59.69 144.78) (xy 66.04 144.78)
 		)
 		(stroke
 			(width 0)
@@ -5456,6 +5472,16 @@
 			(type default)
 		)
 		(uuid "99877ee5-9809-47bb-af81-5d5de0b5b78d")
+	)
+	(wire
+		(pts
+			(xy 66.04 124.46) (xy 66.04 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b7b396d-d2d5-4c97-b6a6-d985a2e0fab7")
 	)
 	(wire
 		(pts
@@ -6277,16 +6303,6 @@
 		)
 		(uuid "bb855be6-5d30-49ec-9758-911b7e92c550")
 	)
-	(label "ADD8"
-		(at 261.62 76.2 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "bd554abe-9b0a-4eec-8377-e8611f76b832")
-	)
 	(label "~{RS}_3V3"
 		(at 195.58 101.6 0)
 		(effects
@@ -6396,6 +6412,54 @@
 			(justify right bottom)
 		)
 		(uuid "fd534580-4794-4f60-9269-91f1788a39f5")
+	)
+	(global_label "ADD8"
+		(shape input)
+		(at 261.62 76.2 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "5dedaa2f-d068-4dd9-aada-0bbe00806994")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 269.4433 76.2 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+	)
+	(global_label "ADD8"
+		(shape input)
+		(at 66.04 124.46 90)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "cd96e7cb-eef4-4ac0-a2cc-fbf71448342f")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 66.04 116.6367 90)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
 	)
 	(hierarchical_label "D2"
 		(shape bidirectional)
