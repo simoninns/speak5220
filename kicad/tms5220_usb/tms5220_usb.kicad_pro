@@ -416,13 +416,17 @@
         "uuid": "9c31612b-8325-458b-91d0-655d6dbf06eb"
       }
     ],
-    "used_designators": "",
+    "used_designators": "RV1,J1,U2-3,R1-17,#PWR1-11,C1-8,A1",
     "variants": []
   },
   "sheets": [
     [
       "9c31612b-8325-458b-91d0-655d6dbf06eb",
       "Root"
+    ],
+    [
+      "ace3b3a9-8e6e-485d-94c6-a8d9ad4b8797",
+      "audio_output"
     ]
   ],
   "text_variables": {},
