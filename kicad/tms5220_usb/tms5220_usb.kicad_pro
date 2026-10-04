@@ -425,7 +425,7 @@
         "uuid": "9c31612b-8325-458b-91d0-655d6dbf06eb"
       }
     ],
-    "used_designators": "RN1,#FLG1-3,RV1,J1-2,U1-5,TP1,R1-30,#PWR1-41,D1,C1-13,A1",
+    "used_designators": "RN1,#FLG1-3,RV1-2,J1-3,U1-6,TP1,R1-31,#PWR1-43,D1,C1-16,A1",
     "variants": []
   },
   "sheets": [
@@ -440,6 +440,10 @@
     [
       "1ecdf88d-de05-4c5f-b67d-124b44dbc726",
       "pico_interface"
+    ],
+    [
+      "e20f87ad-0044-44a9-b933-d9a27ef58e88",
+      "Power Amp"
     ]
   ],
   "text_variables": {},

@@ -2086,6 +2086,12 @@
 		(uuid "0f398176-5a58-438f-a0c7-253a235d2613")
 	)
 	(junction
+		(at 204.47 147.32)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "162ec37c-6e55-4b27-af1f-c7a4780ec5a9")
+	)
+	(junction
 		(at 45.72 144.78)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2363,6 +2369,16 @@
 	)
 	(wire
 		(pts
+			(xy 210.82 137.16) (xy 204.47 137.16)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "4b6dcef8-f96f-4cfe-ba39-57d253996fe3")
+	)
+	(wire
+		(pts
 			(xy 120.65 156.21) (xy 110.49 156.21)
 		)
 		(stroke
@@ -2440,6 +2456,16 @@
 			(type default)
 		)
 		(uuid "75123d99-65e8-4487-99b1-bb12449755b6")
+	)
+	(wire
+		(pts
+			(xy 204.47 147.32) (xy 207.01 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "75271ce4-d14c-4bd9-82a2-25122070e14b")
 	)
 	(wire
 		(pts
@@ -2583,6 +2609,16 @@
 	)
 	(wire
 		(pts
+			(xy 204.47 137.16) (xy 204.47 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a6bafc86-d007-4bd7-bd43-bcabc482dbb0")
+	)
+	(wire
+		(pts
 			(xy 83.82 66.04) (xy 60.96 66.04)
 		)
 		(stroke
@@ -2613,7 +2649,7 @@
 	)
 	(wire
 		(pts
-			(xy 200.66 147.32) (xy 207.01 147.32)
+			(xy 200.66 147.32) (xy 204.47 147.32)
 		)
 		(stroke
 			(width 0)
@@ -4627,6 +4663,62 @@
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
 					(page "2")
+				)
+			)
+		)
+	)
+	(sheet
+		(at 210.82 134.62)
+		(size 25.4 5.08)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0)
+		)
+		(uuid "e20f87ad-0044-44a9-b933-d9a27ef58e88")
+		(property "Sheetname" "Power Amp"
+			(at 210.82 133.9084 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "poweramp.kicad_sch"
+			(at 210.82 140.2846 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "Audio_in" input
+			(at 210.82 137.16 180)
+			(uuid "2212df61-0f94-4450-8dc9-caa7cf04ff87")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(page "4")
 				)
 			)
 		)
