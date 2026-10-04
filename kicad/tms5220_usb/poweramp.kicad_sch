@@ -1400,6 +1400,10 @@
 		(uuid "86887ab4-8be8-4f02-abe0-9e477e044839")
 	)
 	(no_connect
+		(at 146.05 105.41)
+		(uuid "86cf58ea-e311-43ac-8dfa-3e388adeb905")
+	)
+	(no_connect
 		(at 146.05 90.17)
 		(uuid "f16648db-2fc7-4540-b9dc-379cac396c57")
 	)
@@ -1835,7 +1839,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "575c0750-9684-40e1-bec9-43efc0ee57a5")
-		(property "Reference" "R31"
+		(property "Reference" "R24"
 			(at 160.02 102.8699 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -1899,7 +1903,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "R31")
+					(reference "R24")
 					(unit 1)
 				)
 			)
