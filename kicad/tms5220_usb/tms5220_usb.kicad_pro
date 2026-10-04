@@ -427,6 +427,10 @@
     [
       "ace3b3a9-8e6e-485d-94c6-a8d9ad4b8797",
       "audio_output"
+    ],
+    [
+      "1ecdf88d-de05-4c5f-b67d-124b44dbc726",
+      "pico_interface"
     ]
   ],
   "text_variables": {},
