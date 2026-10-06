@@ -37,14 +37,16 @@
 
 static absolute_time_t strobeRecoveryEnd;
 
-uint32_t tms5220ClockStart(void)
+uint32_t tms5220ClockStart(uint32_t hz)
 {
     // The TMS5220 has no oscillator of its own on this board: its OSC input
     // is driven from a PWM output via U5D (5V).  The PWM counts at the
-    // system clock, so the clock is exact if clk_sys is a multiple of
-    // TMS5220_CLOCK_HZ (see main.c).
+    // system clock, so the clock is exact if clk_sys is a multiple of the
+    // frequency (144MHz = 225 x 640kHz, see main.c).
     uint32_t sysHz = clock_get_hz(clk_sys);
-    uint32_t period = (sysHz + TMS5220_CLOCK_HZ / 2) / TMS5220_CLOCK_HZ;
+    if (hz == 0) return 0;
+    uint32_t period = (sysHz + hz / 2) / hz;
+    if (period < 2 || period > 65536) return 0;
 
     uint slice = pwm_gpio_to_slice_num(PIN_OSC_CLK);
     pwm_config config = pwm_get_default_config();
@@ -56,6 +58,14 @@ uint32_t tms5220ClockStart(void)
     pwm_set_enabled(slice, true);
 
     return sysHz / period;
+}
+
+void tms5220ClockStop(void)
+{
+    pwm_set_enabled(pwm_gpio_to_slice_num(PIN_OSC_CLK), false);
+    gpio_init(PIN_OSC_CLK);
+    gpio_put(PIN_OSC_CLK, 0);
+    gpio_set_dir(PIN_OSC_CLK, GPIO_OUT);
 }
 
 static void busRelease(void)

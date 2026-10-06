@@ -5,6 +5,12 @@
     Triggered PicoScope 3405D capture of the TMS5220 probe points. Waits for
     SCOPE_TRIG (Ch D) and writes <out>/raw/scope_raw.npz and <out>/capture.json.
 
+    With --speak or --speakext, it also drives the Pico (pico.py): once the
+    scope is armed it clears the VSM trace and has the TMS5220 speak, then
+    saves the trace as <out>/raw/vsm_trace.bin and <out>/vsm_trace.csv.
+    Without them, something else must raise SCOPE_TRIG (for example
+    "pico.py speak" from another terminal).
+
     Expected probes: A x1 on TP2 (DAC), B/C/D x10 on TP3/TP4/TP5. With
     --d-signal romclk, probe D is on TP1 (ROMCLK) instead and the capture
     triggers on T11 (Ch B).
@@ -18,9 +24,11 @@ import json
 import os
 import subprocess
 import time
+import zlib
 
 import numpy as np
 
+import pico as picolib
 from ps3000a import INFO_SERIAL, INFO_VARIANT, Scope
 
 # (range V, offset V) per channel, at the scope input
@@ -31,6 +39,11 @@ CHANNEL_SETUP = {
     3: (1, 0.0),    # D: SCOPE_TRIG, 0-3.3 V
 }
 TRIGGER_V = 0.15    # 1.5 V at the probe tip
+
+# After RunBlock the scope first fills its pre-trigger buffer and only then
+# accepts a trigger, so the Pico waits this long (plus the pre-trigger time)
+# before raising SCOPE_TRIG
+ARM_DELAY_S = 0.2
 
 # What probe D is connected to: (signal label, trigger channel)
 D_SIGNALS = {
@@ -69,7 +82,50 @@ def main():
     parser.add_argument("--load-ohms", type=float,
                         help="R2 as measured with a meter, recorded in capture.json")
     parser.add_argument("--note", default="", help="free text stored in capture.json")
+    speech = parser.add_argument_group("speaking through the Pico")
+    speech.add_argument("--speak", type=lambda s: int(s, 0), metavar="ADDRESS",
+                        help="speak from this VSM address once the scope is armed")
+    speech.add_argument("--speakext", metavar="SOURCE",
+                        help="Speak External: a binary file, or an image ('builtin' or a "
+                             "file) with --word")
+    speech.add_argument("--word", type=lambda s: int(s, 0), metavar="ADDRESS",
+                        help="with --speakext, send the word at this VSM address of the image")
+    speech.add_argument("--reset", action="store_true",
+                        help="send the reset sequence (nine 0xFF, Reset) before arming")
+    speech.add_argument("--port", help="the Pico's serial port (default: found by USB ID)")
     args = parser.parse_args()
+    if args.speak is not None and args.speakext:
+        parser.error("use --speak or --speakext, not both")
+    if args.word is not None and not args.speakext:
+        parser.error("--word needs --speakext")
+
+    pico, picoMeta, armed = None, None, None
+    if args.speak is not None or args.speakext:
+        pico = picolib.Pico(args.port)
+        picoMeta = {"firmware": pico.firmware.get("firmware"),
+                    "osc_hz": int(pico.firmware["osc_hz"]), "banks": pico.firmware.get("banks")}
+        if args.reset:
+            picoMeta["reset_status"] = pico.reset()
+        if args.speak is not None:
+            picoMeta["command"] = {"speak": f"0x{args.speak:05x}"}
+
+            def armed():
+                time.sleep(ARM_DELAY_S + args.pre_ms * 1e-3)
+                pico.traceClear()
+                picoMeta["result"] = pico.speak(args.speak)
+        else:
+            data = picolib.loadImage(args.speakext)
+            if args.word is not None:
+                data = picolib.wordBytes(data, args.word)
+            picoMeta["command"] = {"speakext": args.speakext, "bytes": len(data),
+                                   "crc32": f"{zlib.crc32(data):08x}"}
+            if args.word is not None:
+                picoMeta["command"]["word"] = f"0x{args.word:05x}"
+
+            def armed():
+                time.sleep(ARM_DELAY_S + args.pre_ms * 1e-3)
+                pico.traceClear()
+                picoMeta["result"] = pico.speakExternal(data)
 
     with Scope() as scope:
         for channel, (rangeV, offsetV) in CHANNEL_SETUP.items():
@@ -81,7 +137,8 @@ def main():
         samples = pre + int(args.seconds / interval)
         print(f"Capturing {samples} samples per channel at {1e-6 / interval:.3f} MS/s, "
               f"waiting for a trigger on Ch {'ABCD'[triggerChannel]}...")
-        interval, raw, overflow = scope.runBlock(args.timebase, samples, pre, timeoutS=60)
+        interval, raw, overflow = scope.runBlock(args.timebase, samples, pre, timeoutS=60,
+                                                 armed=armed)
         variant, serial = scope.info(INFO_VARIANT), scope.info(INFO_SERIAL)
         maxAdc = scope.maxAdc
 
@@ -89,6 +146,12 @@ def main():
         print(f"Warning: over-range on channels mask 0x{overflow:x}")
 
     os.makedirs(os.path.join(args.out, "raw"), exist_ok=True)
+    if pico:
+        traceRaw, traceMeta = pico.trace()
+        pico.close()
+        picolib.writeTrace(args.out, traceRaw, traceMeta)
+        picoMeta["trace"] = traceMeta
+        print(f"Pico: {picoMeta['result']}, trace {traceMeta['count']} events")
     np.savez(os.path.join(args.out, "raw", "scope_raw.npz"),
              interval=interval, preTrigger=pre, maxAdc=maxAdc,
              range=[CHANNEL_SETUP[ch][0] for ch in range(4)],
@@ -109,6 +172,7 @@ def main():
         },
         "board": {"config": args.board, "description": BOARD_CONFIGS[args.board],
                   "r2_load_ohms": args.load_ohms},
+        "pico": picoMeta,
         "host_git": gitHash(),
         "note": args.note,
     }

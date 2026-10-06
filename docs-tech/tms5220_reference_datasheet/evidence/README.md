@@ -58,3 +58,40 @@ python tools/dac_compare.py captures/phase2/dac_transfer captures/phase2/dac_tra
 ```
 
 The phrase captures have no `word<N>` WAV and CSV files. `tools/decode.py` makes them if they are wanted.
+
+## Phase 3 captures (2026-10-06)
+
+Board: as Phase 2. TP2 is loaded by R2 alone (996 Ω), with the C1 link removed. Firmware: the command firmware of Phase 3. It was built from the uncommitted working tree on top of `9fcb313`, so `capture.json` records it as `9fcb313-dirty`.
+
+`tools/capture.py` drove each capture, with no manual steps:
+
+1. Reset the chip with `--reset`: nine `0xFF`, then Reset.
+2. Arm the scope.
+3. Speak through the Pico.
+4. Save the VSM trace (`raw/vsm_trace.bin`) beside the scope data.
+
+All three captures used 496 ns sampling over 1.0 s, with probe D on `SCOPE_TRIG`.
+
+| ID | Command | What it shows | SHA-256 of `scope_raw.npz` | SHA-256 of `vsm_trace.bin` |
+|---|---|---|---|---|
+| `p3-01_speak_acorn` | `SPEAK 0x3CBB6` (ACORN, VSM) | The trace: 1197 events. The chip read 1152 bits, exactly the word up to the end of its stop code. One `INT`, five status reads. | `78d9f4c6e01ebb8f069105432b72697207cb2f3a9f96eb61cf3429d21a1fc217` | `cbb7053d64c9f21e343c4e9a5279e250ba2edea0684ed7ef2aedf6182ff4380b` |
+| `p3-02_speakext_acorn` | `SPEAKEXT` of the same 144 bytes | The FIFO was topped up on `INT`: 19 interrupts and 145 writes. The word ends with BE set, because its stop code ends on a byte boundary. | `2aede503ad71024d5f929d776250aadb63f652ac135c3ef250a28a633099c661` | `fcfbdc14e83cd9e60d3da222ae05a4ba40f7f1ade1e2c110aa549e215044b441` |
+| `p3-03_speak_acorn_repeat` | Repeat of p3-01 | A second VSM run, to compare with p3-01 and p3-02 | `2768489bf51e34cbec383c1dc6ae1fd2b52de5472e3501b61fc1bf9cb56071fc` | `590034554e7d36df419217688bc94dac3350f1d14afc40053b04d1959d26c2ab` |
+| `p3-04_read_byte` | `CMD` Load Address ×5 (`0x3CBB6`), `0x10`, then `READ` | **A trace only, with no scope.** The chip read the byte 0x23 bit by bit, LSB first, then returned 0xC4 on the data bus: the byte bit-reversed. | — | `953787ff24f4d163fe3fcd9461d2686bfc7ed825e58a15938a4df050036cc183` |
+
+Derived files in each capture directory: `vsm_trace.csv` from `tools/pico.py`, and `word0_samples.wav` and `word0_samples.csv` from `tools/decode.py`.
+
+To regenerate them:
+
+```
+python tools/decode.py captures/phase3/p3-01_speak_acorn
+python tools/pico.py trace-csv captures/phase3/p3-01_speak_acorn
+```
+
+**What the three captures show:** the word from the first sample that is not idle (−1) to the last.
+
+- **Length.** The word is 5209, 5209 and 5207 samples long.
+- **Codes.** p3-01 and p3-03 (VSM, VSM) differ in 1832 samples, by 3.0 codes rms. p3-03 and p3-02 (VSM, Speak External) differ in 2029 samples, by 3.1 codes rms.
+- **Where they differ.** The two VSM runs agree for their first two frames. Speak External differs from sample 11 onwards.
+
+So a repeat of one input path differs about as much as a change of path. Whether the paths are equivalent therefore has to wait until the start state is understood (Phase 5).

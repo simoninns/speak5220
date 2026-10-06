@@ -37,7 +37,14 @@ The dev shell also provides the Pico SDK, the Arm GCC toolchain, CMake/Ninja, `p
 
 The TMS5220 has no oscillator of its own on this board. The firmware runs the Pico 2 at 144 MHz and generates the TMS5220's 640 kHz clock (an 8 kHz sample rate) with PWM on GPIO22. The clock is buffered to 5 V by U5D, then level-shifted by a PNP transistor (Q1) so that OSC swings between −5 V and +5 V, as on Atari's Star Wars sound board. A 0–5 V clock does not work.
 
-The test firmware in `firmware/` makes the Pico 2 emulate the Acorn speech PHROM (TMS6100) on core 1, with the PHROM image held in SRAM. It then repeatedly asks the TMS5220 to say "Acorn" (word 160, VSM address `0x3CBB6`). The PHROM data comes from [TMS6100-Emulator](https://github.com/simoninns/TMS6100-Emulator). The firmware reports progress, status and VSM activity over USB serial, and the on-board LED lights while the TMS5220 is talking.
+The capture firmware in `firmware/` makes the Pico 2 emulate up to four speech PHROMs (TMS6100) on core 1, with their images held in SRAM. The Acorn PHROM A is built in, in bank `F`, and the host can upload other images. Core 1 also records a timestamped trace of every VSM access and every host interface cycle. The TMS5220 is driven entirely by commands from the host over USB serial: upload, Speak, Speak External, raw command writes, status reads and trace download. `firmware/PROTOCOL.md` documents the protocol, and `tools/pico.py` implements the host side:
+
+```bash
+python tools/pico.py demo        # say "Acorn BBC Computer" once
+python tools/pico.py selftest    # upload, speak and trace, checking every result
+```
+
+The PHROM data comes from [TMS6100-Emulator](https://github.com/simoninns/TMS6100-Emulator). The on-board LED lights while the TMS5220 is talking.
 
 Build:
 
@@ -46,7 +53,15 @@ cmake -S firmware -B firmware/build -G Ninja
 cmake --build firmware/build
 ```
 
-Flash through a Raspberry Pi Debug Probe:
+Flash over USB (the running firmware reboots itself into BOOTSEL):
+
+```bash
+picotool load -f -x firmware/build/speak5220.uf2
+```
+
+Reflash only while the TMS5220 is idle. Flashing stops its clock, and stopping it mid-speech has left the chip unable to complete a write until it was power-cycled. Afterwards, `python tools/pico.py reset` should print a status; `firmware/PROTOCOL.md` has the details.
+
+Alternatively, flash through a Raspberry Pi Debug Probe:
 
 ```bash
 openocd -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" \
@@ -56,15 +71,12 @@ picotool reboot -f
 
 The `picotool reboot -f` is needed: after an OpenOCD reset, core 1 (which runs the TMS6100 emulation) is put back into the bootrom shortly after it is launched. A clean reboot over USB (or a power cycle) avoids this.
 
-Building with `-DTMS6100_TRACE` makes core 1 record a timestamped trace of every change on GPIO8-19 (the VSM bus, strobes, READY and INT) in `tms6100TraceTime`/`tms6100TraceValue`, for debugging the bus interface.
-
-Alternatively, hold BOOTSEL while plugging in the Pico 2 and copy `firmware/build/speak5220.uf2` to it, or run `picotool load -x firmware/build/speak5220.uf2`.
-
-Monitor the output with `minicom -D /dev/ttyACM1` (the Pico's USB serial port; the debug probe's UART is unused, as GPIO0/1 form part of the TMS5220 data bus).
+The Pico's USB serial port is `/dev/ttyACM1` here (`tools/pico.py` finds it by its USB ID). The debug probe's UART is unused, because GPIO0/1 form part of the TMS5220 data bus.
 
 ## Repository layout
 
 - `kicad/tms5220_usb/` – KiCad project, including the project symbol library for the TMS5220 and TMS6100
-- `firmware/` – Raspberry Pi Pico 2 test firmware (C, Pico SDK)
+- `firmware/` – Raspberry Pi Pico 2 capture firmware (C, Pico SDK) and its host protocol (`PROTOCOL.md`)
 - `kicad/libraries/ki-lime-pi-pico/` – Ki-Lime Pi library submodule (Raspberry Pi Pico symbols, footprints and 3D models)
+- `tools/` – Python host tools: Pico control, PicoScope capture and analysis
 - `docs-tech/` – Datasheets and reference schematics

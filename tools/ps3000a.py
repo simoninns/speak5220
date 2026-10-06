@@ -107,14 +107,21 @@ class Scope:
         check(lib.ps3000aSetSimpleTrigger(self.handle, 1, channel, adc, direction, 0, autoMs),
               "SetSimpleTrigger")
 
-    def runBlock(self, timebase, samples, preTrigger=0, timeoutS=30):
-        """Capture one block. Returns (interval, {channel: int16 ADC array}, overflow)."""
+    def runBlock(self, timebase, samples, preTrigger=0, timeoutS=30, armed=None):
+        """Capture one block. Returns (interval, {channel: int16 ADC array}, overflow).
+        armed, if given, is called once the scope is waiting for its trigger."""
         interval, maxSamples = self.timebase(timebase, samples)
         if samples > maxSamples:
             raise ValueError(f"{samples} samples requested, maximum is {maxSamples}")
         indisposedMs = C.c_int32()
         check(lib.ps3000aRunBlock(self.handle, preTrigger, samples - preTrigger, timebase, 0,
                                   C.byref(indisposedMs), 0, None, None), "RunBlock")
+        if armed:
+            try:
+                armed()
+            except BaseException:
+                lib.ps3000aStop(self.handle)
+                raise
         ready = C.c_int16(0)
         start = time.time()
         while not ready.value:

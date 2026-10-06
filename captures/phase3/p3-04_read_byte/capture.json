@@ -1,0 +1,32 @@
+{
+  "captured": "2026-10-06T13:52:28+0200",
+  "kind": "trace only (no scope)",
+  "pico": {
+    "firmware": "9fcb313-dirty",
+    "osc_hz": 640000,
+    "banks": "15:98e1bf9e",
+    "command": {
+      "cmd": [
+        "0x46",
+        "0x4b",
+        "0x4b",
+        "0x4c",
+        "0x43",
+        "0x10"
+      ],
+      "read": 1
+    },
+    "result": {
+      "read": "0xc4"
+    },
+    "trace": {
+      "count": 39,
+      "dropped": 0,
+      "clock_hz": 144000000,
+      "crc": "395d6576"
+    }
+  },
+  "image_byte": "0x23",
+  "host_git": "9fcb313",
+  "note": "Phase 3: Read Byte (0x10) after Load Address of 0x3CBB6, VSM trace of the bits the chip read"
+}

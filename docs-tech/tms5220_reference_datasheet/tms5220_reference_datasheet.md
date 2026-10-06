@@ -4,7 +4,7 @@ This datasheet describes the TMS5220 as measured on real hardware. It follows th
 
 The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. `../speech_capture_plan.md` describes how the measurements are made.
 
-**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). The other sections are placeholders and are filled in by later phases.
+**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). §4 and §6 hold early observations from the Phase 3 VSM traces. The other sections are placeholders and are filled in by later phases.
 
 ## Conventions
 
@@ -51,6 +51,11 @@ Driving `OSC` from an external clock is covered in Appendix A.
 
 **Status: not yet written (Phase 8).** It will give the exact command and bit sequences from the VSM trace.
 
+**New:** early observations from the Phase 3 traces, to be confirmed by the Phase 8 tests:
+
+- **No read-ahead.** A Speak reads the VSM exactly up to the last bit of the stop code and no further. For ACORN that is 1152 bits, starting with a Dummy Read at the loaded address [p3-01, p3-03].
+- **Reset uses the VSM.** Every Reset command issues a Load Address and then a Dummy Read to the VSM, as the original's §6.6 says. This includes each `0xFF` byte of the initialisation sequence, which decodes as Reset (`X111XXXX`) [p3-01].
+
 ## 5. I/O structure
 
 **Status: not yet written (Phase 8).**
@@ -58,6 +63,13 @@ Driving `OSC` from an external clock is covered in Appendix A.
 ## 6. Description of commands
 
 **Status: not yet written (Phase 8).**
+
+**New:** early observations from Phase 3, to be confirmed by the Phase 8 tests:
+
+- **Read Byte (`X001XXXX`) returns the VSM byte bit-reversed.** The chip reads the byte serially, LSB first, and the first bit read appears on D0, which is TI's most significant bit. With the byte at `0x3CBB6`, 0x23, the data register returned 0xC4 [p3-04]. The FIFO works the other way: Speak External shifts each written byte out LSB first (original §5). So a VSM byte read with Read Byte must be bit-reversed before it can be passed to Speak External.
+- **Talk Status is not set at once.** A status read 22 µs after Speak (preceded by Load Address) still shows Talk Status clear [p3-01].
+- **BE is left over outside Speak External.** After a VSM Speak, BE holds whatever the last Reset or Speak External left [p3-01, p3-02].
+- **BE after a complete stream.** A Speak External stream whose stop code ends exactly on a byte boundary finishes with BE set. Its speech is nevertheless complete [p3-02].
 
 ## 7. Power-up clear
 
@@ -271,3 +283,5 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-06 | §8.2 | Correction: the current is about 20 % below the original's Table 4, and the step from −1 to 0 is about 6 LSB, not 1. New: bit weights, carry errors, no memory between samples | p2-01, p2-02, p2-04, p2-05, p2-06 |
 | 2026-10-06 | §8.3 | New: the `SPEAKER` current depends on the load (output resistance about 10–16 kΩ) | p2-01, p2-02, p2-04, p2-05, p2-06 |
 | 2026-10-06 | §11.2 | Pin 8: measured current scale | As §8.2 |
+| 2026-10-06 | §4 | New (early): no VSM read-ahead past the stop code; every Reset command issues a Load Address and a Dummy Read | p3-01, p3-03 |
+| 2026-10-06 | §6 | New (early): Read Byte returns the VSM byte bit-reversed. Talk Status is set some time after Speak. How BE behaves outside Speak External, and at the end of a stream | p3-01, p3-02, p3-04 |

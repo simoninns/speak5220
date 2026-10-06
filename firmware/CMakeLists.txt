@@ -11,12 +11,22 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 add_executable(speak5220
+    src/command.c
     src/main.c
     src/tms5220.c
     src/tms6100.c
 )
 
-target_include_directories(speak5220 PRIVATE src)
+# version.h: the git description of the source, regenerated at every build
+add_custom_target(version
+    COMMAND ${CMAKE_COMMAND} -D SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+            -D OUTPUT=${CMAKE_CURRENT_BINARY_DIR}/generated/version.h
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/version.cmake
+    BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/generated/version.h
+)
+add_dependencies(speak5220 version)
+
+target_include_directories(speak5220 PRIVATE src ${CMAKE_CURRENT_BINARY_DIR}/generated)
 target_compile_options(speak5220 PRIVATE -Wall -Wextra)
 
 target_link_libraries(speak5220

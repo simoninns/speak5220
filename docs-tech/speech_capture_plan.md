@@ -107,7 +107,7 @@ The reference datasheet's §8.2 and §8.3 give the details.
 
 Each capture records three things, so that any difference from an emulator can be traced to its cause:
 
-1. **Input trace (digital, exact).** The Pico's VSM emulation logs every Load-Address, Read and Read-and-Branch, and the bits it returned. This is the exact bit stream the chip parsed. The Pico can already do this (`TMS6100_TRACE`). It needs to be turned into a compact log that can be uploaded after each capture.
+1. **Input trace (digital, exact).** The Pico's VSM emulation logs every Load-Address, Read and Read-and-Branch, and the bits it returned. This is the exact bit stream the chip parsed. The firmware records this on core 1 as a compact, timestamped event log, together with every host interface cycle. The host downloads it after each capture as `raw/vsm_trace.bin` (`firmware/PROTOCOL.md`).
 2. **Output samples (digital, exact).** Capture `T11` and `I/O` with the PicoScope and decode them in software into one integer per 125 µs sample. This is the gold standard for emulator comparison.
 3. **Output waveform (analogue, measured).** Use the PicoScope to measure the voltage across R2 (TP2), which is the raw DAC output **before** the filter chain. This checks the DAC transfer function and the hold behaviour, and it is the fallback if layer 2 does not work out.
 
@@ -165,12 +165,13 @@ Done in the schematic:
    **The firmware generates this clock** (`tms5220ClockStart()` in `tms5220.c`). Without it the TMS5220 has no clock at all. 640 kHz does not divide evenly into the RP2350's default 150 MHz system clock, so the firmware sets the system clock to 144 MHz: the 12 MHz crystal × 120 gives a 1440 MHz VCO, ÷ 5 ÷ 2. That is within the chip's rating, and a PWM slice divides it by 225 to give exactly 640 kHz. To sweep the clock, pick a system clock that is a multiple of the wanted frequency, or accept a non-integer PWM period.
 
 3. **Measurement configuration.** The test board is built on a breadboard. For DAC measurements, the link from the `SPEAKER` / R2 node to C1 is removed, so TP2 sees R2 alone. R2 measures 996 Ω on a meter. Its tolerance does not matter, because the measured value is used. For the load test, a second 1 K was put in parallel with R2 (482 Ω measured). `tools/capture.py --board measure|measure-half|audio --load-ohms <R>` records the configuration in each `capture.json`. The audio output works again once the C1 link is put back (`--board audio`).
-4. **Pull-down on GPIO22.** R27 (10K, `OSC_PICO_3V3` to GND at U5D's input) holds Q1 off and `OSC` at −5 V while the Pico boots, before the firmware starts the clock. It is fitted on the board and in the schematic.
+4. **Pull-down on GPIO22.** R27 (10K, `OSC_PICO_3V3` to GND at U5D's input) gives U5D a defined low input while the Pico boots, before the firmware starts the clock. U5D's output is then low, so Q1 is on and `OSC` is held at +5 V instead of floating. R27 is fitted on the board and in the schematic.
 
 Still to do:
 
 5. **Optional, later: bring `T11` and `I/O` into the Pico.** This is not needed, because the PicoScope captures both (§4). It would only matter for long unattended runs without the scope. They swing from −5 V to +5 V, so they need a clamped level shift to 0–3.3 V (a plain divider is not enough, because the Pico pins must never go negative). Options are a series resistor with Schottky clamps to GND and 3.3 V, or a small NPN stage per signal. GPIO27 and GPIO28 are still free.
 6. **Optional: a virtual-ground DAC measurement.** A transimpedance stage would hold `SPEAKER` at 0 V and give the DAC current with no load effect (datasheet §8.3). The spare LM324 section U2B could do this.
+7. **Optional, for Phase 5: Pico-switched TMS5220 power.** The firmware cannot power-cycle the TMS5220, and stopping its clock mid-speech has left it unable to complete a write until it was power-cycled by hand (`firmware/PROTOCOL.md`). Phase 5 wants power cycles as a test condition. A high-side switch on the ±5 V rails, driven from a spare GPIO (27 or 28), would make them automatic. It would also let the host recover a wedged chip without help. Note the datasheet's condition for a reliable power-up clear: VSS − VDD must rise to +10 V in under 2 ms, on both rails together.
 
 ## 6. Data set layout and file formats
 
@@ -232,19 +233,20 @@ The raw scope data is large. Four channels at 2 MS/s is about 8 MB per second of
 ## 7. Automation architecture
 
 ```
-Host (Python)
- ├── Pico 2 over USB CDC: a simple command protocol
- │     UPLOAD <image>   load a PHROM/VSM image into SRAM (16 KB per PHROM)
- │     SPEAK <addr>     speak from the VSM, with the trigger GPIO marking start/end
- │     SPEAKEXT <bytes> speak external (see §9)
- │     CMD <byte>       raw command write/status read, for protocol tests
- │     TRACE            dump the VSM trace (layer 1)
- └── PicoScope 3405D over ps3000a: arm streaming, wait for the trigger, save
+Host (Python, tools/pico.py and tools/capture.py)
+ ├── Pico 2 over USB CDC: a line-based command protocol (firmware/PROTOCOL.md)
+ │     UPLOAD <bank> …  load a PHROM/VSM image into an SRAM bank (16 KB each, 4 at once)
+ │     SPEAK <addr>     speak from the VSM, with SCOPE_TRIG marking start and end
+ │     SPEAKEXT …       Speak External (see §9), the FIFO topped up on INT
+ │     CMD / READ       raw command and FIFO writes, status and data reads
+ │     RESET, CLOCK     the reset sequence; set or stop the OSC clock
+ │     TRACE            download the VSM and host interface trace (layer 1)
+ └── PicoScope 3405D over ps3000a: arm, wait for the trigger, save
 ```
 
 A run loops over a manifest of the PHROM images and their word tables. For each word it uploads the image (once per PHROM), arms the scope, sends `SPEAK`, waits for Talk Status to clear, pulls the traces, writes the capture directory, and runs sanity checks: the layer 2 and layer 3 data agree, and the bit count matches the parsed frame count. Speak each word several times (say 5) to confirm the chip is deterministic. Any difference between repeats is itself a finding, for example an uninitialised state or the noise generator's state carried over between utterances.
 
-The current firmware is a fixed demo loop. It will need to become a command-driven tool, with the VSM emulation on core 1 unchanged.
+The firmware has been command-driven since Phase 3. The demo loop is gone, and `pico.py demo` says the same phrase once. `capture.py --speak` already does one step of such a run: it arms the scope, speaks and saves the trace. The manifest loop and the checks are Phase 4.
 
 ## 8. PHROM and speech data corpus
 
@@ -335,6 +337,7 @@ Keep a change log in the datasheet listing every correction and addition to the 
 - **Internal state that is not visible on `I/O`.** If `I/O` carries only the final sample, the inner filter state has to be inferred. Carefully designed vectors (for example, one K parameter active at a time) keep that inference tractable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not. Document any 5220/5220C differences in the datasheet.
+- **Stopping the clock.** The TMS5220 has no clock of its own, so `OSC` stops whenever the Pico resets or is reflashed. Once, mid-speech, this left the chip unable to complete any write until it was power-cycled (§5 item 7, `firmware/PROTOCOL.md`). Phase 5 should establish which stops are safe, before the clock is swept or stopped deliberately.
 - **Clock fidelity.** The board no longer has the original RC oscillator, so captures are made with a crystal-derived clock. That is ideal for reproducibility, but real BBC Micro hardware ran slightly off 640 kHz and drifted. To study that behaviour, have the Pico sweep the clock frequency rather than refitting an RC network.
 - **Licensing of PHROM images.** Keep the original ROM images out of the repo unless their redistribution status is clear. Commit the manifests and hashes, plus the captured output if appropriate.
 - **Copyright of the original datasheet.** See §1.1: the new datasheet is written fresh and cites the original.
@@ -347,7 +350,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 |---|---|---|
 | 1. Bench bring-up and signal identification | — | Done |
 | 2. Measurement hardware | 1 | Done |
-| 3. Firmware instrumentation | 1 | Started |
+| 3. Firmware instrumentation | 1 | Done |
 | 4. Host tooling | 1, 3 | Started |
 | 5. Repeatability | 3, 4 | Not started |
 | 6. PROM inventory | — | Sources listed (§8) |
@@ -409,7 +412,6 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 ### Phase 3: Firmware instrumentation
 
 - **Goal:** the host can drive every input path without supervision.
-- **Done:** the `SCOPE_TRIG` output.
 - **Tasks:**
   - The USB command protocol of §7: `UPLOAD`, `SPEAK`, `SPEAKEXT`, `CMD` and `TRACE`, plus `RESET` and power-up sequencing for Phase 5.
   - A compact, timestamped VSM trace.
@@ -417,11 +419,38 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - Retiring the demo loop.
 - **Delivers:** command-driven firmware, with its protocol documented in `firmware/`.
 - **Done when:** a host script can upload an image, speak any address or any Speak External stream, and fetch the VSM trace, all repeatedly, with no manual steps.
+- **Done:**
+  - The `SCOPE_TRIG` output.
+  - **The firmware is driven by commands over USB.** It has `INFO`, `STATS`, `CLOCK`, `RESET`, `UPLOAD`/`UNLOAD`, `SPEAK`, `SPEAKEXT`, `WAIT`, `CMD`, `READ`, `TRIG` and `TRACE`, documented in `firmware/PROTOCOL.md`.
+  - **The demo loop is retired.** The firmware identifies itself with its git description.
+  - **End of speech comes from `INT`.** The status register is read only when `INT` asserts, plus a few reads at the start, so there is little bus activity during speech. Speak External tops up the FIFO on each Buffer Low.
+  - **Up to four 16 KB banks of SRAM**, any of the 16 bank numbers. The Acorn PHROM is built in, in bank `F`, and the host can replace it. Uploads are checked with CRC-32.
+  - **The VSM trace.** Core 1 logs every Load Address, Dummy Read, bit Read and Read and Branch, with the bit returned. It also logs every change on `WS`, `RS`, `READY`, `INT` and `SCOPE_TRIG`, with the data bus. Each event is 8 bytes and timestamped to about 1.5 µs. The trace holds 32,768 events, about 27 words.
+  - **Power-up sequencing so far.** `RESET` (the datasheet's nine `0xFF` and Reset) and `CLOCK` (set or stop `OSC`). Real power cycles need hardware (§5 item 7).
+  - **`tools/pico.py`**: the host class, the trace decoder, a command line and `selftest`. `tools/lpc.py` finds where a word ends.
+  - **`tools/capture.py --speak` and `--speakext`** arm the scope, speak and save `raw/vsm_trace.bin` and `vsm_trace.csv`, with no manual steps.
+  - Captures p3-01 to p3-03 are in the evidence index.
+- **Status:** done (2026-10-06). `pico.py selftest --repeat 3` passes: 54 utterances with no manual steps.
+  - **Images.** The Acorn image was uploaded to banks `F` and 3.
+  - **Words.** Six words were each spoken from both banks and through Speak External, three times over.
+  - **Checks.** In every VSM run, the bits the chip read matched the image. In every Speak External run, the bytes on the bus matched the stream, and the duration matched the VSM's.
+- **Findings, for the datasheet (Phase 8):**
+  - **No VSM read-ahead.** For every word, the chip read exactly the bits up to the end of its stop code. For example, ACORN reads 1152 bits, 27 frames.
+  - **Read Byte (`0x1x`) returns the VSM byte bit-reversed:** 0x23 reads back as 0xC4. The first bit read lands on D0, which is TI's MSB. The FIFO, by contrast, takes a written byte LSB first: the same bytes speak correctly through Speak External.
+  - **Each `0xFF` of the reset sequence is itself a Reset command** (`X111XXXX`). Each one makes the chip issue a Load Address, then a Dummy Read, to the VSM, about 250 µs apart. The trace reads the dummy nibble as 7 for each `0xFF`, and as 0 for the final `0x70`.
+  - **Talk Status takes time to set.** A status read 22 µs after a Speak (preceded by Load Address) still shows Talk Status clear. The original datasheet asks for up to 287 µs after such a Speak before the next command.
+  - **BE is not cleared by a VSM Speak.** It is left from the last Reset or Speak External. A Speak External stream whose stop code ends on a byte boundary finishes with BE set, yet its speech is complete.
+- **Handed on:**
+  - **Stopping the clock can wedge the chip.** Reflashing the Pico while the old demo loop was speaking left the chip unable to complete any write until it was power-cycled. A reflash while it was idle did no harm. Which clock stops are safe, and whether `CLOCK 0` can be used as a reset → Phase 5, with §5 item 7 if power cycles are to be automated.
+  - **Repeats differ.** Repeats of the same word differ by about 3 codes rms, whether they come through the same path or not (p3-01 to p3-03). Between the two VSM runs, the delay from `SCOPE_TRIG` to the first sample of speech also differed, by 4.3 ms. Whether VSM and Speak External are equivalent can only be judged once the start state is understood → Phase 5, then §9.2 in Phase 8.
+  - The trace's view of host interface timing (READY, `INT`, Speak to first fetch) is ready for the §9.3 timing tests → Phase 8.
 
 ### Phase 4: Host tooling
 
 - **Goal:** one command turns a request ("speak word N of PROM X") into a complete capture directory.
-- **Done:** `tools/capture.py` and `tools/decode.py` (triggered block capture, `I/O` decode, DAC averaging, a WAV and CSV per word).
+- **Done:**
+  - `tools/capture.py` and `tools/decode.py`: triggered block capture, `I/O` decode, DAC averaging, and a WAV and CSV per word.
+  - From Phase 3: `capture.py --speak`/`--speakext` drives the Pico and saves the VSM trace. `tools/pico.py` decodes the trace to `vsm_trace.csv`, and `tools/lpc.py` parses frame boundaries.
 - **Tasks:**
   - The runner that drives the Pico and the scope together.
   - The full §6 directory layout and `capture.json`.

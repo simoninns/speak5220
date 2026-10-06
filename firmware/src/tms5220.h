@@ -18,6 +18,7 @@
 #define TMS5220_CMD_SPEAK           0x50
 #define TMS5220_CMD_LOAD_ADDRESS    0x40  // Low nibble is the address nibble
 #define TMS5220_CMD_READ_BYTE       0x10
+#define TMS5220_CMD_SPEAK_EXTERNAL  0x60
 
 // Status register bits
 #define TMS5220_STATUS_TS           0x80  // Talk Status
@@ -29,9 +30,13 @@
 // PWM output needs a level shifter (as on the Atari Star Wars sound PCB).
 #define TMS5220_CLOCK_HZ            640000
 
-// Start the OSC clock on PIN_OSC_CLK; returns the actual frequency in Hz.
+// Start the OSC clock on PIN_OSC_CLK at the nearest frequency the system
+// clock allows; returns the actual frequency in Hz (0 if out of range).
 // The TMS5220 does nothing (including its power-up clear) until this runs.
-uint32_t tms5220ClockStart(void);
+uint32_t tms5220ClockStart(uint32_t hz);
+
+// Stop the OSC clock, holding PIN_OSC_CLK low (so OSC sits at +5V)
+void tms5220ClockStop(void);
 
 void tms5220Init(void);
 
