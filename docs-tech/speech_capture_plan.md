@@ -21,12 +21,19 @@ The second use sets the bar. "Sounds right" is not enough. For each capture we w
 
 `T11` and `I/O` matter most. The datasheet calls them only "sync" and "serial data out". Community reverse engineering of the TMS52xx family (the notes in MAME's `tms5220.cpp`) suggests that `I/O` carries the **digital sample value serially, framed by `T11`**. If that holds for our chip, we can capture the exact output word of the lattice filter with no analogue error at all. **We must confirm this on the bench before we rely on it.** It is the first experiment in the plan (Phase 1).
 
+**Bench observations (2026-10-06).** Both pins swing from −5 V to +5 V.
+- **`T11`:** an 8 kHz pulse train with 5% duty. That is one 6.25 µs bit time (one ROMCLK period) out of the 20 in each 125 µs sample period. It is the per-sample frame marker.
+- **`I/O` when idle:** a 50% duty square wave. This fits a 10-bit sample value of −1 (all ones) sent serially in 10 of the 20 bit times, with the line low for the other 10. Confirm that this square wave is at 8 kHz.
+- **`I/O` during speech:** the pattern changes on every sample.
+
+Still to determine: which bit-time slots carry data relative to `T11`, the bit order, and which ROMCLK edge each bit lines up with.
+
 ## 2. Capture strategy: three layers per utterance
 
 Each capture records three things, so that any difference from an emulator can be traced to its cause:
 
 1. **Input trace (digital, exact).** The Pico's VSM emulation logs every Load-Address, Read and Read-and-Branch, and the bits it returned. This is the exact bit stream the chip parsed. The Pico can already do this (`TMS6100_TRACE`). It needs to be turned into a compact log that can be uploaded after each capture.
-2. **Output samples (digital, exact).** If `I/O`/`T11` work as expected, capture them on the Pico with PIO and record one integer per 125 µs sample. This is the gold standard for emulator comparison.
+2. **Output samples (digital, exact).** Capture `T11` and `I/O` with the PicoScope and decode them in software into one integer per 125 µs sample. This is the gold standard for emulator comparison.
 3. **Output waveform (analogue, measured).** Use the PicoScope to measure the voltage across R2 (TP2), which is the raw DAC output **before** the filter chain. This checks the DAC transfer function and the hold behaviour, and it is the fallback if layer 2 does not work out.
 
 **All reference captures are taken directly at the TMS5220, before the audio stage.** Layer 3 measures pin 8 across R2 at TP2, DC-coupled and upstream of the audio stage's AC coupling capacitor, so the only thing between the DAC and the probe is the 1 K load. If R2's tolerance or the probe loading turns out to matter, replace R2 with a 0.1% resistor of the same value. Alternatively, feed pin 8 into a dedicated transimpedance stage used only for measurement.
@@ -58,9 +65,14 @@ The 3405D has an 8-bit ADC. On the ±1 V range, one ADC count is about 7.8 mV. O
 
 Use **streaming mode** at about 1–2 MS/s per channel. That is far inside the USB 3 bandwidth, and it lets one capture cover an entire PHROM sequence with no memory-depth concerns. Save the raw ADC data together with the range and offset metadata, then derive everything else from it.
 
-### Why the PicoScope is not the main capture path
+### The PicoScope captures all of the output
 
-The Pico 2 is already on the bus. It can capture `T11`/`I/O` with PIO, sample-exactly and for free, alongside the VSM trace and with a shared timebase. The PicoScope's role is **characterisation and validation**: it confirms what the Pico captures, it measures the analogue DAC, and it measures oscillator frequency and jitter. For bulk corpus runs it is optional.
+The PicoScope records all four output-side signals on one timebase: the DAC voltage, `T11`, `I/O` and the trigger. That makes it the single capture instrument for layers 2 and 3. The Pico handles the input side: it drives the chip, serves the VSM data, logs the VSM trace (layer 1) and raises `SCOPE_TRIG`.
+
+- **No level shifting is needed.** `T11` and `I/O` swing from −5 V to +5 V. That is fine for the scope's inputs (use the ±10 V or ±20 V range on Ch B and Ch C), but it would need clamping before it could reach a Pico pin.
+- **The rates are easy.** `I/O` changes at most once per 6.25 µs bit time (160 kHz). Streaming all four channels at 1–2 MS/s each gives 6–12 scope samples per bit, which is plenty for software decoding.
+- **Digital and analogue line up.** Every decoded sample can be checked directly against the DAC step on Ch A for the same 125 µs period.
+- **ROMCLK is not recorded.** The clock is crystal-derived and exact, so the 20 bit times in each sample can be located from the `T11` edge alone. ROMCLK (TP1) is needed only once, while working out which clock edge each `I/O` bit lines up with (Phase 1).
 
 ## 4. Hardware changes
 
@@ -69,13 +81,13 @@ Done in the schematic:
 1. **Probe test points** TP2–TP9, as in §3.
 2. **Pico-driven oscillator.** The original BBC-style RC oscillator has been removed. The TMS5220 is now always clocked by the Pico. Pico GPIO22 (`OSC_PICO_3V3`) drives the previously spare 74AHCT125 gate U5D, whose ~OE is tied to GND. U5D's 0/5 V output drives a PNP level shifter (Q1 BC557: R1 10K to the base, R25 3.3K from base to emitter, emitter to +5 V, R26 1K from collector to −5 V). The collector drives `OSC` (U1 pin 6) between −5 V and +5 V. The clock is inverted, which doesn't matter.
 
-   The datasheet (Figure A-1) shows only the RC option. `OSC` is not an ordinary logic input: it is the threshold node of the internal RC oscillator, whose timing network returns to −5 V. **A 0–5 V square wave does not clock the chip.** This was tested on the board: there was no ROMCLK with 640 kHz at 0–5 V, and none with 320 kHz at 0–5 V and PROM OUT strapped towards −5 V. The working reference is the Atari Star Wars sound PCB (SP-225, sheet 16A). There, an original TMS5220 is clocked at 672 kHz from a 74LS161 through a 2N3906 PNP (collector 1K to −5 V) and two CD4069 inverters running from ±5 V, so OSC swings rail to rail. Our circuit is that transistor stage without the CMOS buffer. The TI-99/4A note that PROM OUT at −5 V enables a 320 kHz external clock did not hold for this chip. Pin 10 drives strongly, so it was left unconnected. A PWM or PIO clock at exactly 640 kHz, derived from the Pico's crystal, makes the sample rate exactly 8000 Hz. It also makes every run sample-aligned and repeatable, and lets the clock be swept to test timing edge cases. Record the measured clock (from `ROMCLK` on TP1, which should read 160 kHz) in every capture.
+   The datasheet (Figure A-1) shows only the RC option. `OSC` is not an ordinary logic input: it is the threshold node of the internal RC oscillator, whose timing network returns to −5 V. **A 0–5 V square wave does not clock the chip.** This was tested on the board: there was no ROMCLK with 640 kHz at 0–5 V, and none with 320 kHz at 0–5 V and PROM OUT strapped towards −5 V. The working reference is the Atari Star Wars sound PCB (SP-225, sheet 16A). There, an original TMS5220 is clocked at 672 kHz from a 74LS161 through a 2N3906 PNP (collector 1K to −5 V) and two CD4069 inverters running from ±5 V, so OSC swings rail to rail. Our circuit is that transistor stage without the CMOS buffer. **Verified on the board (2026-10-06):** OSC swings between −5 V and +5 V at 640 kHz, ROMCLK on TP1 reads 160 kHz, and the TMS5220 speaks the Acorn PHROM words with no READY timeouts. The TI-99/4A note that PROM OUT at −5 V enables a 320 kHz external clock did not hold for this chip. Pin 10 drives strongly, so it was left unconnected. A PWM or PIO clock at exactly 640 kHz, derived from the Pico's crystal, makes the sample rate exactly 8000 Hz. It also makes every run sample-aligned and repeatable, and lets the clock be swept to test timing edge cases. Record the measured clock (from `ROMCLK` on TP1, which should read 160 kHz) in every capture.
 
    **The firmware generates this clock** (`tms5220ClockStart()` in `tms5220.c`). Without it the TMS5220 has no clock at all. 640 kHz does not divide evenly into the RP2350's default 150 MHz system clock, so the firmware sets the system clock to 144 MHz: the 12 MHz crystal × 120 gives a 1440 MHz VCO, ÷ 5 ÷ 2. That is within the chip's rating, and a PWM slice divides it by 225 to give exactly 640 kHz. To sweep the clock, pick a system clock that is a multiple of the wanted frequency, or accept a non-integer PWM period.
 
 Still to do:
 
-3. **Bring `T11` and `I/O` into the Pico** for PIO capture (layer 2). They are 5 V outputs, so they need level-shifting, for example through two inputs of a spare 3.3 V buffer. GPIO27 and GPIO28 are still free. Bodge wires from TP3 and TP4 with resistor dividers are enough for first experiments. Wait until Phase 1 has confirmed what `I/O` carries before committing this to the board.
+3. **Optional, later: bring `T11` and `I/O` into the Pico.** This is not needed, because the PicoScope captures both (§3). It would only matter for long unattended runs without the scope. They swing from −5 V to +5 V, so they need a clamped level shift to 0–3.3 V (a plain divider is not enough, because the Pico pins must never go negative). Options are a series resistor with Schottky clamps to GND and 3.3 V, or a small NPN stage per signal. GPIO27 and GPIO28 are still free.
 4. **Pull-down on GPIO22.** U5D's input relies on the RP2350's default pad pull-down while the Pico boots, so Q1 stays off and OSC sits at −5 V until the firmware starts the clock. Consider an explicit 10K to GND.
 
 ## 5. File formats
@@ -86,9 +98,9 @@ Each capture is a directory with one JSON sidecar describing it:
 captures/<source>/<item>/
   capture.json        # metadata (see below)
   vsm_trace.bin/.csv  # layer 1: every VSM command and returned bit, with timestamps
-  samples.wav         # layer 2: digital output, mono PCM, rate = measured fosc/80
+  samples.wav         # layer 2: I/O decoded from the scope capture, mono PCM, rate = fosc/80
   samples.csv         # layer 2: same data as text (sample index, value, T11 timestamp)
-  dac_raw.npz         # layer 3: raw PicoScope streams + range/offset/timebase
+  scope_raw.npz       # raw PicoScope streams (Ch A-D) + range/offset/timebase
   dac.wav             # layer 3: recovered per-sample DAC codes as WAV
   listen.wav          # convenience: filtered/resampled to 48 kHz for listening
 ```
@@ -119,7 +131,7 @@ Host (Python)
  │     SPEAK <addr>     speak from the VSM, with the trigger GPIO marking start/end
  │     SPEAKEXT <bytes> speak external (see §8)
  │     CMD <byte>       raw command write/status read, for protocol tests
- │     TRACE            dump the VSM trace and the T11/I/O sample capture
+ │     TRACE            dump the VSM trace (layer 1)
  └── PicoScope 3405D over ps3000a: arm streaming, wait for the trigger, save
 ```
 
@@ -163,7 +175,7 @@ The VSM trace and the trigger GPIO also give timestamps for: READY assertion tim
 
 ## 9. Risks and open questions
 
-- **What does `I/O` carry?** If it is not the sample value (or is only active in a test mode), layer 2 falls back to layer 3 (PicoScope plus averaging). That path is slower and noisier, but still workable.
+- **What does `I/O` carry?** The bench observations (§1) point strongly to the 10-bit sample value. If that turns out to be wrong, layer 2 falls back to layer 3 (recovering the DAC code by averaging). That path is noisier, but still workable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not.
 - **Clock fidelity.** The board no longer has the original RC oscillator, so captures are made with a crystal-derived clock. That is ideal for reproducibility, but real BBC Micro hardware ran slightly off 640 kHz and drifted. To study that behaviour, have the Pico sweep the clock frequency rather than refitting an RC network.
@@ -172,7 +184,7 @@ The VSM trace and the trigger GPIO also give timestamps for: READY assertion tim
 ## 10. Phases
 
 1. **Probe.** Use the PicoScope manually on TP2–TP5 to identify the format of `I/O` and its relationship to `T11` and the DAC steps. Measure `fosc`. Write up the findings in `docs-tech/`.
-2. **Instrument the firmware.** Build the command protocol, the PIO capture of `T11`/`I/O`, the compact VSM trace dump, the trigger GPIO and image upload.
+2. **Instrument the firmware.** Build the command protocol, the compact VSM trace dump, the `SCOPE_TRIG` output and image upload.
 3. **Host tooling.** Write the Python runner, the PicoScope streaming capture, the capture directory writer, the step-averaging DAC recovery and the cross-check between layers 2 and 3.
 4. **Acorn PHROM A.** Capture the full corpus with repeats to prove determinism. Publish it as the first reference set.
 5. **Synthetic vectors.** Run the Speak External sweeps (§8.1), then derive and document the lookup tables, the noise LFSR, the chirp table, the interpolation rules and the DAC transfer function.
