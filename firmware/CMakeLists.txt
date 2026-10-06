@@ -22,6 +22,7 @@ target_compile_options(speak5220 PRIVATE -Wall -Wextra)
 target_link_libraries(speak5220
     pico_stdlib
     pico_multicore
+    hardware_pwm
 )
 
 # GPIO0/1 are the TMS5220 data bus, so stdio must use USB only

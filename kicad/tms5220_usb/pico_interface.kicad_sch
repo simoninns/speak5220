@@ -4278,20 +4278,8 @@
 		(uuid "f06bb278-119f-4d21-a77e-2bcbb4da8a0e")
 	)
 	(no_connect
-		(at 170.18 124.46)
-		(uuid "1634ac81-a2a5-4e20-a472-d87786a132dc")
-	)
-	(no_connect
 		(at 124.46 134.62)
 		(uuid "1ee669e4-dd9a-4741-8aae-18e96f0a82f0")
-	)
-	(no_connect
-		(at 170.18 114.3)
-		(uuid "41d28531-8798-4d07-8443-bd1a352f6c58")
-	)
-	(no_connect
-		(at 271.78 119.38)
-		(uuid "6ce15cf6-18d8-46fe-a45f-9c5fd8739af1")
 	)
 	(no_connect
 		(at 170.18 127)
@@ -4565,7 +4553,7 @@
 	)
 	(wire
 		(pts
-			(xy 237.49 31.75) (xy 237.49 34.29)
+			(xy 245.11 29.21) (xy 245.11 31.75)
 		)
 		(stroke
 			(width 0)
@@ -4845,7 +4833,7 @@
 	)
 	(wire
 		(pts
-			(xy 229.87 76.2) (xy 226.06 76.2)
+			(xy 237.49 73.66) (xy 233.68 73.66)
 		)
 		(stroke
 			(width 0)
@@ -4885,7 +4873,17 @@
 	)
 	(wire
 		(pts
-			(xy 245.11 25.4) (xy 250.19 25.4)
+			(xy 170.18 114.3) (xy 195.58 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3df11a46-127c-49f9-aa9c-9edc8224b300")
+	)
+	(wire
+		(pts
+			(xy 252.73 22.86) (xy 257.81 22.86)
 		)
 		(stroke
 			(width 0)
@@ -5025,7 +5023,7 @@
 	)
 	(wire
 		(pts
-			(xy 237.49 57.15) (xy 237.49 59.69)
+			(xy 245.11 54.61) (xy 245.11 57.15)
 		)
 		(stroke
 			(width 0)
@@ -5095,7 +5093,7 @@
 	)
 	(wire
 		(pts
-			(xy 226.06 25.4) (xy 229.87 25.4)
+			(xy 233.68 22.86) (xy 237.49 22.86)
 		)
 		(stroke
 			(width 0)
@@ -5125,7 +5123,7 @@
 	)
 	(wire
 		(pts
-			(xy 245.11 76.2) (xy 251.46 76.2)
+			(xy 252.73 73.66) (xy 259.08 73.66)
 		)
 		(stroke
 			(width 0)
@@ -5205,7 +5203,7 @@
 	)
 	(wire
 		(pts
-			(xy 259.08 76.2) (xy 261.62 76.2)
+			(xy 266.7 73.66) (xy 269.24 73.66)
 		)
 		(stroke
 			(width 0)
@@ -5465,7 +5463,7 @@
 	)
 	(wire
 		(pts
-			(xy 264.16 125.73) (xy 264.16 128.27)
+			(xy 245.11 110.49) (xy 245.11 113.03)
 		)
 		(stroke
 			(width 0)
@@ -5615,7 +5613,7 @@
 	)
 	(wire
 		(pts
-			(xy 245.11 50.8) (xy 250.19 50.8)
+			(xy 252.73 48.26) (xy 257.81 48.26)
 		)
 		(stroke
 			(width 0)
@@ -5625,7 +5623,7 @@
 	)
 	(wire
 		(pts
-			(xy 226.06 50.8) (xy 229.87 50.8)
+			(xy 233.68 48.26) (xy 237.49 48.26)
 		)
 		(stroke
 			(width 0)
@@ -5725,6 +5723,16 @@
 	)
 	(wire
 		(pts
+			(xy 170.18 124.46) (xy 195.58 124.46)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d13ece9d-b029-413f-ab64-db0af708dacc")
+	)
+	(wire
+		(pts
 			(xy 45.72 46.99) (xy 35.56 46.99)
 		)
 		(stroke
@@ -5735,7 +5743,7 @@
 	)
 	(wire
 		(pts
-			(xy 237.49 82.55) (xy 237.49 85.09)
+			(xy 245.11 80.01) (xy 245.11 82.55)
 		)
 		(stroke
 			(width 0)
@@ -5845,6 +5853,16 @@
 	)
 	(wire
 		(pts
+			(xy 252.73 104.14) (xy 257.81 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e33f7c82-76fc-488f-977f-e3fe64cb07a0")
+	)
+	(wire
+		(pts
 			(xy 77.47 52.07) (xy 93.98 52.07)
 		)
 		(stroke
@@ -5945,13 +5963,23 @@
 	)
 	(wire
 		(pts
-			(xy 256.54 119.38) (xy 251.46 119.38)
+			(xy 237.49 104.14) (xy 232.41 104.14)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "fc9800d0-a292-4ee1-9d12-5c4b8667e053")
+	)
+	(label "OSC_PICO_3V3"
+		(at 195.58 114.3 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "081a73a5-57de-4738-94ec-20e7d4206c65")
 	)
 	(label "PD6"
 		(at 36.83 46.99 0)
@@ -6014,7 +6042,7 @@
 		(uuid "152402ff-778d-4c08-bd72-740494660b2c")
 	)
 	(label "ADD8_OUT"
-		(at 226.06 76.2 180)
+		(at 233.68 73.66 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6064,7 +6092,7 @@
 		(uuid "3e92b5b1-fe72-4b5a-9c19-7853e3fe3c59")
 	)
 	(label "~{ADD8_OE}"
-		(at 237.49 85.09 270)
+		(at 245.11 82.55 270)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6124,7 +6152,7 @@
 		(uuid "64033248-e6b0-4930-8dfa-6ba8dd96c313")
 	)
 	(label "~{WS}_3V3"
-		(at 226.06 25.4 180)
+		(at 233.68 22.86 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6212,6 +6240,16 @@
 			(justify right bottom)
 		)
 		(uuid "7e3b5478-aaf1-4d26-b871-d22a60f48530")
+	)
+	(label "OSC_PICO_3V3"
+		(at 232.41 104.14 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "7f4bd3ef-c6a6-4600-b0ff-062ade3b7a77")
 	)
 	(label "~{READY}_3V3"
 		(at 34.29 160.02 180)
@@ -6334,7 +6372,7 @@
 		(uuid "cf6d39a0-166b-4959-84fb-4441434c763a")
 	)
 	(label "~{RS}_3V3"
-		(at 226.06 50.8 180)
+		(at 233.68 48.26 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6415,7 +6453,7 @@
 	)
 	(global_label "ADD8"
 		(shape input)
-		(at 261.62 76.2 0)
+		(at 269.24 73.66 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -6425,7 +6463,7 @@
 		)
 		(uuid "5dedaa2f-d068-4dd9-aada-0bbe00806994")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 269.4433 76.2 0)
+			(at 277.0633 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6472,6 +6510,17 @@
 		)
 		(uuid "0520cfe1-3687-43f7-8f9d-f9c6d0de8f03")
 	)
+	(hierarchical_label "SCOPE_TRIG"
+		(shape output)
+		(at 195.58 124.46 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "2db5eb03-75e7-4d00-8a0c-a4fe3fa51c26")
+	)
 	(hierarchical_label "D4"
 		(shape bidirectional)
 		(at 93.98 57.15 0)
@@ -6515,6 +6564,17 @@
 			(justify left)
 		)
 		(uuid "47789ca4-14cb-47b5-aa07-c5b7f0a74510")
+	)
+	(hierarchical_label "OSC_PICO"
+		(shape output)
+		(at 257.81 104.14 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "6333c450-ffdd-4807-bef6-50f24823d5e0")
 	)
 	(hierarchical_label "M1"
 		(shape input)
@@ -6562,7 +6622,7 @@
 	)
 	(hierarchical_label "~{RS}"
 		(shape output)
-		(at 250.19 50.8 0)
+		(at 257.81 48.26 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6595,7 +6655,7 @@
 	)
 	(hierarchical_label "~{WS}"
 		(shape output)
-		(at 250.19 25.4 0)
+		(at 257.81 22.86 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6661,7 +6721,7 @@
 	)
 	(symbol
 		(lib_id "74xx:74AHCT125")
-		(at 237.49 50.8 0)
+		(at 245.11 48.26 0)
 		(unit 2)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -6671,7 +6731,7 @@
 		(dnp no)
 		(uuid "0179ac87-9e85-4a56-8b58-2156b2192b4f")
 		(property "Reference" "U5"
-			(at 237.49 44.45 0)
+			(at 245.11 41.91 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6681,7 +6741,7 @@
 			)
 		)
 		(property "Value" "74AHCT125"
-			(at 237.49 46.99 0)
+			(at 245.11 44.45 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6691,7 +6751,7 @@
 			)
 		)
 		(property "Footprint" "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm"
-			(at 237.49 50.8 0)
+			(at 245.11 48.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6702,7 +6762,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf"
-			(at 237.49 50.8 0)
+			(at 245.11 48.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6713,7 +6773,7 @@
 			)
 		)
 		(property "Description" "Quadruple Bus Buffer Gates With 3-State Outputs"
-			(at 237.49 50.8 0)
+			(at 245.11 48.26 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6785,7 +6845,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "05c7b8fc-946e-4401-81a9-33b8b044759e")
-		(property "Reference" "#PWR035"
+		(property "Reference" "#PWR038"
 			(at 191.77 85.09 0)
 			(hide yes)
 			(show_name no)
@@ -6845,7 +6905,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR035")
+					(reference "#PWR038")
 					(unit 1)
 				)
 			)
@@ -6862,7 +6922,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "05d43898-7952-46ef-8672-f61a85921c16")
-		(property "Reference" "#PWR020"
+		(property "Reference" "#PWR023"
 			(at 55.88 87.63 0)
 			(hide yes)
 			(show_name no)
@@ -6922,7 +6982,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR020")
+					(reference "#PWR023")
 					(unit 1)
 				)
 			)
@@ -6930,7 +6990,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 255.27 76.2 90)
+		(at 262.89 73.66 90)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -6940,7 +7000,7 @@
 		(dnp no)
 		(uuid "0c7ac5b1-f8ef-47fc-b0f7-d390d377568f")
 		(property "Reference" "R23"
-			(at 254 73.66 0)
+			(at 261.62 71.12 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6951,7 +7011,7 @@
 			)
 		)
 		(property "Value" "1K"
-			(at 256.54 73.66 0)
+			(at 264.16 71.12 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -6962,7 +7022,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 255.27 76.2 0)
+			(at 262.89 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6973,7 +7033,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 255.27 76.2 0)
+			(at 262.89 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -6984,7 +7044,7 @@
 			)
 		)
 		(property "Description" "Resistor"
-			(at 255.27 76.2 0)
+			(at 262.89 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7101,7 +7161,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "2aa42db8-78a5-40e9-b71a-c356874c9bec")
-		(property "Reference" "C9"
+		(property "Reference" "C8"
 			(at 125.73 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7165,7 +7225,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "C9")
+					(reference "C8")
 					(unit 1)
 				)
 			)
@@ -7182,7 +7242,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "2b3dd78e-eb0d-4db4-8847-2b4143a8b98d")
-		(property "Reference" "#PWR018"
+		(property "Reference" "#PWR021"
 			(at 48.26 26.67 0)
 			(hide yes)
 			(show_name no)
@@ -7242,7 +7302,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR018")
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)
@@ -7259,7 +7319,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "2c8be7ec-434b-4c68-8228-5a91e88a697d")
-		(property "Reference" "#PWR023"
+		(property "Reference" "#PWR026"
 			(at 72.39 24.13 0)
 			(hide yes)
 			(show_name no)
@@ -7319,7 +7379,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR023")
+					(reference "#PWR026")
 					(unit 1)
 				)
 			)
@@ -7417,7 +7477,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "3223f161-bd76-4411-90b8-be4e3c6e69d4")
-		(property "Reference" "C12"
+		(property "Reference" "C11"
 			(at 163.83 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7481,7 +7541,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "C12")
+					(reference "C11")
 					(unit 1)
 				)
 			)
@@ -7489,7 +7549,7 @@
 	)
 	(symbol
 		(lib_id "74xx:74AHCT125")
-		(at 237.49 25.4 0)
+		(at 245.11 22.86 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -7499,7 +7559,7 @@
 		(dnp no)
 		(uuid "329378c9-de7c-403c-8a2b-bb55f9a355a6")
 		(property "Reference" "U5"
-			(at 237.49 19.05 0)
+			(at 245.11 16.51 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7509,7 +7569,7 @@
 			)
 		)
 		(property "Value" "74AHCT125"
-			(at 237.49 21.59 0)
+			(at 245.11 19.05 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -7519,7 +7579,7 @@
 			)
 		)
 		(property "Footprint" "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm"
-			(at 237.49 25.4 0)
+			(at 245.11 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7530,7 +7590,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf"
-			(at 237.49 25.4 0)
+			(at 245.11 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7541,7 +7601,7 @@
 			)
 		)
 		(property "Description" "Quadruple Bus Buffer Gates With 3-State Outputs"
-			(at 237.49 25.4 0)
+			(at 245.11 22.86 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7613,7 +7673,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "34919156-6c6b-4952-96f7-3656b2a66ef6")
-		(property "Reference" "#PWR032"
+		(property "Reference" "#PWR035"
 			(at 167.64 63.5 0)
 			(hide yes)
 			(show_name no)
@@ -7673,7 +7733,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR032")
+					(reference "#PWR035")
 					(unit 1)
 				)
 			)
@@ -7690,7 +7750,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "3d3c5387-b4df-4e39-919e-c294089ade40")
-		(property "Reference" "C11"
+		(property "Reference" "C10"
 			(at 151.13 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7754,7 +7814,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "C11")
+					(reference "C10")
 					(unit 1)
 				)
 			)
@@ -7771,7 +7831,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "3de39fe8-4e1a-4385-a7e0-b4d34b0c7397")
-		(property "Reference" "C13"
+		(property "Reference" "C12"
 			(at 176.53 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -7835,7 +7895,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "C13")
+					(reference "C12")
 					(unit 1)
 				)
 			)
@@ -7852,7 +7912,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "3e9508ab-6efe-4da5-aae3-411e8c272815")
-		(property "Reference" "#PWR030"
+		(property "Reference" "#PWR033"
 			(at 147.32 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -7912,7 +7972,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR030")
+					(reference "#PWR033")
 					(unit 1)
 				)
 			)
@@ -8255,7 +8315,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "4f71ca2a-2bc0-4c74-9aa8-dba6db2eecde")
-		(property "Reference" "#PWR033"
+		(property "Reference" "#PWR036"
 			(at 173.99 85.09 0)
 			(hide yes)
 			(show_name no)
@@ -8315,7 +8375,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR033")
+					(reference "#PWR036")
 					(unit 1)
 				)
 			)
@@ -8332,7 +8392,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "4fa51d8a-cce7-4704-a609-758c6a4516fd")
-		(property "Reference" "#PWR028"
+		(property "Reference" "#PWR031"
 			(at 137.16 68.58 0)
 			(hide yes)
 			(show_name no)
@@ -8392,7 +8452,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR028")
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
@@ -8400,7 +8460,7 @@
 	)
 	(symbol
 		(lib_id "74xx:74AHCT125")
-		(at 237.49 76.2 0)
+		(at 245.11 73.66 0)
 		(unit 3)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -8410,7 +8470,7 @@
 		(dnp no)
 		(uuid "5aa18bd0-a5cf-4d8a-be38-9e4dc8d76e55")
 		(property "Reference" "U5"
-			(at 237.49 69.85 0)
+			(at 245.11 67.31 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8420,7 +8480,7 @@
 			)
 		)
 		(property "Value" "74AHCT125"
-			(at 237.49 72.39 0)
+			(at 245.11 69.85 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8430,7 +8490,7 @@
 			)
 		)
 		(property "Footprint" "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm"
-			(at 237.49 76.2 0)
+			(at 245.11 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8441,7 +8501,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf"
-			(at 237.49 76.2 0)
+			(at 245.11 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8452,7 +8512,7 @@
 			)
 		)
 		(property "Description" "Quadruple Bus Buffer Gates With 3-State Outputs"
-			(at 237.49 76.2 0)
+			(at 245.11 73.66 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8524,7 +8584,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "5b6e2a99-30bd-4c22-9ff8-0bd32c199299")
-		(property "Reference" "#PWR029"
+		(property "Reference" "#PWR032"
 			(at 147.32 20.32 0)
 			(hide yes)
 			(show_name no)
@@ -8584,7 +8644,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR029")
+					(reference "#PWR032")
 					(unit 1)
 				)
 			)
@@ -8601,7 +8661,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "5e7d43c1-1d91-43dd-af9b-d35e04adb3a2")
-		(property "Reference" "#PWR026"
+		(property "Reference" "#PWR029"
 			(at 121.92 20.32 0)
 			(hide yes)
 			(show_name no)
@@ -8661,7 +8721,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR026")
+					(reference "#PWR029")
 					(unit 1)
 				)
 			)
@@ -8678,7 +8738,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "6992f561-d880-4e95-b72b-26519936f13f")
-		(property "Reference" "#FLG03"
+		(property "Reference" "#FLG05"
 			(at 147.32 67.31 0)
 			(hide yes)
 			(show_name no)
@@ -8739,84 +8799,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#FLG03")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 251.46 119.38 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "6dd739cf-f3f6-4e24-8405-b904f447d0cd")
-		(property "Reference" "#PWR040"
-			(at 251.46 116.84 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 251.46 124.46 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 251.46 119.38 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 251.46 119.38 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 251.46 119.38 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "b83ef32b-e3d9-4058-a133-970a348dd1fa")
-		)
-		(instances
-			(project "tms5220_usb"
-				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR040")
+					(reference "#FLG05")
 					(unit 1)
 				)
 			)
@@ -8824,7 +8807,7 @@
 	)
 	(symbol
 		(lib_id "74xx:74AHCT125")
-		(at 264.16 119.38 0)
+		(at 245.11 104.14 0)
 		(unit 4)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -8834,7 +8817,7 @@
 		(dnp no)
 		(uuid "6ec92cb5-4c40-4474-a41f-a2ddd56efffc")
 		(property "Reference" "U5"
-			(at 264.16 113.03 0)
+			(at 245.11 97.79 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8844,7 +8827,7 @@
 			)
 		)
 		(property "Value" "74AHCT125"
-			(at 264.16 115.57 0)
+			(at 245.11 100.33 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8854,7 +8837,7 @@
 			)
 		)
 		(property "Footprint" "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm"
-			(at 264.16 119.38 0)
+			(at 245.11 104.14 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8865,7 +8848,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf"
-			(at 264.16 119.38 0)
+			(at 245.11 104.14 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8876,7 +8859,7 @@
 			)
 		)
 		(property "Description" "Quadruple Bus Buffer Gates With 3-State Outputs"
-			(at 264.16 119.38 0)
+			(at 245.11 104.14 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8939,7 +8922,7 @@
 	)
 	(symbol
 		(lib_id "power:+5V")
-		(at 237.49 105.41 0)
+		(at 266.7 129.54 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -8948,8 +8931,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "76ccce3c-8367-4ef1-b16d-4aa201b33e9d")
-		(property "Reference" "#PWR038"
-			(at 237.49 102.87 0)
+		(property "Reference" "#PWR042"
+			(at 266.7 127 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8960,7 +8943,7 @@
 			)
 		)
 		(property "Value" "+5V"
-			(at 237.49 100.33 0)
+			(at 266.7 124.46 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -8970,7 +8953,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 237.49 105.41 0)
+			(at 266.7 129.54 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8981,7 +8964,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 237.49 105.41 0)
+			(at 266.7 129.54 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -8992,7 +8975,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 237.49 105.41 0)
+			(at 266.7 129.54 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9008,7 +8991,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR038")
+					(reference "#PWR042")
 					(unit 1)
 				)
 			)
@@ -9025,7 +9008,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "7facf468-f576-4d67-a492-e60118ccbf02")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR034"
 			(at 147.32 152.4 0)
 			(hide yes)
 			(show_name no)
@@ -9085,7 +9068,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR031")
+					(reference "#PWR034")
 					(unit 1)
 				)
 			)
@@ -9102,7 +9085,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "8c5a04be-7d88-4ab6-99a3-928c93f30843")
-		(property "Reference" "#PWR027"
+		(property "Reference" "#PWR030"
 			(at 121.92 35.56 0)
 			(hide yes)
 			(show_name no)
@@ -9162,7 +9145,84 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR027")
+					(reference "#PWR030")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 245.11 113.03 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "96e407ca-9c1d-4988-af8d-0df737ad129b")
+		(property "Reference" "#PWR041"
+			(at 245.11 119.38 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 245.11 116.84 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 245.11 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 245.11 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 245.11 113.03 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2a9f8774-6495-490e-bb44-a501bf45d2bb")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
+					(reference "#PWR041")
 					(unit 1)
 				)
 			)
@@ -9179,7 +9239,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "9bbfa1dc-3f49-4bab-a1e3-0c5a03c4ae84")
-		(property "Reference" "#PWR021"
+		(property "Reference" "#PWR024"
 			(at 57.15 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -9239,7 +9299,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR021")
+					(reference "#PWR024")
 					(unit 1)
 				)
 			)
@@ -9401,7 +9461,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "b59560b1-d6b8-4ac7-8c35-b03f9b14d8b2")
-		(property "Reference" "#PWR016"
+		(property "Reference" "#PWR019"
 			(at 36.83 177.8 0)
 			(hide yes)
 			(show_name no)
@@ -9461,7 +9521,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR016")
+					(reference "#PWR019")
 					(unit 1)
 				)
 			)
@@ -9550,7 +9610,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 237.49 130.81 0)
+		(at 266.7 154.94 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -9559,8 +9619,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "c351a62a-0f12-40ea-bea5-df8263c5754e")
-		(property "Reference" "#PWR039"
-			(at 237.49 128.27 0)
+		(property "Reference" "#PWR043"
+			(at 266.7 152.4 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9571,7 +9631,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 237.49 135.89 0)
+			(at 266.7 160.02 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -9581,7 +9641,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 237.49 130.81 0)
+			(at 266.7 154.94 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9592,7 +9652,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 237.49 130.81 0)
+			(at 266.7 154.94 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9603,7 +9663,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 237.49 130.81 0)
+			(at 266.7 154.94 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9619,7 +9679,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR039")
+					(reference "#PWR043")
 					(unit 1)
 				)
 			)
@@ -9636,7 +9696,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "cd050c2d-36ca-4171-9953-41fd9b465b32")
-		(property "Reference" "#PWR015"
+		(property "Reference" "#PWR018"
 			(at 34.29 170.18 0)
 			(hide yes)
 			(show_name no)
@@ -9696,7 +9756,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR015")
+					(reference "#PWR018")
 					(unit 1)
 				)
 			)
@@ -9794,7 +9854,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "d90dd11b-097a-4288-9c64-2b75f94433f3")
-		(property "Reference" "C10"
+		(property "Reference" "C9"
 			(at 138.43 29.21 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -9858,7 +9918,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "C10")
+					(reference "C9")
 					(unit 1)
 				)
 			)
@@ -9875,7 +9935,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "d937be38-51ff-4655-b8f4-5a60f0cf9a84")
-		(property "Reference" "#PWR034"
+		(property "Reference" "#PWR037"
 			(at 182.88 85.09 0)
 			(hide yes)
 			(show_name no)
@@ -9935,84 +9995,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR034")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5V")
-		(at 264.16 128.27 180)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "db473120-8377-4401-a908-697585792c0e")
-		(property "Reference" "#PWR041"
-			(at 264.16 125.73 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "+5V"
-			(at 264.16 133.35 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 264.16 128.27 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 264.16 128.27 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5V\""
-			(at 264.16 128.27 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "435b66f8-cc0f-4445-b4f3-8075298760c0")
-		)
-		(instances
-			(project "tms5220_usb"
-				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR041")
+					(reference "#PWR037")
 					(unit 1)
 				)
 			)
@@ -10029,7 +10012,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "dedc41a4-c8ea-4888-be02-a7706095bf52")
-		(property "Reference" "#PWR025"
+		(property "Reference" "#PWR028"
 			(at 100.33 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -10089,7 +10072,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR025")
+					(reference "#PWR028")
 					(unit 1)
 				)
 			)
@@ -10097,7 +10080,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 237.49 34.29 0)
+		(at 245.11 31.75 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -10106,8 +10089,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "df0c0034-6c9f-49f5-a21c-ecd2d7f7d516")
-		(property "Reference" "#PWR036"
-			(at 237.49 31.75 0)
+		(property "Reference" "#PWR039"
+			(at 245.11 29.21 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10118,7 +10101,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 237.49 39.37 0)
+			(at 245.11 36.83 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10128,7 +10111,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 237.49 34.29 0)
+			(at 245.11 31.75 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10139,7 +10122,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 237.49 34.29 0)
+			(at 245.11 31.75 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10150,7 +10133,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 237.49 34.29 0)
+			(at 245.11 31.75 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10166,7 +10149,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR036")
+					(reference "#PWR039")
 					(unit 1)
 				)
 			)
@@ -10174,7 +10157,7 @@
 	)
 	(symbol
 		(lib_id "74xx:74AHCT125")
-		(at 237.49 118.11 0)
+		(at 266.7 142.24 0)
 		(unit 5)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -10184,7 +10167,7 @@
 		(dnp no)
 		(uuid "dfbbef62-3529-48de-9ef2-a31ae7a45fad")
 		(property "Reference" "U5"
-			(at 240.03 116.84 0)
+			(at 269.24 140.97 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10194,7 +10177,7 @@
 			)
 		)
 		(property "Value" "74AHCT125"
-			(at 240.03 119.38 0)
+			(at 269.24 143.51 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10204,7 +10187,7 @@
 			)
 		)
 		(property "Footprint" "Package_SO:SOIC-14_3.9x8.7mm_P1.27mm"
-			(at 237.49 118.11 0)
+			(at 266.7 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10215,7 +10198,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/sn74ahct125.pdf"
-			(at 237.49 118.11 0)
+			(at 266.7 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10226,7 +10209,7 @@
 			)
 		)
 		(property "Description" "Quadruple Bus Buffer Gates With 3-State Outputs"
-			(at 237.49 118.11 0)
+			(at 266.7 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10289,7 +10272,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 237.49 59.69 0)
+		(at 245.11 57.15 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -10298,8 +10281,8 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e0d39924-8145-41ad-a3a4-97cdd76e9512")
-		(property "Reference" "#PWR037"
-			(at 237.49 57.15 0)
+		(property "Reference" "#PWR040"
+			(at 245.11 54.61 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10310,7 +10293,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 237.49 64.77 0)
+			(at 245.11 62.23 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -10320,7 +10303,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 237.49 59.69 0)
+			(at 245.11 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10331,7 +10314,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 237.49 59.69 0)
+			(at 245.11 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10342,7 +10325,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 237.49 59.69 0)
+			(at 245.11 57.15 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -10358,7 +10341,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR037")
+					(reference "#PWR040")
 					(unit 1)
 				)
 			)
@@ -10375,7 +10358,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e314b3ea-a934-43e0-95e6-85a4ba0e63dc")
-		(property "Reference" "#PWR017"
+		(property "Reference" "#PWR020"
 			(at 41.91 114.3 0)
 			(hide yes)
 			(show_name no)
@@ -10435,7 +10418,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR017")
+					(reference "#PWR020")
 					(unit 1)
 				)
 			)
@@ -10647,7 +10630,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "e7d6eecc-c5f8-4503-8bc1-3730c27f7c3b")
-		(property "Reference" "#PWR022"
+		(property "Reference" "#PWR025"
 			(at 63.5 26.67 0)
 			(hide yes)
 			(show_name no)
@@ -10707,7 +10690,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR022")
+					(reference "#PWR025")
 					(unit 1)
 				)
 			)
@@ -10803,7 +10786,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "f240a6e9-17d1-4448-ada2-c277798ead22")
-		(property "Reference" "#PWR019"
+		(property "Reference" "#PWR022"
 			(at 49.53 175.26 0)
 			(hide yes)
 			(show_name no)
@@ -10863,7 +10846,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR019")
+					(reference "#PWR022")
 					(unit 1)
 				)
 			)
@@ -10880,7 +10863,7 @@
 		(in_pos_files yes)
 		(dnp no)
 		(uuid "f9c2eef2-4183-48b5-a94f-bf9abf08dd96")
-		(property "Reference" "#PWR024"
+		(property "Reference" "#PWR027"
 			(at 85.09 143.51 0)
 			(hide yes)
 			(show_name no)
@@ -10940,7 +10923,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR024")
+					(reference "#PWR027")
 					(unit 1)
 				)
 			)

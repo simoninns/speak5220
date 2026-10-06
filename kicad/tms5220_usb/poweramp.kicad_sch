@@ -1921,7 +1921,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "92545622-1e9b-4548-837d-d7b4972bf300")
-		(property "Reference" "RV2"
+		(property "Reference" "RV1"
 			(at 119.38 93.9799 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2021,7 +2021,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "RV2")
+					(reference "RV1")
 					(unit 1)
 				)
 			)
@@ -2039,7 +2039,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d4a069c6-88d8-43f8-a2c0-a1e646bfd460")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR045"
 			(at 143.51 90.17 0)
 			(hide yes)
 			(show_name no)
@@ -2099,7 +2099,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "#PWR043")
+					(reference "#PWR045")
 					(unit 1)
 				)
 			)
@@ -2117,7 +2117,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "d616b66a-840f-4559-be5d-d297b2003681")
-		(property "Reference" "C15"
+		(property "Reference" "C14"
 			(at 161.29 113.0299 0)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2181,7 +2181,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "C15")
+					(reference "C14")
 					(unit 1)
 				)
 			)
@@ -2199,7 +2199,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "de925e4f-8312-4e0b-a7b9-f0a5a1c8ddf3")
-		(property "Reference" "C14"
+		(property "Reference" "C13"
 			(at 132.08 87.63 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2261,7 +2261,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "C14")
+					(reference "C13")
 					(unit 1)
 				)
 			)
@@ -2279,7 +2279,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "ea331359-140a-4a61-922d-23703c9d7610")
-		(property "Reference" "C16"
+		(property "Reference" "C15"
 			(at 168.021 90.17 90)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2341,7 +2341,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "C16")
+					(reference "C15")
 					(unit 1)
 				)
 			)
@@ -2359,7 +2359,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f3be08d8-1d03-46c8-9635-b5ae915c561e")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR044"
 			(at 121.92 129.54 0)
 			(hide yes)
 			(show_name no)
@@ -2419,7 +2419,7 @@
 		(instances
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/e20f87ad-0044-44a9-b933-d9a27ef58e88"
-					(reference "#PWR042")
+					(reference "#PWR044")
 					(unit 1)
 				)
 			)

@@ -39,6 +39,12 @@
 #define PIN_BUS_DIR     20  // U4 DIR: 1 = TMS5220 -> Pico, 0 = Pico -> TMS5220
 #define PIN_BUS_OE_N    21  // U4 ~OE, pulled up (disabled) by R22
 
+// TMS5220 clock (640 kHz) via U5D and R1; the TMS5220 has no other clock source
+#define PIN_OSC_CLK     22
+
+// PicoScope trigger/capture marker (TP5, probe D)
+#define PIN_SCOPE_TRIG  26
+
 // On-board LED of the Pico 2
 #define PIN_LED         25
 

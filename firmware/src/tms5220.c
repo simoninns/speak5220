@@ -7,7 +7,9 @@
     SPDX-License-Identifier: GPL-3.0-or-later
 ************************************************************************/
 
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/pwm.h"
 #include "hardware/sync.h"
 #include "pico/stdlib.h"
 
@@ -34,6 +36,27 @@
 #define STROBE_RECOVERY_US      20
 
 static absolute_time_t strobeRecoveryEnd;
+
+uint32_t tms5220ClockStart(void)
+{
+    // The TMS5220 has no oscillator of its own on this board: its OSC input
+    // is driven from a PWM output via U5D (5V).  The PWM counts at the
+    // system clock, so the clock is exact if clk_sys is a multiple of
+    // TMS5220_CLOCK_HZ (see main.c).
+    uint32_t sysHz = clock_get_hz(clk_sys);
+    uint32_t period = (sysHz + TMS5220_CLOCK_HZ / 2) / TMS5220_CLOCK_HZ;
+
+    uint slice = pwm_gpio_to_slice_num(PIN_OSC_CLK);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv_int(&config, 1);
+    pwm_config_set_wrap(&config, period - 1);
+    pwm_init(slice, &config, false);
+    pwm_set_gpio_level(PIN_OSC_CLK, period / 2);
+    gpio_set_function(PIN_OSC_CLK, GPIO_FUNC_PWM);
+    pwm_set_enabled(slice, true);
+
+    return sysHz / period;
+}
 
 static void busRelease(void)
 {

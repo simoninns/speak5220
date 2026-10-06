@@ -24,6 +24,13 @@
 #define TMS5220_STATUS_BL           0x40  // Buffer Low
 #define TMS5220_STATUS_BE           0x20  // Buffer Empty
 
+// Nominal OSC frequency: 640kHz gives an 8kHz sample rate (OSC / 80)
+#define TMS5220_CLOCK_HZ            640000
+
+// Start the OSC clock on PIN_OSC_CLK; returns the actual frequency in Hz.
+// The TMS5220 does nothing (including its power-up clear) until this runs.
+uint32_t tms5220ClockStart(void);
+
 void tms5220Init(void);
 
 // Write a byte to the VSP; returns false if READY never asserted

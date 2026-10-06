@@ -13,6 +13,7 @@
 
 #include <stdio.h>
 
+#include "hardware/clocks.h"
 #include "pico/stdlib.h"
 
 #include "pins.h"
@@ -36,6 +37,10 @@ static const word_t phrase[] = {
     { "C",        PHROM_ADDRESS(0x124D) },  // 175
     { "COMPUTER", PHROM_ADDRESS(0x140B) },  // 179
 };
+
+// 144MHz is an exact multiple of the 640kHz TMS5220 clock (x225) and can
+// be generated exactly from the 12MHz crystal (VCO 1440MHz / 5 / 2)
+#define SYS_CLOCK_KHZ       144000
 
 #define SPEECH_TIMEOUT_MS   3000
 #define REPEAT_DELAY_MS     1000
@@ -81,6 +86,7 @@ static void sayWord(const word_t *word)
 
 int main(void)
 {
+    set_sys_clock_khz(SYS_CLOCK_KHZ, true);
     stdio_init_all();
 
     gpio_init(PIN_LED);
@@ -88,6 +94,7 @@ int main(void)
 
     tms6100Start();
     tms5220Init();
+    uint32_t clockHz = tms5220ClockStart();
 
     // Allow the TMS5220 power-up clear (15ms) to complete
     sleep_ms(100);
@@ -95,7 +102,8 @@ int main(void)
     uint32_t count = 0;
     while (true) {
         count++;
-        printf("\n[%lu] Saying \"Acorn BBC Computer\"\n", (unsigned long)count);
+        printf("\n[%lu] Saying \"Acorn BBC Computer\" (TMS5220 clock %lu Hz)\n",
+               (unsigned long)count, (unsigned long)clockHz);
 
         if (!tms5220Reset()) printf("  Reset: READY timeout\n");
 

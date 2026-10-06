@@ -38,11 +38,11 @@
 
 // Time to let the M0/M1 inputs settle after an edge before deciding which
 // function was requested (M0 and M1 rise together for Read and Branch)
-#define EDGE_SETTLE_CYCLES  30   // ~200ns at 150MHz
+#define EDGE_SETTLE_CYCLES  30   // ~210ns at 144MHz
 
 // Time to let ADD8 settle after releasing our ADD8 output.  The address is
 // set up 2.5us before M1 and held for 5us after, so ~1us is safe.
-#define ADD8_RELEASE_CYCLES 150  // ~1us at 150MHz
+#define ADD8_RELEASE_CYCLES 150  // ~1us at 144MHz
 
 #define M0_MASK (1u << PIN_M0)
 #define M1_MASK (1u << PIN_M1)
