@@ -1,0 +1,38 @@
+{
+  "captured": "2026-10-06T12:48:34+0200",
+  "scope": {
+    "variant": "3405DMSO",
+    "serial": "CZ765/001",
+    "timebase": 3,
+    "interval_s": 8e-09,
+    "pre_trigger_samples": 250000,
+    "samples": 15249999,
+    "overflow_mask": 0,
+    "trigger_channel": "d"
+  },
+  "channels": {
+    "a": {
+      "signal": "SPEAKER (TP2)",
+      "probe": "x1"
+    },
+    "b": {
+      "signal": "T11 (TP3)",
+      "probe": "x10"
+    },
+    "c": {
+      "signal": "I/O (TP4)",
+      "probe": "x10"
+    },
+    "d": {
+      "signal": "SCOPE_TRIG (TP5)",
+      "probe": "x10"
+    }
+  },
+  "board": {
+    "config": "measure",
+    "description": "C1 disconnected: TP2 is loaded by R2 (1K) alone",
+    "r2_load_ohms": 996.0
+  },
+  "host_git": "d78e6ca",
+  "note": "Phase 2: DAC step response at 8 ns with TP2 unloaded"
+}

@@ -4,7 +4,7 @@ This datasheet describes the TMS5220 as measured on real hardware. It follows th
 
 The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. `../speech_capture_plan.md` describes how the measurements are made.
 
-**Status (2026-10-06):** Phase 1 sections are drafted: the system clock (§2, Appendix A), the serial sample output and DAC timing (§8.2, §8.4), measured output characteristics (§9.5), and pin functions (§11.2). The other sections are placeholders and are filled in by later phases.
+**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). The other sections are placeholders and are filled in by later phases.
 
 ## Conventions
 
@@ -71,19 +71,82 @@ Driving `OSC` from an external clock is covered in Appendix A.
 
 ### 8.2 D/A conversion
 
-**Status: timing drafted (Phase 1). Transfer function pending (Phase 2).**
+**Status: drafted (Phases 1 and 2).** Measured on one chip into a resistive load to 0 V (996 Ω and 482 Ω), DC-coupled, with nothing else on the pin.
 
-**DAC update timing (New).** The DAC changes to each new sample at the start of **slot 1**, one slot after `T11` rises. Measured from the ROMCLK rising edge that starts slot 1, the step reaches 10 % after 0.34–0.65 µs, 50 % after 0.62–0.84 µs and 90 % after 1.16–1.32 µs [p1-01, p1-03]. These are averages over 101 and 185 steps of at least 20 codes. They were measured across the test board's 1 K load, which the audio stage also loads, so the settling figures are upper bounds until Phase 2 removes that load. The DAC then holds the value for the rest of the sample period.
+**DAC update timing (New).** The DAC changes to each new sample at the start of **slot 1**, one slot after `T11` rises. Measured from the ROMCLK rising edge that starts slot 1, into 996 Ω, the step reaches 10 % after 0.66 µs, 50 % after 0.85 µs and 90 % after 1.29 µs [p2-03]. This is the average of 180 steps of at least 20 codes. The same word measured with the test board's audio stage also loading the pin gave the same times to within 30 ns [p1-03], so they are set by the chip. Another word stepped about 0.3 µs earlier (10 % at 0.34 µs, 90 % at 1.16 µs) [p1-01]. Why is not yet known: the steps in that word are larger, and the timing may depend on the step size or direction. The output is within 3 % of its final value 2.3 µs after slot 1 starts [p2-01]. It then holds that value for the rest of the sample period, apart from coupling spikes of about 1 % at the `I/O` edges in slots 2–11 (Figure 8-1).
 
 **The DAC and `I/O` show the same sample.** The value the DAC outputs from slot 1 of a sample period is the code sent on `I/O` in slots 2–11 of the **same** period [p1-01, p1-02].
 
 **Input to the DAC.** The original's Table 4 describes the DAC input as bits Y<sub>L13</sub>–Y<sub>L4</sub> of the lattice output: the sign and seven low-order bits drive the DAC, and the two remaining high bits clip it to full on or full off. The `I/O` code (§8.4) carries all ten bits *before* that clipping. Codes up to +134, outside the DAC's −128 to +127 range, have been observed on `I/O` [p1-01].
 
-**Transfer function.** Not yet measured cleanly. On the test board as it is, TP2 changes by about −3.9 mV per code. There is an extra step of about 15 mV between codes −1 and 0. Both figures are affected by the audio stage's load on TP2, and Phase 2 measures them without it. The original's Table 4 gives 744 µA for code 0 and 750 µA for −1, which is a single 5.86 µA step.
+**Clipping.** The DAC takes the code clipped to −128…+127. Codes +131 to +134 gave the same output as +127, to within 0.3 mV [p2-01, p2-02, p2-04, p2-05]. Codes below −111 did not occur in the speech measured, so clipping at the negative end has not been observed yet.
+
+**Direction and zero.** A more positive code gives less current, as in the original's Table 4. Code +127 gives no current: across either load the pin sits at 0 V, to within ±2 mV [p2-01 to p2-06].
+
+**Transfer function (Correction).** This chip delivers about 20 % less current than the original's Table 4. Its step is not uniform, and it jumps by about six steps between codes −1 and 0. Table 8-1 gives the main figures. `captures/phase2/dac_transfer*/dac_table.csv` gives the mean current for each code seen, at each load.
+
+*Table 8-1. DAC output current. Means of 83,190 sample periods per load. Each step is the median of single-code steps that do not cross a multiple of 16.*
+
+| Quantity | Original (Table 4) | Measured, 996 Ω load | Measured, 482 Ω load |
+|---|---|---|---|
+| One step (1 LSB) | 5.86 µA | 4.49 µA | 4.80 µA |
+| Code +127 | 0 µA | 0 ± 2 µA | 0 ± 3 µA |
+| Code 0 | 744 µA | 578 µA | 604 µA |
+| Code −1 (idle) | 750 µA | 604 µA | 631 µA |
+| Code −128 (full scale) | 1500 µA | about 1170 µA (extrapolated) | about 1230 µA (extrapolated) |
+
+[p2-01, p2-02 at 996 Ω; p2-04, p2-05 at 482 Ω; scope zero from p2-06.] The currents are the TP2 voltage divided by the load resistance, measured with a meter. Their absolute accuracy depends on the scope's DC gain (a few per cent). The scope's own zero offset (−8.7 mV) was measured with the probe grounded [p2-06] and has been subtracted. The ratios between codes do not depend on any of this.
+
+**Bit weights (New).** The DAC behaves as eight binary-weighted current sources, one per input bit, with input byte = code + 128 (code 0 = 0x80, code −1 = 0x7F). Fitting one weight per bit to every sample gives:
+
+*Table 8-2. Bit weights, in LSB as defined in Table 8-1.*
+
+| Input bit | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 (sign) |
+|---|---|---|---|---|---|---|---|---|
+| Ideal | 1 | 2 | 4 | 8 | 16 | 32 | 64 | 128 |
+| 996 Ω | 0.86 | 1.82 | 3.99 | 7.85 | 15.79 | 32.33 | 63.97 | 132.64 |
+| 482 Ω | 0.87 | 1.82 | 3.94 | 7.78 | 15.74 | 32.09 | 62.89 | 130.96 |
+
+The two loads agree to within 2 %, so the mismatch belongs to the DAC. It shows as steps of the wrong size wherever a carry crosses into a higher bit:
+
+*Table 8-3. Measured step at the major carries, in LSB (ideal 1).*
+
+| Codes | Input byte | 996 Ω | 482 Ω |
+|---|---|---|---|
+| −1 → 0 | 0x7F → 0x80 (bit 7) | **5.85** | **5.62** |
+| −65 → −64, 63 → 64 | bit 6 | 0.03, 0.36 | 0.16, 0.32 |
+| −33 → −32, 31 → 32 | bit 5 | 1.42, 1.35 | 1.38, 1.32 |
+| −17 → −16, 15 → 16 | bit 4 | 0.91, 0.83 | 0.96, 0.86 |
+
+The step between −1 and 0 is **about six times a normal step**: 26–27 µA, or 26 mV across 996 Ω [p2-01, p2-02, p2-04, p2-05]. The original's Table 4 implies a single 5.86 µA step. Every zero crossing of the waveform passes through this step, so the analogue output has a small crossover distortion that a linear DAC model does not reproduce.
+
+**Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3).
+
+**No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %.
+
+![TP2 against code into 996 ohm, its INL, and the residual against the previous sample](assets/fig_dac_transfer.png)
+
+*Figure 8-2. DAC transfer into 996 Ω [p2-01, p2-02]. Top: mean TP2 voltage for each code, with the bit-weight model. Middle: deviation from a straight line through the model's end points, in LSB. The jump at code 0 is the bit-7 mismatch. The steps at ±32 and ±64 come from bits 5 and 6. Bottom: each sample's residual from the per-code table, plotted against the change from the previous sample, shows no dependence.*
+
+**For emulator writers.** The `I/O` code (§8.4) is the exact output. To model the analogue output, take the code, clip it to −128…+127 and add 128, then sum the Table 8-2 weights for the bits that are **clear**. This is approximate: the fit also leaves a few µA of offset and the shortfall at large currents. More current means more bits clear: byte 0xFF gives no current and byte 0x00 gives full scale. Alternatively, use the per-code table. Expect another chip to have different bit weights.
 
 ### 8.3 Audio output
 
-**Status: not yet written (Phase 2).**
+**Status: drafted (Phase 2).** Measured on one chip [p2-01 to p2-06].
+
+**`SPEAKER` is a current output into a load returned to 0 V.** The pin pushes current into the load, so the load voltage is positive: 0 V at code +127 and about 0.6 V at idle (code −1) into 996 Ω. As the original says, the output must be AC-coupled to any amplifier, because the idle current puts a DC level on the load.
+
+**The output is not an ideal current source (New).** Halving the load from 996 Ω to 482 Ω raises the current by 3–5 % (Figure 8-3). A current source with a finite output resistance would raise every code by the same fraction. The measured ratio is 1.049 at large currents and falls to 1.032 near code +60. Read as a Norton source, that is an output resistance of 10–16 kΩ in parallel with the pin, so the figure is approximate. Codes near zero current are not included: at those currents, the ±2 mV of offset left on the test board dominates the ratio.
+
+![SPEAKER current per code at 996 and 482 ohm loads, and their ratio](assets/fig_dac_load.png)
+
+*Figure 8-3. Current per code at two loads [p2-01, p2-02, p2-04, p2-05; zero from p2-06]. Top: current. Bottom: the ratio of the two currents. Codes seen fewer than 20 times are grey. The line is the mean over codes above a quarter of full scale.*
+
+**Consequences.**
+- **Quoting a current means quoting the load.** At 996 Ω, full scale extrapolates to about 1.17 mA. At 482 Ω it extrapolates to about 1.23 mA. A virtual-ground (transimpedance) measurement would give the current at 0 V, which has not been made yet.
+- **A lower-value load gives a more linear voltage.** The extra shortfall at large currents (§8.2) grows with the pin voltage.
+- **The original's 1.8 kΩ application.** The original says that 1.8 kΩ in series gives 2.7 V at 1.5 mA. That has not been tested here. Given the output resistance above, expect noticeably less current into that load.
+- **AC coupling on the pin changes what the pin delivers.** The test board's own coupling network (C1 and 4.7 kΩ to ground, after a 1 kΩ load) made the voltage on the pin depend on earlier samples. That network was disconnected for these measurements (plan §5).
 
 ### 8.4 Serial sample output: `T11` and `I/O` (New)
 
@@ -113,7 +176,7 @@ The code is a 10-bit two's-complement number (−512 to +511), equal to Y<sub>L1
 | `T11` falling (start of slot 1), to mid-level | 465 ns | 2 ns |
 | `I/O` rising (start of a 1 bit) | 215 ns | 0.8 ns |
 | `I/O` falling (end of a 1 bit), to mid-level | 450 ns | 1.9 ns |
-| DAC, 50 % of the step (start of slot 1) | 0.62–0.84 µs | — |
+| DAC, 50 % of the step (start of slot 1), into 996 Ω | 0.85 µs (0.62 µs in one word, §8.2) | — |
 
 These delays were measured with ×10 probes on all three pins. For decoding, sample `I/O` in the middle of each slot. Taking slot *k* as 6.25·*k* µs to 6.25·(*k*+1) µs after the `T11` rising edge puts each sampling point at least 2.6 µs from any `I/O` edge.
 
@@ -157,7 +220,7 @@ All three outputs swing from near `VSS` down to well below 0 V. Their falls are 
 | 3 | ROMCLK | Clock to VSM | `OSC` ÷ 4, 50.6 % duty. Its rising edges start each slot, and all `T11` and `I/O` transitions follow them (§2, §8.4) |
 | 6 | `OSC` | Oscillator input | The threshold node of the internal RC oscillator. An external clock must swing from `VDD` to `VSS`. A 0–5 V square wave does not clock the chip (Appendix A) |
 | 7 | `T11` | Sync | High for slot 0 of each sample period. It frames the `I/O` data and runs continuously (§8.4) |
-| 8 | `SPEAKER` | Audio output | DAC current output. It changes at the start of slot 1 (§8.2) |
+| 8 | `SPEAKER` | Audio output | DAC current output into a load to 0 V. About 4.5 µA per code, with a step of about 26 µA between codes −1 and 0. The current depends on the load. It changes at the start of slot 1 (§8.2, §8.3) |
 | 9 | `I/O` | Serial data out | The 10-bit output sample before clipping, LSB first, in slots 2–11. It runs continuously, and sends −1 when idle (§8.4) |
 | 10 | `PROM OUT` | Testing use only | An output that drives strongly. It was left unconnected for all measurements. Function unknown |
 | 20 | `TEST` | Testing use only | Not explored (plan §11) |
@@ -204,3 +267,7 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-06 | §9.5 | Measured output levels and edge times for ROMCLK, `T11` and `I/O` | p1-01, p1-03 |
 | 2026-10-06 | §11.2 | Measured functions of pins 3, 6, 7, 8 and 9. Status of 10 and 20 | As above, plus the bench notes in plan §5 |
 | 2026-10-06 | App. A | New: external clock drive requirements and circuit | Plan §5 bench tests |
+| 2026-10-06 | §8.2 | DAC step timing into an unloaded 996 Ω. Clipping of codes above +127 confirmed | p2-03, p2-01, p2-02, p2-04, p2-05 |
+| 2026-10-06 | §8.2 | Correction: the current is about 20 % below the original's Table 4, and the step from −1 to 0 is about 6 LSB, not 1. New: bit weights, carry errors, no memory between samples | p2-01, p2-02, p2-04, p2-05, p2-06 |
+| 2026-10-06 | §8.3 | New: the `SPEAKER` current depends on the load (output resistance about 10–16 kΩ) | p2-01, p2-02, p2-04, p2-05, p2-06 |
+| 2026-10-06 | §11.2 | Pin 8: measured current scale | As §8.2 |

@@ -38,6 +38,14 @@ D_SIGNALS = {
     "romclk": ("ROMCLK (TP1)", 1),
 }
 
+# Board configurations (plan section 5). Every capture records which one it
+# was taken with.
+BOARD_CONFIGS = {
+    "measure": "C1 disconnected: TP2 is loaded by R2 (1K) alone",
+    "measure-half": "C1 disconnected: TP2 is loaded by R2 with a second 1K in parallel",
+    "audio": "C1 connected: the audio stage (C1, R3 4K7) also loads TP2",
+}
+
 
 def gitHash():
     try:
@@ -56,6 +64,10 @@ def main():
                         help="ps3000a timebase, (n - 2) x 8 ns (64 = 2.016 MS/s, 15 = 9.6 MS/s)")
     parser.add_argument("--d-signal", choices=D_SIGNALS, default="trig",
                         help="what probe D is on (romclk triggers on T11 instead)")
+    parser.add_argument("--board", choices=BOARD_CONFIGS, default="measure",
+                        help="board configuration (measure = audio stage disconnected)")
+    parser.add_argument("--load-ohms", type=float,
+                        help="R2 as measured with a meter, recorded in capture.json")
     parser.add_argument("--note", default="", help="free text stored in capture.json")
     args = parser.parse_args()
 
@@ -95,6 +107,8 @@ def main():
             "c": {"signal": "I/O (TP4)", "probe": "x10"},
             "d": {"signal": dSignal, "probe": "x10"},
         },
+        "board": {"config": args.board, "description": BOARD_CONFIGS[args.board],
+                  "r2_load_ohms": args.load_ohms},
         "host_git": gitHash(),
         "note": args.note,
     }

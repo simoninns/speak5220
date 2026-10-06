@@ -88,11 +88,20 @@ Anything that fails any of these tests is a gap in the datasheet.
 - **`I/O` format, confirmed:** a 10-bit two's-complement sample, **LSB first, in bit slots 2–11**. Slot *k* runs from 6.25·*k* to 6.25·(*k*+1) µs after the `T11` rising edge. Slots 0, 1 and 12–19 are always low, and the line high is a 1. Edges fall on slot boundaries. The sample is the one the DAC outputs in the same period. The idle value is −1.
 - **DAC timing:** the DAC changes value 6.25 µs after the `T11` rising edge, that is, on its falling edge.
 - **Averaging:** the settled part of each DAC step (`T11` + 12 µs to + 128 µs) averages down from 11 mV of noise to 0.33 mV.
-- **DAC level against code:** about −3.9 mV per code across the speech band. There is an extra jump of about 15 mV (about 4 codes) between codes −1 and 0, which needs further study.
-- **The audio stage loads TP2.** It is not a pure 1 K load: C1 and R2 4K7 make the TP2 voltage depend on recent samples. A first-order model with a pole at 294 Hz (the C1 corner is 279 Hz) cuts the residual from 8.6 mV to 1.3 mV rms. For DAC characterisation, remove C1 so TP2 sees only the 1 K. Alternatively, model the network in post-processing.
+- **DAC level against code:** about −3.9 mV per code across the speech band. There is an extra jump of about 15 mV (about 4 codes) between codes −1 and 0, which needs further study. (Superseded by the Phase 2 measurements below.)
+- **The audio stage loads TP2.** It is not a pure 1 K load: C1 and R3 4K7 make the TP2 voltage depend on recent samples. A first-order model with a pole at 294 Hz (the C1 corner is 279 Hz) cuts the residual from 8.6 mV to 1.3 mV rms. For DAC characterisation, remove C1 so TP2 sees only the 1 K. Alternatively, model the network in post-processing.
 - **Repeats are not bit-identical.** Repeats of "B" match exactly for the first ~1170 samples, then differ by ±1–2. Words with unvoiced sounds ("C", "ACORN") differ by up to ±26 from the first unvoiced frame onwards. This is consistent with a free-running noise generator that Speak does not reset. The delay from Speak to the first sample also varies: 6 and 25 samples were seen, and 25 samples is one interpolation period. Both are emulator-relevant findings, covered in §11.
 
 **Clock-edge alignment (2026-10-06, Phase 1 complete).** Every `T11` and `I/O` transition follows a ROMCLK **rising** edge. `I/O` rises 215 ns after it and `T11` rises 490 ns after it, each with a spread of 8 ns or less. ROMCLK measures 160.0005 kHz at 50.6 % duty. The DAC steps at the start of slot 1. `I/O` carries the 10-bit code before the DAC clips it (codes up to +134 were seen). The reference datasheet (`tms5220_reference_datasheet/`, §2, §8.2, §8.4, §9.5, §11.2 and Appendix A) gives the full results, with the captures cited.
+
+**DAC transfer function (2026-10-06, Phase 2 complete).** These were measured with the audio stage disconnected, into 996 Ω and 482 Ω.
+- **Clipping and history.** The DAC takes the code clipped to −128…+127. Each sample's output depends only on its own code: the earlier samples explain less than 0.2 % of it.
+- **Current.** The current is about 20 % below the original's Table 4: 4.49 µA per step and 604 µA at idle, into 996 Ω.
+- **Carry errors.** The DAC is binary-weighted with mismatched bits. The step from −1 to 0 is about 6 LSB (26 µA), not 1. The bit-5 carries are 1.4 LSB and the bit-6 carries 0.0–0.4 LSB.
+- **Load dependence.** The current depends on the load: it is 3–5 % more into 482 Ω than into 996 Ω, which is about 10–16 kΩ of output resistance. It also falls short at large currents.
+- **Step timing.** The DAC step timing is set by the chip: 50 % at 0.85 µs after the slot-1 ROMCLK edge.
+
+The reference datasheet's §8.2 and §8.3 give the details.
 
 ## 3. Capture strategy: three layers per utterance
 
@@ -155,10 +164,13 @@ Done in the schematic:
 
    **The firmware generates this clock** (`tms5220ClockStart()` in `tms5220.c`). Without it the TMS5220 has no clock at all. 640 kHz does not divide evenly into the RP2350's default 150 MHz system clock, so the firmware sets the system clock to 144 MHz: the 12 MHz crystal × 120 gives a 1440 MHz VCO, ÷ 5 ÷ 2. That is within the chip's rating, and a PWM slice divides it by 225 to give exactly 640 kHz. To sweep the clock, pick a system clock that is a multiple of the wanted frequency, or accept a non-integer PWM period.
 
+3. **Measurement configuration.** The test board is built on a breadboard. For DAC measurements, the link from the `SPEAKER` / R2 node to C1 is removed, so TP2 sees R2 alone. R2 measures 996 Ω on a meter. Its tolerance does not matter, because the measured value is used. For the load test, a second 1 K was put in parallel with R2 (482 Ω measured). `tools/capture.py --board measure|measure-half|audio --load-ohms <R>` records the configuration in each `capture.json`. The audio output works again once the C1 link is put back (`--board audio`).
+4. **Pull-down on GPIO22.** R27 (10K, `OSC_PICO_3V3` to GND at U5D's input) holds Q1 off and `OSC` at −5 V while the Pico boots, before the firmware starts the clock. It is fitted on the board and in the schematic.
+
 Still to do:
 
-3. **Optional, later: bring `T11` and `I/O` into the Pico.** This is not needed, because the PicoScope captures both (§4). It would only matter for long unattended runs without the scope. They swing from −5 V to +5 V, so they need a clamped level shift to 0–3.3 V (a plain divider is not enough, because the Pico pins must never go negative). Options are a series resistor with Schottky clamps to GND and 3.3 V, or a small NPN stage per signal. GPIO27 and GPIO28 are still free.
-4. **Pull-down on GPIO22.** U5D's input relies on the RP2350's default pad pull-down while the Pico boots, so Q1 stays off and OSC sits at −5 V until the firmware starts the clock. Consider an explicit 10K to GND.
+5. **Optional, later: bring `T11` and `I/O` into the Pico.** This is not needed, because the PicoScope captures both (§4). It would only matter for long unattended runs without the scope. They swing from −5 V to +5 V, so they need a clamped level shift to 0–3.3 V (a plain divider is not enough, because the Pico pins must never go negative). Options are a series resistor with Schottky clamps to GND and 3.3 V, or a small NPN stage per signal. GPIO27 and GPIO28 are still free.
+6. **Optional: a virtual-ground DAC measurement.** A transimpedance stage would hold `SPEAKER` at 0 V and give the DAC current with no load effect (datasheet §8.3). The spare LM324 section U2B could do this.
 
 ## 6. Data set layout and file formats
 
@@ -334,7 +346,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | Phase | Depends on | Status |
 |---|---|---|
 | 1. Bench bring-up and signal identification | — | Done |
-| 2. Measurement hardware | 1 | Not started |
+| 2. Measurement hardware | 1 | Done |
 | 3. Firmware instrumentation | 1 | Started |
 | 4. Host tooling | 1, 3 | Started |
 | 5. Repeatability | 3, 4 | Not started |
@@ -377,6 +389,22 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 - **Done when:**
   - A static code-to-voltage table explains TP2 to within the measurement noise (about 0.3–0.5 mV rms), with no dependence on earlier samples.
   - The jump at zero (§2) has been measured cleanly.
+- **Done:**
+  - C1 is disconnected for measurements, and R27, the GPIO22 pull-down, is fitted on the board and in the schematic (§5).
+  - R2 was measured (996 Ω) rather than replaced with a 0.1 % part.
+  - `capture.py` records the board configuration and the load.
+  - `tools/dac_transfer.py` gives the per-code table, bit weights, linearity and history check. `tools/dac_compare.py` compares two loads.
+  - Captures p2-01 to p2-06 are in the evidence index, and the datasheet's §8.2 and §8.3 are drafted from them.
+- **Status:** done (2026-10-06).
+  - **No dependence on earlier samples.** Regressing on the four previous samples removes less than 0.02 mV.
+  - **The table explains TP2 to within the noise, but the noise is larger than the criterion assumed.** The criterion's 0.3–0.5 mV was too optimistic for this breadboard: idle noise is 0.5–0.8 mV per sample, and during speech the scatter is 1–2 mV. That scatter depends on neither the code nor the history.
+  - **The jump at zero is clean.** It measures 5.6–5.9 LSB at both loads.
+  - **New finding:** the output current depends on the load (datasheet §8.3).
+- **Handed on:**
+  - Codes below −111 and the negative clipping were not reached by the demo phrase. They need controlled vectors → Phase 8.
+  - Why one word's DAC step is 0.3 µs earlier → Phase 8.
+  - The extra noise during speech, which may come from VSM bus activity on the breadboard → Phase 5, when repeat captures are compared.
+  - The absolute current scale rests on the scope's DC gain, which is accurate to a few per cent. A meter check of the idle TP2 voltage with the chip silent would tighten it. A virtual-ground measurement (§5 item 6) is optional.
 
 ### Phase 3: Firmware instrumentation
 
