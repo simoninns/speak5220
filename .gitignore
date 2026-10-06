@@ -35,5 +35,12 @@ Thumbs.db
 # Firmware build output
 firmware/build/
 
-# Capture output (raw scope data is published separately)
-captures/
+# Captures (docs-tech/speech_capture_plan.md, section 6): evidence captures
+# commit their raw data only as raw/scope_raw.npz.zip; PROM corpus captures
+# are kept local for now
+captures/corpus/
+captures/**/raw/*.npz
+captures/**/dac_step_response.npy
+
+# Python bytecode
+__pycache__/

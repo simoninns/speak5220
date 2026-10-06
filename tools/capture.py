@@ -5,7 +5,9 @@
     Triggered PicoScope 3405D capture of the TMS5220 probe points. Waits for
     SCOPE_TRIG (Ch D) and writes <out>/raw/scope_raw.npz and <out>/capture.json.
 
-    Expected probes: A x1 on TP2 (DAC), B/C/D x10 on TP3/TP4/TP5.
+    Expected probes: A x1 on TP2 (DAC), B/C/D x10 on TP3/TP4/TP5. With
+    --d-signal romclk, probe D is on TP1 (ROMCLK) instead and the capture
+    triggers on T11 (Ch B).
 
     This file is part of speak5220.
     SPDX-License-Identifier: GPL-3.0-or-later
@@ -30,6 +32,12 @@ CHANNEL_SETUP = {
 }
 TRIGGER_V = 0.15    # 1.5 V at the probe tip
 
+# What probe D is connected to: (signal label, trigger channel)
+D_SIGNALS = {
+    "trig": ("SCOPE_TRIG (TP5)", 3),
+    "romclk": ("ROMCLK (TP1)", 1),
+}
+
 
 def gitHash():
     try:
@@ -46,18 +54,21 @@ def main():
     parser.add_argument("--pre-ms", type=float, default=10.0, help="time before the trigger")
     parser.add_argument("--timebase", type=int, default=64,
                         help="ps3000a timebase, (n - 2) x 8 ns (64 = 2.016 MS/s, 15 = 9.6 MS/s)")
+    parser.add_argument("--d-signal", choices=D_SIGNALS, default="trig",
+                        help="what probe D is on (romclk triggers on T11 instead)")
     parser.add_argument("--note", default="", help="free text stored in capture.json")
     args = parser.parse_args()
 
     with Scope() as scope:
         for channel, (rangeV, offsetV) in CHANNEL_SETUP.items():
             scope.setChannel(channel, rangeV, offsetV)
-        scope.setTrigger(3, TRIGGER_V)
+        dSignal, triggerChannel = D_SIGNALS[args.d_signal]
+        scope.setTrigger(triggerChannel, TRIGGER_V)
         interval, _ = scope.timebase(args.timebase, 1000)
         pre = int(args.pre_ms * 1e-3 / interval)
         samples = pre + int(args.seconds / interval)
         print(f"Capturing {samples} samples per channel at {1e-6 / interval:.3f} MS/s, "
-              "waiting for SCOPE_TRIG...")
+              f"waiting for a trigger on Ch {'ABCD'[triggerChannel]}...")
         interval, raw, overflow = scope.runBlock(args.timebase, samples, pre, timeoutS=60)
         variant, serial = scope.info(INFO_VARIANT), scope.info(INFO_SERIAL)
         maxAdc = scope.maxAdc
@@ -76,12 +87,13 @@ def main():
         "captured": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "scope": {"variant": variant, "serial": serial, "timebase": args.timebase,
                   "interval_s": interval, "pre_trigger_samples": pre,
-                  "samples": int(len(raw[0])), "overflow_mask": overflow},
+                  "samples": int(len(raw[0])), "overflow_mask": overflow,
+                  "trigger_channel": "abcd"[triggerChannel]},
         "channels": {
             "a": {"signal": "SPEAKER (TP2)", "probe": "x1"},
             "b": {"signal": "T11 (TP3)", "probe": "x10"},
             "c": {"signal": "I/O (TP4)", "probe": "x10"},
-            "d": {"signal": "SCOPE_TRIG (TP5)", "probe": "x10"},
+            "d": {"signal": dSignal, "probe": "x10"},
         },
         "host_git": gitHash(),
         "note": args.note,

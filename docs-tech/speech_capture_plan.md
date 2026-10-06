@@ -92,7 +92,7 @@ Anything that fails any of these tests is a gap in the datasheet.
 - **The audio stage loads TP2.** It is not a pure 1 K load: C1 and R2 4K7 make the TP2 voltage depend on recent samples. A first-order model with a pole at 294 Hz (the C1 corner is 279 Hz) cuts the residual from 8.6 mV to 1.3 mV rms. For DAC characterisation, remove C1 so TP2 sees only the 1 K. Alternatively, model the network in post-processing.
 - **Repeats are not bit-identical.** Repeats of "B" match exactly for the first ~1170 samples, then differ by ±1–2. Words with unvoiced sounds ("C", "ACORN") differ by up to ±26 from the first unvoiced frame onwards. This is consistent with a free-running noise generator that Speak does not reset. The delay from Speak to the first sample also varies: 6 and 25 samples were seen, and 25 samples is one interpolation period. Both are emulator-relevant findings, covered in §11.
 
-Still to determine: which ROMCLK edge each `I/O` bit lines up with.
+**Clock-edge alignment (2026-10-06, Phase 1 complete).** Every `T11` and `I/O` transition follows a ROMCLK **rising** edge. `I/O` rises 215 ns after it and `T11` rises 490 ns after it, each with a spread of 8 ns or less. ROMCLK measures 160.0005 kHz at 50.6 % duty. The DAC steps at the start of slot 1. `I/O` carries the 10-bit code before the DAC clips it (codes up to +134 were seen). The reference datasheet (`tms5220_reference_datasheet/`, §2, §8.2, §8.4, §9.5, §11.2 and Appendix A) gives the full results, with the captures cited.
 
 ## 3. Capture strategy: three layers per utterance
 
@@ -142,7 +142,7 @@ The PicoScope records all four output-side signals on one timebase: the DAC volt
 - **No level shifting is needed.** `T11` and `I/O` swing from −5 V to +5 V. That is fine for the scope's inputs (use the ±10 V or ±20 V range on Ch B and Ch C), but it would need clamping before it could reach a Pico pin.
 - **The rates are easy.** `I/O` changes at most once per 6.25 µs bit time (160 kHz). Streaming all four channels at 1–2 MS/s each gives 6–12 scope samples per bit, which is plenty for software decoding.
 - **Digital and analogue line up.** Every decoded sample can be checked directly against the DAC step on Ch A for the same 125 µs period.
-- **ROMCLK is not recorded.** The clock is crystal-derived and exact, so the 20 bit times in each sample can be located from the `T11` edge alone. ROMCLK (TP1) is needed only once, while working out which clock edge each `I/O` bit lines up with (Phase 1).
+- **ROMCLK is not recorded.** The clock is crystal-derived and exact, so the 20 bit times in each sample can be located from the `T11` edge alone. ROMCLK (TP1) was captured once, in Phase 1, to establish the clock-edge alignment (§2). `tools/capture.py --d-signal romclk` repeats that capture if it is ever needed.
 
 ## 5. Hardware changes
 
@@ -179,6 +179,7 @@ captures/<prom>/<word>/
 
   # Original capture format: written once at capture time, never modified
   raw/scope_raw.npz   # raw PicoScope ADC streams (Ch A-D) + range/offset/timebase
+                      #   (committed as scope_raw.npz.zip, see "Where it is stored")
   raw/vsm_trace.bin   # layer 1: every VSM command and returned bit, with timestamps
 
   # Readable formats: regenerated from raw/ by the post-processing scripts
@@ -194,7 +195,7 @@ The `raw/` files are the record of what was measured. The `scope_raw.npz` layout
 
 ### WAV conventions
 
-- **`samples.wav`:** 16-bit signed PCM, one WAV sample per chip sample, no resampling. The header records the nominal rate (8000 Hz). The *measured* rate goes in the JSON. The chip's native value goes in the low bits, and the bit width and scaling are documented in the JSON. A WAV like this is bit-exact, plays in any tool, and diffs trivially against an emulator's output.
+- **`samples.wav`:** 16-bit signed PCM, one WAV sample per chip sample, no resampling. The header records the nominal rate (8000 Hz). The *measured* rate goes in the JSON. The chip's 10-bit code is left-justified (code × 64), so the chip's full scale is the WAV's full scale and the file plays at a normal level. The code is the sample shifted right by 6, and the bit width and scaling are documented in the JSON. (Storing the code in the low bits would be equally exact, but at about −48 dBFS it plays as near silence.) A WAV like this is bit-exact, plays in any tool, and diffs trivially against an emulator's output.
 - **`dac.wav`:** the same convention, built from the layer 3 recovered codes.
 - **`listen.wav`:** 48 kHz, optionally with the BBC filter applied. Nothing is computed from it. It is for ears only.
 - Avoid MP3, FLAC-with-resampling and any other processing in the reference files. FLAC is fine for archive size, because it is lossless.
@@ -211,7 +212,10 @@ Record at least:
 
 ### Where it is stored
 
-The raw scope data is large: four channels at 2 MS/s is about 8 MB per second of speech, so a full PROM with repeats runs to gigabytes. Keep the scripts, manifests, `prom.json`, `index.md`, the frame and sample CSVs and the bit-exact WAVs in the repo. Publish the `raw/` directories and the full WAV sets as release archives (or Git LFS), with their hashes recorded in the repo.
+The raw scope data is large. Four channels at 2 MS/s is about 8 MB per second of speech uncompressed, so a full PROM with repeats runs to gigabytes. Zip compression brings that down by about 10× (the Phase 1 captures shrank from 305 MB to 26 MB), because the digital channels compress well. There are two kinds of capture:
+
+- **Evidence captures** live in `captures/phase<N>/<id>/`, are cited by the datasheet, and are **committed to the repo**. The raw file is committed as `raw/scope_raw.npz.zip`: a zip that holds the original `scope_raw.npz` unchanged, so its SHA-256 still matches the evidence index. The tools read the zip directly, and `.gitignore` excludes the unzipped `.npz`. Keep each phase's evidence to a few tens of MB.
+- **PROM corpus captures** (Phases 7 and 10) live in `captures/corpus/<prom>/` and are **kept local for now**. The whole directory is git-ignored. How to publish them (release archives, Git LFS or elsewhere) is decided in Phase 12. Until then, the repo holds the scripts, manifests, `prom.json`, `index.md` and the hashes of the local raw files, so the local copies can be checked. Back up the local corpus separately, because it is the only copy.
 
 ## 7. Automation architecture
 
@@ -329,7 +333,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 
 | Phase | Depends on | Status |
 |---|---|---|
-| 1. Bench bring-up and signal identification | — | Mostly done |
+| 1. Bench bring-up and signal identification | — | Done |
 | 2. Measurement hardware | 1 | Not started |
 | 3. Firmware instrumentation | 1 | Started |
 | 4. Host tooling | 1, 3 | Started |
@@ -351,11 +355,15 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - The `I/O` format decoded (10 bits, LSB first, slots 2–11).
   - The DAC update timing measured.
   - The audio stage's loading of TP2 identified (§2).
-- **Remaining:**
-  - Capture ROMCLK once in place of `SCOPE_TRIG`, to find which clock edge each `I/O` bit lines up with.
-  - Start the datasheet with the clock, pin-function and `I/O` format sections.
+  - The ROMCLK edge alignment: all `T11` and `I/O` edges follow ROMCLK rising edges (§2).
+  - The first datasheet sections, drafted in `tms5220_reference_datasheet/`: the system clock (§2, Appendix A), the DAC timing (§8.2), the serial sample output (§8.4), the measured output signals (§9.5) and the pin functions (§11.2). An evidence index (`evidence/README.md`) lists captures p1-01 to p1-03 with their hashes. The captures themselves are committed in `captures/phase1/`, with the raw data zipped (§6).
+  - `tools/edge_timing.py`, which measures every edge relative to `T11` and ROMCLK.
 - **Delivers:** the findings in §2, and the first datasheet sections.
 - **Done when:** those datasheet sections are drafted, with their captures cited.
+- **Status:** done (2026-10-06). Handed on:
+  - The DAC transfer function, including the jump between codes −1 and 0 → Phase 2.
+  - The code resting at 0 rather than −1 between back-to-back words → Phase 5.
+  - The mapping from slots to TI's bit times T1–T20, which so far is inferred from the pin name only → Phase 8.
 
 ### Phase 2: Measurement hardware
 
@@ -477,5 +485,5 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
 ### Phase 12: Publish
 
 - **Goal:** release version 1.0.
-- **Tasks:** do a final pass through the datasheet, including the change log against the original. Build the release archives of the raw data (§6). Tag the datasheet, data set, emulator, tools and test vectors together.
+- **Tasks:** do a final pass through the datasheet, including the change log against the original. Decide how the local PROM corpus captures are published (§6), and publish them. Tag the datasheet, data set, emulator, tools and test vectors together.
 - **Done when:** all three acceptance tests in §1.5 pass on the frozen data set, and the release is published.

@@ -17,6 +17,10 @@
     SPDX-License-Identifier: GPL-3.0-or-later
 """
 
+import io
+import os
+import zipfile
+
 import numpy as np
 
 CHANNELS = "abcd"
@@ -27,10 +31,20 @@ DATA_SLOTS = range(2, 12)
 DAC_WINDOW = (12e-6, 128e-6)
 
 
+def openRaw(path):
+    """Opens scope_raw.npz, or the archived copy scope_raw.npz.zip next to it
+    (the zip holds the original file unchanged)."""
+    if not os.path.exists(path) and os.path.exists(path + ".zip"):
+        with zipfile.ZipFile(path + ".zip") as z:
+            return np.load(io.BytesIO(z.read(os.path.basename(path))))
+    return np.load(path)
+
+
 def loadRaw(path):
-    """Returns (sample interval, [volts per channel A-D]) from scope_raw.npz.
-    Thresholds are applied at the scope input (probe attenuation is not removed)."""
-    raw = np.load(path)
+    """Returns (sample interval, [volts per channel A-D]) from scope_raw.npz
+    (or its .zip). Thresholds are applied at the scope input (probe
+    attenuation is not removed)."""
+    raw = openRaw(path)
     interval = float(raw["interval"])
     volts = [raw[ch] / float(raw["maxAdc"]) * raw["range"][i] - raw["offset"][i]
              for i, ch in enumerate(CHANNELS)]
