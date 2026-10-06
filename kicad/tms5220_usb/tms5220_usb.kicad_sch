@@ -616,6 +616,249 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Transistor_BJT:BC557"
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
+			(property "Reference" "Q"
+				(at 5.08 1.905 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "BC557"
+				(at 5.08 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" "Package_TO_SOT_THT:TO-92_Inline"
+				(at 5.08 -1.905 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+						(italic yes)
+					)
+					(justify left)
+				)
+			)
+			(property "Datasheet" "https://www.onsemi.com/pub/Collateral/BC556BTA-D.pdf"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Description" "0.1A Ic, 45V Vce, PNP Small Signal Transistor, TO-92"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Sim.Device" "PNP"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Sim.Pins" "1=C 2=B 3=E"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_keywords" "PNP Transistor"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "ki_fp_filters" "TO?92*"
+				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(symbol "BC557_0_1"
+				(polyline
+					(pts
+						(xy -2.54 0) (xy 0.635 0)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 1.905) (xy 0.635 -1.905)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 0.635) (xy 2.54 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.635 -0.635) (xy 2.54 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 1.27 0)
+					(radius 2.8194)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.286 -1.778) (xy 1.778 -2.286) (xy 1.27 -1.27) (xy 2.286 -1.778)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+			)
+			(symbol "BC557_1_1"
+				(pin passive line
+					(at 2.54 5.08 270)
+					(length 2.54)
+					(name "C"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -5.08 0 0)
+					(length 2.54)
+					(name "B"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name "E"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "power:+5V"
 			(power global)
 			(pin_numbers
@@ -1773,6 +2016,17 @@
 		)
 		(uuid "a59bd12e-deae-4147-82f4-bb549b8772fe")
 	)
+	(text "OSC level shifter:\nOSC must swing between the TMS5220 rails (-5 V to +5 V).\nU5D high: Q1 off, R26 pulls OSC to -5 V. U5D low: Q1 on, OSC = +5 V."
+		(exclude_from_sim no)
+		(at 177.8 157.48 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "b1d00251-702d-42ab-85a1-ef60bfcd41f1")
+	)
 	(text "Ch A: TMS5220 SPEAKER (pin 8) across R2 1K.\nRaw DAC output before the audio stage, 0-1.5 V. DC couple."
 		(exclude_from_sim no)
 		(at 205.74 43.18 0)
@@ -1785,10 +2039,16 @@
 		(uuid "b7d0356b-822e-4e1a-8ebf-4b35bbf4d161")
 	)
 	(junction
-		(at 105.41 144.78)
+		(at 77.47 142.24)
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "162ec37c-6e55-4b27-af1f-c7a4780ec5a9")
+	)
+	(junction
+		(at 193.04 130.81)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "23db6809-629d-402e-9598-0bd66750433e")
 	)
 	(junction
 		(at 29.21 168.91)
@@ -1813,6 +2073,18 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "b432758c-12d7-4fd9-b83a-197057ddede6")
+	)
+	(junction
+		(at 203.2 138.43)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c681429e-2b1d-4d4a-86cd-c9fed0de5625")
+	)
+	(junction
+		(at 203.2 120.65)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "f6b66b3d-a31a-4b7c-8247-9dd2257af88a")
 	)
 	(no_connect
 		(at 114.3 91.44)
@@ -1914,6 +2186,26 @@
 	)
 	(wire
 		(pts
+			(xy 60.96 96.52) (xy 63.5 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1b8c2666-1e57-432f-921f-a1ca18ad38b8")
+	)
+	(wire
+		(pts
+			(xy 177.8 130.81) (xy 182.88 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1dc76f0b-6f1a-4ce5-b971-94f9a00bf932")
+	)
+	(wire
+		(pts
 			(xy 101.6 101.6) (xy 101.6 102.87)
 		)
 		(stroke
@@ -1934,7 +2226,7 @@
 	)
 	(wire
 		(pts
-			(xy 107.95 147.32) (xy 105.41 147.32)
+			(xy 80.01 144.78) (xy 77.47 144.78)
 		)
 		(stroke
 			(width 0)
@@ -1971,6 +2263,26 @@
 			(type default)
 		)
 		(uuid "2476ac8b-c5b2-46d9-bf49-f18fcc8829ff")
+	)
+	(wire
+		(pts
+			(xy 203.2 120.65) (xy 203.2 125.73)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "24fd1dca-981b-4202-99ba-02644314e346")
+	)
+	(wire
+		(pts
+			(xy 193.04 130.81) (xy 195.58 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "28de4182-f5ce-462a-98bc-49ea46c4a05e")
 	)
 	(wire
 		(pts
@@ -2054,7 +2366,7 @@
 	)
 	(wire
 		(pts
-			(xy 111.76 134.62) (xy 105.41 134.62)
+			(xy 83.82 132.08) (xy 77.47 132.08)
 		)
 		(stroke
 			(width 0)
@@ -2124,7 +2436,7 @@
 	)
 	(wire
 		(pts
-			(xy 105.41 144.78) (xy 107.95 144.78)
+			(xy 77.47 142.24) (xy 80.01 142.24)
 		)
 		(stroke
 			(width 0)
@@ -2151,6 +2463,26 @@
 			(type default)
 		)
 		(uuid "815e9a4a-afc7-471f-ba9b-225674b73f4b")
+	)
+	(wire
+		(pts
+			(xy 203.2 138.43) (xy 210.82 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "84a38cd8-4f15-45fa-98ef-f94916192acf")
+	)
+	(wire
+		(pts
+			(xy 193.04 120.65) (xy 203.2 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8affe138-0f71-4d50-ab71-12d22f927d41")
 	)
 	(wire
 		(pts
@@ -2214,6 +2546,16 @@
 	)
 	(wire
 		(pts
+			(xy 203.2 146.05) (xy 203.2 148.59)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "942e9ba6-5357-4864-ba30-0a62bc66d5bb")
+	)
+	(wire
+		(pts
 			(xy 91.44 113.03) (xy 96.52 113.03)
 		)
 		(stroke
@@ -2231,6 +2573,26 @@
 			(type default)
 		)
 		(uuid "94d64f37-d669-4cda-8746-7c83c9a3da4b")
+	)
+	(wire
+		(pts
+			(xy 203.2 135.89) (xy 203.2 138.43)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9b4f79a7-4403-4d4c-a5b7-efb8b4a953f4")
+	)
+	(wire
+		(pts
+			(xy 190.5 130.81) (xy 193.04 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9d855f3e-8666-4a2c-9893-1c53e6269a5b")
 	)
 	(wire
 		(pts
@@ -2274,7 +2636,7 @@
 	)
 	(wire
 		(pts
-			(xy 105.41 134.62) (xy 105.41 144.78)
+			(xy 77.47 132.08) (xy 77.47 142.24)
 		)
 		(stroke
 			(width 0)
@@ -2314,13 +2676,33 @@
 	)
 	(wire
 		(pts
-			(xy 101.6 144.78) (xy 105.41 144.78)
+			(xy 83.82 96.52) (xy 81.28 96.52)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b7d5f278-bfa4-42c2-a58c-bb9a452abb09")
+	)
+	(wire
+		(pts
+			(xy 73.66 142.24) (xy 77.47 142.24)
 		)
 		(stroke
 			(width 0)
 			(type default)
 		)
 		(uuid "b83b25c8-5835-4cc2-8dd6-df394f3ee1b5")
+	)
+	(wire
+		(pts
+			(xy 193.04 128.27) (xy 193.04 130.81)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b858c5f4-6642-4873-8f24-d2e34e8b3646")
 	)
 	(wire
 		(pts
@@ -2344,7 +2726,7 @@
 	)
 	(wire
 		(pts
-			(xy 63.5 144.78) (xy 71.12 144.78)
+			(xy 35.56 142.24) (xy 43.18 142.24)
 		)
 		(stroke
 			(width 0)
@@ -2404,16 +2786,6 @@
 	)
 	(wire
 		(pts
-			(xy 60.96 96.52) (xy 68.58 96.52)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e11ec86e-7d60-4d51-a969-43fc5598c18c")
-	)
-	(wire
-		(pts
 			(xy 124.46 66.04) (xy 124.46 39.37)
 		)
 		(stroke
@@ -2454,16 +2826,6 @@
 	)
 	(wire
 		(pts
-			(xy 76.2 96.52) (xy 83.82 96.52)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "eca5e8be-727a-482f-a492-3bf6d6d6d0dc")
-	)
-	(wire
-		(pts
 			(xy 83.82 73.66) (xy 60.96 73.66)
 		)
 		(stroke
@@ -2474,7 +2836,7 @@
 	)
 	(wire
 		(pts
-			(xy 105.41 147.32) (xy 105.41 149.86)
+			(xy 77.47 144.78) (xy 77.47 147.32)
 		)
 		(stroke
 			(width 0)
@@ -2491,6 +2853,16 @@
 			(type default)
 		)
 		(uuid "f7db1260-c254-48b2-8d53-cd542f761951")
+	)
+	(wire
+		(pts
+			(xy 203.2 118.11) (xy 203.2 120.65)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f7f4c2d6-cada-4a5b-9e98-76386c0982bf")
 	)
 	(wire
 		(pts
@@ -2511,6 +2883,16 @@
 			(justify left bottom)
 		)
 		(uuid "236f9724-6cab-4aa5-99ef-a6a18a56b49c")
+	)
+	(label "OSC_PICO"
+		(at 63.5 96.52 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "61d15c10-a0a1-4040-9569-7b904b3e0cd9")
 	)
 	(label "SCOPE_TRIG"
 		(at 180.34 76.2 180)
@@ -2542,6 +2924,16 @@
 		)
 		(uuid "a2a2e57a-43f3-433d-b0ac-fea9f5f053c8")
 	)
+	(label "OSC_PICO"
+		(at 177.8 130.81 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "ad773ea4-486b-4a68-8558-ce8165678825")
+	)
 	(label "IO"
 		(at 180.34 66.04 180)
 		(effects
@@ -2561,6 +2953,26 @@
 			(justify left bottom)
 		)
 		(uuid "d3b051cf-d4a9-4fc3-a8d3-323ea06734f4")
+	)
+	(label "OSC"
+		(at 210.82 138.43 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f31402f9-cdcf-44b8-b2d4-4c7a6207cb8b")
+	)
+	(label "OSC"
+		(at 81.28 96.52 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right bottom)
+		)
+		(uuid "fd0ab1cc-4b77-4d1f-ac5d-f81187c1ac18")
 	)
 	(global_label "SPEAKER"
 		(shape output)
@@ -2588,7 +3000,7 @@
 	)
 	(global_label "SPEAKER"
 		(shape input)
-		(at 63.5 144.78 180)
+		(at 35.56 142.24 180)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -2598,7 +3010,7 @@
 		)
 		(uuid "b705c836-7f76-48a8-8657-bea9ff9d1bf9")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 52.1087 144.78 0)
+			(at 24.1687 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -2788,6 +3200,91 @@
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
 					(reference "U1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Transistor_BJT:BC557")
+		(at 200.66 130.81 0)
+		(mirror x)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "1c45e450-102a-478d-a3ad-e34e8685a7ea")
+		(property "Reference" "Q1"
+			(at 205.74 129.54 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "BC557"
+			(at 205.74 132.08 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Package_TO_SOT_THT:TO-92_Inline"
+			(at 200.66 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 200.66 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "0.1A Ic, 45V Vce, PNP Small Signal Transistor, TO-92"
+			(at 200.66 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "5d2b1d57-d802-49c4-972d-cf11e1ce366f")
+		)
+		(pin "2"
+			(uuid "92d89322-0b91-4146-a568-29f939a14c6a")
+		)
+		(pin "3"
+			(uuid "4330bbe8-8325-4f7d-8c37-f5539f5ee70d")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "Q1")
 					(unit 1)
 				)
 			)
@@ -3189,6 +3686,162 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+5V")
+		(at 203.2 118.11 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "450853e4-ba6f-40e0-a98e-06a08b5ba213")
+		(property "Reference" "#PWR046"
+			(at 203.2 121.92 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "+5V"
+			(at 203.2 114.3 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 203.2 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 203.2 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+5V\""
+			(at 203.2 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "9b7c6c72-260d-41f3-a5e1-41fd297847a4")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "#PWR046")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 186.69 130.81 90)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "4a051249-2f1d-49d8-8e97-343eb289f18e")
+		(property "Reference" "R1"
+			(at 186.69 128.27 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "10K"
+			(at 186.69 133.35 90)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 186.69 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 186.69 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 186.69 130.81 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "2443b637-6f26-4852-93ec-5d70ab7d85d4")
+		)
+		(pin "2"
+			(uuid "7c838680-0e6b-4dd1-95d2-0a69bc0f84dd")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "R1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:GND")
 		(at 226.06 88.9 0)
 		(unit 1)
@@ -3422,6 +4075,87 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 203.2 142.24 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "64c76a1d-5e33-49e7-aca6-b7a5accaa3ae")
+		(property "Reference" "R26"
+			(at 205.74 140.97 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "1K"
+			(at 205.74 143.51 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" ""
+			(at 203.2 142.24 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 203.2 142.24 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 203.2 142.24 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "5ee81bd5-49d7-4224-993b-b93086825b77")
+		)
+		(pin "2"
+			(uuid "722623a6-07fd-40db-8901-2074917775ab")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "R26")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector:TestPoint")
 		(at 190.5 45.72 0)
 		(unit 1)
@@ -3494,6 +4228,87 @@
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
 					(reference "TP2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 193.04 124.46 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "6b4adb28-90d3-4b52-be15-c61d87f913b7")
+		(property "Reference" "R25"
+			(at 190.5 123.19 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "3K3"
+			(at 190.5 125.73 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 193.04 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 193.04 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 193.04 124.46 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "09a10218-4736-4503-a2cb-34d2bfcdf516")
+		)
+		(pin "2"
+			(uuid "c12fc9ae-d5dd-427f-908e-8e3a03e55c7c")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "R25")
 					(unit 1)
 				)
 			)
@@ -3578,7 +4393,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 105.41 149.86 0)
+		(at 77.47 147.32 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3589,7 +4404,7 @@
 		(fields_autoplaced yes)
 		(uuid "73daedf2-1587-4319-bf79-9ab616d06167")
 		(property "Reference" "#PWR07"
-			(at 105.41 156.21 0)
+			(at 77.47 153.67 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3600,7 +4415,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 105.41 154.94 0)
+			(at 77.47 152.4 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3610,7 +4425,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 105.41 149.86 0)
+			(at 77.47 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3621,7 +4436,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 105.41 149.86 0)
+			(at 77.47 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3632,7 +4447,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 105.41 149.86 0)
+			(at 77.47 147.32 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3733,85 +4548,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R")
-		(at 72.39 96.52 90)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "7f7621d4-45cc-4c8a-8945-4c3b3f51bf6e")
-		(property "Reference" "R1"
-			(at 70.104 94.234 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "100R"
-			(at 75.184 94.234 90)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 72.39 96.52 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 72.39 96.52 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 72.39 96.52 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "cac2628f-f720-4eac-9e15-8dfd317e489e")
-		)
-		(pin "2"
-			(uuid "ba51ca6e-cff4-452f-9327-b04595832c50")
-		)
-		(instances
-			(project "tms5220_usb"
-				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
-					(reference "R1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+5V")
 		(at 99.06 53.34 0)
 		(unit 1)
@@ -3891,7 +4627,7 @@
 	)
 	(symbol
 		(lib_id "Connector_Generic:Conn_01x02")
-		(at 113.03 144.78 0)
+		(at 85.09 142.24 0)
 		(unit 1)
 		(body_style 1)
 		(exclude_from_sim no)
@@ -3902,7 +4638,7 @@
 		(fields_autoplaced yes)
 		(uuid "8bb7967c-9c60-43ce-a53f-b4077ea35f2b")
 		(property "Reference" "J2"
-			(at 115.57 144.7799 0)
+			(at 87.63 142.2399 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3913,7 +4649,7 @@
 			)
 		)
 		(property "Value" "Audio out"
-			(at 115.57 147.3199 0)
+			(at 87.63 144.7799 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -3924,7 +4660,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 113.03 144.78 0)
+			(at 85.09 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3935,7 +4671,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 113.03 144.78 0)
+			(at 85.09 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -3946,7 +4682,7 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x02, script generated (kicad-library-utils/schlib/autogen/connector/)"
-			(at 113.03 144.78 0)
+			(at 85.09 142.24 0)
 			(hide yes)
 			(show_name no)
 			(do_not_autoplace no)
@@ -4829,6 +5565,83 @@
 			)
 		)
 	)
+	(symbol
+		(lib_id "power:-5V")
+		(at 203.2 148.59 180)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "fffcfc77-a07d-470c-931c-118665486616")
+		(property "Reference" "#PWR047"
+			(at 203.2 144.78 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "-5V"
+			(at 203.2 152.4 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 203.2 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 203.2 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"-5V\""
+			(at 203.2 148.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "ed79fd3d-2aa6-4f5f-a206-5d53e0206ad3")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb"
+					(reference "#PWR047")
+					(unit 1)
+				)
+			)
+		)
+	)
 	(sheet
 		(at 33.02 29.21)
 		(size 27.94 77.47)
@@ -5076,7 +5889,7 @@
 		)
 	)
 	(sheet
-		(at 71.12 142.24)
+		(at 43.18 139.7)
 		(size 30.48 5.08)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5092,7 +5905,7 @@
 		)
 		(uuid "ace3b3a9-8e6e-485d-94c6-a8d9ad4b8797")
 		(property "Sheetname" "audio_output"
-			(at 71.12 141.5284 0)
+			(at 43.18 138.9884 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5103,7 +5916,7 @@
 			)
 		)
 		(property "Sheetfile" "audio_output.kicad_sch"
-			(at 71.12 147.9046 0)
+			(at 43.18 145.3646 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5114,7 +5927,7 @@
 			)
 		)
 		(pin "5220_in" input
-			(at 71.12 144.78 180)
+			(at 43.18 142.24 180)
 			(uuid "95504af7-1969-43bd-b88e-4f1a319b44b3")
 			(effects
 				(font
@@ -5124,7 +5937,7 @@
 			)
 		)
 		(pin "Audio_out" output
-			(at 101.6 144.78 0)
+			(at 73.66 142.24 0)
 			(uuid "f252c073-86a3-4f87-8f51-76af45f30cc4")
 			(effects
 				(font
@@ -5142,7 +5955,7 @@
 		)
 	)
 	(sheet
-		(at 111.76 132.08)
+		(at 83.82 129.54)
 		(size 25.4 5.08)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -5158,7 +5971,7 @@
 		)
 		(uuid "e20f87ad-0044-44a9-b933-d9a27ef58e88")
 		(property "Sheetname" "Power Amp"
-			(at 111.76 131.3684 0)
+			(at 83.82 128.8284 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5169,7 +5982,7 @@
 			)
 		)
 		(property "Sheetfile" "poweramp.kicad_sch"
-			(at 111.76 137.7446 0)
+			(at 83.82 135.2046 0)
 			(show_name no)
 			(do_not_autoplace no)
 			(effects
@@ -5180,7 +5993,7 @@
 			)
 		)
 		(pin "Audio_in" input
-			(at 111.76 134.62 180)
+			(at 83.82 132.08 180)
 			(uuid "2212df61-0f94-4450-8dc9-caa7cf04ff87")
 			(effects
 				(font

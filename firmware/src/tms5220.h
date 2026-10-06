@@ -24,7 +24,9 @@
 #define TMS5220_STATUS_BL           0x40  // Buffer Low
 #define TMS5220_STATUS_BE           0x20  // Buffer Empty
 
-// Nominal OSC frequency: 640kHz gives an 8kHz sample rate (OSC / 80)
+// OSC frequency: 640kHz gives ROMCLK = 160kHz and an 8kHz sample rate.
+// OSC must swing between the TMS5220's supply rails (-5V to +5V), so the
+// PWM output needs a level shifter (as on the Atari Star Wars sound PCB).
 #define TMS5220_CLOCK_HZ            640000
 
 // Start the OSC clock on PIN_OSC_CLK; returns the actual frequency in Hz.

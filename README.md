@@ -35,7 +35,7 @@ The flake requires Nix with flakes enabled (`experimental-features = nix-command
 
 The dev shell also provides the Pico SDK, the Arm GCC toolchain, CMake/Ninja, `picotool` and Raspberry Pi's OpenOCD fork (which supports the RP2350).
 
-The TMS5220 has no oscillator of its own on this board. The firmware runs the Pico 2 at 144 MHz and generates the TMS5220's 640 kHz clock (an 8 kHz sample rate) with PWM on GPIO22, buffered to 5 V by U5D.
+The TMS5220 has no oscillator of its own on this board. The firmware runs the Pico 2 at 144 MHz and generates the TMS5220's 640 kHz clock (an 8 kHz sample rate) with PWM on GPIO22. The clock is buffered to 5 V by U5D, then level-shifted by a PNP transistor (Q1) so that OSC swings between −5 V and +5 V, as on Atari's Star Wars sound board. A 0–5 V clock does not work.
 
 The test firmware in `firmware/` makes the Pico 2 emulate the Acorn speech PHROM (TMS6100) on core 1, with the PHROM image held in SRAM. It then repeatedly asks the TMS5220 to say "Acorn" (word 160, VSM address `0x3CBB6`). The PHROM data comes from [TMS6100-Emulator](https://github.com/simoninns/TMS6100-Emulator). The firmware reports progress, status and VSM activity over USB serial, and the on-board LED lights while the TMS5220 is talking.
 
