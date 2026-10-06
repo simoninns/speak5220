@@ -58,6 +58,7 @@ static void printStats(void)
 static void sayWord(const word_t *word)
 {
     gpio_put(PIN_LED, 1);
+    gpio_put(PIN_SCOPE_TRIG, 1);
     if (!tms5220Speak(word->address)) printf("  Speak: READY timeout\n");
 
     // Poll the status register until Talk Status clears
@@ -77,6 +78,7 @@ static void sayWord(const word_t *word)
             break;
         }
     }
+    gpio_put(PIN_SCOPE_TRIG, 0);
     gpio_put(PIN_LED, 0);
 
     int64_t elapsedMs = absolute_time_diff_us(start, get_absolute_time()) / 1000;
@@ -91,6 +93,10 @@ int main(void)
 
     gpio_init(PIN_LED);
     gpio_set_dir(PIN_LED, GPIO_OUT);
+
+    // PicoScope trigger: high from just before Speak until Talk Status clears
+    gpio_init(PIN_SCOPE_TRIG);
+    gpio_set_dir(PIN_SCOPE_TRIG, GPIO_OUT);
 
     tms6100Start();
     tms5220Init();

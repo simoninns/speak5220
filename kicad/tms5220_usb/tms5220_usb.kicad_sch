@@ -1972,7 +1972,7 @@
 		)
 		(uuid "06737a3a-6149-4222-9a74-8598f52c595c")
 	)
-	(text "Ch C: TMS5220 I/O (pin 9), serial data out."
+	(text "Ch C (x10): TMS5220 I/O (pin 9), serial data out."
 		(exclude_from_sim no)
 		(at 205.74 63.5 0)
 		(effects
@@ -1983,7 +1983,7 @@
 		)
 		(uuid "159fedac-3438-4c8b-9d37-0b451d7c2aad")
 	)
-	(text "Ch D: Pico GPIO26 capture marker.\nUse as the trigger source."
+	(text "Ch D (x10): Pico GPIO26 capture marker.\nUse as the trigger source."
 		(exclude_from_sim no)
 		(at 205.74 73.66 0)
 		(effects
@@ -2005,7 +2005,7 @@
 		)
 		(uuid "9e51c2ea-f1ae-4fb1-b038-8136d192ba07")
 	)
-	(text "Ch B: TMS5220 T11 (pin 7), sample sync."
+	(text "Ch B (x10): TMS5220 T11 (pin 7), sample sync."
 		(exclude_from_sim no)
 		(at 205.74 53.34 0)
 		(effects
@@ -2027,7 +2027,7 @@
 		)
 		(uuid "b1d00251-702d-42ab-85a1-ef60bfcd41f1")
 	)
-	(text "Ch A: TMS5220 SPEAKER (pin 8) across R2 1K.\nRaw DAC output before the audio stage, 0-1.5 V. DC couple."
+	(text "Ch A (x1): TMS5220 SPEAKER (pin 8) across R2 1K.\nRaw DAC output before the audio stage, 0-1.5 V. DC couple."
 		(exclude_from_sim no)
 		(at 205.74 43.18 0)
 		(effects

@@ -34,3 +34,6 @@ Thumbs.db
 
 # Firmware build output
 firmware/build/
+
+# Capture output (raw scope data is published separately)
+captures/

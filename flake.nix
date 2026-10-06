@@ -15,13 +15,21 @@
         let
           # Pico SDK with its submodules (TinyUSB is needed for USB stdio)
           pico-sdk = pkgs.pico-sdk.override { withSubmodules = true; };
+
+          # Capture and analysis tools (tools/)
+          python = pkgs.python3.withPackages (p: [
+            p.numpy
+            p.scipy
+            p.matplotlib
+            p.pyserial
+          ]);
         in
         {
           default = pkgs.mkShell {
             packages = with pkgs; [
               # Hardware design
               kicad
-              python3
+              python
               git
 
               # Raspberry Pi Pico 2 (RP2350) firmware
@@ -35,6 +43,10 @@
 
             PICO_SDK_PATH = "${pico-sdk}/lib/pico-sdk";
             picotool_DIR = "${pkgs.picotool}/lib/cmake/picotool";
+
+            # Runtime dependencies of PicoScope 7's libps3000a.so, preloaded by
+            # tools/ps3000a.py (the driver itself comes from the PicoScope install)
+            PICO_DRIVER_DEPS = "${pkgs.libusb1}/lib/libusb-1.0.so.0:${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6";
 
             shellHook = ''
               if [ ! -e kicad/libraries/ki-lime-pi-pico/MCU_Module_RaspberryPi_Pico.kicad_sym ]; then
