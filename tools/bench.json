@@ -1,0 +1,18 @@
+{
+  "comment": "Bench details recorded in every capture.json by run.py (plan section 6). Update this file whenever the chip or the board changes; null means not recorded yet.",
+  "chip": {
+    "part": "TMS5220NL",
+    "marking": "TMS5220NL / DEP 8423",
+    "date_code": "8423",
+    "revision": "TMS5220 (not 5220C)"
+  },
+  "board": {
+    "build": "breadboard, wired to the schematic in kicad/ (git hash in host_git)"
+  },
+  "supplies_v": {
+    "+5": 4.99466,
+    "-5": -5.00021,
+    "measured": "2026-10-06"
+  },
+  "temperature_c": null
+}

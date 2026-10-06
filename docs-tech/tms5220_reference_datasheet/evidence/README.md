@@ -61,7 +61,7 @@ The phrase captures have no `word<N>` WAV and CSV files. `tools/decode.py` makes
 
 ## Phase 3 captures (2026-10-06)
 
-Board: as Phase 2. TP2 is loaded by R2 alone (996 Ω), with the C1 link removed. Firmware: the command firmware of Phase 3. It was built from the uncommitted working tree on top of `9fcb313`, so `capture.json` records it as `9fcb313-dirty`.
+Board: as Phase 2, except that **the C1 link was connected**, so the audio stage also loaded TP2. `capture.json` originally recorded the default `measure` configuration; Phase 4's layer 3 check found the audio stage's history in TP2 (see "Phase 4 captures"), and the three scope captures' `board` entries were corrected to `audio` on 2026-10-06, with the original value kept as `recorded_as`. The DAC levels of these captures are therefore not reference data; their traces and `I/O` samples are unaffected. Firmware: the command firmware of Phase 3. It was built from the uncommitted working tree on top of `9fcb313`, so `capture.json` records it as `9fcb313-dirty`.
 
 `tools/capture.py` drove each capture, with no manual steps:
 
@@ -95,3 +95,37 @@ python tools/pico.py trace-csv captures/phase3/p3-01_speak_acorn
 - **Where they differ.** The two VSM runs agree for their first two frames. Speak External differs from sample 11 onwards.
 
 So a repeat of one input path differs about as much as a change of path. Whether the paths are equivalent therefore has to wait until the start state is understood (Phase 5).
+
+## Phase 4 captures (2026-10-06)
+
+Board: as Phase 2, with the C1 link removed, so TP2 is loaded by R2 alone (996 Ω). The chip is a TMS5220NL marked `DEP 8423`; the supplies measured +4.995 V and −5.000 V (`tools/bench.json`). Firmware: the Phase 3 command firmware. It reports `9fcb313-dirty`, because it was built before the Phase 3 commit; its source differs from `9114160` only in a comment. Host tools: `9114160` plus the uncommitted Phase 4 tools.
+
+One runner command made the whole set, with no manual steps:
+
+```
+python tools/run.py acorn_phrom_a ACORN --takes 2 --path both --out captures/phase4 --zip
+```
+
+It wrote `captures/phase4/acorn_phrom_a/`: `prom.json`, `index.md`, and `160_acorn/` with `compare.json` and four take directories in the plan §6 layout. Each take was captured at 496 ns for 0.88 s, with probe D on `SCOPE_TRIG`, and with no reset before it. Every check in `tools/process.py` passed on every take (`capture.json`, `processed.checks`).
+
+| ID | Path | What it shows | SHA-256 of `scope_raw.npz` | SHA-256 of `vsm_trace.bin` |
+|---|---|---|---|---|
+| `p4-01` = `acorn_phrom_a/160_acorn/vsm01` | VSM Speak | 27 frames, 1152 bits read, one frame read every 25.000 ms (±0.12 µs). The first frame read 19.69 ms after `SCOPE_TRIG` rose | `c8f9ec9e36b53b229d6737e4a3b23d8bbff63b0d6567bf846057d252337497db` | `6df198ec7ad1b4e3a67ebf4829ccfdf5dd3a409f1cbb2b7e09e6f149e21b2417` |
+| `p4-02` = `…/vsm02` | VSM Speak | As p4-01, with the first frame read at 12.49 ms | `e96b29ee3e5251c181a0dea88e140039f0acd13d377d5675f6982544c1874637` | `365f9bdb30bf490740eccff89c9a48d2909380e79d5d284adfc6047fc4e912a5` |
+| `p4-03` = `…/ext01` | Speak External | The same 144 bytes; the bytes on the bus match the stream | `25584991e89da9db0658eb43e0f44f52b527c6030e121008dedfb6c4acf42d8c` | `d4226f543a104160ef64626e04d910709162da05f9b8de68132807a6575511fd` |
+| `p4-04` = `…/ext02` | Speak External | Repeat of p4-03 | `1e3b0e349bd4da595161ce3a8f1e18a5495f089163888e6166940476c09e4765` | `06a20f74a25e97ac2cb915330e4db18610d7afdce8e2834986ef65fe02e3ba2d` |
+
+Derived files in each take directory, all from `tools/process.py`: `vsm_trace.csv`, `frames.csv`, `samples.wav`, `samples.csv`, `dac.wav` and `listen.wav`. To regenerate them, and the comparison and index:
+
+```
+python tools/process.py captures/phase4/acorn_phrom_a/160_acorn/*/
+python tools/compare.py captures/phase4/acorn_phrom_a/160_acorn
+python tools/promindex.py captures/phase4/acorn_phrom_a
+```
+
+**What the set shows:**
+
+- **Layer 2 against layer 3.** The DAC voltage follows the Phase 2 table of the `I/O` codes to 2.2–2.3 mV rms, and 99.9 % of the codes recovered from it are within ±2 of `I/O` (62–71 % exactly). The fitted gain is 1.070–1.071: the DAC's scale is 7 % above the Phase 2 table (the idle level, code −1, is 0.635 V against 0.592 V in p2-01). The supplies were within 6 mV of nominal, so the cause is not known yet.
+- **The audio stage leaves a signature.** With the C1 link connected (a scratch run just before this set, and the Phase 3 captures), the same fit leaves 6.5–6.7 mV rms and a gain of 0.92–0.93. A first-order term for the audio stage's coupling network brings it down to 1.8–1.9 mV. This is how the Phase 3 board entries were found to be wrong.
+- **The start varies by most of a frame.** Speech began 219–398 samples after `SCOPE_TRIG` rose. In the VSM takes the first frame was read 19.69 ms and 12.49 ms after it (p3-01: 25.51 ms), while the time from the first frame read to Talk Status clearing was the same, 674.87 ms, in all three.
+- **Repeats differ as in Phase 3.** After alignment, each take differs from p4-01 by 3.1–3.5 codes rms. p4-02 first differs 946 samples after speech starts; both Speak External takes differ from sample 204. The frames parsed are identical in all four.

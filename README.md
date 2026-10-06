@@ -46,6 +46,12 @@ python tools/pico.py selftest    # upload, speak and trace, checking every resul
 
 The PHROM data comes from [TMS6100-Emulator](https://github.com/simoninns/TMS6100-Emulator). The on-board LED lights while the TMS5220 is talking.
 
+With the PicoScope connected, one command captures a word into a complete capture directory, with the readable files and checks (`tools/README.md`):
+
+```bash
+python tools/run.py acorn_phrom_a ACORN --takes 2 --path both
+```
+
 Build:
 
 ```bash
@@ -78,5 +84,7 @@ The Pico's USB serial port is `/dev/ttyACM1` here (`tools/pico.py` finds it by i
 - `kicad/tms5220_usb/` – KiCad project, including the project symbol library for the TMS5220 and TMS6100
 - `firmware/` – Raspberry Pi Pico 2 capture firmware (C, Pico SDK) and its host protocol (`PROTOCOL.md`)
 - `kicad/libraries/ki-lime-pi-pico/` – Ki-Lime Pi library submodule (Raspberry Pi Pico symbols, footprints and 3D models)
-- `tools/` – Python host tools: Pico control, PicoScope capture and analysis
+- `tools/` – Python host tools: the capture runner, Pico control, PicoScope capture and analysis
+- `proms/` – speech PROM manifests: image hashes, provenance and word tables
+- `captures/` – evidence captures cited by the reference datasheet (`captures/corpus/` is kept local)
 - `docs-tech/` – Datasheets and reference schematics

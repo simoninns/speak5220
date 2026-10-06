@@ -4,7 +4,7 @@ This datasheet describes the TMS5220 as measured on real hardware. It follows th
 
 The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. `../speech_capture_plan.md` describes how the measurements are made.
 
-**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). §4 and §6 hold early observations from the Phase 3 VSM traces. The other sections are placeholders and are filled in by later phases.
+**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). §4 and §6 hold early observations from the Phase 3 and Phase 4 VSM traces. The other sections are placeholders and are filled in by later phases.
 
 ## Conventions
 
@@ -55,6 +55,8 @@ Driving `OSC` from an external clock is covered in Appendix A.
 
 - **No read-ahead.** A Speak reads the VSM exactly up to the last bit of the stop code and no further. For ACORN that is 1152 bits, starting with a Dummy Read at the loaded address [p3-01, p3-03].
 - **Reset uses the VSM.** Every Reset command issues a Load Address and then a Dummy Read to the VSM, as the original's §6.6 says. This includes each `0xFF` byte of the initialisation sequence, which decodes as Reset (`X111XXXX`) [p3-01].
+- **One frame every 25 ms.** During a Speak, the chip reads each frame's bits in a burst, and the bursts start exactly 25.000 ms apart (within 0.12 µs, at the nominal clock) [p4-01, p4-02].
+- **The start is not fixed.** The first frame read came 25.51, 19.69 and 12.49 ms after the host started its Load Address and Speak sequence (`SCOPE_TRIG` rising), in three Speaks of the same word with no reset between them. The time from that first read to Talk Status clearing was the same in all three, 674.87 ms, which is 27 frames of 25 ms [p3-01, p4-01, p4-02]. This suggests that a Speak waits for a frame boundary of a timer that keeps running between words. Phase 5 tests this.
 
 ## 5. I/O structure
 
@@ -134,7 +136,7 @@ The step between −1 and 0 is **about six times a normal step**: 26–27 µA, o
 
 **Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3).
 
-**No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %.
+**No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %. Some hours later, after the chip had been power-cycled, the whole scale was 7 % higher (code −1 at 0.635 V against 0.592 V), with the supplies within 6 mV of nominal [p4-01 to p4-04]. The shape of the table still fitted to 2.2–2.3 mV rms. So the absolute current figures in this section can vary by at least 7 %; the cause (the chip, the load or the scope) is not known yet.
 
 ![TP2 against code into 996 ohm, its INL, and the residual against the previous sample](assets/fig_dac_transfer.png)
 
@@ -284,4 +286,6 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-06 | §8.3 | New: the `SPEAKER` current depends on the load (output resistance about 10–16 kΩ) | p2-01, p2-02, p2-04, p2-05, p2-06 |
 | 2026-10-06 | §11.2 | Pin 8: measured current scale | As §8.2 |
 | 2026-10-06 | §4 | New (early): no VSM read-ahead past the stop code; every Reset command issues a Load Address and a Dummy Read | p3-01, p3-03 |
+| 2026-10-06 | §4 | New (early): frames are read exactly 25 ms apart; the delay from Speak to the first frame read varies by most of a frame | p3-01, p4-01, p4-02 |
+| 2026-10-06 | §8.2 | The absolute DAC scale was 7 % higher on a later run; the table's shape was unchanged | p4-01 to p4-04 |
 | 2026-10-06 | §6 | New (early): Read Byte returns the VSM byte bit-reversed. Talk Status is set some time after Speak. How BE behaves outside Speak External, and at the end of a stream | p3-01, p3-02, p3-04 |

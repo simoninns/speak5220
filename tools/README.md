@@ -27,6 +27,77 @@ Every capture records the board configuration (`--board`, plan §5) and the TP2 
 | `measure-half` | R2 with a second 1K in parallel |
 | `audio` | R2 plus the audio stage (C1 connected). Not for DAC measurements |
 
+## Capturing PROM words
+
+`run.py` is the capture runner (plan §7). One command takes a PROM, words and a number of takes, and writes complete capture directories (plan §6):
+
+```
+python tools/run.py acorn_phrom_a ACORN                    # one take, VSM Speak
+python tools/run.py acorn_phrom_a 160 179 --takes 3 --path both
+python tools/run.py acorn_phrom_a all --takes 5            # the whole PROM
+python tools/run.py acorn_phrom_a --address 0x3CBB7        # a sweep point outside the word table
+python tools/prom.py list acorn_phrom_a                    # the word table
+```
+
+Words are given by number or by name. `--path` is `vsm` (Speak from the emulated VSM, the default), `external` (Speak External of the same bytes) or `both`. The output goes under `captures/corpus/` (kept local) unless `--out` says otherwise; `--zip` also archives each `raw/scope_raw.npz` as `.npz.zip`, for evidence captures. `--reset` sends the reset sequence before every take, and `--idle` sets the wait between takes; both are recorded in `capture.json` for Phase 5. `--board` is as in the table above; `--load-ohms` defaults to 996.
+
+For each take, the runner:
+
+1. Uploads the PROM image to its bank, if the Pico does not hold it already.
+2. Arms the scope for the word's length, worked out from its frames.
+3. Clears the trace and has the Pico speak.
+4. Saves `raw/scope_raw.npz`, `raw/vsm_trace.bin` and `capture.json`.
+5. Runs `process.py` on the take.
+
+After each word it runs `compare.py`, and at the end it rewrites the PROM's `index.md` with `promindex.py`. It exits non-zero if any check failed.
+
+```
+<out>/<prom>/
+  prom.json, index.md
+  <number>_<name>/          one per word (addr_<address> for an address sweep point)
+    compare.json
+    vsm01/, vsm02/, ...     one per take: VSM Speak
+    ext01/, ...             Speak External
+      capture.json          metadata, plus "processed": summary and checks
+      raw/scope_raw.npz     raw scope data (never modified)
+      raw/vsm_trace.bin     raw VSM trace (never modified)
+      vsm_trace.csv, frames.csv, samples.wav, samples.csv, dac.wav, listen.wav
+```
+
+PROMs are described by manifests, `proms/<name>.json`: the image's source and SHA-256, its bank, provenance and word table. `prom.py acorn-manifest` builds the Acorn PHROM A's from `firmware/src/romdata_acorn.h`. Images that may not be redistributed go in `proms/images/`, which is git-ignored. `bench.json` records the chip's marking, the measured supplies and the temperature; every `capture.json` copies it, so update it whenever the chip or the board changes.
+
+### Readable files and checks
+
+`process.py` rebuilds a take's readable files from `raw/` and can be rerun at any time: `python tools/process.py <take>...`.
+
+- `frames.csv`: one row per frame the chip parsed, up to the stop code. The bits come from the VSM trace (VSM path) or from the bytes written to the FIFO (Speak External). Columns: bit offset, length, kind, energy, repeat, pitch and the K1–K10 indices. For the VSM path, `read_us` is when the frame's first bit was read, after `SCOPE_TRIG` rose, and `read_sample` is the `samples.wav` sample period it fell in. The parameters are the coded indices; each is taken most significant bit first, as MAME assumes (to be confirmed in Phase 8).
+- `samples.wav`, `samples.csv`: layer 2, from the first `T11` period after `SCOPE_TRIG` rose to the end of the capture. The WAV convention is as for `decode.py` below. The CSV adds the DAC voltage and the DAC code recovered from it.
+- `dac.wav`: layer 3, the recovered DAC codes (code × 64). The codes come from the Phase 2 bit-weight model fitted to this capture. They are measured, not exact: about 2/3 match `I/O` exactly, and almost all are within ±2.
+- `listen.wav`: for listening only. It holds the DAC codes for each sample period at 48 kHz and passes them through a model of the BBC Micro's audio filter (`--listen-filter none` leaves the filter out).
+
+The checks go into `capture.json` under `processed.checks`. Each is true, false, or null when it does not apply:
+
+| Check | Passes when |
+|---|---|
+| `scope_overflow` | No channel went over range |
+| `io_format` | No `I/O` activity outside bit slots 2–11 |
+| `fosc` | The `T11` rate gives `OSC` within 50 ppm of the clock set |
+| `trace_complete` | No trace events were dropped |
+| `talk_status` | Talk Status was seen set, and was clear at the end |
+| `stop_frame` | The parsed data ends with a stop frame |
+| `vsm_image` | VSM: the bits read are the image's, from the word address |
+| `bits_vs_frames` | VSM: the bits read are exactly the frames up to the end of the stop code |
+| `frame_period` | VSM: frame reads are 25 ms apart, within 0.1 ms |
+| `duration` | VSM: Talk Status cleared within 2 ms of frames × 25 ms after the first frame read. Speak External: the talk time exceeds frames × 200 samples by 0–400 samples |
+| `external_stream` | Speak External: the bytes on the bus are the stream sent |
+| `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. Null for `--board audio` |
+
+The gain limit is wide on purpose. It catches a wrong board configuration (half load gives about 0.5, and the audio stage leaves a large residual), not drift: the DAC scale was 7 % above the Phase 2 table in Phase 4. The fitted gain is recorded in every capture.
+
+### Comparing repeats
+
+`compare.py` compares the takes of a word with the first one taken: `python tools/compare.py <word dir>` writes `compare.json` there. Each take is shifted by up to ±400 samples to match the first one best, because the start of speech varies. Then the comparison reports the differing samples, the first difference (counted from the start of speech), the largest and rms difference, and whether the frames are identical.
+
 ## Driving the Pico
 
 `pico.py` talks to the firmware. It finds the Pico by its USB ID; `--port` overrides that.
@@ -59,7 +130,7 @@ For every word it checks:
 
 The trace is saved as `raw/vsm_trace.bin` (the firmware's 8-byte events, unchanged) and `vsm_trace.csv` (decoded: one row per event, times in µs). `pico.py` can also be used as a library: the `Pico` class, `decodeTrace()`, `hostCycles()` and `bitsRead()`.
 
-## Usage
+## Single captures and analysis
 
 ```
 python tools/capture.py captures/test --speak 0x3CBB6 --reset  # arm, speak through the Pico, capture
@@ -94,10 +165,14 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 ## Files
 
 - `pico.py`: the host side of the firmware protocol, with the trace decoder, the self-test and a command line.
-- `lpc.py`: parses LPC frames as far as their boundaries, to find where a word ends. The full frame decoder is Phase 4.
+- `run.py`: the capture runner (see "Capturing PROM words").
+- `process.py`: builds a capture's readable files from `raw/` and runs the checks.
+- `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`.
+- `prom.py`: PROM manifests (`proms/`). `bench.json`: the bench details recorded in every capture.
+- `lpc.py`: the LPC frame parser: frame boundaries and the coded parameters of each frame.
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
-- `capture.py`, `decode.py`: the command-line tools.
+- `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.
 - `dac_transfer.py`: the static DAC transfer function from one or more captures. It writes a per-code table of TP2 voltage and current (`dac_table.csv`), fits one weight per DAC input bit, and reports linearity, the step from −1 to 0, and whether the output depends on earlier samples (`dac_transfer.json`, `dac_transfer.png`). `--zero` subtracts the scope's zero offset, measured from a capture taken with probe A's tip grounded.
 - `dac_compare.py`: compares the tables from two loads, giving the current ratio per code and the equivalent output resistance. The reference datasheet's §8.2 and §8.3 come from these two tools.
 - `edge_timing.py`: measures `T11`, `I/O`, DAC and, if probe D is on TP1, ROMCLK edge timing. It writes `edge_timing.json`, and `edge_timing.png` (one annotated sample period). The reference datasheet's §8.4 and §9.5 come from its output.

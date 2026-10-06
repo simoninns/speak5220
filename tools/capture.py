@@ -22,13 +22,13 @@
 import argparse
 import json
 import os
-import subprocess
 import time
 import zlib
 
 import numpy as np
 
 import pico as picolib
+from process import gitHash
 from ps3000a import INFO_SERIAL, INFO_VARIANT, Scope
 
 # (range V, offset V) per channel, at the scope input
@@ -60,12 +60,60 @@ BOARD_CONFIGS = {
 }
 
 
-def gitHash():
-    try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"],
-                                       text=True, stderr=subprocess.DEVNULL).strip()
-    except (OSError, subprocess.CalledProcessError):
-        return None
+def scopeCapture(seconds, preMs, timebase, triggerChannel, armed=None):
+    """Arm the scope with the standard channel setup, call armed() (which
+    should make the trigger happen), and capture one block. Returns a dict
+    with the raw ADC arrays and the settings."""
+    with Scope() as scope:
+        for channel, (rangeV, offsetV) in CHANNEL_SETUP.items():
+            scope.setChannel(channel, rangeV, offsetV)
+        scope.setTrigger(triggerChannel, TRIGGER_V)
+        interval, _ = scope.timebase(timebase, 1000)
+        pre = int(preMs * 1e-3 / interval)
+        samples = pre + int(seconds / interval)
+        print(f"Capturing {samples} samples per channel at {1e-6 / interval:.3f} MS/s, "
+              f"waiting for a trigger on Ch {'ABCD'[triggerChannel]}...")
+        interval, raw, overflow = scope.runBlock(timebase, samples, pre, timeoutS=60,
+                                                 armed=armed)
+        result = {"interval": interval, "pre": pre, "raw": raw, "overflow": overflow,
+                  "timebase": timebase, "trigger_channel": triggerChannel,
+                  "variant": scope.info(INFO_VARIANT), "serial": scope.info(INFO_SERIAL),
+                  "maxAdc": scope.maxAdc}
+    if overflow:
+        print(f"Warning: over-range on channels mask 0x{overflow:x}")
+    return result
+
+
+def saveScope(out, scope):
+    """Write raw/scope_raw.npz (never modified afterwards)."""
+    os.makedirs(os.path.join(out, "raw"), exist_ok=True)
+    raw = scope["raw"]
+    np.savez(os.path.join(out, "raw", "scope_raw.npz"),
+             interval=scope["interval"], preTrigger=scope["pre"], maxAdc=scope["maxAdc"],
+             range=[CHANNEL_SETUP[ch][0] for ch in range(4)],
+             offset=[CHANNEL_SETUP[ch][1] for ch in range(4)],
+             **{"abcd"[ch]: raw[ch] for ch in range(4)})
+
+
+def scopeMeta(scope):
+    return {"variant": scope["variant"], "serial": scope["serial"],
+            "timebase": scope["timebase"], "interval_s": scope["interval"],
+            "pre_trigger_samples": scope["pre"], "samples": int(len(scope["raw"][0])),
+            "overflow_mask": scope["overflow"],
+            "trigger_channel": "abcd"[scope["trigger_channel"]]}
+
+
+def channelMeta(dSignal="trig"):
+    return {
+        "a": {"signal": "SPEAKER (TP2)", "probe": "x1"},
+        "b": {"signal": "T11 (TP3)", "probe": "x10"},
+        "c": {"signal": "I/O (TP4)", "probe": "x10"},
+        "d": {"signal": D_SIGNALS[dSignal][0], "probe": "x10"},
+    }
+
+
+def boardMeta(config, loadOhms):
+    return {"config": config, "description": BOARD_CONFIGS[config], "r2_load_ohms": loadOhms}
 
 
 def main():
@@ -127,51 +175,21 @@ def main():
                 pico.traceClear()
                 picoMeta["result"] = pico.speakExternal(data)
 
-    with Scope() as scope:
-        for channel, (rangeV, offsetV) in CHANNEL_SETUP.items():
-            scope.setChannel(channel, rangeV, offsetV)
-        dSignal, triggerChannel = D_SIGNALS[args.d_signal]
-        scope.setTrigger(triggerChannel, TRIGGER_V)
-        interval, _ = scope.timebase(args.timebase, 1000)
-        pre = int(args.pre_ms * 1e-3 / interval)
-        samples = pre + int(args.seconds / interval)
-        print(f"Capturing {samples} samples per channel at {1e-6 / interval:.3f} MS/s, "
-              f"waiting for a trigger on Ch {'ABCD'[triggerChannel]}...")
-        interval, raw, overflow = scope.runBlock(args.timebase, samples, pre, timeoutS=60,
-                                                 armed=armed)
-        variant, serial = scope.info(INFO_VARIANT), scope.info(INFO_SERIAL)
-        maxAdc = scope.maxAdc
-
-    if overflow:
-        print(f"Warning: over-range on channels mask 0x{overflow:x}")
-
-    os.makedirs(os.path.join(args.out, "raw"), exist_ok=True)
+    triggerChannel = D_SIGNALS[args.d_signal][1]
+    scope = scopeCapture(args.seconds, args.pre_ms, args.timebase, triggerChannel, armed)
     if pico:
         traceRaw, traceMeta = pico.trace()
         pico.close()
         picolib.writeTrace(args.out, traceRaw, traceMeta)
         picoMeta["trace"] = traceMeta
         print(f"Pico: {picoMeta['result']}, trace {traceMeta['count']} events")
-    np.savez(os.path.join(args.out, "raw", "scope_raw.npz"),
-             interval=interval, preTrigger=pre, maxAdc=maxAdc,
-             range=[CHANNEL_SETUP[ch][0] for ch in range(4)],
-             offset=[CHANNEL_SETUP[ch][1] for ch in range(4)],
-             **{"abcd"[ch]: raw[ch] for ch in range(4)})
+    saveScope(args.out, scope)
 
     meta = {
         "captured": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "scope": {"variant": variant, "serial": serial, "timebase": args.timebase,
-                  "interval_s": interval, "pre_trigger_samples": pre,
-                  "samples": int(len(raw[0])), "overflow_mask": overflow,
-                  "trigger_channel": "abcd"[triggerChannel]},
-        "channels": {
-            "a": {"signal": "SPEAKER (TP2)", "probe": "x1"},
-            "b": {"signal": "T11 (TP3)", "probe": "x10"},
-            "c": {"signal": "I/O (TP4)", "probe": "x10"},
-            "d": {"signal": dSignal, "probe": "x10"},
-        },
-        "board": {"config": args.board, "description": BOARD_CONFIGS[args.board],
-                  "r2_load_ohms": args.load_ohms},
+        "scope": scopeMeta(scope),
+        "channels": channelMeta(args.d_signal),
+        "board": boardMeta(args.board, args.load_ohms),
         "pico": picoMeta,
         "host_git": gitHash(),
         "note": args.note,

@@ -42,5 +42,9 @@ captures/corpus/
 captures/**/raw/*.npz
 captures/**/dac_step_response.npy
 
+# PROM images that may not be redistributed (plan section 11); their
+# manifests in proms/ record the hashes
+proms/images/
+
 # Python bytecode
 __pycache__/

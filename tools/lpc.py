@@ -1,9 +1,10 @@
 """
     lpc.py
 
-    TMS5220 LPC frame parsing, as far as the frame boundaries: enough to
-    find where a word ends. The full frame decoder (frames.csv) is Phase 4
-    of the capture plan.
+    TMS5220 LPC frame parsing: the frame boundaries and the coded
+    parameter indices of each frame (frames.csv, plan section 6). It gives
+    the indices the chip was sent, not the values it looks them up to;
+    those tables are Phase 8 of the capture plan.
 
     The chip reads its data serially, least significant bit of each byte
     first (the original datasheet: the FIFO shifts data out "starting with
@@ -28,6 +29,9 @@ import numpy as np
 
 K_BITS_VOICED = [5, 5, 4, 4, 4, 4, 4, 3, 3, 3]
 K_BITS_UNVOICED = K_BITS_VOICED[:4]
+FRAME_SAMPLES = 200     # 25 ms at 8 kHz
+FRAME_COLUMNS = (["frame", "bit_offset", "bits", "kind", "energy", "repeat", "pitch"]
+                 + [f"k{i}" for i in range(1, 11)])
 
 
 def bitsLsbFirst(data):
@@ -74,4 +78,16 @@ def parseFrames(bits, maxFrames=100000):
             frames.append(frame)
     except EOFError:
         pass
+    for frame, end in zip(frames, [f["offset"] for f in frames[1:]] + [position]):
+        frame["bits"] = end - frame["offset"]
     return frames, position
+
+
+def frameRow(index, frame):
+    """One frames.csv row: the frame's fields, with '' for fields it does not
+    carry (K parameters of repeat, silence and stop frames, K5-K10 of
+    unvoiced frames)."""
+    k = frame.get("k", [])
+    return ([index, frame["offset"], frame["bits"], frame["kind"], frame["energy"],
+             frame.get("repeat", ""), frame.get("pitch", "")]
+            + [k[i] if i < len(k) else "" for i in range(10)])

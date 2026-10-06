@@ -29,9 +29,11 @@
     }
   },
   "board": {
-    "config": "measure",
-    "description": "C1 disconnected: TP2 is loaded by R2 (1K) alone",
-    "r2_load_ohms": 996.0
+    "config": "audio",
+    "description": "C1 connected: the audio stage (C1, R3 4K7) also loads TP2",
+    "r2_load_ohms": 996.0,
+    "recorded_as": "measure",
+    "correction": "2026-10-06, Phase 4: the C1 link was connected when this was captured. The layer 3 check (tools/process.py) found the audio stage's high-pass history in TP2; see docs-tech/tms5220_reference_datasheet/evidence/README.md"
   },
   "pico": {
     "firmware": "9fcb313-dirty",

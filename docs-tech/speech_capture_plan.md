@@ -140,9 +140,11 @@ The 3405D has an 8-bit ADC. On the ±1 V range, one ADC count is about 7.8 mV. O
 
 Use **streaming mode** at about 1–2 MS/s per channel. That is far inside the USB 3 bandwidth, and it lets one capture cover an entire PHROM sequence with no memory-depth concerns. Save the raw ADC data together with the range and offset metadata, then derive everything else from it.
 
-Block mode is a simpler option, and it is what has been tested so far. The 3405D has 64 MS of memory, shared between the enabled channels. With all four channels at 2 MS/s, that is enough for about 8 s, so a single word fits easily. 2 MS/s gives 12 scope samples per `I/O` bit slot, and decoding at that rate is reliable.
+Block mode is a simpler option. The 3405D has 64 MS of memory, shared between the enabled channels. With all four channels at 2 MS/s, that is enough for about 8 s, so a single word fits easily. 2 MS/s gives 12 scope samples per `I/O` bit slot, and decoding at that rate is reliable.
 
-**Driver access works without packaging.** PicoScope 7, installed system-wide, ships `libps3000a.so`. `tools/ps3000a.py` loads it through `ctypes`, and the dev shell provides its libusb and libstdc++ dependencies. `tools/capture.py` and `tools/decode.py` are the first parts of the Phase 4 tooling (see `tools/README.md`).
+**Decision (Phase 4): block mode.** The runner captures one take per block, triggered by `SCOPE_TRIG`, so every capture starts at the same point relative to the Speak. The block length comes from the frame count (frames + 2, × 25 ms, plus 150 ms). The longest Acorn word fits many times over in the 8 s limit, and so does an unvoiced run long enough for the noise generator's period (§9.1). Streaming would only be needed for a single stimulus longer than about 8 s, or to drop the scope's re-arm time between takes; neither is needed yet.
+
+**Driver access works without packaging.** PicoScope 7, installed system-wide, ships `libps3000a.so`. `tools/ps3000a.py` loads it through `ctypes`, and the dev shell provides its libusb and libstdc++ dependencies. `tools/run.py` drives the scope and the Pico together (§7, `tools/README.md`).
 
 ### The PicoScope captures all of the output
 
@@ -181,13 +183,18 @@ Still to do:
 captures/<prom>/
   prom.json           # inventory: name, hash, provenance, target chip, word table
   index.md            # browsable page: word list, frame counts, links to audio
-  <word>/             # one capture directory per word (or per swept address)
+  <word>/             # one directory per word, <number>_<name> (addr_<address> for a swept address)
+    compare.json      # every take compared with the first (tools/compare.py)
+    vsm01/, vsm02/    # one capture directory per take: VSM Speak ...
+    ext01/, ...       # ... and Speak External
 ```
+
+`prom.json` is a copy of the PROM's manifest, `proms/<prom>.json` (`tools/prom.py`). The manifest gives the image's SHA-256 and its source; images that may not be redistributed are kept in `proms/images/`, which is git-ignored.
 
 ### Per capture
 
 ```
-captures/<prom>/<word>/
+captures/<prom>/<word>/<take>/
   capture.json        # metadata (see below)
 
   # Original capture format: written once at capture time, never modified
@@ -198,13 +205,15 @@ captures/<prom>/<word>/
   # Readable formats: regenerated from raw/ by the post-processing scripts
   vsm_trace.csv       # layer 1 as text
   frames.csv          # the frames the chip parsed: bit offset, energy, pitch, K1-K10, repeat flag
-  samples.wav         # layer 2: I/O decoded from the scope capture, mono PCM, rate = fosc/80
-  samples.csv         # layer 2 as text (sample index, value, T11 timestamp)
+  samples.wav         # layer 2: I/O decoded from the scope capture, mono PCM, rate = fosc/80,
+                      #   from the first T11 period after SCOPE_TRIG rose to the end of the capture
+  samples.csv         # layer 2 as text (sample index, value, T11 timestamp), with the DAC voltage
+                      #   and the DAC code recovered from it
   dac.wav             # layer 3: recovered per-sample DAC codes as WAV
   listen.wav          # convenience: filtered and resampled to 48 kHz for listening
 ```
 
-The `raw/` files are the record of what was measured. The `scope_raw.npz` layout (array names, dtypes, scaling) is documented alongside the scripts, so it can be read without the capture tooling. Every readable file can be rebuilt from `raw/` with one command, and `capture.json` records the script version that built it.
+The `raw/` files are the record of what was measured. The `scope_raw.npz` layout (array names, dtypes, scaling) is documented alongside the scripts, so it can be read without the capture tooling. Every readable file can be rebuilt from `raw/` with one command (`tools/process.py`), and `capture.json` records the script version that built it, under `processed`, together with the checks.
 
 ### WAV conventions
 
@@ -222,6 +231,8 @@ Record at least:
 - The board revision, the measured `fosc`, the supply voltages and the temperature if you can get it.
 - The firmware git hash, the host script git hash and the capture timestamp.
 - The final status register value, the `INT` events, the count of bits consumed and the total samples.
+
+`tools/run.py` writes all of these. The chip, supply and temperature details come from `tools/bench.json`, which must be updated whenever the chip or the board changes. The results of the checks go under `processed` (`tools/process.py`).
 
 ### Where it is stored
 
@@ -246,7 +257,7 @@ Host (Python, tools/pico.py and tools/capture.py)
 
 A run loops over a manifest of the PHROM images and their word tables. For each word it uploads the image (once per PHROM), arms the scope, sends `SPEAK`, waits for Talk Status to clear, pulls the traces, writes the capture directory, and runs sanity checks: the layer 2 and layer 3 data agree, and the bit count matches the parsed frame count. Speak each word several times (say 5) to confirm the chip is deterministic. Any difference between repeats is itself a finding, for example an uninitialised state or the noise generator's state carried over between utterances.
 
-The firmware has been command-driven since Phase 3. The demo loop is gone, and `pico.py demo` says the same phrase once. `capture.py --speak` already does one step of such a run: it arms the scope, speaks and saves the trace. The manifest loop and the checks are Phase 4.
+`tools/run.py` is this runner (Phase 4). The manifest is `proms/<prom>.json`. After each take it runs `tools/process.py`, which writes the readable files and the checks; after each word, `tools/compare.py`; and at the end, `tools/promindex.py`, which rewrites `index.md`. `capture.py --speak` remains for one-off captures outside a PROM.
 
 ## 8. PHROM and speech data corpus
 
@@ -351,7 +362,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 1. Bench bring-up and signal identification | — | Done |
 | 2. Measurement hardware | 1 | Done |
 | 3. Firmware instrumentation | 1 | Done |
-| 4. Host tooling | 1, 3 | Started |
+| 4. Host tooling | 1, 3 | Done |
 | 5. Repeatability | 3, 4 | Not started |
 | 6. PROM inventory | — | Sources listed (§8) |
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Not started |
@@ -429,7 +440,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - **Power-up sequencing so far.** `RESET` (the datasheet's nine `0xFF` and Reset) and `CLOCK` (set or stop `OSC`). Real power cycles need hardware (§5 item 7).
   - **`tools/pico.py`**: the host class, the trace decoder, a command line and `selftest`. `tools/lpc.py` finds where a word ends.
   - **`tools/capture.py --speak` and `--speakext`** arm the scope, speak and save `raw/vsm_trace.bin` and `vsm_trace.csv`, with no manual steps.
-  - Captures p3-01 to p3-03 are in the evidence index.
+  - Captures p3-01 to p3-03 are in the evidence index. (Phase 4 found that they were taken with the C1 link connected, although they were recorded as `measure`. Their `board` entries are corrected; their traces and `I/O` samples are unaffected.)
 - **Status:** done (2026-10-06). `pico.py selftest --repeat 3` passes: 54 utterances with no manual steps.
   - **Images.** The Acorn image was uploaded to banks `F` and 3.
   - **Words.** Six words were each spoken from both banks and through Speak External, three times over.
@@ -448,9 +459,6 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 ### Phase 4: Host tooling
 
 - **Goal:** one command turns a request ("speak word N of PROM X") into a complete capture directory.
-- **Done:**
-  - `tools/capture.py` and `tools/decode.py`: triggered block capture, `I/O` decode, DAC averaging, and a WAV and CSV per word.
-  - From Phase 3: `capture.py --speak`/`--speakext` drives the Pico and saves the VSM trace. `tools/pico.py` decodes the trace to `vsm_trace.csv`, and `tools/lpc.py` parses frame boundaries.
 - **Tasks:**
   - The runner that drives the Pico and the scope together.
   - The full §6 directory layout and `capture.json`.
@@ -461,13 +469,33 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - Choose between block mode and streaming mode (§4).
 - **Delivers:** the `tools/` package and its README.
 - **Done when:** a single command produces a §6-compliant directory for one word, with all checks passing.
+- **Done:**
+  - Earlier: `tools/capture.py` and `tools/decode.py` (triggered block capture, `I/O` decode, DAC averaging), and from Phase 3 the Pico client and trace decoder (`tools/pico.py`).
+  - **PROM manifests.** `proms/acorn_phrom_a.json` holds the Acorn PHROM A's hash, provenance and 165-entry word table, built from `romdata_acorn.h` by `tools/prom.py`. Phase 6 adds the other PROMs in the same format.
+  - **The runner, `tools/run.py`.** It takes a PROM and words (numbers, names, `all`, or `--address` for sweep points), a path (VSM, Speak External or both) and a number of takes. It uploads the image if the Pico's bank does not hold it, captures each take, and writes the §6 layout.
+  - **`tools/process.py`** rebuilds every readable file from `raw/`: `vsm_trace.csv`, `frames.csv`, `samples.wav` and `.csv`, `dac.wav` and `listen.wav` (48 kHz, through a model of the BBC audio stage). It runs twelve checks and records them in `capture.json` (`tools/README.md` lists them).
+  - **The frame decoder** (`tools/lpc.py`): every frame's bit offset, length, kind, energy, repeat flag, pitch and K1–K10 indices. For the VSM path, `frames.csv` also gives when each frame's first bit was read, and in which output sample period.
+  - **Layer 2 against layer 3.** The Phase 2 bit-weight model of each `I/O` code is fitted to the DAC voltage with a gain and an offset. The check needs a residual of 3 mV rms or less, a gain within 15 % of the table's, and 99 % of the DAC codes recovered within ±2 of `I/O`.
+  - **`tools/compare.py`** aligns each take with the first and compares them sample for sample, and frame for frame. **`tools/promindex.py`** writes `index.md`.
+  - **`tools/bench.json`** records the chip (TMS5220NL, `DEP 8423`) and the measured supplies.
+  - **Block mode** is chosen (§4).
+- **Status:** done (2026-10-06). One command, `run.py acorn_phrom_a ACORN --takes 2 --path both --out captures/phase4 --zip`, wrote `captures/phase4/acorn_phrom_a/` with four takes. Every check passed on every take, and the runner exited 0. The set is p4-01 to p4-04 in the evidence index.
+- **Findings:**
+  - **The Phase 3 captures were taken with the C1 link connected.** The layer 3 check failed on them, and on a first Phase 4 run: TP2 carried the audio stage's high-pass history (6.5 mV rms of residual, which a first-order term brings down to 1.8 mV). With the link removed, the residual is 2.2–2.3 mV. The Phase 3 `board` entries are corrected, and the evidence index says so.
+  - **The DAC scale has drifted.** It is 7–8.5 % above the Phase 2 table (code −1 at 0.635 V, against 0.592 V), with the supplies within 6 mV of nominal. The table's shape still fits. (Datasheet §8.2.)
+  - **Frames are read exactly 25 ms apart, but the start varies by most of a frame.** The first frame read came 12.5–25.5 ms after `SCOPE_TRIG` in three VSM Speaks, while the rest of the word took exactly 674.87 ms each time. (Datasheet §4.)
+  - Repeats differ by 3.1–3.5 codes rms after alignment, as in Phase 3. The frames parsed are identical in every take.
+- **Handed on:**
+  - **The start delay** looks like a wait for the next boundary of a free-running frame timer. Phase 5 should test that, together with the noise generator's state.
+  - **The DAC scale drift.** Its cause (chip, load or scope), and whether captures need a per-session scale → Phase 5. A meter reading of TP2 with the chip idle would separate the scope from the chip.
+  - **Phase 7 needs only the procedure from Phase 5.** The runner already takes `--reset` and `--idle`, and records them in `capture.json`.
 
 ### Phase 5: Repeatability
 
 - **Goal:** a capture procedure whose results can be reproduced, and a documented account of any state the chip carries between utterances.
 - **Tasks:**
   - Repeat the same word under different conditions: plain Speak, a Reset command first, a full power cycle, and different idle times.
-  - Characterise the noise generator's state and the start delay. So far a 6- or 25-sample start variation has been seen, and unvoiced output differs between repeats (§2).
+  - Characterise the noise generator's state and the start delay. So far a 6- or 25-sample start variation has been seen, and unvoiced output differs between repeats (§2). In Phase 4 the first VSM frame read moved by up to 13 ms between takes, while the rest of the word kept exactly the same timing.
 - **Delivers:**
   - The standard procedure used by Phase 7 onwards.
   - A datasheet section on state at power-up and at the start of speech.
