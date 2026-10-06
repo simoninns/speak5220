@@ -32,6 +32,13 @@ def loadJson(path):
 def repeatsText(result):
     if not result:
         return ""
+    groups = result.get("standard_variants") or []
+    if groups:
+        # Standard takes: how many share the reference output, per path
+        return "; ".join(f"{g['path']}: {g['takes_matching_majority']} of {g['takes']} match"
+                         + (f", {g['samples_without_majority']} samples undecided"
+                            if g["samples_without_majority"] else "")
+                         for g in groups)
     pairs = [p for p in result["pairs"] if "error" not in p]
     if result["all_identical"]:
         return f"{len(pairs) + 1} identical"
@@ -90,7 +97,9 @@ def writeIndex(promDir, log=print):
         "- **Columns:** Frames and Bits are parsed from what the chip read (VSM) or was sent "
         "(Speak External), up to the stop code. ms is the talk time of the first take, "
         "from `SCOPE_TRIG` rising to Talk Status clearing. Repeats compares every take with "
-        "the first, sample for sample, after aligning them (`compare.json`).",
+        "the first, sample for sample, after aligning them. For takes made with the standard "
+        "procedure, it gives how many match the per-sample majority of all of them exactly, and "
+        "the samples where no majority exists (`compare.json`).",
         "",
         "| No. | Word | Address | Frames | Bits | ms | Takes | Checks | Repeats | Files |",
         "|---|---|---|---|---|---|---|---|---|---|",

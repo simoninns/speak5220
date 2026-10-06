@@ -63,18 +63,23 @@ def decode(interval, volts, digitalThreshold=0.1):
     """
     dacV, t11, io, trig = volts
     edges = np.flatnonzero(np.diff((t11 > digitalThreshold / 2).astype(np.int8)) == 1) + 1
-    edges = edges[edges + int(DAC_WINDOW[1] / interval) < len(dacV)]
+    # Slots and the DAC window scale with the clock; the nominal values are
+    # kept unless OSC is set well away from 640 kHz
+    period = float(np.median(np.diff(edges))) * interval if len(edges) > 1 else SAMPLE_PERIOD
+    scale = period / SAMPLE_PERIOD if abs(period / SAMPLE_PERIOD - 1) > 1e-3 else 1.0
+    window = (DAC_WINDOW[0] * scale, DAC_WINDOW[1] * scale)
+    edges = edges[edges + int(window[1] / interval) < len(dacV)]
 
-    slotCentres = ((np.arange(20) + 0.5) * SLOT / interval).astype(int)
+    slotCentres = ((np.arange(20) + 0.5) * SLOT * scale / interval).astype(int)
     bits = (io[edges[:, None] + slotCentres[None, :]] > digitalThreshold).astype(np.int64)
     unsigned = bits[:, DATA_SLOTS.start:DATA_SLOTS.stop] @ (1 << np.arange(10))
     code = np.where(unsigned >= 512, unsigned - 1024, unsigned)
 
-    w0, w1 = (int(t / interval) for t in DAC_WINDOW)
+    w0, w1 = (int(t / interval) for t in window)
     cumulative = np.concatenate([[0.0], np.cumsum(dacV)])
     dac = (cumulative[edges + w1] - cumulative[edges + w0]) / (w1 - w0)
 
-    trigLevel = trig[edges + int(SAMPLE_PERIOD / 2 / interval)] > digitalThreshold
+    trigLevel = trig[edges + int(period / 2 / interval)] > digitalThreshold
     return {"edge": edges, "bits": bits, "code": code, "dac": dac, "trig": trigLevel}
 
 

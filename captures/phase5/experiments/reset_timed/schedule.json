@@ -1,0 +1,55 @@
+[
+ {
+  "frame": 172205,
+  "noise_phase": 194,
+  "reset_frames_before": "300.5",
+  "extra": "-",
+  "reset_status": 127,
+  "take": "vsm01",
+  "passed": true
+ },
+ {
+  "frame": 173005,
+  "noise_phase": 994,
+  "reset_frames_before": "300.5",
+  "extra": "-",
+  "reset_status": 127,
+  "take": "vsm02",
+  "passed": true
+ },
+ {
+  "frame": 173805,
+  "noise_phase": 1794,
+  "reset_frames_before": "350.3",
+  "extra": "-",
+  "reset_status": 127,
+  "take": "vsm03",
+  "passed": true
+ },
+ {
+  "frame": 174605,
+  "noise_phase": 2594,
+  "reset_frames_before": "300.5",
+  "extra": "B",
+  "reset_status": 127,
+  "extra_result": {
+   "status": 127,
+   "talked": 1,
+   "ints": 1,
+   "reads": 4,
+   "us": 421723,
+   "trig_us": 4358133571
+  },
+  "take": "vsm04",
+  "passed": true
+ },
+ {
+  "frame": 175405,
+  "noise_phase": 3394,
+  "reset_frames_before": "300.5",
+  "extra": "-",
+  "reset_status": 127,
+  "take": "vsm05",
+  "passed": true
+ }
+]

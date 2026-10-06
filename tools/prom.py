@@ -66,7 +66,9 @@ def findWord(manifest, key):
         if str(word["number"]) == str(key):
             return word
     for word in manifest["words"]:
-        if str(key).upper() in [n.strip().upper() for n in word["name"].split(",")]:
+        names = [n.strip().upper() for n in word["name"].split(",")]
+        names += [re.sub(r"\s*\(.*?\)", "", n).strip() for n in names]
+        if str(key).upper() in names:
             return word
     raise KeyError(f"{manifest['name']} has no word {key!r}")
 

@@ -7,6 +7,14 @@
     aligning their output by the shift that matches them best, because the
     delay from Speak to the first sample varies (plan section 2).
 
+    Takes made with the standard procedure (run.py) all start from the same
+    chip state, so they should match exactly, apart from upsets: small
+    departures, of a few codes at most, that start at a few points in a
+    word and that no controlled state explains (datasheet section 7). For
+    each path, the per-sample majority of those takes is the reference
+    output; each take is described by how it departs from it, and the
+    number of distinct outputs is counted.
+
     Give it a word directory (it compares every take in it, and writes
     compare.json there) or any capture directories (--out to save).
 
@@ -25,6 +33,7 @@ import numpy as np
 
 MAX_SHIFT = 400         # samples (50 ms) searched either way
 MARGIN = 10             # samples compared before the first and after the last change
+UPSET_GAP = 200         # deviations further apart than this are counted as separate upsets
 
 
 def takeDirs(wordDir):
@@ -47,7 +56,8 @@ def loadTake(directory):
                       for row in csv.DictReader(f)]
     summary = meta.get("processed", {}).get("summary", {})
     return {"dir": directory, "code": data["code"].astype(int), "summary": summary,
-            "frames": frames, "path": summary.get("path")}
+            "frames": frames, "path": summary.get("path"),
+            "standard": (meta.get("procedure") or {}).get("start") == "standard"}
 
 
 def bestShift(ref, other, start, end):
@@ -88,16 +98,64 @@ def comparePair(ref, other):
         "max_abs_difference": int(np.abs(diff).max()) if len(diff) else None,
         "rms_difference": float(np.sqrt(np.mean(diff.astype(float) ** 2))) if len(diff) else None,
         "frames_identical": other["frames"] == ref["frames"] if ref["frames"] else None,
+        "standard": other["standard"] and ref["standard"],
     }
     if s.get("first_frame_read_s") is not None and o.get("first_frame_read_s") is not None:
         result["first_frame_read_difference_s"] = o["first_frame_read_s"] - s["first_frame_read_s"]
     return result
 
 
+def variants(takes):
+    """Takes that should match (the standard procedure): their per-sample
+    majority, which is the reference output, how each take departs from it,
+    and how many distinct outputs (variants) there are."""
+    ref = takes[0]
+    s = ref["summary"]
+    start = max(0, s["speech_first_sample"] - MARGIN)
+    end = min(len(ref["code"]), s["speech_last_sample"] + MARGIN + 1)
+    rows = []
+    for t in takes:
+        shift = bestShift(ref["code"], t["code"], start, end) if t is not ref else 0
+        lo, hi = start + shift, end + shift
+        if lo < 0 or hi > len(t["code"]):
+            return None
+        rows.append((t, shift, t["code"][lo:hi]))
+    codes = np.array([r[2] for r in rows])
+    low = codes.min()
+    span = int(codes.max() - low) + 1
+    counts = np.apply_along_axis(lambda col: np.bincount(col - low, minlength=span), 0, codes)
+    majority = counts.argmax(0) + low
+    resolved = counts.max(0) * 2 > len(takes)
+    distinct = []
+    members = []
+    for t, shift, code in rows:
+        variant = next((k for k, d in enumerate(distinct) if np.array_equal(d, code)), None)
+        if variant is None:
+            distinct.append(code)
+            variant = len(distinct) - 1
+        deviating = np.flatnonzero(code != majority)
+        onsets = [int(i) + start - s["speech_first_sample"] for j, i in enumerate(deviating)
+                  if j == 0 or i - deviating[j - 1] > UPSET_GAP]
+        members.append({"take": t["dir"], "variant": variant + 1, "shift_samples": int(shift),
+                        "matches_majority": bool(len(deviating) == 0),
+                        "deviating_samples": int(len(deviating)),
+                        "max_abs_deviation": int(np.abs(code - majority).max()),
+                        "upset_onsets": onsets})
+    return {"path": ref["path"], "takes": len(takes), "variants": len(distinct),
+            "takes_matching_majority": sum(m["matches_majority"] for m in members),
+            "samples_without_majority": int((~resolved).sum()),
+            "members": members}
+
+
 def compare(directories, log=print):
     takes = [loadTake(d) for d in directories]
     ref = takes[0]
     pairs = [comparePair(ref, t) for t in takes[1:]]
+    standard = {}
+    for t in takes:
+        if t["standard"] and t["summary"].get("speech_first_sample") is not None:
+            standard.setdefault(t["path"], []).append(t)
+    groups = [g for g in (variants(v) for v in standard.values() if len(v) > 1) if g]
     result = {
         "reference": ref["dir"], "reference_path": ref["path"],
         "reference_speech_first_sample": ref["summary"].get("speech_first_sample"),
@@ -105,6 +163,7 @@ def compare(directories, log=print):
         "all_identical": all(p.get("identical") for p in pairs),
         "all_frames_identical": all(p.get("frames_identical") is not False for p in pairs),
         "pairs": pairs,
+        "standard_variants": groups,
     }
     log(f"reference {ref['dir']} ({ref['path']}), speech from sample "
         f"{result['reference_speech_first_sample']}")
@@ -118,6 +177,14 @@ def compare(directories, log=print):
             f"rms {p['rms_difference']:.2f}")
         log(f"  {os.path.basename(p['take']):8s} ({p['path']}): shift {p['shift_samples']:+d}, "
             f"{verdict}, frames {'same' if p['frames_identical'] else 'DIFFER'}")
+    for g in groups:
+        log(f"  standard {g['path']} takes: {g['takes_matching_majority']} of {g['takes']} match "
+            f"the per-sample majority; {g['variants']} distinct outputs; "
+            f"{g['samples_without_majority']} samples without a majority")
+        for m in g["members"]:
+            if not m["matches_majority"]:
+                log(f"    {os.path.basename(m['take']):8s} {m['deviating_samples']} samples off by "
+                    f"up to {m['max_abs_deviation']}, upsets from {m['upset_onsets']}")
     return result
 
 

@@ -39,15 +39,27 @@ python tools/run.py acorn_phrom_a --address 0x3CBB7        # a sweep point outsi
 python tools/prom.py list acorn_phrom_a                    # the word table
 ```
 
-Words are given by number or by name. `--path` is `vsm` (Speak from the emulated VSM, the default), `external` (Speak External of the same bytes) or `both`. The output goes under `captures/corpus/` (kept local) unless `--out` says otherwise; `--zip` also archives each `raw/scope_raw.npz` as `.npz.zip`, for evidence captures. `--reset` sends the reset sequence before every take, and `--idle` sets the wait between takes; both are recorded in `capture.json` for Phase 5. `--board` is as in the table above; `--load-ohms` defaults to 996.
+Words are given by number or by name. `--path` is `vsm` (Speak from the emulated VSM, the default), `external` (Speak External of the same bytes) or `both`. The output goes under `captures/corpus/` (kept local) unless `--out` says otherwise; `--zip` also archives each `raw/scope_raw.npz` as `.npz.zip`, for evidence captures. `--board` is as in the table above; `--load-ohms` defaults to 996.
 
-For each take, the runner:
+**The standard procedure** (the default, plan §12 Phase 5, datasheet §7). The TMS5220 carries two things from one utterance to the next:
+- **A frame clock.** It runs all the time, and a Speak waits for its next boundary.
+- **A noise generator.** It runs freely until a Reset holds it, and the next Speak restarts it.
 
+So that every take starts from the same state, the runner works in two stages.
+
+At the start of a run, it:
 1. Uploads the PROM image to its bank, if the Pico does not hold it already.
+2. Locates the frame clock on the Pico's timer from one Speak's trace (`frameclock.py`).
+3. For each path, calibrates the start, so that the chip accepts the Speak command 12256.1 µs before a frame boundary, in the same 6.25 µs slot every time. This takes about 40 s per path.
+
+For each take, it:
+1. Sends the reset sequence.
 2. Arms the scope for the word's length, worked out from its frames.
-3. Clears the trace and has the Pico speak.
+3. Clears the trace and has the Pico speak, timed to start half a frame before a frame boundary.
 4. Saves `raw/scope_raw.npz`, `raw/vsm_trace.bin` and `capture.json`.
 5. Runs `process.py` on the take.
+
+`--start free` speaks as soon as the scope is armed, as in Phase 4; `--reset` then adds the reset sequence before each take, and `--idle` sets the wait between takes.
 
 After each word it runs `compare.py`, and at the end it rewrites the PROM's `index.md` with `promindex.py`. It exits non-zero if any check failed.
 
@@ -90,13 +102,21 @@ The checks go into `capture.json` under `processed.checks`. Each is true, false,
 | `frame_period` | VSM: frame reads are 25 ms apart, within 0.1 ms |
 | `duration` | VSM: Talk Status cleared within 2 ms of frames × 25 ms after the first frame read. Speak External: the talk time exceeds frames × 200 samples by 0–400 samples |
 | `external_stream` | Speak External: the bytes on the bus are the stream sent |
+| `start_frame` | VSM: the first frame read is on the frame clock's grid (within 5 µs), and on the frame it was timed for. Speak External: the timed start was not late |
+| `start_slot` | Standard procedure: the chip accepted the Speak within 2 µs of the target time before the frame |
 | `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. Null for `--board audio` |
 
 The gain limit is wide on purpose. It catches a wrong board configuration (half load gives about 0.5, and the audio stage leaves a large residual), not drift: the DAC scale was 7 % above the Phase 2 table in Phase 4. The fitted gain is recorded in every capture.
 
 ### Comparing repeats
 
-`compare.py` compares the takes of a word with the first one taken: `python tools/compare.py <word dir>` writes `compare.json` there. Each take is shifted by up to ±400 samples to match the first one best, because the start of speech varies. Then the comparison reports the differing samples, the first difference (counted from the start of speech), the largest and rms difference, and whether the frames are identical.
+`compare.py` compares the takes of a word with the first one taken: `python tools/compare.py <word dir>` writes `compare.json` there. Each take is shifted by up to ±400 samples to match the first one best, because without the standard procedure the start of speech varies. Then the comparison reports the differing samples, the first difference (counted from the start of speech), the largest and rms difference, and whether the frames are identical.
+
+Takes made with the standard procedure should match exactly, apart from upsets (datasheet §7). These are small departures of 1–3 codes that start at a few points in a word. For each path, `compare.json` (`standard_variants`) gives:
+- the per-sample majority of those takes, as the reference output;
+- for each take, how far it departs from that majority, and the sample where each upset starts;
+- the number of distinct outputs;
+- the samples where no majority exists.
 
 ## Driving the Pico
 
@@ -128,7 +148,7 @@ For every word it checks:
 - that the Speak External bytes on the bus match the stream;
 - that the Speak External duration matches the VSM duration.
 
-The trace is saved as `raw/vsm_trace.bin` (the firmware's 8-byte events, unchanged) and `vsm_trace.csv` (decoded: one row per event, times in µs). `pico.py` can also be used as a library: the `Pico` class, `decodeTrace()`, `hostCycles()` and `bitsRead()`.
+The trace is saved as `raw/vsm_trace.bin` (the firmware's 8-byte events, unchanged) and `vsm_trace.csv` (decoded: one row per event, times in µs). `pico.py` can also be used as a library: the `Pico` class, `decodeTrace()`, `hostCycles()` and `bitsRead()`. `Pico.time()` reads the Pico's microsecond timer. `speak()` and `speakExternal()` take an optional `atUs`, a time on that timer at which the command starts.
 
 ## Single captures and analysis
 
@@ -169,6 +189,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `process.py`: builds a capture's readable files from `raw/` and runs the checks.
 - `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`.
 - `prom.py`: PROM manifests (`proms/`). `bench.json`: the bench details recorded in every capture.
+- `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser: frame boundaries and the coded parameters of each frame.
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.

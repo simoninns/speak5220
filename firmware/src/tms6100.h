@@ -70,6 +70,9 @@ const uint8_t *tms6100Bank(uint bank);  // NULL if the bank is empty
 uint tms6100BuiltinBank(void);
 
 // VSM trace
+// Delay each data bit by this many system clock cycles (timing tests only)
+void tms6100SetReadDelay(uint32_t cycles);
+
 void tms6100TraceClear(void);
 uint32_t tms6100TraceCount(uint32_t *dropped);
 const tms6100Event_t *tms6100TraceEvents(void);

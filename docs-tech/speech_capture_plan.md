@@ -231,6 +231,7 @@ Record at least:
 - The board revision, the measured `fosc`, the supply voltages and the temperature if you can get it.
 - The firmware git hash, the host script git hash and the capture timestamp.
 - The final status register value, the `INT` events, the count of bits consumed and the total samples.
+- The capture procedure (Phase 5): whether the chip was reset first, and, for the standard procedure, the frame the Speak was timed for and when the chip accepted it.
 
 `tools/run.py` writes all of these. The chip, supply and temperature details come from `tools/bench.json`, which must be updated whenever the chip or the board changes. The results of the checks go under `processed` (`tools/process.py`).
 
@@ -251,6 +252,7 @@ Host (Python, tools/pico.py and tools/capture.py)
  │     SPEAKEXT …       Speak External (see §9), the FIFO topped up on INT
  │     CMD / READ       raw command and FIFO writes, status and data reads
  │     RESET, CLOCK     the reset sequence; set or stop the OSC clock
+ │     TIME, SPEAK … at_us   the Pico's timer, and Speaks timed to the chip's frame clock
  │     TRACE            download the VSM and host interface trace (layer 1)
  └── PicoScope 3405D over ps3000a: arm, wait for the trigger, save
 ```
@@ -258,6 +260,8 @@ Host (Python, tools/pico.py and tools/capture.py)
 A run loops over a manifest of the PHROM images and their word tables. For each word it uploads the image (once per PHROM), arms the scope, sends `SPEAK`, waits for Talk Status to clear, pulls the traces, writes the capture directory, and runs sanity checks: the layer 2 and layer 3 data agree, and the bit count matches the parsed frame count. Speak each word several times (say 5) to confirm the chip is deterministic. Any difference between repeats is itself a finding, for example an uninitialised state or the noise generator's state carried over between utterances.
 
 `tools/run.py` is this runner (Phase 4). The manifest is `proms/<prom>.json`. After each take it runs `tools/process.py`, which writes the readable files and the checks; after each word, `tools/compare.py`; and at the end, `tools/promindex.py`, which rewrites `index.md`. `capture.py --speak` remains for one-off captures outside a PROM.
+
+Every take uses the standard procedure from Phase 5 (`tools/frameclock.py`). At the start of a run the runner locates the chip's frame clock on the Pico's timer and calibrates the start of each path. Then, for every take, it sends the reset sequence, and times the Speak so that the chip accepts it 12256.1 µs before a frame boundary. That fixes the start delay and the noise generator's state, so repeats should match (datasheet §7).
 
 ## 8. PHROM and speech data corpus
 
@@ -341,14 +345,11 @@ Keep a change log in the datasheet listing every correction and addition to the 
 ## 11. Risks and open questions
 
 - **What does `I/O` carry?** Resolved (§2): the 10-bit sample, LSB first, which matches the DAC.
-- **Run-to-run differences.** The noise generator and the internal sample and interpolation counters are not reset by Speak, so repeated words are not bit-identical (§2). The data set must record this rather than hide it. Options:
-  - Reset the chip (Reset command, or a power cycle) before each word, and test whether that makes repeats identical.
-  - Infer the noise LFSR state from unvoiced frames.
-  - Treat the starting state as an input that the emulator must reproduce.
+- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself.
 - **Internal state that is not visible on `I/O`.** If `I/O` carries only the final sample, the inner filter state has to be inferred. Carefully designed vectors (for example, one K parameter active at a time) keep that inference tractable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not. Document any 5220/5220C differences in the datasheet.
-- **Stopping the clock.** The TMS5220 has no clock of its own, so `OSC` stops whenever the Pico resets or is reflashed. Once, mid-speech, this left the chip unable to complete any write until it was power-cycled (§5 item 7, `firmware/PROTOCOL.md`). Phase 5 should establish which stops are safe, before the clock is swept or stopped deliberately.
+- **Stopping the clock.** The TMS5220 has no clock of its own, so `OSC` stops whenever the Pico resets or is reflashed. Once, mid-speech, this left the chip unable to complete any write until it was power-cycled (§5 item 7, `firmware/PROTOCOL.md`). Phase 5 found that stops while the chip is idle are safe: up to 1 s they freeze its state, and after 10 s it still works, though its frame clock has moved. Stops during speech were not repeated.
 - **Clock fidelity.** The board no longer has the original RC oscillator, so captures are made with a crystal-derived clock. That is ideal for reproducibility, but real BBC Micro hardware ran slightly off 640 kHz and drifted. To study that behaviour, have the Pico sweep the clock frequency rather than refitting an RC network.
 - **Licensing of PHROM images.** Keep the original ROM images out of the repo unless their redistribution status is clear. Commit the manifests and hashes, plus the captured output if appropriate.
 - **Copyright of the original datasheet.** See §1.1: the new datasheet is written fresh and cites the original.
@@ -363,7 +364,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 2. Measurement hardware | 1 | Done |
 | 3. Firmware instrumentation | 1 | Done |
 | 4. Host tooling | 1, 3 | Done |
-| 5. Repeatability | 3, 4 | Not started |
+| 5. Repeatability | 3, 4 | Done |
 | 6. PROM inventory | — | Sources listed (§8) |
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Not started |
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Not started |
@@ -501,6 +502,34 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - A datasheet section on state at power-up and at the start of speech.
   - A description of the starting state that the emulator needs.
 - **Done when:** repeats under the standard procedure are either bit-identical, or differ only in the way the documented state model predicts.
+- **Done:**
+  - **Firmware.** Timed starts (`TIME`, and an optional start time on `SPEAK` and `SPEAKEXT`), and `trig_us` and `late_us` in their replies. `POLL` controls status reads during speech; they are now off by default, so the end of speech is found from `INT` alone. `VSMDELAY` delays the VSM data, for timing tests. `CLOCK` reports when it acted (`firmware/PROTOCOL.md`).
+  - **`tools/frameclock.py`.** It locates the chip's frame clock on the Pico's timer from one Speak's trace. For each path, it calibrates the start so that the chip accepts the command in the target slot.
+  - **The standard procedure, now the runner's default (`run.py --start standard`).** Before every take, the reset sequence; then a Speak timed to the frame clock, accepted 12256.1 µs before a frame boundary. `capture.json` records the frame and the acceptance time. `process.py` checks them (`start_frame`, `start_slot`), and `compare.py` compares the standard takes of a word with their per-sample majority. `--start free` gives the Phase 4 behaviour.
+  - **Datasheet §7 drafted.** It covers power-up, the frame clock, the noise generator, clock stops and upsets, and says what an emulator needs. §4, §6, §8.2 and §8.4 have additions.
+  - **Evidence:** p5-01 to p5-18 in the evidence index. p5-01 to p5-08 are the standard procedure, through VSM and Speak External; the rest are the experiments.
+- **Status:** done (2026-10-06), with one part of the state model still open. One command, `run.py acorn_phrom_a ACORN --takes 4 --path both --out captures/phase5 --zip`, gave eight takes that all passed every check. Within each path, every take started on the same sample, with the same noise, and differed from the others by at most 3 codes. They were not bit-identical: each carries small upsets (below). Elsewhere in the experiments, groups of standard takes were bit-identical, including across clock sessions [p5-14, p5-15]. So the procedure fixes all the state that was found; upsets are the documented remainder.
+- **Findings:**
+  - **The start delay is a free-running frame clock.** A Speak waits for the first frame boundary at least about 320 µs after it is written. Neither Speak, Reset nor idle time moves the clock; a power cycle does.
+  - **The noise generator runs freely with a period of 8191 frames.** It keeps running between words, so takes whose start frames differed by a multiple of 8191 matched. Reset holds it until the next Speak, which restarts it from a fixed state. That is why a Reset before a timed Speak gives the same noise on any frame.
+  - **The restart is counted in slots.** The firmware's write sequence sometimes finished one slot (6.25 µs) later, depending on how its timing fell against the chip's READY. That alone changed the noise. The runner therefore calibrates the start time each run, and checks every take.
+  - **Upsets.** Even with all of this fixed, most runs of takes include ±1–3 code departures. They start at a few recurring points in each word and then persist for the rest of it. They did not change with the clock rate (600, 640, 800 kHz), the status polls, the VSM data timing, a preceding word, a power cycle or the spacing between takes.
+  - **Clock stops while idle are safe.** Up to 1 s they freeze the chip's state. After 10 s the chip still works, but its frame clock has moved. `CLOCK 0` is not a reset.
+  - **The VSM data timing has a wide margin.** The chip samples `ADD8` about 10 µs after `M0` rises.
+  - **Speak External, accepted at the same time as a VSM Speak, starts 2 samples earlier, with different noise.** Each path repeats as well as the other.
+  - **The DAC scale step is real.** A meter read 0.642 V on TP2 at idle (Phase 2: 0.592 V), and the step has not changed since Phase 4.
+  - The Phase 1 question of the code resting at 0 between words is resolved (datasheet §8.4).
+- **Handed on:**
+  - **Upsets → Phase 8.** Find their cause before the emulator is held to bit-for-bit matching. Candidates: an internal state not cleared by Reset, such as the filter's registers; marginal internal logic, sensitive to supply or temperature; or interference on the breadboard. Tests: temperature; supply voltage; decoupling; a second chip; and how the chip's state is left at the end of a word.
+  - **Phase 7 uses the standard procedure.** Take at least 5 takes per word and path, and publish all of them. Until upsets are explained, the reference output for a word is the per-sample majority of its takes, and `compare.json` says where there is no majority.
+  - **For Phase 8:**
+    - the noise generator's polynomial and steps per slot, and its state after Reset;
+    - why Speak External starts 2 samples earlier than a VSM Speak;
+    - what the original's "T State Counter" is.
+  - **For a later hardware revision:**
+    - whether the DAC scale step is in the chip or in the load (§5);
+    - the Pico-switched power of §5 item 7, if upset tests need many power cycles (the one here was done by hand).
+  - **Not looked at:** the extra DAC noise during speech, handed on from Phase 2. It affects only layer 3 → Phase 8.
 
 ### Phase 6: PROM inventory
 

@@ -4,7 +4,15 @@ This datasheet describes the TMS5220 as measured on real hardware. It follows th
 
 The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. `../speech_capture_plan.md` describes how the measurements are made.
 
-**Status (2026-10-06):** Phase 1 and 2 sections are drafted: the system clock (§2, Appendix A), the DAC and the audio output (§8.2, §8.3), the serial sample output (§8.4), measured output characteristics (§9.5), and pin functions (§11.2). §4 and §6 hold early observations from the Phase 3 and Phase 4 VSM traces. The other sections are placeholders and are filled in by later phases.
+**Status (2026-10-06):** These sections are drafted:
+- the system clock (§2, Appendix A);
+- the chip's state at power-up and between utterances (§7);
+- the DAC and the audio output (§8.2, §8.3);
+- the serial sample output (§8.4);
+- the measured output characteristics (§9.5);
+- the pin functions (§11.2).
+
+§4 and §6 hold early observations from the Phase 3–5 traces. The other sections are placeholders, filled in by later phases.
 
 ## Conventions
 
@@ -56,7 +64,9 @@ Driving `OSC` from an external clock is covered in Appendix A.
 - **No read-ahead.** A Speak reads the VSM exactly up to the last bit of the stop code and no further. For ACORN that is 1152 bits, starting with a Dummy Read at the loaded address [p3-01, p3-03].
 - **Reset uses the VSM.** Every Reset command issues a Load Address and then a Dummy Read to the VSM, as the original's §6.6 says. This includes each `0xFF` byte of the initialisation sequence, which decodes as Reset (`X111XXXX`) [p3-01].
 - **One frame every 25 ms.** During a Speak, the chip reads each frame's bits in a burst, and the bursts start exactly 25.000 ms apart (within 0.12 µs, at the nominal clock) [p4-01, p4-02].
-- **The start is not fixed.** The first frame read came 25.51, 19.69 and 12.49 ms after the host started its Load Address and Speak sequence (`SCOPE_TRIG` rising), in three Speaks of the same word with no reset between them. The time from that first read to Talk Status clearing was the same in all three, 674.87 ms, which is 27 frames of 25 ms [p3-01, p4-01, p4-02]. This suggests that a Speak waits for a frame boundary of a timer that keeps running between words. Phase 5 tests this.
+- **The start waits for the frame clock.** A Speak starts on the next boundary of a frame clock that runs all the time, so the first read comes 0.3–25.3 ms after the Speak (§7) [p5-09, p5-10]. The time from the first read to Talk Status clearing is the same for every Speak of a word: 674.87 ms, 27 frames, for ACORN [p3-01, p4-01, p4-02].
+- **When a frame is read.** Each frame's first bit is read about 106 µs after `T11` rises, at the start of slot 17 of a sample period, in every frame [p5-01]. The bits of a frame follow one every 12.5 µs (two ROMCLK periods) [p5-18].
+- **When the data must be valid.** The VSM emulation puts each data bit on `ADD8` after it sees `M0` rise. The chip still read every bit correctly with that delayed by up to 9.5 µs, but not by 10 µs [p5-18]. So the chip samples `ADD8` about 10 µs after `M0` rises, shortly before the next read. The emulation, which normally answers within about 1.5 µs, has a wide margin.
 
 ## 5. I/O structure
 
@@ -72,10 +82,52 @@ Driving `OSC` from an external clock is covered in Appendix A.
 - **Talk Status is not set at once.** A status read 22 µs after Speak (preceded by Load Address) still shows Talk Status clear [p3-01].
 - **BE is left over outside Speak External.** After a VSM Speak, BE holds whatever the last Reset or Speak External left [p3-01, p3-02].
 - **BE after a complete stream.** A Speak External stream whose stop code ends exactly on a byte boundary finishes with BE set. Its speech is nevertheless complete [p3-02].
+- **Speak and Reset against the frame clock.** A Speak (or Speak External) starts on the first frame boundary at least about 320 µs after it is written. Reset does not move the frame clock, and it holds the noise generator until the next Speak (§7) [p5-09, p5-10, p5-12].
 
-## 7. Power-up clear
+## 7. Power-up clear, and the state between utterances
 
-**Status: not yet written (Phase 5).** This includes what state survives a Speak or Reset, such as the noise generator and the start delay (plan §11).
+**Status: drafted (Phase 5).** Measured on one chip at 640 kHz. Phase 8 explains the noise generator itself (§8).
+
+The original's §7 lists what the power-up clear does, and says that it resembles Reset. It does not say what the chip keeps from one utterance to the next. Two things are kept: the phase of a frame clock, and the state of the noise generator. Together they explain why repeats of a word were not identical (plan §2). A third, smaller effect is not explained yet ("Upsets", below).
+
+**Power-up (New).** After a power cycle with `OSC` running, the chip spoke at once, without a Reset, so the power-up clear worked [p5-16].
+
+**The frame clock (New).** The chip has a frame clock that runs whenever `OSC` runs, whether the chip is speaking or idle. Its boundaries are 16000 `OSC` cycles apart: 200 samples, 25 ms at 640 kHz.
+- **It runs between words.** In 34 Speaks spread over 23 s, with idle gaps of 0.02–0.6 s, every first frame read fell on one 25 ms grid, to within ±0.08 µs [p5-09].
+- **Neither Speak nor Reset moves it.** Half of those 34 Speaks came after the reset sequence (nine `0xFF`, then Reset) [p5-09].
+- **Power-up starts it at an arbitrary phase.** After a power cycle the grid had moved by 262 µs [p5-16]. The original's power-up list says the "T State Counter" is reset; whether that counter is the frame clock is not known.
+- **When a Speak starts.** A Speak starts on the first frame boundary at least about 320 µs after it is written. Written 323 µs or more before a boundary, it started on that boundary; written 317 µs or less before, on the next one [p5-10]. So the first frame is read anywhere from about 0.3 ms to 25.3 ms after the Speak (measured: 2.1–24.7 ms [p5-09]). This is the start delay that varied in earlier captures (plan §2). From the first read onwards, a word's timing does not vary (§4).
+- **When the output starts.** The first sample that differs from idle comes 207 samples (ACORN) or 206 samples (B) after the sample period of the first frame read [p5-01]. That agrees with the original's "audio output begins on the following frame boundary", with a few samples for the energy to rise from zero.
+- **Stopping the clock freezes it.** With the chip idle, `OSC` was stopped for 1 ms to 1 s. Afterwards the frame grid had moved by the stopped time, to within 6 µs, and the chip spoke normally without a Reset. After 10 s stopped, the chip still spoke normally, but the grid had moved 4.3 ms further than the stopped time, so some internal state is lost over that time [p5-17]. Stopping `OSC` is therefore not a reset. Stopping it during speech has left the chip unable to complete a write until it was power-cycled (`firmware/PROTOCOL.md`); that was not repeated.
+
+**The noise generator (New).** The noise that excites unvoiced frames comes from a generator whose state carries over from one utterance to the next.
+- **It runs freely, with a period of 8191 frames.** Takes of ACORN that started 8191 frames apart (204.8 s) differed by at most 3 codes. Takes at the other spacings, from 600 to 9391 frames, differed by 33–40 codes [p5-11]. A period of 8191 fits a 13-bit maximal-length shift register that advances a fixed number of steps per frame. It keeps running between words.
+- **It affects voiced frames too.** Between takes whose noise differed, the output first differed in a voiced frame, 946 samples after speech started, by ±1–2 codes. The large differences start with the first unvoiced frame [p5-11].
+- **Reset holds it, and the next Speak restarts it.** After the reset sequence, takes of ACORN on frames 800 apart all matched (to 3 codes), although their frames differed. A take with another Speak between the Reset and the take differed by up to 32 codes [p5-12]. So after a Reset, the generator stays in a fixed state until the next Speak, and runs freely from that Speak onwards.
+- **The restart counts from the Speak, in slots.** After a Reset, Speaks at random times within a frame gave different noise [p5-13]. Speaks accepted (READY low) in the same slot before the frame boundary gave the same noise, even in different clock sessions. One accepted one slot later (6.35 µs) gave different noise [p5-14].
+- **The state after Reset is fixed.** After a power cycle, the same Reset-then-Speak timing gave the same output as before it [p5-16].
+
+**Speak External (New).** Accepted at the same time before the frame boundary as a VSM Speak, Speak External starts its output 2 samples earlier, and its noise differs [p5-01, p5-05]. Its takes repeat among themselves as well as VSM takes do.
+
+**Upsets (New, not explained).** With the start delay and the noise fixed, repeats of a word match to within ±1–3 codes. They are often not identical:
+- In a sequence of takes, some pairs are bit-identical. For example, three of six takes, and two others, matched exactly [p5-15]; two takes from different clock sessions matched exactly [p5-14]. In other runs, no two takes matched [p5-01 to p5-04].
+- Where takes differ, the difference starts with a single ±1 at one sample. It then appears as scattered ±1 differences, now and then ±2 or ±3, for the rest of the word, as if a small difference had entered the filter's internal state.
+- Each word has a few points where these departures start, and they recur from take to take. For ACORN they are about 2490, 2880 and 3280 samples after speech starts [p5-01 to p5-04, p5-12, p5-15].
+- They are not caused by the start timing, which was the same in every take to within 1 µs.
+- Each of these changes left them in place:
+  - clocking the chip at 600 or 800 kHz;
+  - stopping the host's status reads during speech;
+  - delaying the VSM data by up to 8 µs;
+  - speaking another word first;
+  - a power cycle.
+
+Phase 8 investigates them [p5-12 to p5-16].
+
+**For emulator writers.** To reproduce a capture, start from:
+1. **The start time.** The Speak starts on the first frame boundary at least about 320 µs after it is written.
+2. **The noise generator.** After a Reset or power-up it is in a fixed state. It starts when the Speak is accepted, and advances by slots from then on, through speech and idle alike, until the next Reset. Its state after a Reset, and the number of steps per slot, are for Phase 8.
+
+`capture.json` records both for every capture taken with the standard procedure (plan §12, Phase 5): the frame, and the time the Speak was accepted before it.
 
 ## 8. Speech synthesis
 
@@ -136,7 +188,7 @@ The step between −1 and 0 is **about six times a normal step**: 26–27 µA, o
 
 **Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3).
 
-**No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %. Some hours later, after the chip had been power-cycled, the whole scale was 7 % higher (code −1 at 0.635 V against 0.592 V), with the supplies within 6 mV of nominal [p4-01 to p4-04]. The shape of the table still fitted to 2.2–2.3 mV rms. So the absolute current figures in this section can vary by at least 7 %; the cause (the chip, the load or the scope) is not known yet.
+**No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %. Some hours later, after the chip had been power-cycled, the whole scale was 7 % higher (code −1 at 0.635 V against 0.592 V), with the supplies within 6 mV of nominal [p4-01 to p4-04]. The shape of the table still fitted to 2.2–2.3 mV rms. The step then stayed put: over the next three hours, through another power cycle, the fitted scale was 1.068–1.079 times the table [p5-01 to p5-08]. A meter on TP2 read 0.642 V for the idle level, against the scope's 0.631 V, so the step is real, in the chip or the load, not in the scope. So the absolute current figures in this section can vary by at least 7 %; the cause is not known yet.
 
 ![TP2 against code into 996 ohm, its INL, and the residual against the previous sample](assets/fig_dac_transfer.png)
 
@@ -180,7 +232,7 @@ The original lists pin 7 (`T11`) only as "Sync" and pin 9 (`I/O`) only as "Seria
 
 The code is a 10-bit two's-complement number (−512 to +511), equal to Y<sub>L13</sub>–Y<sub>L4</sub> of the original's Table 4. In 41,599 consecutive sample periods, `I/O` was never high outside slots 2–11 [p1-02].
 
-**Idle value.** When the chip is not speaking, the code is −1. That is all ones in slots 2–11, which looks like a 50 % duty square wave at 8 kHz on a scope. A 1 s idle gap gave 8016 consecutive samples of −1 [p1-02]. Between the end of one word and the next Speak, the code can rest at 0 rather than −1 [p1-02]. This is examined in Phase 5.
+**Idle value.** When the chip is not speaking, the code is −1. That is all ones in slots 2–11, which looks like a 50 % duty square wave at 8 kHz on a scope. A 1 s idle gap gave 8016 consecutive samples of −1 [p1-02]. At the end of a word, the output decays to 0 and keeps changing for about 15 samples after Talk Status clears, then returns to −1 [p5-01]. An earlier capture showed it resting at 0 for longer between back-to-back words [p1-02]; that was with the firmware's old demo loop, and no Phase 5 capture shows it.
 
 **Timing.** Slot *k* starts at a ROMCLK rising edge. Each output changes a fixed delay after that edge [p1-03]:
 
@@ -289,3 +341,7 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-06 | §4 | New (early): frames are read exactly 25 ms apart; the delay from Speak to the first frame read varies by most of a frame | p3-01, p4-01, p4-02 |
 | 2026-10-06 | §8.2 | The absolute DAC scale was 7 % higher on a later run; the table's shape was unchanged | p4-01 to p4-04 |
 | 2026-10-06 | §6 | New (early): Read Byte returns the VSM byte bit-reversed. Talk Status is set some time after Speak. How BE behaves outside Speak External, and at the end of a stream | p3-01, p3-02, p3-04 |
+| 2026-10-06 | §7 | New: the frame clock, which runs between words, and when a Speak starts on it; the noise generator, which runs freely with a period of 8191 frames, is held by Reset and restarts from the Speak; clock stops; upsets (not explained) | p5-01 to p5-17 |
+| 2026-10-06 | §4, §6 | New (early): when each frame is read, and the `ADD8` data timing margin. Speak and Reset against the frame clock | p5-01, p5-09, p5-10, p5-12, p5-18 |
+| 2026-10-06 | §8.2 | The DAC scale step confirmed with a meter (0.642 V idle); stable over three hours | p5-01 to p5-08 |
+| 2026-10-06 | §8.4 | The output's return to idle at the end of a word | p5-01 |

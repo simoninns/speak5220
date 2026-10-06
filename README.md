@@ -46,7 +46,7 @@ python tools/pico.py selftest    # upload, speak and trace, checking every resul
 
 The PHROM data comes from [TMS6100-Emulator](https://github.com/simoninns/TMS6100-Emulator). The on-board LED lights while the TMS5220 is talking.
 
-With the PicoScope connected, one command captures a word into a complete capture directory, with the readable files and checks (`tools/README.md`):
+With the PicoScope connected, one command captures a word into a complete capture directory, with the readable files and checks (`tools/README.md`). Every take uses the standard procedure: the chip is reset, then the Speak is timed to the chip's frame clock, so that repeats start from the same state.
 
 ```bash
 python tools/run.py acorn_phrom_a ACORN --takes 2 --path both

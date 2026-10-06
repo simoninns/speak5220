@@ -18,6 +18,7 @@
 #include <strings.h>
 
 #include "hardware/clocks.h"
+#include "hardware/sync.h"
 #include "pico/stdlib.h"
 
 #include "command.h"
@@ -35,9 +36,12 @@
 // Speak External streams are uploaded into this buffer, then fed to the FIFO
 #define EXTERNAL_MAX        32768
 
-// Talk Status is checked when INT asserts.  It is also read at this
-// interval, as a fallback, so that a missed INT cannot hang a command.
-#define STATUS_POLL_MS      200
+// Talk Status is checked when INT asserts.  It can also be read at an
+// interval, as a fallback, so that a missed INT cannot hang a command (the
+// command's timeout ends it anyway).  POLL sets the interval; 0, the
+// default, reads only on INT, because a status read during speech can
+// disturb the output (datasheet section 7).
+#define DEFAULT_POLL_MS     0
 
 // Talk Status is not set at once: a read 22us after a Speak still finds it
 // clear (the datasheet allows a Speak after Load Address up to 287us before
@@ -55,6 +59,7 @@
 
 static uint8_t external[EXTERNAL_MAX];
 static uint32_t clockHz;
+static uint32_t statusPollMs = DEFAULT_POLL_MS;
 
 void commandSetClock(uint32_t hz)
 {
@@ -81,6 +86,15 @@ static bool parseNumber(const char *text, uint32_t *value)
     unsigned long v = strtoul(text, &end, 0);
     if (*text == '\0' || *end != '\0') return false;
     *value = (uint32_t)v;
+    return true;
+}
+
+static bool parseNumber64(const char *text, uint64_t *value)
+{
+    char *end;
+    unsigned long long v = strtoull(text, &end, 0);
+    if (*text == '\0' || *end != '\0') return false;
+    *value = (uint64_t)v;
     return true;
 }
 
@@ -163,6 +177,9 @@ typedef struct {
     uint32_t interrupts;    // INT assertions seen
     uint32_t statusReads;
     int64_t elapsedUs;      // From the start of the command to Talk Status clear
+    uint64_t trigUs;        // The microsecond timer when SCOPE_TRIG rose
+    int64_t lateUs;         // How late SCOPE_TRIG rose after the requested start time
+    bool timed;             // A start time was requested
 } talk_t;
 
 static bool feed(feed_t *f, uint32_t count)
@@ -202,7 +219,9 @@ static const char *waitTalk(feed_t *f, uint32_t timeoutMs, absolute_time_t start
                 (talk->talked || absolute_time_diff_us(begun, get_absolute_time()) > START_MS * 1000)) {
                 break;
             }
-            poll = make_timeout_time_ms(talk->talked ? STATUS_POLL_MS : START_POLL_MS);
+            if (!talk->talked) poll = make_timeout_time_ms(START_POLL_MS);
+            else if (statusPollMs) poll = make_timeout_time_ms(statusPollMs);
+            else poll = at_the_end_of_time;
         }
         if (time_reached(timeout)) {
             error = "timeout waiting for Talk Status to clear";
@@ -219,8 +238,27 @@ static void replyTalk(const char *error, const talk_t *talk, const feed_t *f)
            talk->status, talk->talked, (unsigned long)talk->interrupts,
            (unsigned long)talk->statusReads, talk->elapsedUs);
     if (f) printf(" written=%lu", (unsigned long)f->written);
+    printf(" trig_us=%llu", (unsigned long long)talk->trigUs);
+    if (talk->timed) printf(" late_us=%lld", (long long)talk->lateUs);
     if (error) printf(" %s", error);
     printf("\n");
+}
+
+// Wait for the requested start time (if any), then raise SCOPE_TRIG and
+// note when.  The microsecond timer and the trace's cycle counter both
+// run from the crystal that clocks the TMS5220, so a start time can be
+// placed exactly on the chip's frame grid (PROTOCOL.md).
+static absolute_time_t begin(talk_t *talk, uint64_t atUs)
+{
+    if (talk->timed) {
+        while (time_us_64() < atUs) tight_loop_contents();
+    }
+    uint32_t interrupts = save_and_disable_interrupts();
+    talk->trigUs = time_us_64();
+    setTrigger(true);
+    restore_interrupts(interrupts);
+    if (talk->timed) talk->lateUs = (int64_t)(talk->trigUs - atUs);
+    return from_us_since_boot(talk->trigUs);
 }
 
 // ---------------------------------------------------------------------
@@ -253,10 +291,14 @@ static void cmdStats(void)
 
 static void cmdClock(uint32_t hz)
 {
+    // at_us: when the clock stopped or started, on the microsecond timer
+    uint64_t atUs;
     if (hz == 0) {
+        atUs = time_us_64();
         tms5220ClockStop();
         clockHz = 0;
     } else {
+        atUs = time_us_64();
         uint32_t actual = tms5220ClockStart(hz);
         if (!actual) {
             printf("ERR frequency out of range\n");
@@ -264,7 +306,7 @@ static void cmdClock(uint32_t hz)
         }
         clockHz = actual;
     }
-    printf("OK osc_hz=%lu\n", (unsigned long)clockHz);
+    printf("OK osc_hz=%lu at_us=%llu\n", (unsigned long)clockHz, (unsigned long long)atUs);
 }
 
 static void cmdReset(void)
@@ -313,18 +355,23 @@ static void cmdUnload(const char *which)
     printf("OK\n");
 }
 
-static void cmdSpeak(uint32_t address, uint32_t timeoutMs)
+static void cmdTime(void)
 {
-    talk_t talk = { 0 };
-    absolute_time_t start = get_absolute_time();
-    setTrigger(true);
+    printf("OK us=%llu\n", (unsigned long long)time_us_64());
+}
+
+static void cmdSpeak(uint32_t address, uint32_t timeoutMs, bool timed, uint64_t atUs)
+{
+    talk_t talk = { .timed = timed };
+    absolute_time_t start = begin(&talk, atUs);
     const char *error = tms5220Speak(address & 0xFFFFF) ? NULL : "READY timeout sending Speak";
     if (!error) error = waitTalk(NULL, timeoutMs, start, &talk);
     setTrigger(false);
     replyTalk(error, &talk, NULL);
 }
 
-static void cmdSpeakExternal(uint32_t length, uint32_t crc, uint32_t timeoutMs)
+static void cmdSpeakExternal(uint32_t length, uint32_t crc, uint32_t timeoutMs, bool timed,
+                             uint64_t atUs)
 {
     if (length == 0 || length > EXTERNAL_MAX) {
         printf("ERR length must be 1-%d\n", EXTERNAL_MAX);
@@ -337,9 +384,8 @@ static void cmdSpeakExternal(uint32_t length, uint32_t crc, uint32_t timeoutMs)
     }
 
     feed_t f = { external, length, 0 };
-    talk_t talk = { 0 };
-    absolute_time_t start = get_absolute_time();
-    setTrigger(true);
+    talk_t talk = { .timed = timed };
+    absolute_time_t start = begin(&talk, atUs);
     if (!tms5220Write(TMS5220_CMD_SPEAK_EXTERNAL)) error = "READY timeout sending Speak External";
     else if (!feed(&f, FIFO_SIZE)) error = "READY timeout writing FIFO";
     if (!error) error = waitTalk(&f, timeoutMs, start, &talk);
@@ -407,8 +453,8 @@ static void cmdHelp(void)
 {
     puts("INFO | STATS | CLOCK <hz> | RESET | UPLOAD <bank> <length> <crc32> | "
          "UNLOAD <bank>|ALL\n"
-         "SPEAK <address> [timeout_ms] | SPEAKEXT <length> <crc32> [timeout_ms] | "
-         "WAIT [timeout_ms]\n"
+         "SPEAK <address> [timeout_ms [at_us]] | SPEAKEXT <length> <crc32> [timeout_ms [at_us]] | "
+         "WAIT [timeout_ms] | TIME | POLL [ms] | VSMDELAY <cycles>\n"
          "CMD <byte>... | READ [count] | TRIG 0|1 | TRACE [CLEAR]");
     printf("OK\n");
 }
@@ -427,12 +473,17 @@ static void execute(char *line)
     if (count == 0) return;
 
     const char *name = tokens[0];
+#define IS_NAME(command) (!strcasecmp(name, command))
     uint32_t n[3] = { 0 };
     int args = count - 1;
     bool numeric = true;
     for (int i = 0; i < args && i < 3; i++) numeric &= parseNumber(tokens[i + 1], &n[i]);
+    // SPEAK and SPEAKEXT take a 64-bit start time as their last argument
+    uint64_t atUs = 0;
+    bool timedSpeak = (IS_NAME("SPEAK") && args == 3) || (IS_NAME("SPEAKEXT") && args == 4);
+    if (timedSpeak) numeric &= parseNumber64(tokens[args], &atUs);
 
-#define IS(command)     (!strcasecmp(name, command))
+#define IS(command)     IS_NAME(command)
 #define NEED(lo, hi)    if (args < (lo) || args > (hi)) { printf("ERR usage: see HELP\n"); return; }
 #define NUMERIC         if (!numeric) { printf("ERR bad number\n"); return; }
 
@@ -455,11 +506,22 @@ static void execute(char *line)
         NEED(1, 1);
         cmdUnload(tokens[1]);
     } else if (IS("SPEAK")) {
-        NEED(1, 2); NUMERIC;
-        cmdSpeak(n[0], args > 1 ? n[1] : DEFAULT_TIMEOUT_MS);
+        NEED(1, 3); NUMERIC;
+        cmdSpeak(n[0], args > 1 ? n[1] : DEFAULT_TIMEOUT_MS, timedSpeak, atUs);
     } else if (IS("SPEAKEXT")) {
-        NEED(2, 3); NUMERIC;
-        cmdSpeakExternal(n[0], n[1], args > 2 ? n[2] : DEFAULT_TIMEOUT_MS);
+        NEED(2, 4); NUMERIC;
+        cmdSpeakExternal(n[0], n[1], args > 2 ? n[2] : DEFAULT_TIMEOUT_MS, timedSpeak, atUs);
+    } else if (IS("VSMDELAY")) {
+        NEED(1, 1); NUMERIC;
+        tms6100SetReadDelay(n[0]);
+        printf("OK cycles=%lu\n", (unsigned long)n[0]);
+    } else if (IS("POLL")) {
+        NEED(0, 1); NUMERIC;
+        if (args) statusPollMs = n[0];
+        printf("OK poll_ms=%lu\n", (unsigned long)statusPollMs);
+    } else if (IS("TIME")) {
+        NEED(0, 0);
+        cmdTime();
     } else if (IS("WAIT")) {
         NEED(0, 1); NUMERIC;
         cmdWait(args ? n[0] : DEFAULT_TIMEOUT_MS);

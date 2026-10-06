@@ -14,6 +14,12 @@
       python tools/run.py acorn_phrom_a all --takes 5          # the whole PROM
       python tools/run.py acorn_phrom_a --address 0x3CBB7      # an address sweep point
 
+    Every take uses the standard procedure (plan section 12, Phase 5;
+    datasheet section 7) unless --start free is given: the reset sequence,
+    then a Speak timed to start half a frame before a boundary of the chip's
+    frame clock (frameclock.py). That fixes both the start delay and the
+    noise generator's state, so repeats match apart from rare upsets.
+
     Layout: <out>/<prom>/prom.json, index.md and one directory per word
     (<number>_<name>, or addr_<address> for addresses not in the word
     table), holding compare.json and one directory per take: vsm01, vsm02,
@@ -37,6 +43,7 @@ import zlib
 
 import capture as capturelib
 import compare as comparelib
+import frameclock
 import lpc
 import pico as picolib
 import process as processlib
@@ -48,6 +55,7 @@ PATH_PREFIX = {"vsm": "vsm", "external": "ext"}
 POST_S = 0.15              # captured after the expected end of speech
 UNPARSED_S = 2.0           # capture length when the data has no stop code
 PRE_MS = 10.0
+START_LEAD_S = 6.0         # a timed take opens the scope (about 3.5 s) this long before its start
 
 
 def nextTake(wordDir, path):
@@ -72,13 +80,29 @@ def zipRaw(takeDir):
         z.write(path, "scope_raw.npz")
 
 
-def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench, lastEnd):
+def waitUntil(pico, us, marginS=0.0):
+    """Sleep until marginS before the Pico's timer reaches us."""
+    lead = (us - pico.time()) * 1e-6 - marginS
+    if lead > 0:
+        time.sleep(lead)
+
+
+def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench, lastEnd,
+                clock, frame=None):
+    """One take. The standard procedure resets the chip, which holds its
+    noise generator in a fixed state until the next Speak, and then times
+    the Speak so that the first frame is read at a frame boundary half a
+    frame later (frameclock.py)."""
     takeDir = nextTake(wordDir, path)
+    standard = args.start == "standard"
     seconds, frames = expectedSeconds(image, address)
     picoMeta = {"firmware": pico.firmware.get("firmware"),
                 "osc_hz": int(pico.firmware["osc_hz"]), "banks": pico.info()["banks"]}
-    if args.reset:
+    if standard or args.reset:
         picoMeta["reset_status"] = pico.reset()
+    if standard and frame is None:
+        frame = clock.next(pico, START_LEAD_S + 0.5)
+    atUs = clock.startUs(frame, path) if standard else None
     if path == "vsm":
         picoMeta["command"] = {"speak": f"0x{address:05x}"}
         data = None
@@ -95,9 +119,9 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
         timing["idle_s"] = timing["start"] - lastEnd if lastEnd else None
         try:
             if path == "vsm":
-                picoMeta["result"] = pico.speak(address, args.timeout_ms)
+                picoMeta["result"] = pico.speak(address, args.timeout_ms, atUs)
             else:
-                picoMeta["result"] = pico.speakExternal(data, args.timeout_ms)
+                picoMeta["result"] = pico.speakExternal(data, args.timeout_ms, atUs)
         except picolib.PicoError as error:
             # For example a sweep point whose data never reaches a stop
             # code: record it, stop the speech, and let the scope finish
@@ -108,6 +132,9 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
 
     print(f"{takeDir}: {word['name'] if word else 'address'} 0x{address:05x} "
           f"{path}, {frames or '?'} frames, capturing {seconds:.2f} s")
+    if atUs is not None:
+        # Arm the scope shortly before the start time
+        waitUntil(pico, atUs, START_LEAD_S)
     scope = capturelib.scopeCapture(seconds, PRE_MS, args.timebase, 3, armed)
     traceRaw, traceMeta = pico.trace()
     picolib.writeTrace(takeDir, traceRaw, traceMeta)
@@ -123,8 +150,9 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
                    "word_number": word["number"] if word else None,
                    "word": word["name"] if word else None},
         "path": path,
-        "procedure": {"reset_before": bool(args.reset), "idle_before_s": timing.get("idle_s"),
-                      "takes_requested": args.takes},
+        "procedure": {"start": args.start, "reset_before": standard or bool(args.reset),
+                      "idle_before_s": timing.get("idle_s"), "takes_requested": args.takes},
+        "timing": dict(clock.meta(path if standard else None), start_at_us=atUs, frame=frame),
         "chip": bench.get("chip"), "supplies_v": bench.get("supplies_v"),
         "temperature_c": bench.get("temperature_c"),
         "scope": capturelib.scopeMeta(scope),
@@ -150,9 +178,12 @@ def main():
                         help="VSM Speak, Speak External, or both")
     parser.add_argument("--takes", type=int, default=1, help="takes per word and path")
     parser.add_argument("--idle", type=float, default=0.5,
-                        help="seconds to wait between takes (after the scope data is saved)")
+                        help="with --start free: seconds to wait between takes")
+    parser.add_argument("--start", choices=("standard", "free"), default="standard",
+                        help="standard: reset, then a Speak timed to the frame clock, so that "
+                             "repeats match; free: speak as soon as the scope is armed")
     parser.add_argument("--reset", action="store_true",
-                        help="send the reset sequence (nine 0xFF, Reset) before every take")
+                        help="with --start free: also send the reset sequence before every take")
     parser.add_argument("--out", default=os.path.join(promlib.ROOT, "captures", "corpus"),
                         help="capture root (default captures/corpus, kept local)")
     parser.add_argument("--zip", action="store_true",
@@ -195,15 +226,28 @@ def main():
         if pico.banks().get(manifest["bank"]) != crc:
             print(f"uploading {manifest['name']} to bank {manifest['bank']:X}")
             pico.upload(manifest["bank"], image)
+        # The frame clock, and for the standard procedure the start offset
+        # of each path, from the first word (a word that parses to a stop
+        # code, so that it ends)
+        calibration = next((a for _, a, _ in targets if expectedSeconds(image, a)[1]),
+                           frameclock.CALIBRATION_ADDRESS)
+        clock = frameclock.FrameClock.locate(pico, calibration)
+        print(f"frame grid at {clock.gridUs:.2f} us on the Pico's timer")
+        if args.start == "standard":
+            pico.reset()
+            for path in paths:
+                clock.calibrate(pico, path, calibration,
+                                picolib.wordBytes(image, calibration) if path == "external" else None)
         lastEnd = None
         for word, address, name in targets:
             wordDir = os.path.join(promDir, name)
             for path in paths:
                 for _ in range(args.takes):
-                    if lastEnd:
+                    if lastEnd and args.start == "free":
                         time.sleep(args.idle)
                     takeDir, passed, lastEnd = captureTake(pico, args, manifest, image, word,
-                                                           address, path, wordDir, bench, lastEnd)
+                                                           address, path, wordDir, bench,
+                                                           lastEnd, clock)
                     if not passed:
                         failed.append(takeDir)
             takes = comparelib.takeDirs(wordDir)

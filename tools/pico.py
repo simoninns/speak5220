@@ -161,17 +161,26 @@ class Pico:
     @staticmethod
     def _talk(fields):
         result = {key: number(fields[key]) for key in ("status", "talked", "ints", "reads", "us")}
-        if "written" in fields:
-            result["written"] = number(fields["written"])
+        for key in ("written", "trig_us", "late_us"):
+            if key in fields:
+                result[key] = number(fields[key])
         return result
 
-    def speak(self, address, timeoutMs=10000):
-        return self._talk(self.command(f"SPEAK 0x{address:05x} {timeoutMs}")[0])
+    def time(self):
+        """The Pico's microsecond timer, which runs from the same crystal as OSC."""
+        return number(self.command("TIME")[0]["us"])
 
-    def speakExternal(self, data, timeoutMs=10000):
+    def speak(self, address, timeoutMs=10000, atUs=None):
+        """VSM Speak. With atUs, SCOPE_TRIG rises and the command starts when
+        the microsecond timer reaches atUs (see time())."""
+        at = "" if atUs is None else f" {int(atUs)}"
+        return self._talk(self.command(f"SPEAK 0x{address:05x} {timeoutMs}{at}")[0])
+
+    def speakExternal(self, data, timeoutMs=10000, atUs=None):
         data = bytes(data)
+        at = "" if atUs is None else f" {int(atUs)}"
         return self._talk(self._sendData(
-            f"SPEAKEXT {len(data)} 0x{zlib.crc32(data):08x} {timeoutMs}", data)[0])
+            f"SPEAKEXT {len(data)} 0x{zlib.crc32(data):08x} {timeoutMs}{at}", data)[0])
 
     def wait(self, timeoutMs=10000):
         return self._talk(self.command(f"WAIT {timeoutMs}")[0])

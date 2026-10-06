@@ -73,6 +73,10 @@ static_assert(PIN_RS_N == PIN_WS_N + 1 && PIN_READY_N == PIN_WS_N + 2 &&
 
 static volatile tms6100Stats_t stats;
 
+// Extra delay before each data bit is driven onto ADD8, for measuring the
+// TMS5220's timing margin (VSMDELAY command); normally 0
+static volatile uint32_t readDelayCycles;
+
 // Bank images (written by core 0, read by core 1)
 static uint8_t slots[TMS6100_SLOTS][TMS6100_BANK_SIZE];
 static int8_t slotBank[TMS6100_SLOTS];          // Bank held by each slot, or -1
@@ -176,6 +180,7 @@ static void __not_in_flash_func(readData)(uint32_t time)
         // Present the next bit (LSB first); the TMS5220 samples it before
         // the end of the M0 pulse
         uint32_t bit = (outputBuffer >> outputBufferPointer) & 1;
+        if (readDelayCycles) busy_wait_at_least_cycles(readDelayCycles);
         if (outputEnabled) {
             if (bit) {
                 sio_hw->gpio_set = 1u << PIN_ADD8_OUT;
@@ -348,6 +353,11 @@ const uint8_t *tms6100Bank(uint bank)
 uint tms6100BuiltinBank(void)
 {
     return PHROM_BANK;
+}
+
+void tms6100SetReadDelay(uint32_t cycles)
+{
+    readDelayCycles = cycles;
 }
 
 void tms6100TraceClear(void)

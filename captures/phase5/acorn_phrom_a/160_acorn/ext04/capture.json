@@ -1,0 +1,180 @@
+{
+  "captured": "2026-10-06T17:58:48+0200",
+  "source": {
+    "prom": "acorn_phrom_a",
+    "image_sha256": "8c093401661f530032c5aca8fd80d91af58e596d082a51be58ce2ee063a89308",
+    "bank": 15,
+    "address": "0x3cbb6",
+    "word_number": 160,
+    "word": "ACORN"
+  },
+  "path": "external",
+  "procedure": {
+    "start": "standard",
+    "reset_before": true,
+    "idle_before_s": 8.651795148849487,
+    "takes_requested": 4
+  },
+  "timing": {
+    "frame_us": 25000.0,
+    "grid_us": 20824.743055582047,
+    "start_offset_us": 213.30277791023218,
+    "latch_target_us": 12256.1,
+    "pico_boot": "2026-10-06T17:23:29+0200",
+    "pico_boot_epoch": 1791300209.225,
+    "start_at_us": 2115158538.0458336,
+    "frame": 84606
+  },
+  "chip": {
+    "part": "TMS5220NL",
+    "marking": "TMS5220NL / DEP 8423",
+    "date_code": "8423",
+    "revision": "TMS5220 (not 5220C)"
+  },
+  "supplies_v": {
+    "+5": 4.99466,
+    "-5": -5.00021,
+    "measured": "2026-10-06"
+  },
+  "temperature_c": null,
+  "scope": {
+    "variant": "3405DMSO",
+    "serial": "CZ765/001",
+    "timebase": 64,
+    "interval_s": 4.96e-07,
+    "pre_trigger_samples": 20161,
+    "samples": 1784273,
+    "overflow_mask": 0,
+    "trigger_channel": "d"
+  },
+  "channels": {
+    "a": {
+      "signal": "SPEAKER (TP2)",
+      "probe": "x1"
+    },
+    "b": {
+      "signal": "T11 (TP3)",
+      "probe": "x10"
+    },
+    "c": {
+      "signal": "I/O (TP4)",
+      "probe": "x10"
+    },
+    "d": {
+      "signal": "SCOPE_TRIG (TP5)",
+      "probe": "x10"
+    }
+  },
+  "board": {
+    "config": "measure",
+    "description": "C1 disconnected: TP2 is loaded by R2 (1K) alone",
+    "r2_load_ohms": 996.0,
+    "build": "breadboard, wired to the schematic in kicad/ (git hash in host_git)"
+  },
+  "pico": {
+    "firmware": "d66eeef-dirty",
+    "osc_hz": 640000,
+    "banks": "15:98e1bf9e",
+    "reset_status": 127,
+    "command": {
+      "speakext": "acorn_phrom_a",
+      "word": "0x3cbb6",
+      "bytes": 144,
+      "crc32": "5e024496"
+    },
+    "result": {
+      "status": 127,
+      "talked": 1,
+      "ints": 19,
+      "reads": 20,
+      "us": 687152,
+      "written": 144,
+      "trig_us": 2115158538,
+      "late_us": 0
+    },
+    "trace": {
+      "count": 617,
+      "dropped": 0,
+      "clock_hz": 144000000,
+      "crc": "d89fbf56"
+    }
+  },
+  "host_git": "d66eeef-dirty",
+  "note": "Phase 5 evidence: standard procedure",
+  "processed": {
+    "version": 2,
+    "host_git": "d66eeef-dirty",
+    "time": "2026-10-06T17:58:48+0200",
+    "files": [
+      "dac.wav",
+      "frames.csv",
+      "listen.wav",
+      "samples.csv",
+      "samples.wav",
+      "vsm_trace.csv"
+    ],
+    "listen_filter": "bbc",
+    "wav": {
+      "samples.wav": "16-bit PCM, header rate 8000 Hz, sample = 10-bit I/O code x 64; sample 0 is the first T11 period after SCOPE_TRIG rose",
+      "dac.wav": "16-bit PCM, header rate 8000 Hz, sample = recovered DAC code x 64",
+      "listen.wav": "48 kHz, DAC code x 128, filter bbc"
+    },
+    "summary": {
+      "path": "external",
+      "trace_events": 617,
+      "final_status": "0x7f",
+      "int_events": 19,
+      "fosc_ppm": 2.761939608797448,
+      "fosc_measured_hz": 640001.7676413497,
+      "sample_rate_hz": 8000.022095516872,
+      "samples": 6999,
+      "talk_samples": 5497,
+      "speech_first_sample": 304,
+      "speech_first_sample_s": 0.0380556,
+      "speech_last_sample": 5510,
+      "code_range": [
+        -93,
+        121
+      ],
+      "layer3": {
+        "gain": 1.072716055633556,
+        "offset_mv": -15.525394977575981,
+        "residual_rms_mv": 1.8929663446735416,
+        "residual_max_mv": 14.763753141932678,
+        "recovered_exact": 0.795970852978997,
+        "recovered_within_2": 0.9998571224460637,
+        "codes_clipped": 0,
+        "table": "captures/phase2/dac_transfer/dac_table.csv"
+      },
+      "host_writes": 145,
+      "host_commands": "60 23 9b 35 85 d3 96 9c 64 d6 12 0a 5f 7c a2 95",
+      "stream_bytes": 144,
+      "stream_bits_to_stop": 1152,
+      "talk_minus_frames_samples": 97,
+      "latch_before_frame_us": 12255.97916674614,
+      "start_frame": 84606,
+      "frames": 27,
+      "frame_kinds": {
+        "voiced": 22,
+        "unvoiced": 1,
+        "repeat": 1,
+        "silence": 2,
+        "stop": 1
+      }
+    },
+    "checks": {
+      "trace_complete": true,
+      "talk_status": true,
+      "scope_overflow": true,
+      "io_format": true,
+      "fosc": true,
+      "layer2_vs_layer3": true,
+      "external_stream": true,
+      "duration": true,
+      "start_slot": true,
+      "start_frame": true,
+      "stop_frame": true
+    },
+    "passed": true
+  }
+}
