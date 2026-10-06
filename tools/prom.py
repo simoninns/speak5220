@@ -8,12 +8,16 @@
     each capture set as <prom>/prom.json.
 
     Images that may not be redistributed are kept out of the repo, in
-    proms/images/ (git-ignored); the manifest's hash identifies them. The
-    Acorn PHROM A image is already in the repo, in firmware/src/
-    romdata_acorn.h, and its manifest calls it "builtin".
+    proms/images/ (git-ignored); the manifest's hash identifies them, and
+    promimport.py rebuilds them, and the manifests, from their pinned public
+    sources. The Acorn PHROM A image is already in the repo, in
+    firmware/src/romdata_acorn.h, and its manifest calls it "builtin".
+
+    An image starts at the first VSM address of its bank and may span
+    several 16K banks (a 32K image in banks 0 and 1, for example); word
+    addresses are full VSM addresses.
 
       python tools/prom.py list acorn_phrom_a      # the word table
-      python tools/prom.py acorn-manifest          # rebuild proms/acorn_phrom_a.json
 
     This file is part of speak5220.
     SPDX-License-Identifier: GPL-3.0-or-later
@@ -24,7 +28,6 @@ import hashlib
 import json
 import os
 import re
-import zlib
 
 import pico as picolib
 
@@ -48,12 +51,26 @@ def image(manifest):
     if source == "builtin":
         data = picolib.acornImage()
     else:
-        with open(os.path.join(ROOT, source), "rb") as f:
+        path = os.path.join(ROOT, source)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"{source} is missing: run tools/promimport.py to rebuild it")
+        with open(path, "rb") as f:
             data = f.read()
     digest = hashlib.sha256(data).hexdigest()
     if digest != manifest["image"]["sha256"]:
         raise ValueError(f"{source}: SHA-256 {digest} does not match the manifest")
     return data
+
+
+def base(manifest):
+    """The VSM address of the image's first byte."""
+    return manifest["bank"] << 14
+
+
+def bankImages(manifest, data):
+    """[(bank, 16K image)] for uploading the image, one entry per bank it spans."""
+    return [(manifest["bank"] + i, data[offset:offset + BANK_SIZE])
+            for i, offset in enumerate(range(0, len(data), BANK_SIZE))]
 
 
 def address(word):
@@ -97,67 +114,17 @@ def addressDir(vsmAddress):
     return f"addr_{vsmAddress:05x}"
 
 
-# ---------------------------------------------------------------------
-# The Acorn PHROM A manifest, from the word list in romdata_acorn.h
-
-def acornManifest():
-    with open(picolib.ROMDATA_ACORN) as f:
-        text = f.read()
-    table = text[text.index("PHROM Word list:"):text.index("*/", text.index("PHROM Word list:"))]
-    bank = int(re.search(r"#define PHROM_BANK 0x([0-9A-F])", text).group(1), 16)
-    words = []
-    for line in table.splitlines():
-        m = re.match(r"\s*(\d+)\s+([0-9A-F]+)\s+(.*\S)\s*$", line)
-        if not m:
-            continue
-        name, note = m.group(3), None
-        if "(unverified" in name:
-            name, note = name[:name.index("(unverified")].strip(), \
-                "start address unverified (romdata_acorn.h)"
-        word = {"number": int(m.group(1)),
-                "address": f"0x{(bank << 14) | int(m.group(2), 16):05X}", "name": name}
-        if note:
-            word["note"] = note
-        words.append(word)
-    data = picolib.acornImage()
-    return {
-        "name": "acorn_phrom_a",
-        "title": "Acorn PHROM A (Kenneth Kendall voice)",
-        "target_chip": "TMS5220",
-        "image": {"source": "builtin", "file": "firmware/src/romdata_acorn.h",
-                  "size": len(data), "sha256": hashlib.sha256(data).hexdigest(),
-                  "crc32": f"{zlib.crc32(data):08x}"},
-        "bank": bank,
-        "provenance": "TMS6100-Emulator (simoninns), "
-                      "https://github.com/simoninns/TMS6100-Emulator/tree/master/Firmware/tms6100: "
-                      "a dump of an Acorn PHROM A made with HxD. The word list was checked by "
-                      "decoding the LPC data at each address (romdata_acorn.h).",
-        "word_numbers": "the BBC Micro's word numbers (SOUND -1, <number>, 0, 0)",
-        "words": words,
-    }
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[1].strip())
     sub = parser.add_subparsers(dest="command", required=True)
     p = sub.add_parser("list", help="print a PROM's word table")
     p.add_argument("prom")
-    sub.add_parser("acorn-manifest", help="rebuild proms/acorn_phrom_a.json from romdata_acorn.h")
     args = parser.parse_args()
 
-    if args.command == "list":
-        manifest = loadManifest(args.prom)
-        image(manifest)
-        for word in manifest["words"]:
-            print(f"{word['number']:5d}  {word['address']}  {wordDir(word):24s} {word['name']}")
-    else:
-        manifest = acornManifest()
-        os.makedirs(PROMS_DIR, exist_ok=True)
-        path = manifestPath(manifest["name"])
-        with open(path, "w") as f:
-            json.dump(manifest, f, indent=2)
-            f.write("\n")
-        print(f"{len(manifest['words'])} words -> {path}")
+    manifest = loadManifest(args.prom)
+    image(manifest)
+    for word in manifest["words"]:
+        print(f"{word['number']:5d}  {word['address']}  {wordDir(word):24s} {word['name']}")
 
 
 if __name__ == "__main__":

@@ -65,9 +65,9 @@ def nextTake(wordDir, path):
     return os.path.join(wordDir, f"{prefix}{max(numbers, default=0) + 1:02d}")
 
 
-def expectedSeconds(image, address):
+def expectedSeconds(image, address, base=None):
     """Talk time from the frames in the image at the address, plus margin."""
-    frames, _ = lpc.parseFrames(lpc.bitsLsbFirst(image[address & 0x3FFF:]))
+    frames, _ = lpc.parseFrames(lpc.bitsLsbFirst(image[picolib.imageOffset(address, base):]))
     if not frames or frames[-1]["kind"] != "stop":
         return UNPARSED_S, None
     return (len(frames) + 2) * lpc.FRAME_SAMPLES / 8000 + POST_S, len(frames)
@@ -95,7 +95,8 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
     frame later (frameclock.py)."""
     takeDir = nextTake(wordDir, path)
     standard = args.start == "standard"
-    seconds, frames = expectedSeconds(image, address)
+    base = promlib.base(manifest)
+    seconds, frames = expectedSeconds(image, address, base)
     picoMeta = {"firmware": pico.firmware.get("firmware"),
                 "osc_hz": int(pico.firmware["osc_hz"]), "banks": pico.info()["banks"]}
     if standard or args.reset:
@@ -107,7 +108,7 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
         picoMeta["command"] = {"speak": f"0x{address:05x}"}
         data = None
     else:
-        data = picolib.wordBytes(image, address)
+        data = picolib.wordBytes(image, address, base)
         picoMeta["command"] = {"speakext": manifest["name"], "word": f"0x{address:05x}",
                                "bytes": len(data), "crc32": f"{zlib.crc32(data):08x}"}
     timing = {}
@@ -222,22 +223,32 @@ def main():
 
     failed = []
     with picolib.Pico(args.port) as pico:
-        crc = zlib.crc32(image.ljust(promlib.BANK_SIZE, b"\0"))
-        if pico.banks().get(manifest["bank"]) != crc:
-            print(f"uploading {manifest['name']} to bank {manifest['bank']:X}")
-            pico.upload(manifest["bank"], image)
+        # The Pico holds 4 banks at once: free the slots of other PROMs'
+        # banks first, if anything needs uploading
+        loaded = pico.banks()
+        needed = [(bank, data) for bank, data in promlib.bankImages(manifest, image)
+                  if loaded.get(bank) != zlib.crc32(data.ljust(promlib.BANK_SIZE, b"\0"))]
+        if needed:
+            mine = {bank for bank, _ in promlib.bankImages(manifest, image)}
+            for bank in set(loaded) - mine:
+                pico.unload(bank)
+        for bank, data in needed:
+            print(f"uploading {manifest['name']} to bank {bank:X}")
+            pico.upload(bank, data)
         # The frame clock, and for the standard procedure the start offset
         # of each path, from the first word (a word that parses to a stop
-        # code, so that it ends)
-        calibration = next((a for _, a, _ in targets if expectedSeconds(image, a)[1]),
-                           frameclock.CALIBRATION_ADDRESS)
+        # code, so that it ends), or else the PROM's first such word
+        base = promlib.base(manifest)
+        candidates = [a for _, a, _ in targets] + [promlib.address(w) for w in manifest["words"]]
+        calibration = next(a for a in candidates if expectedSeconds(image, a, base)[1])
         clock = frameclock.FrameClock.locate(pico, calibration)
         print(f"frame grid at {clock.gridUs:.2f} us on the Pico's timer")
         if args.start == "standard":
             pico.reset()
             for path in paths:
                 clock.calibrate(pico, path, calibration,
-                                picolib.wordBytes(image, calibration) if path == "external" else None)
+                                picolib.wordBytes(image, calibration, base)
+                                if path == "external" else None)
         lastEnd = None
         for word, address, name in targets:
             wordDir = os.path.join(promDir, name)

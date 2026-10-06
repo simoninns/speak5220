@@ -335,9 +335,15 @@ def reverseBits(value):
     return int(f"{value:08b}"[::-1], 2)
 
 
-def wordBytes(image, address):
+def imageOffset(address, base=None):
+    """Where a VSM address falls in an image that starts at VSM address
+    base; by default the image is the address's own 16K bank."""
+    return (address & 0x3FFF) if base is None else address - base
+
+
+def wordBytes(image, address, base=None):
     """The bytes of the word at a VSM address, up to the byte holding its stop code."""
-    offset = address & 0x3FFF
+    offset = imageOffset(address, base)
     frames, bits = lpc.parseFrames(lpc.bitsLsbFirst(image[offset:]))
     if not frames or frames[-1]["kind"] != "stop":
         raise ValueError(f"no stop frame after 0x{address:05x}")
@@ -355,11 +361,11 @@ SELFTEST_WORDS = ACORN_PHRASE[:2] + ACORN_PHRASE[3:] + [("ZERO", 0x3C437), ("YES
 SECOND_BANK = 0x3
 
 
-def checkVsmBits(trace, image, address, label):
+def checkVsmBits(trace, image, address, label, base=None):
     """The bits read from the VSM must be the image's bits from the word
     address on, and must cover the word up to its stop code."""
     addr, bitNumber, bit = bitsRead(trace)
-    expected = lpc.bitsLsbFirst(image[address & 0x3FFF:])
+    expected = lpc.bitsLsbFirst(image[imageOffset(address, base):])
     frames, length = lpc.parseFrames(expected)
     n = len(bit)
     problems = []
@@ -380,7 +386,9 @@ def selftest(pico, repeat, log=print):
     image = acornImage()
     log(f"firmware {pico.firmware.get('firmware')}, OSC {pico.firmware.get('osc_hz')} Hz")
 
-    # Images: the built-in PHROM uploaded to its own bank and to a second one
+    # Images: the built-in PHROM uploaded to its own bank and to a second
+    # one, after emptying the slots (the runner may have left others loaded)
+    pico.unload()
     for bank in (ACORN_BANK, SECOND_BANK):
         pico.upload(bank, image)
     banks = pico.banks()

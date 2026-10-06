@@ -1,0 +1,795 @@
+{
+  "name": "vm61004",
+  "title": "TI VM61004 (US male voice, military vocabulary)",
+  "part": "VM61004",
+  "target_chip": "TMS5220",
+  "target_chip_basis": "Listed by MAME as a BBC Micro speech PHROM (TMS5220), and by TI's 1983 selection guide (whose part numbers do not match MAME's for this series) as TMS5220A vocabulary.",
+  "image": {
+    "source": "proms/images/vm61004.bin",
+    "kind": "dump",
+    "size": 16384,
+    "sha256": "3258d15676a2705f7bedee5f87596043cc979b0cf6beb4dcdeecabe26b4f71c5",
+    "sha1": "24b88d0127a52eccc579d4ea90b39cb90da7fd39",
+    "crc32": "45ec7dcd"
+  },
+  "reference": {
+    "mame": "vm61004",
+    "listed_in": "https://github.com/mamedev/mame/blob/1ecdb5701405bd4cadba520fe1ff4d65f7c7e8aa/hash/bbc_vsm.xml",
+    "size": 16384,
+    "crc32": "45ec7dcd",
+    "sha1": "24b88d0127a52eccc579d4ea90b39cb90da7fd39",
+    "matches": true
+  },
+  "copies": [
+    {
+      "repo": "https://github.com/eRadiofan/TMS6100-Multi-PHROM-Emulator-for-the-BBC-Micro",
+      "commit": "b1a0bd83570755eb02c873b6e24e7b80b341eb59",
+      "path": "Firmware/Common/Src/ROMdata_VM61004.c",
+      "licence": "GPL-3.0",
+      "symbol": "PHROMdata_Mil",
+      "size": 15766,
+      "sha256": "7fc87749a6b65e2e6d5a9f529bfebbf40728987d0e4d17cf7fd50738195ac210",
+      "sha1": "a8056c72218bfba7eca3d85032ea9fce74207e6a",
+      "crc32": "f006f3fa",
+      "note": "truncated after the last word; the image is this padded with zeros to 16 KB"
+    }
+  ],
+  "bank": 2,
+  "format": "unindexed",
+  "provenance": "TMS6100 Multi-PHROM Emulator (eRadiofan), ROMdata_VM61004.c, padded with zeros to 16 KB; the result is MAME's dump. The word names are from its word list; the addresses are checked by following each word's stop code.",
+  "word_numbers": "none in the image (it has no index): the words are numbered in address order from 1.",
+  "words": [
+    {
+      "number": 1,
+      "address": "0x08000",
+      "name": "Alpha"
+    },
+    {
+      "number": 2,
+      "address": "0x08064",
+      "name": "Bravo"
+    },
+    {
+      "number": 3,
+      "address": "0x080BC",
+      "name": "Charlie"
+    },
+    {
+      "number": 4,
+      "address": "0x0811E",
+      "name": "Delta"
+    },
+    {
+      "number": 5,
+      "address": "0x08171",
+      "name": "Echo"
+    },
+    {
+      "number": 6,
+      "address": "0x081B3",
+      "name": "Foxtrot"
+    },
+    {
+      "number": 7,
+      "address": "0x08248",
+      "name": "Golf"
+    },
+    {
+      "number": 8,
+      "address": "0x08280",
+      "name": "Hotel"
+    },
+    {
+      "number": 9,
+      "address": "0x082F6",
+      "name": "India"
+    },
+    {
+      "number": 10,
+      "address": "0x08356",
+      "name": "Juliet"
+    },
+    {
+      "number": 11,
+      "address": "0x083BC",
+      "name": "Kilo"
+    },
+    {
+      "number": 12,
+      "address": "0x08409",
+      "name": "Lima"
+    },
+    {
+      "number": 13,
+      "address": "0x0844C",
+      "name": "Mike"
+    },
+    {
+      "number": 14,
+      "address": "0x0848E",
+      "name": "November"
+    },
+    {
+      "number": 15,
+      "address": "0x0852A",
+      "name": "Oscar"
+    },
+    {
+      "number": 16,
+      "address": "0x08587",
+      "name": "Papa"
+    },
+    {
+      "number": 17,
+      "address": "0x085C9",
+      "name": "Quebec"
+    },
+    {
+      "number": 18,
+      "address": "0x08610",
+      "name": "Romeo"
+    },
+    {
+      "number": 19,
+      "address": "0x08670",
+      "name": "Sierra"
+    },
+    {
+      "number": 20,
+      "address": "0x08706",
+      "name": "Tango"
+    },
+    {
+      "number": 21,
+      "address": "0x0877D",
+      "name": "Uniform"
+    },
+    {
+      "number": 22,
+      "address": "0x087FB",
+      "name": "Victor"
+    },
+    {
+      "number": 23,
+      "address": "0x0886E",
+      "name": "Whisky"
+    },
+    {
+      "number": 24,
+      "address": "0x088C7",
+      "name": "Xray"
+    },
+    {
+      "number": 25,
+      "address": "0x0893B",
+      "name": "Zulu"
+    },
+    {
+      "number": 26,
+      "address": "0x08984",
+      "name": "Affirmative"
+    },
+    {
+      "number": 27,
+      "address": "0x08A38",
+      "name": "Negative"
+    },
+    {
+      "number": 28,
+      "address": "0x08ACF",
+      "name": "Mayday"
+    },
+    {
+      "number": 29,
+      "address": "0x08B74",
+      "name": "Warning"
+    },
+    {
+      "number": 30,
+      "address": "0x08C07",
+      "name": "Icing"
+    },
+    {
+      "number": 31,
+      "address": "0x08C78",
+      "name": "Danger"
+    },
+    {
+      "number": 32,
+      "address": "0x08D0B",
+      "name": "Emergency"
+    },
+    {
+      "number": 33,
+      "address": "0x08DD2",
+      "name": "Roger"
+    },
+    {
+      "number": 34,
+      "address": "0x08E50",
+      "name": "Hertz"
+    },
+    {
+      "number": 35,
+      "address": "0x08E8D",
+      "name": "(Pause)"
+    },
+    {
+      "number": 36,
+      "address": "0x08E96",
+      "name": "Security"
+    },
+    {
+      "number": 37,
+      "address": "0x08F13",
+      "name": "Target"
+    },
+    {
+      "number": 38,
+      "address": "0x08F6E",
+      "name": "Vectors"
+    },
+    {
+      "number": 39,
+      "address": "0x08FE6",
+      "name": "Light"
+    },
+    {
+      "number": 40,
+      "address": "0x0903D",
+      "name": "Front"
+    },
+    {
+      "number": 41,
+      "address": "0x09098",
+      "name": "Way"
+    },
+    {
+      "number": 42,
+      "address": "0x090DA",
+      "name": "Glide"
+    },
+    {
+      "number": 43,
+      "address": "0x0915E",
+      "name": "Open"
+    },
+    {
+      "number": 44,
+      "address": "0x091C2",
+      "name": "Lights"
+    },
+    {
+      "number": 45,
+      "address": "0x09221",
+      "name": "On"
+    },
+    {
+      "number": 46,
+      "address": "0x09287",
+      "name": "Gun dish"
+    },
+    {
+      "number": 47,
+      "address": "0x0930A",
+      "name": "ArdNav"
+    },
+    {
+      "number": 48,
+      "address": "0x093B9",
+      "name": "Select"
+    },
+    {
+      "number": 49,
+      "address": "0x09420",
+      "name": "Filed"
+    },
+    {
+      "number": 50,
+      "address": "0x094A5",
+      "name": "MIG"
+    },
+    {
+      "number": 51,
+      "address": "0x09511",
+      "name": "Alert"
+    },
+    {
+      "number": 52,
+      "address": "0x09579",
+      "name": "Zone"
+    },
+    {
+      "number": 53,
+      "address": "0x095FD",
+      "name": "Terminal"
+    },
+    {
+      "number": 54,
+      "address": "0x0967E",
+      "name": "Cancel"
+    },
+    {
+      "number": 55,
+      "address": "0x096EB",
+      "name": "Radios"
+    },
+    {
+      "number": 56,
+      "address": "0x0978E",
+      "name": "Speed"
+    },
+    {
+      "number": 57,
+      "address": "0x09800",
+      "name": "Knots"
+    },
+    {
+      "number": 58,
+      "address": "0x09868",
+      "name": "Expect"
+    },
+    {
+      "number": 59,
+      "address": "0x098D6",
+      "name": "Action"
+    },
+    {
+      "number": 60,
+      "address": "0x0993C",
+      "name": "Radio"
+    },
+    {
+      "number": 61,
+      "address": "0x099AA",
+      "name": "Power"
+    },
+    {
+      "number": 62,
+      "address": "0x09A07",
+      "name": "Path"
+    },
+    {
+      "number": 63,
+      "address": "0x09A5F",
+      "name": "Information"
+    },
+    {
+      "number": 64,
+      "address": "0x09B09",
+      "name": "True"
+    },
+    {
+      "number": 65,
+      "address": "0x09B52",
+      "name": "Pressure"
+    },
+    {
+      "number": 66,
+      "address": "0x09BBF",
+      "name": "Check"
+    },
+    {
+      "number": 67,
+      "address": "0x09BF6",
+      "name": "Decrease"
+    },
+    {
+      "number": 68,
+      "address": "0x09C63",
+      "name": "Advise"
+    },
+    {
+      "number": 69,
+      "address": "0x09CED",
+      "name": "You"
+    },
+    {
+      "number": 70,
+      "address": "0x09D27",
+      "name": "Half"
+    },
+    {
+      "number": 71,
+      "address": "0x09D7E",
+      "name": "Error"
+    },
+    {
+      "number": 72,
+      "address": "0x09DDA",
+      "name": "Call"
+    },
+    {
+      "number": 73,
+      "address": "0x09E31",
+      "name": "Wrong"
+    },
+    {
+      "number": 74,
+      "address": "0x09E91",
+      "name": "No"
+    },
+    {
+      "number": 75,
+      "address": "0x09EEA",
+      "name": "Immediately"
+    },
+    {
+      "number": 76,
+      "address": "0x09FA3",
+      "name": "Final"
+    },
+    {
+      "number": 77,
+      "address": "0x0A00F",
+      "name": "Please"
+    },
+    {
+      "number": 78,
+      "address": "0x0A05A",
+      "name": "Start"
+    },
+    {
+      "number": 79,
+      "address": "0x0A0B6",
+      "name": "Course"
+    },
+    {
+      "number": 80,
+      "address": "0x0A102",
+      "name": "RADAR"
+    },
+    {
+      "number": 81,
+      "address": "0x0A181",
+      "name": "Plan"
+    },
+    {
+      "number": 82,
+      "address": "0x0A1EE",
+      "name": "Target"
+    },
+    {
+      "number": 83,
+      "address": "0x0A25B",
+      "name": "Windows"
+    },
+    {
+      "number": 84,
+      "address": "0x0A2F3",
+      "name": "Watch"
+    },
+    {
+      "number": 85,
+      "address": "0x0A336",
+      "name": "Use (s)"
+    },
+    {
+      "number": 86,
+      "address": "0x0A381",
+      "name": "Turn"
+    },
+    {
+      "number": 87,
+      "address": "0x0A3CE",
+      "name": "Traffic"
+    },
+    {
+      "number": 88,
+      "address": "0x0A435",
+      "name": "Tech"
+    },
+    {
+      "number": 89,
+      "address": "0x0A48A",
+      "name": "Slow"
+    },
+    {
+      "number": 90,
+      "address": "0x0A4F9",
+      "name": "Release"
+    },
+    {
+      "number": 91,
+      "address": "0x0A56D",
+      "name": "Key"
+    },
+    {
+      "number": 92,
+      "address": "0x0A5A8",
+      "name": "Ignition"
+    },
+    {
+      "number": 93,
+      "address": "0x0A639",
+      "name": "Degree"
+    },
+    {
+      "number": 94,
+      "address": "0x0A6A4",
+      "name": "Grain"
+    },
+    {
+      "number": 95,
+      "address": "0x0A6F9",
+      "name": "Repair"
+    },
+    {
+      "number": 96,
+      "address": "0x0A77C",
+      "name": "Cancel"
+    },
+    {
+      "number": 97,
+      "address": "0x0A806",
+      "name": "Verify"
+    },
+    {
+      "number": 98,
+      "address": "0x0A8A0",
+      "name": "Ready"
+    },
+    {
+      "number": 99,
+      "address": "0x0A8FA",
+      "name": "Use (z)"
+    },
+    {
+      "number": 100,
+      "address": "0x0A976",
+      "name": "Out"
+    },
+    {
+      "number": 101,
+      "address": "0x0A9BF",
+      "name": "Other"
+    },
+    {
+      "number": 102,
+      "address": "0x0AA25",
+      "name": "Oil"
+    },
+    {
+      "number": 103,
+      "address": "0x0AA78",
+      "name": "Off"
+    },
+    {
+      "number": 104,
+      "address": "0x0AAC6",
+      "name": "Mirror"
+    },
+    {
+      "number": 105,
+      "address": "0x0AB26",
+      "name": "Rate"
+    },
+    {
+      "number": 106,
+      "address": "0x0AB93",
+      "name": "Mixture"
+    },
+    {
+      "number": 107,
+      "address": "0x0AC16",
+      "name": "Much"
+    },
+    {
+      "number": 108,
+      "address": "0x0AC6E",
+      "name": "Rate"
+    },
+    {
+      "number": 109,
+      "address": "0x0ACD0",
+      "name": "Is"
+    },
+    {
+      "number": 110,
+      "address": "0x0AD28",
+      "name": "Caution"
+    },
+    {
+      "number": 111,
+      "address": "0x0AD97",
+      "name": "Below"
+    },
+    {
+      "number": 112,
+      "address": "0x0AE13",
+      "name": "Cylinder"
+    },
+    {
+      "number": 113,
+      "address": "0x0AE90",
+      "name": "Contact"
+    },
+    {
+      "number": 114,
+      "address": "0x0AF0A",
+      "name": "And"
+    },
+    {
+      "number": 115,
+      "address": "0x0AF51",
+      "name": "Fuel"
+    },
+    {
+      "number": 116,
+      "address": "0x0AFA8",
+      "name": "For"
+    },
+    {
+      "number": 117,
+      "address": "0x0AFE2",
+      "name": "Sequence"
+    },
+    {
+      "number": 118,
+      "address": "0x0B068",
+      "name": "Side"
+    },
+    {
+      "number": 119,
+      "address": "0x0B0C3",
+      "name": "Slow"
+    },
+    {
+      "number": 120,
+      "address": "0x0B119",
+      "name": "To"
+    },
+    {
+      "number": 121,
+      "address": "0x0B148",
+      "name": "Rich"
+    },
+    {
+      "number": 122,
+      "address": "0x0B1B6",
+      "name": "Pumps"
+    },
+    {
+      "number": 123,
+      "address": "0x0B20C",
+      "name": "Level"
+    },
+    {
+      "number": 124,
+      "address": "0x0B273",
+      "name": "Lower"
+    },
+    {
+      "number": 125,
+      "address": "0x0B2E5",
+      "name": "Rear"
+    },
+    {
+      "number": 126,
+      "address": "0x0B364",
+      "name": "Hold"
+    },
+    {
+      "number": 127,
+      "address": "0x0B3C9",
+      "name": "Long"
+    },
+    {
+      "number": 128,
+      "address": "0x0B435",
+      "name": "Level"
+    },
+    {
+      "number": 129,
+      "address": "0x0B4AE",
+      "name": "Left"
+    },
+    {
+      "number": 130,
+      "address": "0x0B50F",
+      "name": "Right"
+    },
+    {
+      "number": 131,
+      "address": "0x0B56F",
+      "name": "Open"
+    },
+    {
+      "number": 132,
+      "address": "0x0B5C9",
+      "name": "Stray"
+    },
+    {
+      "number": 133,
+      "address": "0x0B659",
+      "name": "Closed"
+    },
+    {
+      "number": 134,
+      "address": "0x0B6E2",
+      "name": "Evacuate"
+    },
+    {
+      "number": 135,
+      "address": "0x0B79A",
+      "name": "Failure"
+    },
+    {
+      "number": 136,
+      "address": "0x0B807",
+      "name": "Service"
+    },
+    {
+      "number": 137,
+      "address": "0x0B881",
+      "name": "Abort"
+    },
+    {
+      "number": 138,
+      "address": "0x0B902",
+      "name": "Identify"
+    },
+    {
+      "number": 139,
+      "address": "0x0B999",
+      "name": "Too low"
+    },
+    {
+      "number": 140,
+      "address": "0x0BA2F",
+      "name": "Centre"
+    },
+    {
+      "number": 141,
+      "address": "0x0BAA9",
+      "name": "Area"
+    },
+    {
+      "number": 142,
+      "address": "0x0BB09",
+      "name": "Base"
+    },
+    {
+      "number": 143,
+      "address": "0x0BB45",
+      "name": "Control"
+    },
+    {
+      "number": 144,
+      "address": "0x0BBBB",
+      "name": "Measured"
+    },
+    {
+      "number": 145,
+      "address": "0x0BC41",
+      "name": "The (ee)"
+    },
+    {
+      "number": 146,
+      "address": "0x0BC74",
+      "name": "The (uh)"
+    },
+    {
+      "number": 147,
+      "address": "0x0BC95",
+      "name": "Vacuum"
+    },
+    {
+      "number": 148,
+      "address": "0x0BD13",
+      "name": "Abeam"
+    }
+  ],
+  "frame_format": {
+    "tms5200_tms5220": {
+      "words": 148,
+      "stop_code": 148,
+      "overruns": 0
+    },
+    "tms5100": {
+      "words": 148,
+      "stop_code": 148,
+      "overruns": 38
+    }
+  }
+}

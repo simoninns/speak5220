@@ -76,7 +76,14 @@ After each word it runs `compare.py`, and at the end it rewrites the PROM's `ind
       vsm_trace.csv, frames.csv, samples.wav, samples.csv, dac.wav, listen.wav
 ```
 
-PROMs are described by manifests, `proms/<name>.json`: the image's source and SHA-256, its bank, provenance and word table. `prom.py acorn-manifest` builds the Acorn PHROM A's from `firmware/src/romdata_acorn.h`. Images that may not be redistributed go in `proms/images/`, which is git-ignored. `bench.json` records the chip's marking, the measured supplies and the temperature; every `capture.json` copies it, so update it whenever the chip or the board changes.
+PROMs are described by manifests, `proms/<name>.json`: the image's source and hashes, its bank, provenance, target chip and word table. `proms/README.md` is the inventory. `promimport.py` writes both, and rebuilds the images from their pinned public sources into `proms/images/`, which is git-ignored. Run it once before capturing any PROM except the Acorn PHROM A, whose image is in `firmware/src/romdata_acorn.h`:
+
+```bash
+python tools/promimport.py              # fetch, rebuild and check every image; write the manifests
+python tools/prom.py list ti99_speech   # a PROM's word table
+```
+
+An image may span several banks (TI-99's is 32 KB, in banks 0 and 1); `run.py` uploads all of them. `bench.json` records the chip's marking, the measured supplies and the temperature; every `capture.json` copies it, so update it whenever the chip or the board changes.
 
 ### Readable files and checks
 
@@ -104,7 +111,7 @@ The checks go into `capture.json` under `processed.checks`. Each is true, false,
 | `external_stream` | Speak External: the bytes on the bus are the stream sent |
 | `start_frame` | VSM: the first frame read is on the frame clock's grid (within 5 µs), and on the frame it was timed for. Speak External: the timed start was not late |
 | `start_slot` | Standard procedure: the chip accepted the Speak within 2 µs of the target time before the frame |
-| `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. Null for `--board audio` |
+| `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. All three are judged on codes inside ±119: at the rails (127, and −128, which clipped codes take) the chip sits 6–10 mV below the model, so the rail samples are reported separately (`rail_samples`, `rail_residual_mean_mv`). Null for `--board audio` |
 
 The gain limit is wide on purpose. It catches a wrong board configuration (half load gives about 0.5, and the audio stage leaves a large residual), not drift: the DAC scale was 7 % above the Phase 2 table in Phase 4. The fitted gain is recorded in every capture.
 
@@ -188,7 +195,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `run.py`: the capture runner (see "Capturing PROM words").
 - `process.py`: builds a capture's readable files from `raw/` and runs the checks.
 - `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`.
-- `prom.py`: PROM manifests (`proms/`). `bench.json`: the bench details recorded in every capture.
+- `prom.py`: PROM manifests (`proms/`). `promimport.py`: the PROM inventory; it rebuilds the images and writes the manifests. `bench.json`: the bench details recorded in every capture.
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser: frame boundaries and the coded parameters of each frame.
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.

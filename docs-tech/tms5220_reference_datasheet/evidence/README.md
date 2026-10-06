@@ -181,3 +181,30 @@ These are in `captures/phase5/experiments/`. The scope experiments keep, for eac
 | `p5-16` | `power_cycle/` | After a power cycle of the TMS5220 (Pico kept running): a Speak with no reset, then four standard takes | The chip spoke at once, without a reset; its frame grid had moved by 262 µs. The takes differ from p5-15's vsm01 by at most 3 codes |
 | `p5-17` | `clock_stops/clock_stops.json` | With the chip idle, `CLOCK 0` for 1 ms, 10 ms, 100 ms, 1 s and 10 s, then a Speak with no reset (`scripts/e6.py`) | Every Speak worked. After stops of up to 1 s the frame grid had moved by the stopped time, to within 6 µs; after 10 s it had moved 4.3 ms further |
 | `p5-18` | `vsm_data_margin/vsm_delay.json` | The VSM emulation delays each data bit on `ADD8` by 0–10 µs after it sees `M0` rise (`VSMDELAY`; `scripts/delay.py`) | The chip reads one bit every 12.5 µs. It still read all 1152 bits of ACORN with a 9.5 µs delay; at 10 µs the word never ended |
+
+## Phase 6 captures (2026-10-06)
+
+Board, chip, supplies and firmware: as Phase 5 (firmware `d66eeef-dirty`). The host tools are the Phase 6 ones (`processed` version 3, which judges the DAC check inside codes ±119). The PROM is the TI-99/4A speech VSMs, `ti99_speech` (`proms/README.md`), rebuilt with `tools/promimport.py` and loaded into banks 0 and 1. One runner command, using the standard procedure:
+
+```
+python tools/run.py ti99_speech MORE LINE --takes 2 --path both
+```
+
+The runner calibrated the start offsets (VSM −2.10 µs, Speak External +216.88 µs). Every check passed on every take; each Speak was accepted 12255.8–12256.2 µs before its frame boundary. The raw data was zipped afterwards, unchanged (`run.zipRaw`), and the set was moved to `captures/phase6/`.
+
+| ID | Take | SHA-256 of `scope_raw.npz` | SHA-256 of `vsm_trace.bin` |
+|---|---|---|---|
+| `p6-01` = `ti99_speech/0_more/vsm01` | MORE, VSM Speak | `c16d8c95e62ff4644fdd6c4704093d65cd7d23e60d0ee916db1b8f0d8ae9bb91` | `86d8e226ff9cf7fb6007baccb62bb3fe4e00f28d69469e8c5e75aeeeb7cd90a8` |
+| `p6-02` = `…/0_more/vsm02` | MORE, VSM Speak | `69ba885f4d6de69f1b3f9d01c1e595cd3a6e88973c9a57772945d16949d01bab` | `883f5c8d6ca74034f9a523ffed5bae4b1851429e3330004919dfd0704c8793b0` |
+| `p6-03` = `…/0_more/ext01` | MORE, Speak External | `dc91ce4190c831bd491288b65ba3912e4c59f8d08985628a69de8fd8caa96269` | `bbc5dcd8441f0d9089ac48006ec21fe351f56c03a1ea7ec5b56aa0c3a5dd9a6d` |
+| `p6-04` = `…/0_more/ext02` | MORE, Speak External | `d252b6fb6cbe2cd3634e7fb4e1b0f186f33a84a816b6c9c36debf0117d743993` | `cd0f7b0ea2f56863db141a8296af7306213111902210068aae7887c97fbcefab` |
+| `p6-05` = `…/167_line/vsm01` | LINE, VSM Speak | `6c1ef4d2324b1a29542b886a9adfa01dfda0d00fc20c1f388f335853a056bfe7` | `4c70df0b20f209281be2efb79d2a25627a096e45840bf892bd3d27a9c1f91086` |
+| `p6-06` = `…/167_line/vsm02` | LINE, VSM Speak | `a2add170354da6a95099b8608ebb32c09049adcd6ef67a68807b177bdc3a7439` | `23eae154aad21bb07fbeb4438d8aca962fd7741bb67069e6970aba3c865d8974` |
+| `p6-07` = `…/167_line/ext01` | LINE, Speak External | `5465d20e6afdc2947d178ba759cc139a278da8bc40854c8947631f27e6dbbe96` | `708e98a911ad6752a13996c1a70894a4f4f38a53e371679b7938fe5d7a98e519` |
+| `p6-08` = `…/167_line/ext02` | LINE, Speak External | `d542637321cd24902a76b9c7029595aee97ecced74c9b9a44560820c015bc97f` | `264e59d179714739860468b1069b3f24b24ae5a87e6443ebb77cfe10336c503b` |
+
+**What the set shows:**
+
+- **The rails.** TI-99 speech, written for the TMS5200, is loud on the TMS5220: MORE's codes span −271 to +412, and LINE's the whole 10-bit range, −512 to +511. 514–723 samples per take lie outside the DAC's range. Codes above +127 give the same output as +127 to within 0.5 mV, and codes below −128 the same as −128 to within 2 mV. Fitted inside ±119 (gain 1.059–1.062, 1.9–2.2 mV rms), the Phase 2 model puts the rail samples 7.1–7.8 mV too high on average: about 6 mV at +127 and 10 mV at −128 (datasheet §8.2).
+- **Reading across the VSMs.** LINE starts at 0x3FD5, in CD2325A, and ends at 0x4049, in CD2326A; the bits read match the image across the boundary (`vsm_image`).
+- **Repeats.** The two LINE Speak External takes are bit-identical. The others differ within their path by up to 10 codes (MORE) and 15 codes (LINE, VSM), with departures starting as early as sample 3 of speech: larger and earlier than the Acorn word's 3 codes in Phase 5. This is an upset question for Phase 8.

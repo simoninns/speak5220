@@ -60,7 +60,7 @@ import pico as picolib
 import prom as promlib
 import tms5220_decode as td
 
-PROCESS_VERSION = 2
+PROCESS_VERSION = 3
 ROOT = promlib.ROOT
 
 # Phase 2 DAC tables per board configuration (captures/phase2, datasheet 8.2)
@@ -81,6 +81,12 @@ LAYER3_RMS_MV = 3.0                    # Phase 2: 1.8 mV, 2.3 mV during speech
 # 2026-10-06 in Phase 4), so the gain is recorded in every capture
 LAYER3_GAIN = 0.15
 LAYER3_WITHIN = (2, 0.99)              # this fraction of codes recovered within +/- 2
+# The bit-weight model holds inside these codes. Phase 2 measured code 127
+# 7 mV below it and never reached the negative rail; loud words (TI-99) sit
+# on the rails, 6 mV (127) and 10 mV (-128) below the model. So the gain,
+# offset and residual come from the codes inside, and the rails are reported
+# separately (Phase 6)
+LAYER3_INNER = 120
 
 LISTEN_RATE = 48000
 
@@ -131,21 +137,31 @@ def dacModel(board):
 def layer3(code, dacV, model):
     """Compare the DAC voltage with the Phase 2 model of the I/O codes.
     The model is fitted to this capture with a gain and an offset (the
-    scope's offset drifts), then each DAC voltage is mapped back to the
-    nearest model code. Returns (recovered codes, statistics)."""
+    scope's offset drifts), over the codes inside +/-LAYER3_INNER, where
+    the model holds; then each DAC voltage is mapped back to the nearest
+    model code. The recovery is judged inside +/-LAYER3_INNER too. Returns
+    (recovered codes, statistics)."""
     clipped = np.clip(code, -128, 127)
     predicted = model[clipped + 128]
-    gain, offset = np.polyfit(predicted, dacV, 1)
+    inner = np.abs(clipped) < LAYER3_INNER
+    gain, offset = np.polyfit(predicted[inner], dacV[inner], 1)
     residual = dacV - (gain * predicted + offset)
+    rails = residual[~inner]
+    residual = residual[inner]
     levels = gain * model + offset
     recovered = np.argmin(np.abs(dacV[:, None] - levels[None, :]), axis=1) - 128
     difference = np.abs(recovered - clipped)
     stats = {"gain": float(gain), "offset_mv": float(offset * 1e3),
              "residual_rms_mv": float(np.sqrt(np.mean(residual ** 2)) * 1e3),
              "residual_max_mv": float(np.abs(residual).max() * 1e3),
-             "recovered_exact": float(np.mean(difference == 0)),
-             f"recovered_within_{LAYER3_WITHIN[0]}": float(np.mean(difference <= LAYER3_WITHIN[0])),
-             "codes_clipped": int(np.sum(clipped != code))}
+             "recovered_exact": float(np.mean(difference[inner] == 0)),
+             f"recovered_within_{LAYER3_WITHIN[0]}":
+                 float(np.mean(difference[inner] <= LAYER3_WITHIN[0])),
+             "codes_clipped": int(np.sum(clipped != code)),
+             "rail_samples": int(rails.size),
+             "rail_residual_mean_mv": float(rails.mean() * 1e3) if rails.size else None,
+             f"rail_recovered_within_{LAYER3_WITHIN[0]}":
+                 float(np.mean(difference[~inner] <= LAYER3_WITHIN[0])) if rails.size else None}
     stats["pass"] = bool(stats["residual_rms_mv"] <= LAYER3_RMS_MV
                          and abs(gain - 1) <= LAYER3_GAIN
                          and stats[f"recovered_within_{LAYER3_WITHIN[0]}"] >= LAYER3_WITHIN[1])
@@ -177,23 +193,24 @@ def commandPath(meta):
 
 
 def sourceImage(meta):
-    """The VSM image the capture spoke from, if its manifest and image are
-    available. Captures made before run.py have no "source"; for those the
-    CRC of the bank spoken from is looked up among the manifests."""
+    """(image, VSM address of its first byte) for the VSM image the capture
+    spoke from, if its manifest and image are available, else None.
+    Captures made before run.py have no "source"; for those the CRC of the
+    bank spoken from is looked up among the manifests."""
     source = meta.get("source")
     try:
         if source:
             manifest = promlib.loadManifest(source["prom"])
             if manifest["image"]["sha256"] != source.get("image_sha256"):
                 return None
-            return promlib.image(manifest)
+            return promlib.image(manifest), promlib.base(manifest)
         bank = (int(meta["pico"]["command"]["speak"], 16) >> 14) & 0xF
         banks = dict(item.split(":") for item in meta["pico"]["banks"].split(","))
         for name in sorted(os.listdir(promlib.PROMS_DIR)):
             manifest = promlib.loadManifest(os.path.join(promlib.PROMS_DIR, name))
             if manifest["image"]["crc32"] == banks.get(str(bank)) \
                     and manifest["image"]["size"] == promlib.BANK_SIZE:
-                return promlib.image(manifest)
+                return promlib.image(manifest), None
     except (KeyError, OSError, ValueError):
         pass
     return None
@@ -340,10 +357,11 @@ def process(directory, listenFilter="bbc", log=print):
         if len(frames) and result and "trig_us" in result:
             # On the Pico's microsecond timer, which runs from the chip's crystal
             summary["first_frame_read_us"] = result["trig_us"] + float(frameTimes[0]) * 1e6
-        image = sourceImage(meta)
-        if image is not None:
+        source = sourceImage(meta)
+        if source is not None:
             address = int(meta["pico"]["command"]["speak"], 16)
-            problems = picolib.checkVsmBits(reads, image, address, "")[0]
+            image, base = source
+            problems = picolib.checkVsmBits(reads, image, address, "", base)[0]
             checks["vsm_image"] = not problems
         else:
             checks["vsm_image"] = None

@@ -1,843 +1,1354 @@
 {
   "name": "acorn_phrom_a",
   "title": "Acorn PHROM A (Kenneth Kendall voice)",
+  "part": "CM62024",
   "target_chip": "TMS5220",
+  "target_chip_basis": "Acorn's BBC Micro speech system, which used the TMS5220.",
   "image": {
     "source": "builtin",
     "file": "firmware/src/romdata_acorn.h",
+    "kind": "dump",
     "size": 16384,
     "sha256": "8c093401661f530032c5aca8fd80d91af58e596d082a51be58ce2ee063a89308",
+    "sha1": "b369809275cb67dfd8a749265e91adb2d2558ae6",
     "crc32": "98e1bf9e"
   },
+  "reference": {
+    "mame": "cm62024",
+    "listed_in": "https://github.com/mamedev/mame/blob/1ecdb5701405bd4cadba520fe1ff4d65f7c7e8aa/hash/bbc_vsm.xml",
+    "size": 16384,
+    "crc32": "98e1bf9e",
+    "sha1": "b369809275cb67dfd8a749265e91adb2d2558ae6",
+    "matches": true
+  },
+  "copies": [
+    {
+      "repo": "https://github.com/simoninns/TMS6100-Emulator",
+      "commit": "0d78f97b20bee44786669abbe135318b30c696ce",
+      "path": "Firmware/tms6100/romdata_acorn.h",
+      "licence": "GPL-3.0",
+      "symbol": "phromData",
+      "size": 16384,
+      "sha256": "8c093401661f530032c5aca8fd80d91af58e596d082a51be58ce2ee063a89308",
+      "sha1": "b369809275cb67dfd8a749265e91adb2d2558ae6",
+      "crc32": "98e1bf9e"
+    },
+    {
+      "repo": "https://github.com/eRadiofan/TMS6100-Multi-PHROM-Emulator-for-the-BBC-Micro",
+      "commit": "b1a0bd83570755eb02c873b6e24e7b80b341eb59",
+      "path": "Firmware/Common/Src/ROMdata_Acorn.c",
+      "licence": "GPL-3.0",
+      "symbol": "phromData_Acorn",
+      "size": 16384,
+      "sha256": "8c093401661f530032c5aca8fd80d91af58e596d082a51be58ce2ee063a89308",
+      "sha1": "b369809275cb67dfd8a749265e91adb2d2558ae6",
+      "crc32": "98e1bf9e"
+    }
+  ],
   "bank": 15,
-  "provenance": "TMS6100-Emulator (simoninns), https://github.com/simoninns/TMS6100-Emulator/tree/master/Firmware/tms6100: a dump of an Acorn PHROM A made with HxD. The word list was checked by decoding the LPC data at each address (romdata_acorn.h).",
-  "word_numbers": "the BBC Micro's word numbers (SOUND -1, <number>, 0, 0)",
+  "format": "acorn",
+  "header": {
+    "strings": [
+      "(C)1982 Acorn",
+      "Word PHROM A",
+      "1.00"
+    ],
+    "ascii_words": 95,
+    "pointers": 260
+  },
+  "provenance": "TMS6100-Emulator (simoninns): a dump of an Acorn PHROM A made with HxD, held in this repo as firmware/src/romdata_acorn.h. The word names are from its word list, whose addresses and numbers all match the image's pointer table. Four of its names contradict the names stored in the image (stored_name) and are corrected from them (listed_as keeps the list's).",
+  "word_numbers": "the BBC Micro's word numbers (SOUND -1, <number>, 0, 0): word N's pointer is at byte 2N. Numbers 32-126 (aliases) are the 'ASCII associated' words, which repeat words numbered from 127 on.",
   "words": [
     {
       "number": 127,
       "address": "0x3C250",
-      "name": "-0.125"
+      "name": "-0.125",
+      "aliases": [
+        32
+      ],
+      "stored_name": "(0.125)"
     },
     {
       "number": 128,
       "address": "0x3C25F",
-      "name": "-0.25"
+      "name": "-0.25",
+      "stored_name": "(0.25)"
     },
     {
       "number": 129,
       "address": "0x3C272",
-      "name": "(TONE 1)"
+      "name": "(TONE 1)",
+      "aliases": [
+        58
+      ],
+      "stored_name": "(TONE1)"
     },
     {
       "number": 130,
       "address": "0x3C2B0",
-      "name": "(TONE2)"
+      "name": "(TONE2)",
+      "aliases": [
+        59
+      ],
+      "stored_name": "(TONE2)"
     },
     {
       "number": 131,
       "address": "0x3C2E9",
-      "name": "-D"
+      "name": "-D",
+      "aliases": [
+        100
+      ],
+      "stored_name": "-D"
     },
     {
       "number": 132,
       "address": "0x3C300",
-      "name": "-ED"
+      "name": "-ED",
+      "aliases": [
+        101
+      ],
+      "stored_name": "-ED"
     },
     {
       "number": 133,
       "address": "0x3C32B",
-      "name": "-ING"
+      "name": "-ING",
+      "aliases": [
+        106
+      ],
+      "stored_name": "-ING"
     },
     {
       "number": 134,
       "address": "0x3C361",
-      "name": "-S"
+      "name": "-S",
+      "aliases": [
+        115
+      ],
+      "stored_name": "-S"
     },
     {
       "number": 135,
       "address": "0x3C384",
-      "name": "-TEE"
+      "name": "-TEEN",
+      "stored_name": "-TEEN",
+      "listed_as": "-TEE"
     },
     {
       "number": 136,
       "address": "0x3C3DC",
-      "name": "-TH"
+      "name": "-TH",
+      "stored_name": "-TH"
     },
     {
       "number": 137,
       "address": "0x3C3F3",
-      "name": "-T"
+      "name": "-TY",
+      "stored_name": "-TY",
+      "listed_as": "-T"
     },
     {
       "number": 138,
       "address": "0x3C415",
-      "name": "-"
+      "name": "-Z",
+      "aliases": [
+        122
+      ],
+      "stored_name": "-Z",
+      "listed_as": "-"
     },
     {
       "number": 139,
       "address": "0x3C437",
-      "name": "ZERO (0)"
+      "name": "ZERO (0)",
+      "aliases": [
+        48
+      ],
+      "stored_name": "0"
     },
     {
       "number": 140,
       "address": "0x3C4C8",
-      "name": "HUNDRED (00)"
+      "name": "HUNDRED (00)",
+      "aliases": [
+        104
+      ],
+      "stored_name": "00"
     },
     {
       "number": 141,
       "address": "0x3C530",
-      "name": "THOUSAND (000)"
+      "name": "THOUSAND (000)",
+      "aliases": [
+        44
+      ],
+      "stored_name": "000"
     },
     {
       "number": 142,
       "address": "0x3C5CA",
-      "name": "ONE,WON"
+      "name": "ONE,WON",
+      "aliases": [
+        49
+      ],
+      "stored_name": "1"
     },
     {
       "number": 143,
       "address": "0x3C633",
-      "name": "TWO,TO,TOO"
+      "name": "TWO,TO,TOO",
+      "aliases": [
+        50
+      ],
+      "stored_name": "2"
     },
     {
       "number": 144,
       "address": "0x3C692",
-      "name": "2- (TWEN-)"
+      "name": "2- (TWEN-)",
+      "aliases": [
+        34
+      ],
+      "stored_name": "2-"
     },
     {
       "number": 145,
       "address": "0x3C6D2",
-      "name": "THREE"
+      "name": "THREE",
+      "aliases": [
+        51
+      ],
+      "stored_name": "3"
     },
     {
       "number": 146,
       "address": "0x3C73F",
-      "name": "3- (THIR-)"
+      "name": "3- (THIR-)",
+      "aliases": [
+        35
+      ],
+      "stored_name": "3-"
     },
     {
       "number": 147,
       "address": "0x3C788",
-      "name": "FOUR,FOR,FORE"
+      "name": "FOUR,FOR,FORE",
+      "aliases": [
+        52
+      ],
+      "stored_name": "4"
     },
     {
       "number": 148,
       "address": "0x3C7F7",
-      "name": "4- (FOR-)"
+      "name": "4- (FOR-)",
+      "aliases": [
+        36
+      ],
+      "stored_name": "4-"
     },
     {
       "number": 149,
       "address": "0x3C840",
-      "name": "FIVE"
+      "name": "FIVE",
+      "aliases": [
+        53
+      ],
+      "stored_name": "5"
     },
     {
       "number": 150,
       "address": "0x3C8B6",
-      "name": "5- (FIF-)"
+      "name": "5- (FIF-)",
+      "aliases": [
+        37
+      ],
+      "stored_name": "5-"
     },
     {
       "number": 151,
       "address": "0x3C8E9",
-      "name": "SIX"
+      "name": "SIX",
+      "aliases": [
+        54
+      ],
+      "stored_name": "6"
     },
     {
       "number": 152,
       "address": "0x3C936",
-      "name": "6- (SIX-)"
+      "name": "6- (SIX-)",
+      "aliases": [
+        38
+      ],
+      "stored_name": "6-"
     },
     {
       "number": 153,
       "address": "0x3C96E",
-      "name": "SEVEN"
+      "name": "SEVEN",
+      "aliases": [
+        55
+      ],
+      "stored_name": "7"
     },
     {
       "number": 154,
       "address": "0x3C9CB",
-      "name": "7- (SEVEN-)"
+      "name": "7- (SEVEN-)",
+      "aliases": [
+        39
+      ],
+      "stored_name": "7-"
     },
     {
       "number": 155,
       "address": "0x3CA12",
-      "name": "EIGHT,ATE"
+      "name": "EIGHT,ATE",
+      "aliases": [
+        56
+      ],
+      "stored_name": "8"
     },
     {
       "number": 156,
       "address": "0x3CA46",
-      "name": "8- (EIGHT-)"
+      "name": "8- (EIGHT-)",
+      "aliases": [
+        40
+      ],
+      "stored_name": "8-"
     },
     {
       "number": 157,
       "address": "0x3CA71",
-      "name": "NINE"
+      "name": "NINE",
+      "aliases": [
+        57
+      ],
+      "stored_name": "9"
     },
     {
       "number": 158,
       "address": "0x3CAFD",
-      "name": "9- (NIN-)"
+      "name": "9- (NIN-)",
+      "aliases": [
+        41
+      ],
+      "stored_name": "9-"
     },
     {
       "number": 159,
       "address": "0x3CB5D",
-      "name": "A"
+      "name": "A",
+      "aliases": [
+        65
+      ],
+      "stored_name": "A"
     },
     {
       "number": 160,
       "address": "0x3CBB6",
-      "name": "ACORN"
+      "name": "ACORN",
+      "stored_name": "ACORN"
     },
     {
       "number": 161,
       "address": "0x3CC4B",
-      "name": "AFTER"
+      "name": "AFTER",
+      "stored_name": "AFTER"
     },
     {
       "number": 162,
       "address": "0x3CCB3",
-      "name": "AGAIN"
+      "name": "AGAIN",
+      "stored_name": "AGAIN"
     },
     {
       "number": 163,
       "address": "0x3CD46",
-      "name": "AMOUNT"
+      "name": "AMOUNT",
+      "aliases": [
+        64
+      ],
+      "stored_name": "AMOUNT"
     },
     {
       "number": 164,
       "address": "0x3CDBD",
-      "name": "AN"
+      "name": "AN",
+      "stored_name": "AN"
     },
     {
       "number": 165,
       "address": "0x3CE12",
-      "name": "AND"
+      "name": "AND",
+      "aliases": [
+        97
+      ],
+      "stored_name": "AND"
     },
     {
       "number": 166,
       "address": "0x3CE8E",
-      "name": "ANOTHER"
+      "name": "ANOTHER",
+      "stored_name": "ANOTHER"
     },
     {
       "number": 167,
       "address": "0x3CEFD",
-      "name": "ANSWER"
+      "name": "ANSWER",
+      "stored_name": "ANSWER"
     },
     {
       "number": 168,
       "address": "0x3CF72",
-      "name": "ANY"
+      "name": "ANY",
+      "stored_name": "ANY"
     },
     {
       "number": 169,
       "address": "0x3CFCF",
-      "name": "AVAILABLE"
+      "name": "AVAILABLE",
+      "stored_name": "AVAILABLE"
     },
     {
       "number": 170,
       "address": "0x3D065",
-      "name": "B,BEE,BE"
+      "name": "B,BEE,BE",
+      "aliases": [
+        66
+      ],
+      "stored_name": "B"
     },
     {
       "number": 171,
       "address": "0x3D0BD",
-      "name": "BAD"
+      "name": "BAD",
+      "aliases": [
+        98
+      ],
+      "stored_name": "BAD"
     },
     {
       "number": 172,
       "address": "0x3D13B",
-      "name": "BETWEEN"
+      "name": "BETWEEN",
+      "stored_name": "BETWEEN"
     },
     {
       "number": 173,
       "address": "0x3D1B1",
-      "name": "BOTH"
+      "name": "BOTH",
+      "stored_name": "BOTH"
     },
     {
       "number": 174,
       "address": "0x3D1F8",
-      "name": "BUTTON"
+      "name": "BUTTON",
+      "stored_name": "BUTTON"
     },
     {
       "number": 175,
       "address": "0x3D24D",
-      "name": "C,SEE,SEA"
+      "name": "C,SEE,SEA",
+      "aliases": [
+        67
+      ],
+      "stored_name": "C"
     },
     {
       "number": 176,
       "address": "0x3D2B1",
-      "name": "CASSETTE"
+      "name": "CASSETTE",
+      "stored_name": "CASSETTE"
     },
     {
       "number": 177,
       "address": "0x3D326",
-      "name": "CHARACTER"
+      "name": "CHARACTER",
+      "stored_name": "CHARACTER"
     },
     {
       "number": 178,
       "address": "0x3D39F",
-      "name": "COMPLETE"
+      "name": "COMPLETE",
+      "stored_name": "COMPLETE"
     },
     {
       "number": 179,
       "address": "0x3D40B",
-      "name": "COMPUTER"
+      "name": "COMPUTER",
+      "stored_name": "COMPUTER"
     },
     {
       "number": 180,
       "address": "0x3D483",
-      "name": "CORRECT"
+      "name": "CORRECT",
+      "aliases": [
+        99
+      ],
+      "stored_name": "CORRECT"
     },
     {
       "number": 181,
       "address": "0x3D4F0",
-      "name": "D"
+      "name": "D",
+      "aliases": [
+        68
+      ],
+      "stored_name": "D"
     },
     {
       "number": 182,
       "address": "0x3D53B",
-      "name": "DATA"
+      "name": "DATA",
+      "stored_name": "DATA"
     },
     {
       "number": 183,
       "address": "0x3D59F",
-      "name": "DATE"
+      "name": "DATE",
+      "stored_name": "DATE"
     },
     {
       "number": 184,
       "address": "0x3D5E6",
-      "name": "DO"
+      "name": "DO",
+      "stored_name": "DO"
     },
     {
       "number": 185,
       "address": "0x3D62A",
-      "name": "DOLLAR"
+      "name": "DOLLAR",
+      "stored_name": "DOLLAR"
     },
     {
       "number": 186,
       "address": "0x3D67E",
-      "name": "DONT"
+      "name": "DONT",
+      "stored_name": "DONT"
     },
     {
       "number": 187,
       "address": "0x3D6D7",
-      "name": "DOWN"
+      "name": "DOWN",
+      "stored_name": "DOWN"
     },
     {
       "number": 188,
       "address": "0x3D75A",
-      "name": "E"
+      "name": "E",
+      "aliases": [
+        69
+      ],
+      "stored_name": "E"
     },
     {
       "number": 189,
       "address": "0x3D78B",
-      "name": "EACH"
+      "name": "EACH",
+      "stored_name": "EACH"
     },
     {
       "number": 190,
       "address": "0x3D7D6",
-      "name": "ELEVEN"
+      "name": "ELEVEN",
+      "stored_name": "ELEVEN"
     },
     {
       "number": 191,
       "address": "0x3D852",
-      "name": "ENGAGED"
+      "name": "ENGAGED",
+      "stored_name": "ENGAGED"
     },
     {
       "number": 192,
       "address": "0x3D8FA",
-      "name": "ENTER"
+      "name": "ENTER",
+      "stored_name": "ENTER"
     },
     {
       "number": 193,
       "address": "0x3D95C",
-      "name": "ERROR"
+      "name": "ERROR",
+      "stored_name": "ERROR"
     },
     {
       "number": 194,
       "address": "0x3D9AA",
-      "name": "ESCAPE"
+      "name": "ESCAPE",
+      "stored_name": "ESCAPE"
     },
     {
       "number": 195,
       "address": "0x3DA1C",
-      "name": "F"
+      "name": "F",
+      "aliases": [
+        70
+      ],
+      "stored_name": "F"
     },
     {
       "number": 196,
       "address": "0x3DA5D",
-      "name": "FEW"
+      "name": "FEW",
+      "stored_name": "FEW"
     },
     {
       "number": 197,
       "address": "0x3DAAB",
-      "name": "FILE"
+      "name": "FILE",
+      "aliases": [
+        102
+      ],
+      "stored_name": "FILE"
     },
     {
       "number": 198,
       "address": "0x3DB1E",
-      "name": "FIRST"
+      "name": "FIRST",
+      "aliases": [
+        123
+      ],
+      "stored_name": "FIRST"
     },
     {
       "number": 199,
       "address": "0x3DB96",
-      "name": "FOUND"
+      "name": "FOUND",
+      "stored_name": "FOUND"
     },
     {
       "number": 200,
       "address": "0x3DC11",
-      "name": "FROM"
+      "name": "FROM",
+      "stored_name": "FROM"
     },
     {
       "number": 201,
       "address": "0x3DC6B",
-      "name": "G"
+      "name": "G",
+      "aliases": [
+        71
+      ],
+      "stored_name": "G"
     },
     {
       "number": 202,
       "address": "0x3DCC9",
-      "name": "GOOD"
+      "name": "GOOD",
+      "aliases": [
+        103
+      ],
+      "stored_name": "GOOD"
     },
     {
       "number": 203,
       "address": "0x3DD09",
-      "name": "H"
+      "name": "H",
+      "aliases": [
+        72
+      ],
+      "stored_name": "H"
     },
     {
       "number": 204,
       "address": "0x3DD60",
-      "name": "HAVE"
+      "name": "HAVE",
+      "stored_name": "HAVE"
     },
     {
       "number": 205,
       "address": "0x3DDCC",
-      "name": "I,EYE"
+      "name": "I,EYE",
+      "aliases": [
+        73
+      ],
+      "stored_name": "I"
     },
     {
       "number": 206,
       "address": "0x3DE3E",
-      "name": "ILLEGAL"
+      "name": "ILLEGAL",
+      "aliases": [
+        108
+      ],
+      "stored_name": "ILLEGAL"
     },
     {
       "number": 207,
       "address": "0x3DEBD",
-      "name": "IN-"
+      "name": "IN-",
+      "aliases": [
+        105
+      ],
+      "stored_name": "IN-"
     },
     {
       "number": 208,
       "address": "0x3DEFC",
-      "name": "INPUT"
+      "name": "INPUT",
+      "stored_name": "INPUT"
     },
     {
       "number": 209,
       "address": "0x3DF57",
-      "name": "IS"
+      "name": "IS",
+      "aliases": [
+        61
+      ],
+      "stored_name": "IS"
     },
     {
       "number": 210,
       "address": "0x3DFA6",
-      "name": "J,JAY"
+      "name": "J,JAY",
+      "aliases": [
+        74
+      ],
+      "stored_name": "J"
     },
     {
       "number": 211,
       "address": "0x3E008",
-      "name": "K"
+      "name": "K",
+      "aliases": [
+        75
+      ],
+      "stored_name": "K"
     },
     {
       "number": 212,
       "address": "0x3E061",
-      "name": "KEY"
+      "name": "KEY",
+      "aliases": [
+        107
+      ],
+      "stored_name": "KEY"
     },
     {
       "number": 213,
       "address": "0x3E09F",
-      "name": "L"
+      "name": "L",
+      "aliases": [
+        76
+      ],
+      "stored_name": "L"
     },
     {
       "number": 214,
       "address": "0x3E0FC",
-      "name": "LARGE"
+      "name": "LARGE",
+      "aliases": [
+        62
+      ],
+      "stored_name": "LARGE"
     },
     {
       "number": 215,
       "address": "0x3E195",
-      "name": "LAST"
+      "name": "LAST",
+      "aliases": [
+        125
+      ],
+      "stored_name": "LAST"
     },
     {
       "number": 216,
       "address": "0x3E1F5",
-      "name": "LINE"
+      "name": "LINE",
+      "aliases": [
+        95
+      ],
+      "stored_name": "LINE"
     },
     {
       "number": 217,
       "address": "0x3E26F",
-      "name": "M"
+      "name": "M",
+      "aliases": [
+        77
+      ],
+      "stored_name": "M"
     },
     {
       "number": 218,
       "address": "0x3E2CD",
-      "name": "MANY"
+      "name": "MANY",
+      "stored_name": "MANY"
     },
     {
       "number": 219,
       "address": "0x3E321",
-      "name": "MINUS"
+      "name": "MINUS",
+      "aliases": [
+        45
+      ],
+      "stored_name": "MINUS"
     },
     {
       "number": 220,
       "address": "0x3E39D",
-      "name": "MORE"
+      "name": "MORE",
+      "stored_name": "MORE"
     },
     {
       "number": 221,
       "address": "0x3E409",
-      "name": "MUST"
+      "name": "MUST",
+      "aliases": [
+        109
+      ],
+      "stored_name": "MUST"
     },
     {
       "number": 222,
       "address": "0x3E46F",
-      "name": "N"
+      "name": "N",
+      "aliases": [
+        78
+      ],
+      "stored_name": "N"
     },
     {
       "number": 223,
       "address": "0x3E4C9",
-      "name": "NAME"
+      "name": "NAME",
+      "stored_name": "NAME"
     },
     {
       "number": 224,
       "address": "0x3E544",
-      "name": "NEGATIVE"
+      "name": "NEGATIVE",
+      "stored_name": "NEGATIVE"
     },
     {
       "number": 225,
       "address": "0x3E5DE",
-      "name": "NEW"
+      "name": "NEW",
+      "stored_name": "NEW"
     },
     {
       "number": 226,
       "address": "0x3E63D",
-      "name": "NO,KNOW"
+      "name": "NO,KNOW",
+      "aliases": [
+        110
+      ],
+      "stored_name": "NO"
     },
     {
       "number": 227,
       "address": "0x3E69D",
-      "name": "NOT,KNOT"
+      "name": "NOT,KNOT",
+      "aliases": [
+        126
+      ],
+      "stored_name": "NOT"
     },
     {
       "number": 228,
       "address": "0x3E6F7",
-      "name": "NOW"
+      "name": "NOW",
+      "stored_name": "NOW"
     },
     {
       "number": 229,
       "address": "0x3E76A",
-      "name": "NUMBER"
+      "name": "NUMBER",
+      "aliases": [
+        120
+      ],
+      "stored_name": "NUMBER"
     },
     {
       "number": 230,
       "address": "0x3E7E5",
-      "name": "0"
+      "name": "O",
+      "aliases": [
+        79
+      ],
+      "stored_name": "O",
+      "listed_as": "0"
     },
     {
       "number": 231,
       "address": "0x3E82D",
-      "name": "O'CLOCK"
+      "name": "O'CLOCK",
+      "stored_name": "O'CLOCK"
     },
     {
       "number": 232,
       "address": "0x3E892",
-      "name": "OF"
+      "name": "OF",
+      "aliases": [
+        113
+      ],
+      "stored_name": "OF"
     },
     {
       "number": 233,
       "address": "0x3E8D9",
-      "name": "OFF"
+      "name": "OFF",
+      "aliases": [
+        92
+      ],
+      "stored_name": "OFF"
     },
     {
       "number": 234,
       "address": "0x3E923",
-      "name": "OLD"
+      "name": "OLD",
+      "stored_name": "OLD"
     },
     {
       "number": 235,
       "address": "0x3E980",
-      "name": "ON"
+      "name": "ON",
+      "aliases": [
+        47
+      ],
+      "stored_name": "ON"
     },
     {
       "number": 236,
       "address": "0x3E9DE",
-      "name": "ONLY"
+      "name": "ONLY",
+      "aliases": [
+        111
+      ],
+      "stored_name": "ONLY"
     },
     {
       "number": 237,
       "address": "0x3EA48",
-      "name": "OR"
+      "name": "OR",
+      "aliases": [
+        124
+      ],
+      "stored_name": "OR"
     },
     {
       "number": 238,
       "address": "0x3EA90",
-      "name": "P,PEA"
+      "name": "P,PEA",
+      "aliases": [
+        80
+      ],
+      "stored_name": "P"
     },
     {
       "number": 239,
       "address": "0x3EAC7",
-      "name": "PARAMETER"
+      "name": "PARAMETER",
+      "stored_name": "PARAMETER"
     },
     {
       "number": 240,
       "address": "0x3EB58",
-      "name": "PENCE"
+      "name": "PENCE",
+      "stored_name": "PENCE"
     },
     {
       "number": 241,
       "address": "0x3EBBA",
-      "name": "PLEASE"
+      "name": "PLEASE",
+      "stored_name": "PLEASE"
     },
     {
       "number": 242,
       "address": "0x3EC45",
-      "name": "PLUS"
+      "name": "PLUS",
+      "aliases": [
+        43
+      ],
+      "stored_name": "PLUS"
     },
     {
       "number": 243,
       "address": "0x3EC8B",
-      "name": "POINT"
+      "name": "POINT",
+      "aliases": [
+        46
+      ],
+      "stored_name": "POINT"
     },
     {
       "number": 244,
       "address": "0x3ECE6",
-      "name": "POSITIVE"
+      "name": "POSITIVE",
+      "stored_name": "POSITIVE"
     },
     {
       "number": 245,
       "address": "0x3ED64",
-      "name": "POUN-"
+      "name": "POUN-",
+      "aliases": [
+        96
+      ],
+      "stored_name": "POUN-"
     },
     {
       "number": 246,
       "address": "0x3EDCD",
-      "name": "PRESS"
+      "name": "PRESS",
+      "aliases": [
+        112
+      ],
+      "stored_name": "PRESS"
     },
     {
       "number": 247,
       "address": "0x3EE3F",
-      "name": "PROGRAM"
+      "name": "PROGRAM",
+      "stored_name": "PROGRAM"
     },
     {
       "number": 248,
       "address": "0x3EEC8",
-      "name": "Q,QUEUE"
+      "name": "Q,QUEUE",
+      "aliases": [
+        81
+      ],
+      "stored_name": "Q"
     },
     {
       "number": 249,
       "address": "0x3EF1E",
-      "name": "R,ARE"
+      "name": "R,ARE",
+      "aliases": [
+        82
+      ],
+      "stored_name": "R"
     },
     {
       "number": 250,
       "address": "0x3EF59",
-      "name": "RED"
+      "name": "RED",
+      "stored_name": "RED"
     },
     {
       "number": 251,
       "address": "0x3EFD1",
-      "name": "RESET"
+      "name": "RESET",
+      "stored_name": "RESET"
     },
     {
       "number": 252,
       "address": "0x3F051",
-      "name": "RETURN"
+      "name": "RETURN",
+      "aliases": [
+        114
+      ],
+      "stored_name": "RETURN"
     },
     {
       "number": 253,
       "address": "0x3F0E7",
-      "name": "RUN"
+      "name": "RUN",
+      "stored_name": "RUN"
     },
     {
       "number": 254,
       "address": "0x3F153",
-      "name": "RUNNING"
+      "name": "RUNNING",
+      "stored_name": "RUNNING"
     },
     {
       "number": 255,
       "address": "0x3F1E1",
-      "name": "S"
+      "name": "S",
+      "aliases": [
+        83
+      ],
+      "stored_name": "S"
     },
     {
       "number": 256,
       "address": "0x3F231",
-      "name": "SAME"
+      "name": "SAME",
+      "stored_name": "SAME"
     },
     {
       "number": 257,
       "address": "0x3F29A",
-      "name": "SCORE"
+      "name": "SCORE",
+      "stored_name": "SCORE"
     },
     {
       "number": 258,
       "address": "0x3F320",
-      "name": "SECOND"
+      "name": "SECOND",
+      "stored_name": "SECOND"
     },
     {
       "number": 259,
       "address": "0x3F39A",
-      "name": "SMALL"
+      "name": "SMALL",
+      "aliases": [
+        60
+      ],
+      "stored_name": "SMALL"
     },
     {
       "number": 260,
       "address": "0x3F41F",
-      "name": "START"
+      "name": "START",
+      "aliases": [
+        91
+      ],
+      "stored_name": "START"
     },
     {
       "number": 261,
       "address": "0x3F49F",
-      "name": "STOP"
+      "name": "STOP",
+      "aliases": [
+        93
+      ],
+      "stored_name": "STOP"
     },
     {
       "number": 262,
       "address": "0x3F4FB",
-      "name": "SWITCH"
+      "name": "SWITCH",
+      "stored_name": "SWITCH"
     },
     {
       "number": 263,
       "address": "0x3F573",
-      "name": "T,TEA,TEE"
+      "name": "T,TEA,TEE",
+      "aliases": [
+        84
+      ],
+      "stored_name": "T"
     },
     {
       "number": 264,
       "address": "0x3F5CA",
-      "name": "TEN"
+      "name": "TEN",
+      "aliases": [
+        33
+      ],
+      "stored_name": "TEN"
     },
     {
       "number": 265,
       "address": "0x3F62B",
-      "name": "THANK"
+      "name": "THANK",
+      "aliases": [
+        94
+      ],
+      "stored_name": "THANK"
     },
     {
       "number": 266,
       "address": "0x3F684",
-      "name": "THAT"
+      "name": "THAT",
+      "stored_name": "THAT"
     },
     {
       "number": 267,
       "address": "0x3F6DF",
-      "name": "THE"
+      "name": "THE",
+      "aliases": [
+        116
+      ],
+      "stored_name": "THE"
     },
     {
       "number": 268,
       "address": "0x3F724",
-      "name": "THEN"
+      "name": "THEN",
+      "stored_name": "THEN"
     },
     {
       "number": 269,
       "address": "0x3F77E",
-      "name": "THIRD"
+      "name": "THIRD",
+      "stored_name": "THIRD"
     },
     {
       "number": 270,
       "address": "0x3F808",
-      "name": "THIS"
+      "name": "THIS",
+      "stored_name": "THIS"
     },
     {
       "number": 271,
       "address": "0x3F874",
-      "name": "TIME"
+      "name": "TIME",
+      "aliases": [
+        42
+      ],
+      "stored_name": "TIME"
     },
     {
       "number": 272,
       "address": "0x3F8E2",
       "name": "TRY",
-      "note": "start address unverified (romdata_acorn.h)"
+      "stored_name": "TRY"
     },
     {
       "number": 273,
       "address": "0x3F953",
-      "name": "TWELVE"
+      "name": "TWELVE",
+      "stored_name": "TWELVE"
     },
     {
       "number": 274,
       "address": "0x3F9D2",
-      "name": "TYPE"
+      "name": "TYPE",
+      "stored_name": "TYPE"
     },
     {
       "number": 275,
       "address": "0x3FA21",
-      "name": "U,YOU"
+      "name": "U,YOU",
+      "aliases": [
+        85
+      ],
+      "stored_name": "U"
     },
     {
       "number": 276,
       "address": "0x3FA91",
-      "name": "UH"
+      "name": "UH",
+      "stored_name": "UH"
     },
     {
       "number": 277,
       "address": "0x3FAC0",
-      "name": "UP"
+      "name": "UP",
+      "stored_name": "UP"
     },
     {
       "number": 278,
       "address": "0x3FAF7",
-      "name": "V"
+      "name": "V",
+      "aliases": [
+        86
+      ],
+      "stored_name": "V"
     },
     {
       "number": 279,
       "address": "0x3FB5C",
-      "name": "VERY"
+      "name": "VERY",
+      "aliases": [
+        118
+      ],
+      "stored_name": "VERY"
     },
     {
       "number": 280,
       "address": "0x3FBB8",
-      "name": "W"
+      "name": "W",
+      "aliases": [
+        87
+      ],
+      "stored_name": "W"
     },
     {
       "number": 281,
       "address": "0x3FC1D",
-      "name": "WANT"
+      "name": "WANT",
+      "stored_name": "WANT"
     },
     {
       "number": 282,
       "address": "0x3FC6C",
-      "name": "WAS"
+      "name": "WAS",
+      "stored_name": "WAS"
     },
     {
       "number": 283,
       "address": "0x3FCC2",
-      "name": "WERE"
+      "name": "WERE",
+      "stored_name": "WERE"
     },
     {
       "number": 284,
       "address": "0x3FD1A",
-      "name": "WHAT"
+      "name": "WHAT",
+      "aliases": [
+        63
+      ],
+      "stored_name": "WHAT"
     },
     {
       "number": 285,
       "address": "0x3FD6E",
-      "name": "WHICH"
+      "name": "WHICH",
+      "aliases": [
+        119
+      ],
+      "stored_name": "WHICH"
     },
     {
       "number": 286,
       "address": "0x3FDB5",
-      "name": "X"
+      "name": "X",
+      "aliases": [
+        88
+      ],
+      "stored_name": "X"
     },
     {
       "number": 287,
       "address": "0x3FE11",
-      "name": "Y,WHY"
+      "name": "Y,WHY",
+      "aliases": [
+        89
+      ],
+      "stored_name": "Y"
     },
     {
       "number": 288,
       "address": "0x3FE86",
-      "name": "YEAR"
+      "name": "YEAR",
+      "stored_name": "YEAR"
     },
     {
       "number": 289,
       "address": "0x3FEFC",
-      "name": "YES"
+      "name": "YES",
+      "aliases": [
+        121
+      ],
+      "stored_name": "YES"
     },
     {
       "number": 290,
       "address": "0x3FF3D",
-      "name": "YOUR"
+      "name": "YOUR",
+      "aliases": [
+        117
+      ],
+      "stored_name": "YOUR"
     },
     {
       "number": 291,
       "address": "0x3FF9B",
-      "name": "Z"
+      "name": "Z",
+      "aliases": [
+        90
+      ],
+      "stored_name": "Z"
     }
-  ]
+  ],
+  "frame_format": {
+    "tms5200_tms5220": {
+      "words": 165,
+      "stop_code": 165,
+      "overruns": 0
+    },
+    "tms5100": {
+      "words": 165,
+      "stop_code": 165,
+      "overruns": 53
+    }
+  }
 }

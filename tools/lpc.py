@@ -39,10 +39,12 @@ def bitsLsbFirst(data):
     return np.unpackbits(np.frombuffer(bytes(data), dtype=np.uint8), bitorder="little")
 
 
-def parseFrames(bits, maxFrames=100000):
+def parseFrames(bits, maxFrames=100000, pitchBits=6):
     """Parse frames up to and including the stop code. Returns (frames, bits
     consumed); each frame is a dict with its bit offset, kind and fields.
-    Stops early, without a stop frame, if the bits run out."""
+    Stops early, without a stop frame, if the bits run out. pitchBits=5
+    parses the TMS5100's format instead, which differs only in the width of
+    the pitch field (used to identify a PROM's target chip, promimport.py)."""
     position = 0
     frames = []
 
@@ -67,7 +69,7 @@ def parseFrames(bits, maxFrames=100000):
                 frames.append({"offset": start, "kind": "stop", "energy": 15})
                 break
             repeat = take(1)
-            pitch = take(6)
+            pitch = take(pitchBits)
             frame = {"offset": start, "energy": energy, "repeat": repeat, "pitch": pitch}
             if repeat:
                 frame["kind"] = "repeat"

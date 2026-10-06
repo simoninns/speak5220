@@ -85,6 +85,6 @@ The Pico's USB serial port is `/dev/ttyACM1` here (`tools/pico.py` finds it by i
 - `firmware/` – Raspberry Pi Pico 2 capture firmware (C, Pico SDK) and its host protocol (`PROTOCOL.md`)
 - `kicad/libraries/ki-lime-pi-pico/` – Ki-Lime Pi library submodule (Raspberry Pi Pico symbols, footprints and 3D models)
 - `tools/` – Python host tools: the capture runner, Pico control, PicoScope capture and analysis
-- `proms/` – speech PROM manifests: image hashes, provenance and word tables
+- `proms/` – the speech PROM inventory (`proms/README.md`) and manifests: image hashes, provenance and word tables. `python tools/promimport.py` rebuilds the images
 - `captures/` – evidence captures cited by the reference datasheet (`captures/corpus/` is kept local)
 - `docs-tech/` – Datasheets and reference schematics

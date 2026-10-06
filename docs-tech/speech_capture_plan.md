@@ -189,7 +189,7 @@ captures/<prom>/
     ext01/, ...       # ... and Speak External
 ```
 
-`prom.json` is a copy of the PROM's manifest, `proms/<prom>.json` (`tools/prom.py`). The manifest gives the image's SHA-256 and its source; images that may not be redistributed are kept in `proms/images/`, which is git-ignored.
+`prom.json` is a copy of the PROM's manifest, `proms/<prom>.json` (`tools/prom.py`). The manifest gives the image's hashes, its sources and the reference dump it matches, its target chip and its word table. `tools/promimport.py` writes the manifests and the inventory page, `proms/README.md` (Phase 6). It also rebuilds the images from their pinned public sources into `proms/images/`, which is git-ignored, so images that may not be redistributed stay out of the repo.
 
 ### Per capture
 
@@ -268,7 +268,7 @@ Every take uses the standard procedure from Phase 5 (`tools/frameclock.py`). At 
 The aim is to cover **every original speech PROM that can be found**. This needs an inventory step first. Collect the images, record their hashes and provenance, and check the word tables. Candidates to look for:
 
 - **Acorn PHROM A** (Kenneth Kendall voice). Already in `romdata_acorn.h`, from TMS6100-Emulator.
-- **Acorn PHROM US** (American voice), if a dump exists.
+- **Acorn PHROM US** (American voice), if a dump exists. It is TI's VM61002, which was found (Phase 6).
 - **Other TMS6100 / VSM dumps** that are archived in MAME (for example for TI products), checked for whether they target the TMS5220 or the TMS5200/5100. Older chips use different coefficient tables and frame formats. Those dumps will still play on a 5220, but they will sound wrong. That is still a useful test, as long as it is labelled clearly.
 - **Speak External data from other TMS5220 hosts.** Arcade boards (for example several Atari games) and Apple II and similar speech cards stored LPC data in CPU ROM rather than in a VSM. We can replay it through Speak External (§9).
 
@@ -277,13 +277,16 @@ The aim is to cover **every original speech PROM that can be found**. This needs
 PROM images:
 
 - **TMS6100 Multi-PHROM Emulator for the BBC Micro** (eRadiofan): <https://github.com/eRadiofan/TMS6100-Multi-PHROM-Emulator-for-the-BBC-Micro/tree/main/Firmware/Common/Src>. Several PHROM images built into its firmware sources.
-- **TMS6100-Emulator** (simoninns): <https://github.com/simoninns/TMS6100-Emulator/tree/master/Firmware/tms6100>. The source of the Acorn PHROM A data in `romdata_acorn.h`.
+- **TMS6100-Emulator** (simoninns): <https://github.com/simoninns/TMS6100-Emulator/tree/master/Firmware/tms6100>. The source of the Acorn PHROM A data in `romdata_acorn.h`, and of a full VM61002 dump.
+- **Talkie** (Peter Knight): <https://github.com/going-digital/Talkie>. An Arduino LPC library whose vocabularies are words copied from TI and Acorn PROMs, including 232 words of the VM61003 and VM61005, which are not otherwise available.
+- **Star Wars sound ROM disassembly** (nmikstas): <https://github.com/nmikstas/star-wars-arcade-audio>. The game's 23 Speak External speech blocks.
+- **MAME** (<https://github.com/mamedev/mame>): the reference hashes of the dumps (`hash/bbc_vsm.xml`, and the drivers' ROM lists), and the list of systems that used a VSM.
 
 Information:
 
 - **TI Portable Speech Lab** (Stuart Conner): <https://www.stuartconner.me.uk/ti_portable_speech_lab/ti_portable_speech_lab.htm>. TI's speech development system, which is background for the authoring guide.
 
-When the images are imported, record which source each came from, along with its hash, in `prom.json`. Where the same PROM appears in more than one source, compare the copies.
+When the images are imported, record which source each came from, along with its hash, in `prom.json`. Where the same PROM appears in more than one source, compare the copies. Phase 6 did this (`proms/README.md`).
 
 For each image, the word table gives the entry points. Also do a **sweep of every byte address**, not just the word starts. Starting mid-word produces garbage, but it is deterministic garbage, which makes it excellent emulator test material.
 
@@ -345,13 +348,13 @@ Keep a change log in the datasheet listing every correction and addition to the 
 ## 11. Risks and open questions
 
 - **What does `I/O` carry?** Resolved (§2): the 10-bit sample, LSB first, which matches the DAC.
-- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself.
+- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself. In the louder TI-99 words (Phase 6) they reach 15 codes.
 - **Internal state that is not visible on `I/O`.** If `I/O` carries only the final sample, the inner filter state has to be inferred. Carefully designed vectors (for example, one K parameter active at a time) keep that inference tractable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not. Document any 5220/5220C differences in the datasheet.
 - **Stopping the clock.** The TMS5220 has no clock of its own, so `OSC` stops whenever the Pico resets or is reflashed. Once, mid-speech, this left the chip unable to complete any write until it was power-cycled (§5 item 7, `firmware/PROTOCOL.md`). Phase 5 found that stops while the chip is idle are safe: up to 1 s they freeze its state, and after 10 s it still works, though its frame clock has moved. Stops during speech were not repeated.
 - **Clock fidelity.** The board no longer has the original RC oscillator, so captures are made with a crystal-derived clock. That is ideal for reproducibility, but real BBC Micro hardware ran slightly off 640 kHz and drifted. To study that behaviour, have the Pico sweep the clock frequency rather than refitting an RC network.
-- **Licensing of PHROM images.** Keep the original ROM images out of the repo unless their redistribution status is clear. Commit the manifests and hashes, plus the captured output if appropriate.
+- **Licensing of PHROM images.** Keep the original ROM images out of the repo unless their redistribution status is clear. Commit the manifests and hashes, plus the captured output if appropriate. Since Phase 6, `tools/promimport.py` rebuilds every image except the Acorn PHROM A from public sources pinned to a commit, so the repo holds only the manifests. Whether the captured output of each PROM may be published is decided in Phase 12.
 - **Copyright of the original datasheet.** See §1.1: the new datasheet is written fresh and cites the original.
 
 ## 12. Phases
@@ -365,7 +368,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 3. Firmware instrumentation | 1 | Done |
 | 4. Host tooling | 1, 3 | Done |
 | 5. Repeatability | 3, 4 | Done |
-| 6. PROM inventory | — | Sources listed (§8) |
+| 6. PROM inventory | — | Done |
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Not started |
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Not started |
 | 9. Reference emulator | 8 (runs alongside it) | Not started |
@@ -472,7 +475,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 - **Done when:** a single command produces a §6-compliant directory for one word, with all checks passing.
 - **Done:**
   - Earlier: `tools/capture.py` and `tools/decode.py` (triggered block capture, `I/O` decode, DAC averaging), and from Phase 3 the Pico client and trace decoder (`tools/pico.py`).
-  - **PROM manifests.** `proms/acorn_phrom_a.json` holds the Acorn PHROM A's hash, provenance and 165-entry word table, built from `romdata_acorn.h` by `tools/prom.py`. Phase 6 adds the other PROMs in the same format.
+  - **PROM manifests.** `proms/acorn_phrom_a.json` holds the Acorn PHROM A's hash, provenance and 165-entry word table, built from `romdata_acorn.h`. Phase 6 added the other PROMs, and moved the building to `tools/promimport.py`.
   - **The runner, `tools/run.py`.** It takes a PROM and words (numbers, names, `all`, or `--address` for sweep points), a path (VSM, Speak External or both) and a number of takes. It uploads the image if the Pico's bank does not hold it, captures each take, and writes the §6 layout.
   - **`tools/process.py`** rebuilds every readable file from `raw/`: `vsm_trace.csv`, `frames.csv`, `samples.wav` and `.csv`, `dac.wav` and `listen.wav` (48 kHz, through a model of the BBC audio stage). It runs twelve checks and records them in `capture.json` (`tools/README.md` lists them).
   - **The frame decoder** (`tools/lpc.py`): every frame's bit offset, length, kind, energy, repeat flag, pitch and K1–K10 indices. For the VSM path, `frames.csv` also gives when each frame's first bit was read, and in which output sample period.
@@ -544,6 +547,38 @@ This phase can run alongside Phases 1–5.
   - Write `prom.json` for each image.
 - **Delivers:** the inventory and the manifests. Images that cannot be redistributed stay out of the repo (§11).
 - **Done when:** every image found has been inventoried, and the list is frozen for version 1. Images found later go into version 1.x.
+- **Done:**
+  - **`tools/promimport.py`.** It fetches each source file at a pinned commit and rebuilds the image from it. It checks each image against MAME's hash, and reads the word table from the image's own index, cross-checked against the source's published word list. It identifies the frame format from the data, and writes the manifests and `proms/README.md`. The images go in `proms/images/`, which is git-ignored.
+  - **The inventory, version 1.0** (`proms/README.md`), eight manifests:
+    - **Dumps, matching MAME byte for byte:**
+      - `acorn_phrom_a` (CM62024);
+      - `vm61002` (Acorn's US PHROM);
+      - `vm61004` (military vocabulary);
+      - `vm71003a` (female talking clock, 4 KB);
+      - `ti99_speech` (CD2325A + CD2326A, 32 KB across banks 0 and 1, written for the TMS5200).
+    - **Assembled from original words:**
+      - `starwars_speech`, the arcade game's 23 Speak External blocks;
+      - `vm61003_words` and `vm61005_words`, 116 words each, from Talkie.
+    - **Known but not held:** the complete VM61003 and VM61005 images, Exelvision's CM62312 (TMS5220C), and Speak External data in other games' program ROMs.
+    - **Left out:** VSMs for the TMS5100/TMS5110 family, whose frame format differs.
+  - **Multi-bank images.** An image may span several 16 KB banks. `run.py` uploads every bank, and the tools find words by their offset from the image's first bank (`prom.base`). The Pico holds 4 banks at once, so before uploading, `run.py` now unloads banks that belong to other PROMs, and the self-test starts from empty banks.
+  - **The DAC check works at the rails** (`process.py` version 3). Loud words failed `layer2_vs_layer3`, because the Phase 2 model is wrong at codes +127 and −128. The fit, the residual and the code recovery are now judged on codes inside ±119, and the rail samples are reported separately.
+  - **Evidence:** p6-01 to p6-08, TI-99's MORE and LINE, two takes per path (datasheet §8.2).
+- **Status:** done (2026-10-06). The list is frozen as version 1.0. At least one word from every PROM was captured with the standard procedure, through both paths for TI-99, Star Wars and the VM61005 words, and all passed every check. That includes TI-99's LINE, which runs from the first VSM into the second. Of the 22 takes, one TI-99 take in the first run was accepted one slot early and failed `start_slot`. Its run was repeated, and every take in the repeat passed.
+- **Findings:**
+  - **Every copy found is a good dump.** The two Acorn copies are identical to the image in this repo. The eRadiofan copies stop after their last word, and padded with zeros they match MAME's dumps exactly.
+  - **Talkie's words are verbatim.** All 766 of its words that come from a held image match that image byte for byte. On that basis its VM61003 and VM61005 words are taken as original.
+  - **Every held image is in the TMS5200/TMS5220 frame format.** Every word in all eight parses to a stop code, and none runs into the next word. Read with the TMS5100's 5-bit pitch field instead, 2–123 words per PROM run into the next one. The data cannot separate the TMS5200 from the TMS5220, which share a frame format. TI-99's target, the TMS5200, comes from the product.
+  - **Four word names in `romdata_acorn.h` were wrong.** The Acorn PHROM stores each word's name next to its data. Those names correct words 135 (-TEEN), 137 (-TY), 138 (-Z) and 230 (O). The list's numbers and addresses all match the PHROM's pointer table, including word 272 (TRY), which the list marked as unverified.
+  - **The DAC model fails at the rails.** TI-99 speech is loud on the TMS5220, and LINE uses the whole 10-bit `I/O` range. Codes beyond −128…+127 clip to the rail values. Codes −128 and +127 sit about 10 mV and 6 mV from the Phase 2 bit-weight model (datasheet §8.2) [p6-01 to p6-08].
+  - **Larger upsets in TI-99 words.** Within a path, takes differed by up to 15 codes, from as early as sample 3 of speech, against 3 codes for the Acorn word in Phase 5. The two LINE takes through Speak External were bit-identical.
+  - **The image formats are documented** (`proms/README.md`): Acorn's header, pointer table and stored names; TI's indexed and unindexed layouts; and the TI-99's binary search tree. In TI's own images, every word is followed by one spare byte after the byte holding its stop code. This is material for the authoring guide (Phase 11).
+- **Handed on:**
+  - **Phase 10** captures the seven PROMs other than the Acorn PHROM A. For `starwars_speech`, the manifest records how many bytes the game sends for each block (`stream_bytes`), including the bytes after the stop code. That matters to Speak External replays (Phase 8). The assembled images are original only word by word, so their address sweeps (§8) are not original data.
+  - **Upsets → Phase 8.** The TI-99 words show larger and earlier upsets than the Acorn word. Loud words may be the quickest way to study them.
+  - **The DAC at the rails → Phase 8** (the DAC transfer function).
+  - **The 4 KB VM71003A** is served padded with zeros. How a real 4 KB VSM answers addresses above 4 KB is not known.
+  - **Version 1.x:** the complete VM61003 and VM61005, the CM62312, and Speak External data from other hosts, if they can be found.
 
 ### Phase 7: Acorn PHROM A reference set
 

@@ -1,0 +1,113 @@
+{
+  "reference": "captures/phase6/ti99_speech/167_line/vsm01",
+  "reference_path": "vsm",
+  "reference_speech_first_sample": 306,
+  "takes": 4,
+  "all_identical": false,
+  "all_frames_identical": true,
+  "pairs": [
+    {
+      "take": "captures/phase6/ti99_speech/167_line/vsm02",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 306,
+      "compared_samples": 4219,
+      "identical": false,
+      "differing_samples": 2179,
+      "first_difference": 3,
+      "max_abs_difference": 15,
+      "rms_difference": 1.320432172998287,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": 0.0
+    },
+    {
+      "take": "captures/phase6/ti99_speech/167_line/ext01",
+      "path": "external",
+      "shift_samples": -2,
+      "speech_first_sample": 304,
+      "compared_samples": 4219,
+      "identical": false,
+      "differing_samples": 2350,
+      "first_difference": 3,
+      "max_abs_difference": 15,
+      "rms_difference": 1.5878329753834621,
+      "frames_identical": true,
+      "standard": true
+    },
+    {
+      "take": "captures/phase6/ti99_speech/167_line/ext02",
+      "path": "external",
+      "shift_samples": -2,
+      "speech_first_sample": 304,
+      "compared_samples": 4219,
+      "identical": false,
+      "differing_samples": 2350,
+      "first_difference": 3,
+      "max_abs_difference": 15,
+      "rms_difference": 1.5878329753834621,
+      "frames_identical": true,
+      "standard": true
+    }
+  ],
+  "standard_variants": [
+    {
+      "path": "vsm",
+      "takes": 2,
+      "variants": 2,
+      "takes_matching_majority": 0,
+      "samples_without_majority": 2179,
+      "members": [
+        {
+          "take": "captures/phase6/ti99_speech/167_line/vsm01",
+          "variant": 1,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 1179,
+          "max_abs_deviation": 15,
+          "upset_onsets": [
+            10
+          ]
+        },
+        {
+          "take": "captures/phase6/ti99_speech/167_line/vsm02",
+          "variant": 2,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 1000,
+          "max_abs_deviation": 13,
+          "upset_onsets": [
+            3
+          ]
+        }
+      ]
+    },
+    {
+      "path": "external",
+      "takes": 2,
+      "variants": 1,
+      "takes_matching_majority": 2,
+      "samples_without_majority": 0,
+      "members": [
+        {
+          "take": "captures/phase6/ti99_speech/167_line/ext01",
+          "variant": 1,
+          "shift_samples": 0,
+          "matches_majority": true,
+          "deviating_samples": 0,
+          "max_abs_deviation": 0,
+          "upset_onsets": []
+        },
+        {
+          "take": "captures/phase6/ti99_speech/167_line/ext02",
+          "variant": 1,
+          "shift_samples": 0,
+          "matches_majority": true,
+          "deviating_samples": 0,
+          "max_abs_deviation": 0,
+          "upset_onsets": []
+        }
+      ]
+    }
+  ]
+}

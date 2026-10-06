@@ -1,0 +1,230 @@
+{
+  "name": "vm71003a",
+  "title": "TI VM71003A (US female voice, talking clock)",
+  "part": "VM71003A",
+  "target_chip": "TMS5220",
+  "target_chip_basis": "Listed by MAME as a BBC Micro speech PHROM (TMS5220); its data parses only in the TMS5200/TMS5220 format.",
+  "image": {
+    "source": "proms/images/vm71003a.bin",
+    "kind": "dump",
+    "size": 4096,
+    "sha256": "7bc29d27427f7fc945392b98f7051b0520b5fb5c5b06fbe127184d9878928bb8",
+    "sha1": "164dae26500d9ef01c591686f13078d51254c4e1",
+    "crc32": "d1d5a1dc"
+  },
+  "reference": {
+    "mame": "vm71003a",
+    "listed_in": "https://github.com/mamedev/mame/blob/1ecdb5701405bd4cadba520fe1ff4d65f7c7e8aa/hash/bbc_vsm.xml",
+    "size": 4096,
+    "crc32": "d1d5a1dc",
+    "sha1": "164dae26500d9ef01c591686f13078d51254c4e1",
+    "matches": true
+  },
+  "copies": [
+    {
+      "repo": "https://github.com/eRadiofan/TMS6100-Multi-PHROM-Emulator-for-the-BBC-Micro",
+      "commit": "b1a0bd83570755eb02c873b6e24e7b80b341eb59",
+      "path": "Firmware/Common/Src/ROMdata_VM71003A.c",
+      "licence": "GPL-3.0",
+      "symbol": "PHROMdata_Clock",
+      "size": 3955,
+      "sha256": "717e9021be1294f229ca5ca3b1a799c836bca7cdb49ba7f9298e316c036a8ad2",
+      "sha1": "e1a3e5ad49d3a79b9c8d5e0bdd5e87756c098113",
+      "crc32": "45740abb",
+      "note": "truncated after the last word; the image is this padded with zeros to 4 KB"
+    }
+  ],
+  "bank": 4,
+  "format": "ti_indexed",
+  "provenance": "TMS6100 Multi-PHROM Emulator (eRadiofan), ROMdata_VM71003A.c, padded with zeros to 4 KB; the result is MAME's dump. The word names are from its word list. A 4 KB VSM: the Pico serves it padded with zeros to 16 KB, so reads past 4 KB return zeros, where a real 4 KB part might wrap.",
+  "word_numbers": "TI's indexed format: word n's pointer is at byte 2n (n from 1).",
+  "words": [
+    {
+      "number": 1,
+      "address": "0x10048",
+      "name": "THE"
+    },
+    {
+      "number": 2,
+      "address": "0x1006A",
+      "name": "TIME"
+    },
+    {
+      "number": 3,
+      "address": "0x100F7",
+      "name": "IS"
+    },
+    {
+      "number": 4,
+      "address": "0x1015C",
+      "name": "AM"
+    },
+    {
+      "number": 5,
+      "address": "0x10203",
+      "name": "PM"
+    },
+    {
+      "number": 6,
+      "address": "0x10283",
+      "name": "OH"
+    },
+    {
+      "number": 7,
+      "address": "0x102BF",
+      "name": "O'CLOCK"
+    },
+    {
+      "number": 8,
+      "address": "0x1031D",
+      "name": "ONE"
+    },
+    {
+      "number": 9,
+      "address": "0x10383",
+      "name": "TWO"
+    },
+    {
+      "number": 10,
+      "address": "0x103B6",
+      "name": "THREE"
+    },
+    {
+      "number": 11,
+      "address": "0x1041E",
+      "name": "FOUR"
+    },
+    {
+      "number": 12,
+      "address": "0x1047B",
+      "name": "FIVE"
+    },
+    {
+      "number": 13,
+      "address": "0x104F9",
+      "name": "SIX"
+    },
+    {
+      "number": 14,
+      "address": "0x1052C",
+      "name": "SEVEN"
+    },
+    {
+      "number": 15,
+      "address": "0x10584",
+      "name": "EIGHT"
+    },
+    {
+      "number": 16,
+      "address": "0x105CB",
+      "name": "NINE"
+    },
+    {
+      "number": 17,
+      "address": "0x1063F",
+      "name": "TEN"
+    },
+    {
+      "number": 18,
+      "address": "0x106A6",
+      "name": "ELEVEN"
+    },
+    {
+      "number": 19,
+      "address": "0x10733",
+      "name": "TWELVE"
+    },
+    {
+      "number": 20,
+      "address": "0x107AE",
+      "name": "THIRTEEN"
+    },
+    {
+      "number": 21,
+      "address": "0x1084E",
+      "name": "FOURTEEN"
+    },
+    {
+      "number": 22,
+      "address": "0x108C5",
+      "name": "FIFTEEN"
+    },
+    {
+      "number": 23,
+      "address": "0x10958",
+      "name": "SIXTEEN"
+    },
+    {
+      "number": 24,
+      "address": "0x109F0",
+      "name": "SEVENTEEN"
+    },
+    {
+      "number": 25,
+      "address": "0x10AAB",
+      "name": "EIGHTEEN"
+    },
+    {
+      "number": 26,
+      "address": "0x10B46",
+      "name": "NINETEEN"
+    },
+    {
+      "number": 27,
+      "address": "0x10C08",
+      "name": "TWENTY"
+    },
+    {
+      "number": 28,
+      "address": "0x10C71",
+      "name": "THIRTY"
+    },
+    {
+      "number": 29,
+      "address": "0x10CDC",
+      "name": "FOURTY"
+    },
+    {
+      "number": 30,
+      "address": "0x10D47",
+      "name": "FIFTY"
+    },
+    {
+      "number": 31,
+      "address": "0x10DA8",
+      "name": "GOOD"
+    },
+    {
+      "number": 32,
+      "address": "0x10DC7",
+      "name": "MORNING"
+    },
+    {
+      "number": 33,
+      "address": "0x10E52",
+      "name": "AFTERNOON"
+    },
+    {
+      "number": 34,
+      "address": "0x10EF3",
+      "name": "EVENING"
+    },
+    {
+      "number": 35,
+      "address": "0x10F6C",
+      "name": "(0.25)"
+    }
+  ],
+  "frame_format": {
+    "tms5200_tms5220": {
+      "words": 35,
+      "stop_code": 35,
+      "overruns": 0
+    },
+    "tms5100": {
+      "words": 35,
+      "stop_code": 35,
+      "overruns": 6
+    }
+  }
+}
