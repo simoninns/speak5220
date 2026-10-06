@@ -36,6 +36,11 @@
 
 // Note: This is a dump of the Acorn Speech PHROMA produced using HxD
 // and contains 16K bytes of data (16,384 bytes or 0x4000 in hex).
+//
+// The word list below has been checked by decoding the LPC data at each
+// address.  The original list gave B, BETWEEN, BOTH and BUTTON without the
+// leading 1 (e.g. B as 065), FOUND as 1896 and TRY as 3800; these have been
+// corrected.  TRY's start could not be confirmed from the data alone.
 
 /*
 	PHROM Word list:
@@ -87,11 +92,11 @@
 	167        EFD     ANSWER
 	168        F72     ANY
 	169        FCF     AVAILABLE
-	170        065     B,BEE,BE
+	170        1065    B,BEE,BE
 	171        10BD    BAD
-	172        13B     BETWEEN
-	173        1B1     BOTH
-	174        1F8     BUTTON
+	172        113B    BETWEEN
+	173        11B1    BOTH
+	174        11F8    BUTTON
 	175        124D    C,SEE,SEA
 	176        12B1    CASSETTE
 	177        1326    CHARACTER
@@ -116,7 +121,7 @@
 	196        1A5D    FEW
 	197        1AAB    FILE
 	198        1B1E    FIRST
-	199        1896    FOUND
+	199        1B96    FOUND
 	200        1C11    FROM
 	201        1C6B    G
 	202        1CC9    GOOD
@@ -189,7 +194,7 @@
 	269        377E    THIRD
 	270        3808    THIS
 	271        3874    TIME
-	272        3800    TRY
+	272        38E2    TRY (unverified, see note above)
 	273        3953    TWELVE
 	274        39D2    TYPE
 	275        3A21    U,YOU

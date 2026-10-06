@@ -2073,6 +2073,17 @@
 			(embedded_fonts no)
 		)
 	)
+	(text "Note: Original BBC Micro circuit used a 150K\nresistor across the pot.  Breadboard needs\n470K (probably due to capacitance of the\ntraces)."
+		(exclude_from_sim no)
+		(at 104.394 162.56 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "f508388d-69ea-4045-b8b2-2326ae4bf539")
+	)
 	(junction
 		(at 110.49 156.21)
 		(diameter 0)
@@ -4104,7 +4115,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "150K"
+		(property "Value" "470K"
 			(at 113.03 151.1299 0)
 			(show_name no)
 			(do_not_autoplace no)
