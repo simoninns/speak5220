@@ -663,10 +663,13 @@ This phase can run alongside Phases 1–5.
   - **The reset sequence cannot end a Speak External.** Its bytes become FIFO data. It ends the speech within about two frames instead.
   - **Upsets occur in synthetic data too,** at recurring sample positions, and not according to the predecessor.
 - **Handed on:**
-  - **The model's remaining one-code differences → Phase 9.** In voiced frames, at a fixed point of each pitch period; and the start rule for a leading silence frame. Finding them is the first task of the emulator work. The lowest-order arithmetic of the lattice and its overflow are the likely places.
-  - **Upsets → still open.** Their cause needs the bench changes listed in Phase 5 (temperature, supply, decoupling, a second chip). They cannot be made from the host.
+  - **The model's remaining one-code differences → Phase 9.** In voiced frames, at a fixed point of each pitch period; and the start rule for a leading silence frame. Finding them is the first task of the emulator work. Overflow is now modelled as a 14-bit wrap (US 4,335,277). The voiced error is a different low-order limit cycle in the zero-excitation part of each pitch period, and many arithmetic forms are already ruled out (datasheet §8.8). A vector built to isolate it would help: voiced frames with one K non-zero at a time, with the longest pitch and a constant energy, so that each period ends in a long free ringing of one lattice stage.
+  - **Upsets → still open.** Their cause needs the bench changes listed in Phase 5 (temperature, supply, decoupling, a second chip). They cannot be made from the host. The patent's dynamic logic suggests that temperature and `VDD` are the variables to try first (datasheet §7).
   - **The DAC model for very loud data, and the extra DAC noise during speech → Phase 12** final pass, or a later measurement phase. Neither affects `I/O`, the exact output.
   - **Slots and TI's bit times (Phase 1)** remain an inference from the pin name.
+  - **Host interface tests that US 4,335,277 suggests** (bench, no hardware changes):
+    - **A second command written while one is held.** p8-23 gave up after 50 ms. The patent holds the host only until the current instruction finishes, so READY may return once speech ends and the held command has run. Retest with a timeout longer than the word.
+    - **A write to a full FIFO.** The patent accepts a byte only while the FIFO's top level is empty, so a 17th byte should hold READY until a frame has been taken from the FIFO. No stream so far wrote more than 16 bytes.
   - **Phase 9** starts from the datasheet text, as planned. `tools/model.py` is the measuring tool behind the text, not the emulator; Phase 9 must not copy it.
 
 ### Phase 9: Reference emulator

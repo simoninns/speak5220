@@ -25,8 +25,8 @@
    "takes": 97,
    "exact": 0,
    "samples": 145305,
-   "mismatched": 61765,
-   "max_abs": 1011
+   "mismatched": 55816,
+   "max_abs": 1023
   },
   "noise": {
    "takes": 12,
@@ -46,15 +46,15 @@
    "takes": 241,
    "exact": 0,
    "samples": 650219,
-   "mismatched": 319657,
-   "max_abs": 1020
+   "mismatched": 307199,
+   "max_abs": 1023
   },
   "special": {
    "takes": 52,
    "exact": 7,
    "samples": 92296,
-   "mismatched": 19625,
-   "max_abs": 527
+   "mismatched": 19645,
+   "max_abs": 531
   }
  },
  "confirmed": {

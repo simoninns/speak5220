@@ -15,7 +15,7 @@ The aim is that someone working from this document alone can author new phrases,
 - the measured output characteristics (§9.5);
 - the pin functions (§11.2).
 
-What is not yet known is listed where it applies. The main gaps are in §8.8: the filter's lowest-order arithmetic, which leaves the model of §8.9 one code off at a few samples per pitch period, and how it overflows.
+What is not yet known is listed where it applies. The main gap is in §8.8: the filter's lowest-order arithmetic, which leaves the model of §8.9 one code off at a few samples per pitch period. Overflow is now modelled as a 14-bit wrap, following US 4,335,277.
 
 ## Conventions
 
@@ -74,10 +74,10 @@ Driving `OSC` from an external clock is covered in Appendix A.
 
 - **A status read or a write** completes in 12 to 24 µs, two to four slots.
 - **After Read Byte**, the data read waits until the chip has read the eight bits from the VSM, at 12.5 µs a bit, and after a Load Address also the Dummy Read: up to 237 µs [p8-25].
-- **After Read and Branch**, the next write waits until the branch is done: 386 to 486 µs [p8-25].
+- **After Read and Branch**, the next write waits 386 to 486 µs [p8-25]. The chip does not see the VSM finish a branch: US 4,335,277 times Read and Branch with a fixed timer (240 µs in its 10 kHz design, 48 bit times, which would be 300 µs at 640 kHz). The measured wait fits such a timer plus the command's own latency. A VSM must therefore finish the branch within that time.
 - **A second command while one is held.** A command that cannot run during speech is accepted at once (READY active after about 21 µs) and held until speech ends (§6). Another write while it is held keeps READY inactive. The test host gave up after 50 ms; the chip then did not drive READY active again until it had been reset [p8-23]. A host should not write a second command while one is held: it should poll Talk Status first.
 
-**INT (Correction).** INT went active for Talk Status going clear and for Buffer Low going set, and a status read released it [p8-19, p8-20]. **It did not go active when Buffer Empty was set**, which the original's §3.3 lists as a cause: in eight Speak External streams that ran out of data, the status read 1 to 2 ms after Buffer Empty set found it set, with no INT between [p8-19, p8-20]. The INT at the end of those streams came when Talk Status cleared, a frame later (§5).
+**INT (Correction).** INT went active for Talk Status going clear and for Buffer Low going set, and a status read released it [p8-19, p8-20]. **It did not go active when Buffer Empty was set**, which the original's §3.3 lists as a cause: in eight Speak External streams that ran out of data, the status read 1 to 2 ms after Buffer Empty set found it set, with no INT between [p8-19, p8-20]. The INT at the end of those streams came when Talk Status cleared, a frame later (§5). The original's description matches the design in US 4,335,277, where any change of BE, BL or Talk Status raises INT, and BE resets the talk latch at once. This chip behaves differently on both counts.
 
 **Status reads during speech.** During a VSM Speak, status reads return 0xFF or 0xDF: Buffer Low and Buffer Empty keep whatever the last Reset or Speak External left (§6) [p8-22].
 
@@ -177,10 +177,10 @@ The original's §7 lists what the power-up clear does, and says that it resemble
 **The frame clock (New).** The chip has a frame clock that runs whenever `OSC` runs, whether the chip is speaking or idle. Its boundaries are 16000 `OSC` cycles apart: 200 samples, 25 ms at 640 kHz.
 - **It runs between words.** In 34 Speaks spread over 23 s, with idle gaps of 0.02–0.6 s, every first frame read fell on one 25 ms grid, to within ±0.08 µs [p5-09].
 - **Neither Speak nor Reset moves it.** Half of those 34 Speaks came after the reset sequence (nine `0xFF`, then Reset) [p5-09].
-- **Power-up starts it at an arbitrary phase.** After a power cycle the grid had moved by 262 µs [p5-16]. The original's power-up list says the "T State Counter" is reset; whether that counter is the frame clock is not known.
+- **Power-up starts it at an arbitrary phase.** After a power cycle the grid had moved by 262 µs [p5-16]. The original's power-up list says the "T State Counter" is reset. In US 4,335,277 that is the counter that generates the 20 bit times of a sample period (T1–T20); the parameter and interpolation counters that make up the frame clock are separate. So the power-up list does not say that the frame clock is reset.
 - **When a Speak starts.** A Speak starts on the first frame boundary at least about 320 µs after it is written. Written 323 µs or more before a boundary, it started on that boundary; written 317 µs or less before, on the next one [p5-10]. So the first frame is read anywhere from about 0.3 ms to 25.3 ms after the Speak (measured: 2.1–24.7 ms [p5-09]). This is the start delay that varied in earlier captures (plan §2). From the first read onwards, a word's timing does not vary (§4).
 - **When the output starts.** The first sample that differs from idle comes 207 samples (ACORN) or 206 samples (B) after the sample period of the first frame read [p5-01]. That agrees with the original's "audio output begins on the following frame boundary", with a few samples for the energy to rise from zero.
-- **Stopping the clock freezes it.** With the chip idle, `OSC` was stopped for 1 ms to 1 s. Afterwards the frame grid had moved by the stopped time, to within 6 µs, and the chip spoke normally without a Reset. After 10 s stopped, the chip still spoke normally, but the grid had moved 4.3 ms further than the stopped time, so some internal state is lost over that time [p5-17]. Stopping `OSC` is therefore not a reset. Stopping it during speech has left the chip unable to complete a write until it was power-cycled (`firmware/PROTOCOL.md`); that was not repeated.
+- **Stopping the clock freezes it.** With the chip idle, `OSC` was stopped for 1 ms to 1 s. Afterwards the frame grid had moved by the stopped time, to within 6 µs, and the chip spoke normally without a Reset. After 10 s stopped, the chip still spoke normally, but the grid had moved 4.3 ms further than the stopped time, so some internal state is lost over that time [p5-17]. That fits the patent's design, whose counters and registers are dynamic shift registers that hold their state only as charge. Stopping `OSC` is therefore not a reset. Stopping it during speech has left the chip unable to complete a write until it was power-cycled (`firmware/PROTOCOL.md`); that was not repeated.
 
 **The noise generator (New).** The noise that excites unvoiced frames comes from a 13-bit shift register whose state carries over from one utterance to the next. §8.6 gives the register itself.
 - **It runs freely, with a period of 8191 frames.** Takes of ACORN that started 8191 frames apart (204.8 s) differed by at most 3 codes. Takes at the other spacings, from 600 to 9391 frames, differed by 33–40 codes [p5-11]. The register steps once per slot, 4000 times a frame; 8191 is its period, and it is prime to 4000.
@@ -229,6 +229,8 @@ Phase 8 investigates them [p5-12 to p5-16].
 
 **Upsets in the vectors (Phase 8).** Upsets also occur in the synthetic vectors, so they are not a property of PROM data. In 14 standard takes of one loud vector, spoken after four different predecessors, there were five distinct outputs. They first differed from each other at samples 678, 710, 810, 1009 and 1055 from the capture start, and which variant a take gave did not depend on its predecessor [p8-17, p8-18]. The vector sets' repeats were usually identical: in all 62 pairs of takes of the energy and noise vectors through the same path, the two takes matched bit for bit [vectors `energy`, vectors `noise`]. Their cause is still not known. The tests of plan §12 Phase 5 that need changes to the bench (temperature, supply, decoupling, a second chip) have not been made.
 
+*Hypothesis (not tested).* US 4,335,277 builds the chip from precharged, conditional-discharge (dynamic) logic, clocked in four phases. A node that is marginal only for particular data would fit what is seen: departures that start at the same samples from take to take, but not in every take. If that is the cause, the upset rate should depend strongly on temperature and on `VDD`.
+
 **For emulator writers.** To reproduce a capture, start from:
 1. **The start time.** The Speak starts on the first frame boundary at least about 320 µs after it is written.
 2. **The noise generator.** Its state at the first sample of speech follows from when the command was accepted: for the standard procedure, 1958 steps (Speak) or 1923 steps (Speak External) after 0x1FFF, one step more per slot earlier. It advances one step per slot from then on, through speech and idle alike, until the next Reset.
@@ -255,7 +257,7 @@ Each setting was held for six frames, so the filter settles. Every vector was ca
 
 An unconfirmed entry (†) is one where a neighbouring value fits as well or slightly better. That happens because the model is not yet exact for voiced frames (§8.9): a nearby value can offset its one-code slips at a few samples. No neighbouring value made any vector exact. So the listed values are kept, and none is contradicted.
 
-**The values are MAME's.** All of them agree with the tables in MAME's `tms5110r.hxx` for the TMS5220 (`TI_028X_LATER_ENERGY`, `TI_5220_PITCH`, `TI_5110_5220_LPC`, `TI_LATER_CHIRP`; MAME states that its K and chirp tables match a decapped TMS5220), except that the pitch period is one sample longer than MAME's pitch value (§8.6). The original lists only coded index ranges, not values.
+**The values are MAME's.** All of them agree with the tables in MAME's `tms5110r.hxx` for the TMS5220 (`TI_028X_LATER_ENERGY`, `TI_5220_PITCH`, `TI_5110_5220_LPC`, `TI_LATER_CHIRP`; MAME states that its K and chirp tables match a decapped TMS5220), except that the pitch period is one sample longer than MAME's pitch value (§8.6). The original lists only coded index ranges, not values. The energy table is also the one in US 4,335,277 (its Table IV). That patent's pitch and K tables belong to an earlier chip and differ, though it stores them in the same form: 10-bit two's-complement values in a ROM addressed by the coded index.
 
 {tables}
 
@@ -326,7 +328,15 @@ The two loads agree to within 2 %, so the mismatch belongs to the DAC. It shows 
 | −33 → −32, 31 → 32 | bit 5 | 1.42, 1.35 | 1.38, 1.32 |
 | −17 → −16, 15 → 16 | bit 4 | 0.91, 0.83 | 0.96, 0.86 |
 
-The step between −1 and 0 is **about six times a normal step**: 26–27 µA, or 26 mV across 996 Ω [p2-01, p2-02, p2-04, p2-05]. The original's Table 4 implies a single 5.86 µA step. Every zero crossing of the waveform passes through this step, so the analogue output has a small crossover distortion that a linear DAC model does not reproduce.
+The step between −1 and 0 is **about six times a normal step**: 26–27 µA, or 26 mV across 996 Ω [p2-01, p2-02, p2-04, p2-05]. The original's Table 4 implies a single 5.86 µA step. Its figures (5.86 µA a step, 744 µA at code 0, 750 µA at −1, 1500 µA full scale) are the design values in Table V of US 4,335,277, not measurements.
+
+**How the DAC is built.** US 4,335,277 describes the DAC as eight binary-weighted MOS current sources. Each source's gate is switched between `VSS` (off) and a bias voltage that holds the transistor in saturation (on), and the input is the offset-binary byte used here. That design accounts for what is measured:
+- each chip has its own mismatch between the bit weights;
+- the output resistance is finite (§8.3);
+- the shortfall at large currents grows with the pin voltage, as the sources leave saturation;
+- the absolute scale depends on the on-chip bias, which may be why it moved by 7 % between sessions.
+
+The patent also has the output current switched off whenever the chip is not talking. This chip does not do that: it idles at code −1 (§8.4), about 0.6 mA. Every zero crossing of the waveform passes through this step, so the analogue output has a small crossover distortion that a linear DAC model does not reproduce.
 
 **Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3). At the rails the model fails outright: fitted to codes inside ±119 of TI-99 speech with a gain and an offset, it puts code −128 about 10 mV (2 LSB) too high and code +127 about 6 mV (1.3 LSB) too high, in every take [p6-01 to p6-08]. Phase 2 measured +127 1.6 LSB from the model too. Full scale is 1.92 times the idle current (code −1), against 1.94 in the model. In the loudest sweep data of Phase 7, the model also fails inside ±119. It sits 3–6 mV above the measurement for codes 64–119 in size, and the fit leaves more than 3 mV rms. That is just over the limit of the capture checks, in 10 of 16,144 sweep starts. Two of them failed again on every retake [p7-11, corpus `acorn_phrom_a`]. The codes recovered from the voltage were still within ±2 for 99.7 % of samples or more.
 
@@ -392,7 +402,7 @@ These delays were measured with ×10 probes on all three pins. For decoding, sam
 
 *Figure 8-1. One sample period [p1-03]. The code is −36 (1111011100 in binary), sent LSB first in slots 2–11: slots 2–3 low, 4–6 high, 7 low, 8–11 high. The DAC step at slot 1 is visible on SPEAKER. The small spikes on SPEAKER and the ripple on the low level of `T11` are coupling from the other signals.*
 
-**Relation to TI's bit-time names (inference).** The original's Figure A-2 numbers the 20 bit times of a sample period T1–T20. The pin name suggests that `T11` is high during bit time T11. If so, slot *k* is bit time T((*k* + 10) mod 20 + 1): slot 0 is T11, slot 1 (DAC update) is T12, and the code is sent in T13–T20, then T1 and T2. This mapping comes from the pin name only. No measurement has confirmed it.
+**Relation to TI's bit-time names (inference).** The original's Figure A-2 numbers the 20 bit times of a sample period T1–T20. The pin name suggests that `T11` is high during bit time T11. If so, slot *k* is bit time T((*k* + 10) mod 20 + 1): slot 0 is T11, slot 1 (DAC update) is T12, and the code is sent in T13–T20, then T1 and T2. This mapping comes from the pin name only. No measurement has confirmed it. TI's own numbering is not fixed: US 4,335,277 says its T17 is T9 in US 4,209,844. That patent starts each parameter count at T17, and this chip reads each frame from slot 17. That may tie slots to TI's bit times, but it is a hint, not a measurement.
 
 **For emulator writers.** In each sample period:
 1. Slot 0: `T11` goes high.
@@ -432,13 +442,13 @@ Sample numbers below count from the sample period in which a frame's first bit i
 
 **Status: drafted (Phase 8).**
 
-**Voiced: the chirp.** A pitch counter counts samples from 0. When it is equal to or greater than the pitch value it returns to 0, so **the period is the pitch value plus one sample** (Table 8-5). That is one more than in MAME, whose counter returns to 0 at the pitch value: it was measured at every pitch index [vectors `pitch`] and in the PROM corpus (the Acorn tones, 25 and 35 samples for values 24 and 34). Each sample, the counter's value addresses the chirp (Table 8-7): values 0 to 20 give the chirp, and 21 or more give 0. When interpolation is inhibited at a frame change (§8.7), the counter is reset to 0 at sample 0 of that change.
+**Voiced: the chirp.** A pitch counter counts samples from 0. When it is equal to or greater than the pitch value it returns to 0, so **the period is the pitch value plus one sample** (Table 8-5). That is one more than in MAME, whose counter returns to 0 at the pitch value: it was measured at every pitch index [vectors `pitch`] and in the PROM corpus (the Acorn tones, 25 and 35 samples for values 24 and 34). It agrees with US 4,335,277, where the counter is zeroed once its contents equal or exceed the pitch register. The patent's chirp ROM has 52 locations: addresses above 51 are held at 51, which stores zero, until the counter returns to 0. Each sample, the counter's value addresses the chirp (Table 8-7): values 0 to 20 give the chirp, and 21 or more give 0. When interpolation is inhibited at a frame change (§8.7), the counter is reset to 0 at sample 0 of that change.
 
 **Unvoiced: the noise register.** The excitation is +64 or −64, half of full scale, with the sign chosen by a 13-bit linear-feedback shift register:
 - **Each step:** shift the register left by one, and bring in, as the new bit 0, the exclusive OR of bits 12, 3, 2 and 0.
 - **The sign:** each sample, if bit 0 is 1 the excitation is −64, otherwise +64. The register then steps 20 times, once per slot.
 
-This register has the maximal period, 8191 steps. Its state at the start of speech, and how it runs between utterances, are in §7. It matched the chip bit for bit over 32,699 samples [p8-03, vectors `noise`]. The patent (US 4,335,277) describes this excitation as a random sign on a steady 0.5. The register and its taps are MAME's.
+This register has the maximal period, 8191 steps. Its state at the start of speech, and how it runs between utterances, are in §7. It matched the chip bit for bit over 32,699 samples [p8-03, vectors `noise`]. The patent (US 4,335,277) describes this excitation as a random sign on a steady 0.5. The excitation's top bit is the random sign and the next bit is forced to 1, so the value is ±64 in the units used here. The choice between chirp and noise follows the previous frame's voicing flag. That is why the excitation changes a frame after the flag (§8.5). The register and its taps are MAME's.
 
 ### 8.7 Interpolation (New)
 
@@ -446,7 +456,7 @@ This register has the maximal period, 8191 steps. Its state at the start of spee
 
     value = value + ((target − value) >> shift)
 
-The shift is 3 in IP 1, 2 and 3, 2 in IP 4 and 5, 1 in IP 6 and 7, and 0 in IP 0, where the value reaches the target. `>>` is an arithmetic shift, rounding down. Rounding towards zero instead made the model's total difference from the PROM words 44 times larger [corpus `acorn_phrom_a`].
+The shift is 3 in IP 1, 2 and 3, 2 in IP 4 and 5, 1 in IP 6 and 7, and 0 in IP 0, where the value reaches the target. `>>` is an arithmetic shift, rounding down. Rounding towards zero instead made the model's total difference from the PROM words 44 times larger [corpus `acorn_phrom_a`]. US 4,335,277 describes the same thing: the step is computed bit-serially, and the bits below the ten that are kept are zeroed, so no fraction carries over. The patent's Table I contradicts itself at IP 6: its divisor column gives 2 (shift 1), but its fraction column (0.717) needs 4. Shift 2 at IP 6 made the model worse on every vector set [vectors `pitch`, `k`, `interp`, `energy`].
 
 **Inhibited interpolation.** In these cases the registers do not change in IP 1 to 7, and jump to the target in IP 0:
 - the new frame is unvoiced and the old one voiced, or the other way round;
@@ -455,7 +465,7 @@ The shift is 3 in IP 1, 2 and 3, 2 in IP 4 and 5, 1 in IP 6 and 7, and 0 in IP 0
 
 In the last case the energy does not fade: an unvoiced sound followed by a stop code ends at full level [p8-01, vectors `interp`]. MAME's rule is the same, except that it does not count a stop frame as silence.
 
-**K5–K10 of unvoiced frames.** An unvoiced frame (or an unvoiced repeat frame) sets K5–K10 to zero, writing zero to their registers in their PCs. While interpolation is inhibited, this waits for IP 0 like any other change, so for the first frame after a voiced one the old K5–K10 stay in use [corpus `acorn_phrom_a`, vectors `interp`].
+**K5–K10 of unvoiced frames.** An unvoiced frame (or an unvoiced repeat frame) sets K5–K10 to zero, writing zero to their registers in their PCs. In US 4,335,277 this zeroing also acts on the value written back to the register. While interpolation is inhibited, this waits for IP 0 like any other change, so for the first frame after a voiced one the old K5–K10 stay in use [corpus `acorn_phrom_a`, vectors `interp`].
 
 **Measured.** Jumps of each parameter, from one end of its table to the other and back, were captured for every parameter, along with each transition between voiced, unvoiced and silent frames [vectors `interp`]. The model with these rules matches 92 % of their samples; the rest are one-code differences except where noted in §8.9.
 
@@ -479,15 +489,39 @@ This matched the chip better than every other form tried:
 - the exact product, rounded down, towards zero or to nearest, with or without the forced 1;
 - each partial product truncated;
 - the +1 kept or dropped at each Booth stage;
-- K negated before or after the product.
+- K negated before or after the product;
+- (from the patent) stage 0 seeing only the twelve high bits of *M*, and the previous output fed back with its four or six low bits dropped, in the multiplier or in the adder. Each fitted the vectors as well as or worse than the form above, by up to 20 times [vectors `pitch`, `k`, `interp`, `energy`].
 
 Using it for the energy product too, as the patent describes, cut the mismatch on the energy and pitch vectors by a factor of 4 to 5. The forced 1 also explains the idle output: with all coefficients zero, each stage subtracts 1, so *u*₁ settles at −10 and the code is −1 [vectors `energy`, vectors `pitch`].
+
+**Word length and overflow.** The filter's values are 14-bit two's complement, −8192 to +8191. Every sum (*u*₁₁, each *u*ᵢ and each *b*ᵢ) wraps at 14 bits; nothing saturates. US 4,335,277 gives the adder, the delay stack and the multiplier input as 14 bits (D0–D13). On data that stays in the speech range the wrap never acts. On the loud and random vectors, wrapping every sum cut the model's total difference from the chip to a third (loud) and a half (random), against unbounded sums. These did worse:
+- wrapping at 15 bits, as MAME does;
+- saturating at 14 bits;
+- wrapping only the *u* chain, or only the *b* chain.
+
+[vectors `loud`, vectors `random`.] Those vectors still differ from the chip in about 40 % of samples: their first one-code difference (below) grows without limit, as it does on the chip between takes (§7).
 
 **Output.** The `I/O` code is *u*₁ shifted right by 4, with rounding down, as the top ten bits of the 14-bit value: YL13–YL4 (§8.4).
 
 **Not known yet.**
-- **The lowest-order arithmetic.** With this multiplier the model's voiced output is one code off at about one sample per pitch period, at a fixed point in the period, mostly where the waveform is near zero [p8-04, p8-05]. No change to the tables, the multiplier forms above, the chirp or the timing removed it.
-- **Overflow.** How values beyond 14 bits wrap or saturate. Loud vectors, which reach the full output range, match only about half their samples, because the one-code differences grow without limit there, as the chip's own upsets do (§7) [p8-12, vectors `loud`, vectors `random`].
+- **The lowest-order arithmetic.** With this multiplier the model's voiced output is one code off at about one sample per pitch period, at a fixed point in the period, mostly where the waveform is near zero [p8-04, p8-05]. No change to the tables, the multiplier forms above, the chirp or the timing removed it. What is known about it:
+  - **It is deterministic.** Voiced takes through the two paths, whose noise states differ, are identical. So the noise register plays no part [vectors `energy`, vectors `pitch`].
+  - **It lives in the silent part of each pitch period.** After the chirp ends (counter 21 and above), the excitation is zero, and the filter rings within a few LSBs of zero. There the chip settles into a different low-order limit cycle from the model. For example, the chip holds code −1 where the model alternates between 0 and −1 [vectors `energy` v_e14]. Unvoiced frames, whose excitation is never zero, match almost exactly through the same lattice.
+  - **It is period-doubled.** At pitch index 10 (a period of 25 samples, one interpolation period) the chip's output repeats only every 50 samples. The model's repeats every 25. At periods of 24 and 26, both repeat every period [vectors `pitch`].
+  - **It is not a single event.** The first pitch period of a vector matches exactly. No single ±1 or ±2 change to any one operation in the samples before the first difference makes the rest match.
+  - **It depends on the energy.** Energies whose lowest Booth digit is negative (u₁₁ = −1 at zero excitation) show 2–30 times more differences than the others. A fixed u₁₁ at zero excitation fits worse, whatever its value.
+  - **Ruled out** (each fits as well or worse, on voiced energy, pitch and K vectors):
+    - every completion of the Booth array's inverted partial products (0, +1 or +2 at each stage), with each of four final roundings;
+    - sign-magnitude rounding of products;
+    - subtraction by an inverted product without carry-in, with and without the forced 1;
+    - undriven low bits read as ones (the excitation's six low bits, the Y latch's four low bits);
+    - truncating the multiplier's 14-bit input by 1–3 bits;
+    - a one-sample gap while a parameter is interpolated;
+    - shifting when either chain sees a new K;
+    - ±1 or ±2 on any of the near-zero K entries;
+    - the patent's 1/4 at IP 6;
+    - a refitted chirp, which halved the error on its training vectors and doubled it on others.
+- **Whether the wrap is the whole story.** Loud vectors, which reach the full output range, still match only about 60 % of their samples, because the one-code differences grow without limit there, as the chip's own upsets do (§7) [p8-12, vectors `loud`, vectors `random`]. Until those differences are found, the 14-bit wrap is the best fit, not a proof.
 
 ### 8.9 Reference algorithm and the model (New)
 
@@ -506,7 +540,7 @@ Using it for the energy product too, as the patent describes, cut the mismatch o
 | K sweeps | 1069 | 92 | 97.0 % |
 | Interpolation | 100 | 4 | 92.1 % |
 | Special frames (without predecessors) | 52 | 7 | 78.7 % |
-| Random and loud | 338 | 0 | 50–58 % |
+| Random and loud | 338 | 0 | 53–62 % (50–58 % before the 14-bit wrap) |
 | Acorn PHROM A words, first take of each path | 330 | 0 | 80.7 % |
 
 Where the model differs from the chip in the first three rows, it is by one code (two in the K sweeps). Larger differences come from data that drives the filter beyond the range of speech (§8.8).
@@ -625,3 +659,6 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-07 | §8.1 | New: energy, pitch, K and chirp values, measured; field bit order; repeat and silence frames | vectors `energy`, `pitch`, `k`, `special`; p8-01, p8-10 |
 | 2026-10-07 | §8.5–§8.9 | New: frame timing, the start and end of speech, the excitation and noise register, interpolation and its inhibit rules, the lattice filter and its Booth multiplier, and a reference algorithm. Correction to MAME: the pitch period is the pitch value plus one; interpolation from unvoiced to a stop frame is inhibited | vectors (all sets); p8-01 to p8-12; corpus `acorn_phrom_a` |
 | 2026-10-07 | §2 | The interpolation interval (25 samples) and frame (200 samples) measured | p8-04, vectors `interp` |
+| 2026-10-07 | §8.8 | New: the filter wraps at 14 bits (US 4,335,277), the best fit to the loud and random vectors. Patent-derived alternatives for the lowest-order arithmetic tested and rejected | vectors `loud`, `random`, `pitch`, `k`, `interp`, `energy` |
+| 2026-10-07 | §8.8 | The voiced one-code error characterised: deterministic, in the zero-excitation part of each pitch period, a different low-order limit cycle (period-doubled at pitch index 10). A list of arithmetic and timing forms it rules out | vectors `energy`, `pitch`, `k` |
+| 2026-10-07 | §3, §7, §8.1, §8.2, §8.4, §8.6, §8.7 | Cross-referenced with US 4,335,277: Read and Branch uses a fixed timer; the "T State Counter" is not the frame clock; the original's INT and Buffer Empty text and its DAC Table 4 come from the patent's design; how the DAC is built; the energy table; the pitch comparator and chirp ROM; interpolation truncation, and the patent's inconsistent Table I. Upsets: a hypothesis | US 4,335,277; vectors `pitch`, `k`, `interp`, `energy` |

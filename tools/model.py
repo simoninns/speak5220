@@ -92,7 +92,8 @@ class Model:
                         "pitch_zero": True, "zpar_until_sound": False,
                         "energy_zero_delay": None, "idle_keep_registers": True,
                         "zpar_view_only": True, "uv_zero_view_only": False,
-                        "zpar_parses": 2, "repeat_keeps_uv": True}
+                        "zpar_parses": 2, "repeat_keeps_uv": True,
+                        "datapath_bits": 14}
         self.options.update(options)
         self.reset()
 
@@ -246,19 +247,23 @@ class Model:
         rE, rU, rX = (self.multiplier(o[r]) for r in ("round_e", "round_u", "round_x"))
         cu, cx = o["carry_u"], o["carry_x"]
         fe = o["energy_frac_bits"]
-        u[10] = rE(self.view[0], excitation << 6)
+        # The adder and delay stack are 14 bits wide (US 4,335,277: D0-D13),
+        # and every sum wraps there; None leaves the sums unbounded
+        bits = o["datapath_bits"]
+        fit = (lambda v: wrap(v, bits)) if bits else (lambda v: v)
+        u[10] = fit(rE(self.view[0], excitation << 6))
         # b1 is the previous output, from the Y latch; b1m is it as the
         # multiplier sees it, b1a as the adder does
         b1m = x[0] & ~o["b1_mask_mul"]
         b1a = x[0] & ~o["b1_mask_add"]
         for i in range(9, -1, -1):
             xi = b1m if i == 0 else x[i]
-            u[i] = (u[i + 1] + rU(-k[i], xi) if o["neg_u"] else u[i + 1] - rU(k[i], xi)) - cu
+            u[i] = fit((u[i + 1] + rU(-k[i], xi) if o["neg_u"] else u[i + 1] - rU(k[i], xi)) - cu)
         kx = self.view[14:24]
         for i in range(9, 0, -1):
             xp = b1a if i == 1 else x[i - 1]
-            x[i] = (xp - rX(-kx[i - 1], u[i - 1]) if o["neg_x"]
-                    else xp + rX(kx[i - 1], u[i - 1])) - cx
+            x[i] = fit((xp - rX(-kx[i - 1], u[i - 1]) if o["neg_x"]
+                        else xp + rX(kx[i - 1], u[i - 1])) - cx)
         x[0] = u[0]
         return u[0]
 
