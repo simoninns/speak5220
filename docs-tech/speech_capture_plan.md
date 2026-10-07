@@ -244,6 +244,7 @@ The raw scope data is large. Four channels at 2 MS/s is about 8 MB per second of
 
 - **Evidence captures** live in `captures/phase<N>/<id>/`, are cited by the datasheet, and are **committed to the repo**. The raw file is committed as `raw/scope_raw.npz.zip`: a zip that holds the original `scope_raw.npz` unchanged, so its SHA-256 still matches the evidence index. The tools read the zip directly, and `.gitignore` excludes the unzipped `.npz`. Keep each phase's evidence to a few tens of MB.
 - **PROM corpus captures** (Phases 7 and 10) live in `captures/corpus/<prom>/` and are **kept local for now**. Only the raw data's zip is kept (`run.py --zip-only`), which makes a take about 2 MB. Apart from each PROM's `prom.json`, `index.md`, `takes.csv` and `sweep.csv`, the directory is git-ignored. How to publish the corpus (release archives, Git LFS or elsewhere) is decided in Phase 12. Until then, the repo holds the scripts, manifests and those index files. `takes.csv` gives the SHA-256 of every take's raw files, so the local copies can be checked, and of its output, so an emulator can be checked against the output without the raw data. Back up the local corpus separately, because it is the only copy.
+- **Vector captures** (Phase 8) live in `captures/vectors/vectors_<set>/` and are kept local in the same way. Only each set's `index.md` and `takes.csv` are committed; the set's definition and image are in `captures/phase8/vectors/`, so the vectors can be captured again on any board.
 
 ## 7. Automation architecture
 
@@ -351,7 +352,7 @@ Keep a change log in the datasheet listing every correction and addition to the 
 ## 11. Risks and open questions
 
 - **What does `I/O` carry?** Resolved (§2): the 10-bit sample, LSB first, which matches the DAC.
-- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself. In the louder TI-99 words (Phase 6) they reach 15 codes. Phase 7 found a third kind of carried state: the previous utterance changes the first samples of the next one, through the reset sequence. And across the Acorn PHROM A, only 25 % of takes match their word's majority exactly.
+- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself. In the louder TI-99 words (Phase 6) they reach 15 codes. Phase 7 found a third kind of carried state: the previous utterance changes the first samples of the next one, through the reset sequence. And across the Acorn PHROM A, only 25 % of takes match their word's majority exactly. Phase 8 explained the previous utterance: the interpolator's registers are never cleared, and an utterance that starts with a repeat or silence frame uses the previous one's K values. The upsets remain unexplained; they occur in synthetic data too.
 - **Internal state that is not visible on `I/O`.** If `I/O` carries only the final sample, the inner filter state has to be inferred. Carefully designed vectors (for example, one K parameter active at a time) keep that inference tractable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not. Document any 5220/5220C differences in the datasheet.
@@ -362,7 +363,7 @@ Keep a change log in the datasheet listing every correction and addition to the 
 
 ## 12. Phases
 
-Each phase lists its goal, tasks, deliverables, completion criteria and status (as of 2026-10-06). Phases 1–5 build the capture system. Phases 6–12 build the data set and the datasheet. Datasheet sections are drafted in whichever phase produces their evidence (§10), not saved up for the end.
+Each phase lists its goal, tasks, deliverables, completion criteria and status (as of 2026-10-07). Phases 1–5 build the capture system. Phases 6–12 build the data set and the datasheet. Datasheet sections are drafted in whichever phase produces their evidence (§10), not saved up for the end.
 
 | Phase | Depends on | Status |
 |---|---|---|
@@ -373,7 +374,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 5. Repeatability | 3, 4 | Done |
 | 6. PROM inventory | — | Done |
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Done |
-| 8. Synthetic vectors and the core datasheet | 4, 5 | Not started |
+| 8. Synthetic vectors and the core datasheet | 4, 5 | Done |
 | 9. Reference emulator | 8 (runs alongside it) | Not started |
 | 10. Remaining PROM corpora | 6, 7 | Not started |
 | 11. Authoring, and confirmation with new speech data | 8, 9 | Not started |
@@ -638,6 +639,35 @@ This phase can run alongside Phases 1–5.
   - Write the datasheet sections in §1.1: the lookup tables, chirp, noise generator, interpolation, lattice filter arithmetic, DAC transfer function, frame format, and VSM and host interface timing.
 - **Delivers:** the vectors (published as test material, §1.4), their captures, and the drafted datasheet sections.
 - **Done when:** every section in the §1.1 table is drafted, with captured evidence cited for each claim.
+- **Done:**
+  - **The vectors** (`tools/vectors.py`): 480 vectors in eight sets (energy, pitch, K, noise, interpolation, special frames, random, loud). Each set is written as a synthetic PROM in `captures/phase8/vectors/`, so `run.py` captures it like any other through both paths. All were captured twice per path with the standard procedure: 1993 takes, about 2 GB, kept local in `captures/vectors/` with their index files committed.
+  - **The model** (`tools/model.py`): the synthesis path as the datasheet describes it (§8.9 there), with options for every alternative tested. `vecfit.py` compares every take with it and measures the tables (`captures/phase8/analysis/`).
+  - **The host interface and VSM tests** (`tools/protocol.py`), from the Pico's trace, with no scope: FIFO filling and emptying, the start of Speak External, commands written during speech, Reset bytes during Speak External, and the VSM commands (`captures/phase8/protocol/`, p8-19 to p8-25).
+  - **Two bench experiments** (`captures/phase8/scripts/experiments.py`): the Speak timed 1–3 slots off the standard time, and a loud vector after different predecessors.
+  - **Evidence:** p8-01 to p8-18 copied with their raw data into `captures/phase8/evidence/`.
+  - **Datasheet:** §3, §4, §5, §6, §7 (noise generator, previous utterance, upsets), §8.1 and the new §8.5–§8.9; §2 and §11.2 completed.
+  - **Tool changes:**
+    - `lpc.encodeFrames` writes frames back to bits; it reproduces every Acorn word to its stop code.
+    - `run.py` records where a set's manifest is, picks a calibration word with frames, and resets before locating the frame clock.
+    - `process.py` finds the image of a synthetic set from its manifest.
+- **Status:** done (2026-10-07), with the gaps below. Every section of §1.1 is drafted except the authoring guide, which belongs to Phase 11. The lattice filter's section states two things not yet known: its lowest-order arithmetic and its overflow. The model is not yet bit-exact for voiced frames: it is one code off at about one sample per pitch period. Matching every capture bit for bit is Phase 9's test.
+- **Findings:**
+  - **The tables are MAME's, apart from pitch.** All 14 energy entries and all 63 pitch entries were confirmed as unique fits, and 142 of 168 K entries; no entry was contradicted. The pitch period is the pitch value plus one sample, at every index: one more than MAME.
+  - **The multiplier is the patent's.** Every product, the energy's included, goes through a Booth array whose stage 0 inverts without the +1 and whose result has its LSB forced to 1 (US 4,335,277). That cut the error on voiced vectors 4–5 times and explains why the idle code is −1.
+  - **The noise register is fully determined.** 13 bits, feedback from bits 12, 3, 2 and 0, one step per slot, sign from bit 0. It matched 32,699 samples bit for bit. Its state at the first sample is a fixed number of steps after 0x1FFF, counted from the command: shifting the Speak by 1–3 slots shifts the state by 1–3 steps, through both paths.
+  - **Timing inside a frame.** The frame read at sample 0 becomes the target 25 samples later. Each parameter reaches the filter at a fixed sample of its interpolation period: energy at 2, pitch at 5, K*j* at 2*j*+3. The voiced/unvoiced switch acts 2 samples after the latch.
+  - **The previous utterance is explained.** The interpolator's registers are never cleared. A Speak only hides them from the filter until the first frame takes effect. An utterance that starts with a repeat frame, as the Phase 7 bench target does, uses the previous utterance's K values. Words start with full frames and so do not show it.
+  - **Rules MAME lacks.** Interpolation from unvoiced to a stop frame is inhibited. A voiced repeat frame keeps K5–K10 zeroed. K5–K10 zeroing waits, like other inhibited changes, for IP 0. After speech ends, the filter keeps running while its parameters are zeroed one per PC.
+  - **The FIFO.** Talk Status sets at the 9th byte; shorter streams never start. Buffer Low sets at 8 bytes or fewer. A frame that cannot be read in full sets Buffer Empty, and ends the speech like a stop frame, a frame later. That corrects the original, which says at once. Buffer Empty raises no INT, which also corrects the original.
+  - **Commands during speech.** Load Address, Read Byte and Read and Branch are held until speech ends; Speak is ignored; Reset acts at once. A second command while one is held blocks READY.
+  - **The reset sequence cannot end a Speak External.** Its bytes become FIFO data. It ends the speech within about two frames instead.
+  - **Upsets occur in synthetic data too,** at recurring sample positions, and not according to the predecessor.
+- **Handed on:**
+  - **The model's remaining one-code differences → Phase 9.** In voiced frames, at a fixed point of each pitch period; and the start rule for a leading silence frame. Finding them is the first task of the emulator work. The lowest-order arithmetic of the lattice and its overflow are the likely places.
+  - **Upsets → still open.** Their cause needs the bench changes listed in Phase 5 (temperature, supply, decoupling, a second chip). They cannot be made from the host.
+  - **The DAC model for very loud data, and the extra DAC noise during speech → Phase 12** final pass, or a later measurement phase. Neither affects `I/O`, the exact output.
+  - **Slots and TI's bit times (Phase 1)** remain an inference from the pin name.
+  - **Phase 9** starts from the datasheet text, as planned. `tools/model.py` is the measuring tool behind the text, not the emulator; Phase 9 must not copy it.
 
 ### Phase 9: Reference emulator
 

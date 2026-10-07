@@ -1,0 +1,128 @@
+{
+ "two_load_address": {
+  "cycles": [
+   {
+    "kind": "write",
+    "byte": "0x46",
+    "t_us": 363.76,
+    "busy_us": 19.67
+   },
+   {
+    "kind": "write",
+    "byte": "0x4b",
+    "t_us": 405.84,
+    "busy_us": 21.38
+   },
+   {
+    "kind": "write",
+    "byte": "0x4b",
+    "t_us": 447.78,
+    "busy_us": 23.1
+   },
+   {
+    "kind": "write",
+    "byte": "0x4c",
+    "t_us": 491.84,
+    "busy_us": 22.83
+   },
+   {
+    "kind": "write",
+    "byte": "0x43",
+    "t_us": 535.9,
+    "busy_us": 22.57
+   },
+   {
+    "kind": "write",
+    "byte": "0x50",
+    "t_us": 578.86,
+    "busy_us": 23.36
+   },
+   {
+    "kind": "write",
+    "byte": "0x45",
+    "t_us": 200936.78,
+    "busy_us": 21.65
+   },
+   {
+    "kind": "write",
+    "byte": "0x46",
+    "t_us": 201205.9,
+    "busy_us": null
+   }
+  ],
+  "int_on_us": [
+   686726.96
+  ],
+  "int_off_us": [],
+  "vsm": [
+   {
+    "type": "load_address",
+    "address": "0x68fff",
+    "t_us": 395.73
+   },
+   {
+    "type": "load_address",
+    "address": "0xb68ff",
+    "t_us": 439.52
+   },
+   {
+    "type": "load_address",
+    "address": "0xbb68f",
+    "t_us": 483.31
+   },
+   {
+    "type": "load_address",
+    "address": "0xcbb68",
+    "t_us": 526.97
+   },
+   {
+    "type": "load_address",
+    "address": "0x3cbb6",
+    "t_us": 570.75
+   },
+   {
+    "type": "dummy_read",
+    "address": "0x3cbb6",
+    "t_us": 614.58
+   },
+   {
+    "type": "load_address",
+    "address": "0x53cc4",
+    "t_us": 686726.96
+   }
+  ],
+  "frame_reads_us": [
+   11877.08,
+   36876.99,
+   61877.08,
+   86876.98,
+   111877.06,
+   136877.01,
+   161877.0,
+   186877.09,
+   211877.04,
+   236876.97,
+   261877.02,
+   286877.06,
+   311877.07,
+   336877.03,
+   361877.09,
+   386876.99,
+   411877.09,
+   436876.98,
+   461877.08,
+   486876.98,
+   511877.03,
+   536877.05,
+   561877.05,
+   586876.99,
+   611877.07,
+   636877.09,
+   661877.09
+  ],
+  "reads": 1152,
+  "notes": {
+   "write1": "READY timeout on byte 0"
+  }
+ }
+}

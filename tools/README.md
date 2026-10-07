@@ -107,7 +107,7 @@ An image may span several banks (TI-99's is 32 KB, in banks 0 and 1); `run.py` u
 
 `process.py` rebuilds a take's readable files from `raw/` and can be rerun at any time: `python tools/process.py <take>...`.
 
-- `frames.csv`: one row per frame the chip parsed, up to the stop code. The bits come from the VSM trace (VSM path) or from the bytes written to the FIFO (Speak External). Columns: bit offset, length, kind, energy, repeat, pitch and the K1–K10 indices. For the VSM path, `read_us` is when the frame's first bit was read, after `SCOPE_TRIG` rose, and `read_sample` is the `samples.wav` sample period it fell in. The parameters are the coded indices; each is taken most significant bit first, as MAME assumes (to be confirmed in Phase 8).
+- `frames.csv`: one row per frame the chip parsed, up to the stop code. The bits come from the VSM trace (VSM path) or from the bytes written to the FIFO (Speak External). Columns: bit offset, length, kind, energy, repeat, pitch and the K1–K10 indices. For the VSM path, `read_us` is when the frame's first bit was read, after `SCOPE_TRIG` rose, and `read_sample` is the `samples.wav` sample period it fell in. The parameters are the coded indices, each taken most significant bit first (confirmed in Phase 8; the values are in datasheet §8.1).
 - `samples.wav`, `samples.csv`: layer 2, from the first `T11` period after `SCOPE_TRIG` rose to the end of the capture. The WAV convention is as for `decode.py` below. The CSV adds the DAC voltage and the DAC code recovered from it.
 - `dac.wav`: layer 3, the recovered DAC codes (code × 64). The codes come from the Phase 2 bit-weight model fitted to this capture. They are measured, not exact: about 2/3 match `I/O` exactly, and almost all are within ±2.
 - `listen.wav`: for listening only. It holds the DAC codes for each sample period at 48 kHz and passes them through a model of the BBC Micro's audio filter (`--listen-filter none` leaves the filter out).
@@ -142,6 +142,33 @@ Takes made with the standard procedure should match exactly, apart from upsets (
 - for each take, how far it departs from that majority, and the sample where each upset starts;
 - the number of distinct outputs;
 - the samples where no majority exists.
+
+## Synthetic vectors, the model and the protocol tests (Phase 8)
+
+```
+python tools/vectors.py build all                  # write the vector sets to captures/phase8/vectors/
+python tools/run.py captures/phase8/vectors/energy.json all --takes 2 --path both \
+    --out captures/vectors --zip-only --resume     # capture a set like a PROM
+python tools/model.py captures/vectors/vectors_energy/*/vsm01   # compare takes with the model
+python tools/vecfit.py captures/vectors            # every take vs the model; table measurements
+python tools/protocol.py all                       # host interface and VSM command tests (no scope)
+python tools/protocol.py fifo_start --analyse      # rebuild a test's result.json from its traces
+```
+
+- **`vectors.py`** builds sets of frame sequences (energy, pitch, K, noise, interpolation, special frames, random, loud). Each set is a synthetic PROM: a manifest (`<set>.json`) whose word table lists the vectors, the image (`<set>.bin`), and every vector's frames (`<set>.csv`). `run.py` accepts a manifest path in place of a PROM name. Speak External streams are the vectors' bytes up to their stop codes. `lpc.encodeFrames` does the encoding: each field most significant bit first, the bytes read least significant bit first.
+- **`model.py`** is the candidate model of the synthesis path that the datasheet's §8.5–§8.9 describe. Its defaults are the measured behaviour; its options select the alternatives that were tested.
+  - **`compareTake`** models a standard-procedure take and compares it with the chip's `I/O` codes. The noise state and alignment for each path come from `STANDARD_START`. Its `before` argument speaks earlier utterances first: the interpolator's registers carry over (datasheet §7).
+  - **It is not the Phase 9 emulator.** That is written from the datasheet alone.
+- **`vecfit.py`** writes `captures/phase8/analysis/`:
+  - `vectors.csv`: every take compared with the model;
+  - `tables.csv`: each table entry perturbed by 1, 2 and 4 either way, confirmed when its value fits best;
+  - `pitch_periods.csv`: each pitch period, measured from the output alone;
+  - `summary.json`.
+- **`protocol.py`** drives the chip with raw commands and bytes (`CMD`, `READ`, `WAIT`) and keeps each step's raw trace. The trace times every host cycle with READY and `INT`, and every VSM function, on the chip's crystal. Results go to `captures/phase8/protocol/<test>/`.
+  - **Between steps** it ends any Speak External first. The reset sequence cannot: during Speak External its bytes are FIFO data.
+  - **The tests:** FIFO start and starvation, the start of Speak External against the frame clock, commands written during speech, a held command, Reset bytes during Speak External, and the VSM commands.
+
+The vector captures, like the corpus, are kept local; each set's `index.md` and `takes.csv` are committed.
 
 ## Driving the Pico
 
@@ -215,7 +242,8 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`, `takes.csv` and `sweep.csv`.
 - `prom.py`: PROM manifests (`proms/`). `promimport.py`: the PROM inventory; it rebuilds the images and writes the manifests. `bench.json`: the bench details recorded in every capture.
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
-- `lpc.py`: the LPC frame parser: frame boundaries and the coded parameters of each frame.
+- `lpc.py`: the LPC frame parser and encoder: frame boundaries, the coded parameters of each frame, and frames back to bytes.
+- `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the Phase 8 vectors, the synthesis model, the table measurements and the host interface tests (see above).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.

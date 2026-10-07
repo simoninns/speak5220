@@ -188,6 +188,8 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
     meta = {
         "captured": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
         "source": {"prom": manifest["name"], "image_sha256": manifest["image"]["sha256"],
+                   "manifest": os.path.relpath(os.path.abspath(promlib.manifestPath(args.prom)),
+                                               promlib.ROOT),
                    "bank": manifest["bank"], "address": f"0x{address:05x}",
                    "word_number": word["number"] if word else None,
                    "word": word["name"] if word else None},
@@ -359,7 +361,10 @@ def main():
         # code, so that it ends), or else the PROM's first such word
         base = promlib.base(manifest)
         candidates = [a for _, a, *_ in plan] + [promlib.address(w) for w in manifest["words"]]
-        calibration = next(a for a in candidates if expectedSeconds(image, a, base)[1])
+        # A word with a few frames, so that its frames are read and its
+        # start can be timed (a lone stop code is never read as a frame)
+        calibration = next(a for a in candidates if (expectedSeconds(image, a, base)[1] or 0) >= 3)
+        pico.reset()        # a run that stopped part-way may have left Speak External pending
         clock = frameclock.FrameClock.locate(pico, calibration)
         print(f"frame grid at {clock.gridUs:.2f} us on the Pico's timer")
         usedPaths = sorted({path for *_, todo in plan for path, _ in todo})

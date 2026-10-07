@@ -1,0 +1,213 @@
+{
+ "name": "vectors_energy",
+ "title": "Phase 8 test vectors: energy",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase8/vectors/energy.bin",
+  "kind": "synthetic",
+  "size": 854,
+  "sha256": "6ce9acc8a7eea994667bd9ca9a0c6e207b2486b9ff382361e36b7e852f97d5fb",
+  "crc32": "6fed98d6"
+ },
+ "bank": 0,
+ "format": "vectors",
+ "provenance": "tools/vectors.py set 'energy': Every energy index, voiced and unvoiced, with neutral K.",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "v_e01",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 2,
+   "address": "0x00026",
+   "name": "v_e02",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 3,
+   "address": "0x0004C",
+   "name": "v_e03",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 4,
+   "address": "0x00072",
+   "name": "v_e04",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 5,
+   "address": "0x00098",
+   "name": "v_e05",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 6,
+   "address": "0x000BE",
+   "name": "v_e06",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 7,
+   "address": "0x000E4",
+   "name": "v_e07",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 8,
+   "address": "0x0010A",
+   "name": "v_e08",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 9,
+   "address": "0x00130",
+   "name": "v_e09",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 10,
+   "address": "0x00156",
+   "name": "v_e10",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 11,
+   "address": "0x0017C",
+   "name": "v_e11",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 12,
+   "address": "0x001A2",
+   "name": "v_e12",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 13,
+   "address": "0x001C8",
+   "name": "v_e13",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 14,
+   "address": "0x001EE",
+   "name": "v_e14",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 15,
+   "address": "0x00214",
+   "name": "u_e01",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 16,
+   "address": "0x0022B",
+   "name": "u_e02",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 17,
+   "address": "0x00242",
+   "name": "u_e03",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 18,
+   "address": "0x00259",
+   "name": "u_e04",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 19,
+   "address": "0x00270",
+   "name": "u_e05",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 20,
+   "address": "0x00287",
+   "name": "u_e06",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 21,
+   "address": "0x0029E",
+   "name": "u_e07",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 22,
+   "address": "0x002B5",
+   "name": "u_e08",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 23,
+   "address": "0x002CC",
+   "name": "u_e09",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 24,
+   "address": "0x002E3",
+   "name": "u_e10",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 25,
+   "address": "0x002FA",
+   "name": "u_e11",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 26,
+   "address": "0x00311",
+   "name": "u_e12",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 27,
+   "address": "0x00328",
+   "name": "u_e13",
+   "frames": 7,
+   "bytes": 23
+  },
+  {
+   "number": 28,
+   "address": "0x0033F",
+   "name": "u_e14",
+   "frames": 7,
+   "bytes": 23
+  }
+ ]
+}

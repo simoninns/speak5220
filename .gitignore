@@ -45,6 +45,14 @@ captures/corpus/*/*
 !captures/corpus/*/prom.json
 !captures/corpus/*/takes.csv
 !captures/corpus/*/sweep.csv
+# Phase 8 vector captures (tools/vectors.py) are kept local in the same
+# way; their sets' definitions are in captures/phase8/vectors/
+captures/vectors/*
+!captures/vectors/*/
+captures/vectors/*/*
+!captures/vectors/*/index.md
+!captures/vectors/*/takes.csv
+captures/vectors/experiments/
 captures/**/raw/*.npz
 captures/**/dac_step_response.npy
 

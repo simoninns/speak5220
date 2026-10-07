@@ -1,0 +1,36 @@
+# Phase 8 test vectors: interp
+
+- **Image:** 1094 bytes, SHA-256 `4b933c1879ca171791ff5ea72507416c16179cc561b9f4709e0a2fccfdf83b24`, bank 0. Target chip: TMS5220.
+- **Provenance:** tools/vectors.py set 'interp': Jumps between two settings of one parameter, held for HOLD frames
+each, so that every interpolation step is seen; and the transitions
+between voiced, unvoiced and silent frames that may inhibit it.
+- **Captured:** 25 of 25 words. Each take directory follows `docs-tech/speech_capture_plan.md` §6; its `capture.json` holds the metadata and checks. [`takes.csv`](takes.csv) lists every take, with the SHA-256 of its output (`talk_sha256`: the I/O codes from sample 0 to the end of talk, as 16-bit little-endian integers) and of its raw files.
+- **Columns:** Frames and Bits are parsed from what the chip read (VSM) or was sent (Speak External), up to the stop code. ms is the talk time of the first take, from `SCOPE_TRIG` rising to Talk Status clearing. Repeats compares every take with the first, sample for sample, after aligning them. For takes made with the standard procedure, it gives how many match the per-sample majority of all of them exactly, and the samples where no majority exists (`compare.json`).
+
+| No. | Word | Address | Frames | Bits | ms | Takes | Checks | Repeats | Files |
+|---|---|---|---|---|---|---|---|---|---|
+| 1 | energy_jump | 0x00000 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](1_energy_jump/vsm01/samples.wav) · [listen](1_energy_jump/vsm01/listen.wav) · [frames](1_energy_jump/vsm01/frames.csv) |
+| 2 | pitch_jump | 0x00039 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](2_pitch_jump/vsm01/samples.wav) · [listen](2_pitch_jump/vsm01/listen.wav) · [frames](2_pitch_jump/vsm01/frames.csv) |
+| 3 | k1_jump | 0x00072 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](3_k1_jump/vsm01/samples.wav) · [listen](3_k1_jump/vsm01/listen.wav) · [frames](3_k1_jump/vsm01/frames.csv) |
+| 4 | k2_jump | 0x000AB | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 1 of 2 match, 2 samples undecided | [samples](4_k2_jump/vsm01/samples.wav) · [listen](4_k2_jump/vsm01/listen.wav) · [frames](4_k2_jump/vsm01/frames.csv) |
+| 5 | k3_jump | 0x000E4 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](5_k3_jump/vsm01/samples.wav) · [listen](5_k3_jump/vsm01/listen.wav) · [frames](5_k3_jump/vsm01/frames.csv) |
+| 6 | k4_jump | 0x0011D | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](6_k4_jump/vsm01/samples.wav) · [listen](6_k4_jump/vsm01/listen.wav) · [frames](6_k4_jump/vsm01/frames.csv) |
+| 7 | k5_jump | 0x00156 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](7_k5_jump/vsm01/samples.wav) · [listen](7_k5_jump/vsm01/listen.wav) · [frames](7_k5_jump/vsm01/frames.csv) |
+| 8 | k6_jump | 0x0018F | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](8_k6_jump/vsm01/samples.wav) · [listen](8_k6_jump/vsm01/listen.wav) · [frames](8_k6_jump/vsm01/frames.csv) |
+| 9 | k7_jump | 0x001C8 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](9_k7_jump/vsm01/samples.wav) · [listen](9_k7_jump/vsm01/listen.wav) · [frames](9_k7_jump/vsm01/frames.csv) |
+| 10 | k8_jump | 0x00201 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](10_k8_jump/vsm01/samples.wav) · [listen](10_k8_jump/vsm01/listen.wav) · [frames](10_k8_jump/vsm01/frames.csv) |
+| 11 | k9_jump | 0x0023A | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](11_k9_jump/vsm01/samples.wav) · [listen](11_k9_jump/vsm01/listen.wav) · [frames](11_k9_jump/vsm01/frames.csv) |
+| 12 | k10_jump | 0x00273 | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](12_k10_jump/vsm01/samples.wav) · [listen](12_k10_jump/vsm01/listen.wav) · [frames](12_k10_jump/vsm01/frames.csv) |
+| 13 | v_u_v | 0x002AC | 10 | 391 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](13_v_u_v/vsm01/samples.wav) · [listen](13_v_u_v/vsm01/listen.wav) · [frames](13_v_u_v/vsm01/frames.csv) |
+| 14 | u_v_u | 0x002DD | 10 | 328 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](14_u_v_u/vsm01/samples.wav) · [listen](14_u_v_u/vsm01/listen.wav) · [frames](14_u_v_u/vsm01/frames.csv) |
+| 15 | v_s_v | 0x00306 | 10 | 316 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](15_v_s_v/vsm01/samples.wav) · [listen](15_v_s_v/vsm01/listen.wav) · [frames](15_v_s_v/vsm01/frames.csv) |
+| 16 | u_s_u | 0x0032E | 10 | 190 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](16_u_s_u/vsm01/samples.wav) · [listen](16_u_s_u/vsm01/listen.wav) · [frames](16_u_s_u/vsm01/frames.csv) |
+| 17 | v_s1_v | 0x00346 | 8 | 308 | 212 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](17_v_s1_v/vsm01/samples.wav) · [listen](17_v_s1_v/vsm01/listen.wav) · [frames](17_v_s1_v/vsm01/frames.csv) |
+| 18 | u_s1_u | 0x0036D | 8 | 182 | 212 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](18_u_s1_u/vsm01/samples.wav) · [listen](18_u_s1_u/vsm01/listen.wav) · [frames](18_u_s1_u/vsm01/frames.csv) |
+| 19 | s_v | 0x00384 | 7 | 166 | 187 | 2 external, 2 vsm | pass | vsm: 0 of 2 match, 68 samples undecided; external: 2 of 2 match | [samples](19_s_v/vsm01/samples.wav) · [listen](19_s_v/vsm01/listen.wav) · [frames](19_s_v/vsm01/frames.csv) |
+| 20 | s_u | 0x00399 | 7 | 103 | 187 | 2 external, 2 vsm | pass | vsm: 1 of 2 match, 2 samples undecided; external: 2 of 2 match | [samples](20_s_u/vsm01/samples.wav) · [listen](20_s_u/vsm01/listen.wav) · [frames](20_s_u/vsm01/frames.csv) |
+| 21 | v_u1_v | 0x003A6 | 8 | 333 | 212 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](21_v_u1_v/vsm01/samples.wav) · [listen](21_v_u1_v/vsm01/listen.wav) · [frames](21_v_u1_v/vsm01/frames.csv) |
+| 22 | u_v1_u | 0x003D0 | 8 | 228 | 212 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](22_u_v1_u/vsm01/samples.wav) · [listen](22_u_v1_u/vsm01/listen.wav) · [frames](22_u_v1_u/vsm01/frames.csv) |
+| 23 | v_stop | 0x003ED | 4 | 154 | 112 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](23_v_stop/vsm01/samples.wav) · [listen](23_v_stop/vsm01/listen.wav) · [frames](23_v_stop/vsm01/frames.csv) |
+| 24 | u_stop | 0x00401 | 4 | 91 | 112 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](24_u_stop/vsm01/samples.wav) · [listen](24_u_stop/vsm01/listen.wav) · [frames](24_u_stop/vsm01/frames.csv) |
+| 25 | low_high | 0x0040D | 10 | 454 | 262 | 2 external, 2 vsm | pass | vsm: 2 of 2 match; external: 2 of 2 match | [samples](25_low_high/vsm01/samples.wav) · [listen](25_low_high/vsm01/listen.wav) · [frames](25_low_high/vsm01/frames.csv) |

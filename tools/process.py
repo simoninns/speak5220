@@ -215,7 +215,9 @@ def sourceImage(meta):
     source = meta.get("source")
     try:
         if source:
-            manifest = promlib.loadManifest(source["prom"])
+            # Synthetic sets (vectors.py) have their manifest outside proms/
+            manifest = promlib.loadManifest(os.path.join(promlib.ROOT, source["manifest"])
+                                            if source.get("manifest") else source["prom"])
             if manifest["image"]["sha256"] != source.get("image_sha256"):
                 return None
             return promlib.image(manifest), promlib.base(manifest)

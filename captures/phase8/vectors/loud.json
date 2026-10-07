@@ -1,0 +1,185 @@
+{
+ "name": "vectors_loud",
+ "title": "Phase 8 test vectors: loud",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase8/vectors/loud.bin",
+  "kind": "synthetic",
+  "size": 624,
+  "sha256": "91fb86a7188de0bc61f0bea2e006a070c26db53df49dc1a2666307f26a7f5113",
+  "crc32": "cd8e4722"
+ },
+ "bank": 0,
+ "format": "vectors",
+ "provenance": "tools/vectors.py set 'loud': Loud voiced frames with random K, which drive the filter towards and\npast its range: the output's overflow and clipping.",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "loud00",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 2,
+   "address": "0x0001A",
+   "name": "loud01",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 3,
+   "address": "0x00034",
+   "name": "loud02",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 4,
+   "address": "0x0004E",
+   "name": "loud03",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 5,
+   "address": "0x00068",
+   "name": "loud04",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 6,
+   "address": "0x00082",
+   "name": "loud05",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 7,
+   "address": "0x0009C",
+   "name": "loud06",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 8,
+   "address": "0x000B6",
+   "name": "loud07",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 9,
+   "address": "0x000D0",
+   "name": "loud08",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 10,
+   "address": "0x000EA",
+   "name": "loud09",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 11,
+   "address": "0x00104",
+   "name": "loud10",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 12,
+   "address": "0x0011E",
+   "name": "loud11",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 13,
+   "address": "0x00138",
+   "name": "loud12",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 14,
+   "address": "0x00152",
+   "name": "loud13",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 15,
+   "address": "0x0016C",
+   "name": "loud14",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 16,
+   "address": "0x00186",
+   "name": "loud15",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 17,
+   "address": "0x001A0",
+   "name": "loud16",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 18,
+   "address": "0x001BA",
+   "name": "loud17",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 19,
+   "address": "0x001D4",
+   "name": "loud18",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 20,
+   "address": "0x001EE",
+   "name": "loud19",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 21,
+   "address": "0x00208",
+   "name": "loud20",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 22,
+   "address": "0x00222",
+   "name": "loud21",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 23,
+   "address": "0x0023C",
+   "name": "loud22",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 24,
+   "address": "0x00256",
+   "name": "loud23",
+   "frames": 5,
+   "bytes": 26
+  }
+ ]
+}

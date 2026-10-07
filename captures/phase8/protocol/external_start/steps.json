@@ -1,0 +1,435 @@
+{
+ "test": "external_start",
+ "time": "2026-10-07T15:32:49+0200",
+ "firmware": "d66eeef-dirty",
+ "steps": {
+  "trial00": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "cdded6c8",
+   "notes": {}
+  },
+  "trial01": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "e8b4c976",
+   "notes": {}
+  },
+  "trial02": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "a3da5007",
+   "notes": {}
+  },
+  "trial03": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "c611dedf",
+   "notes": {}
+  },
+  "trial04": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "f6a5c968",
+   "notes": {}
+  },
+  "trial05": {
+   "count": 43,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "6a53b4b5",
+   "notes": {}
+  },
+  "trial06": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "32aea99e",
+   "notes": {}
+  },
+  "trial07": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "23fab7c6",
+   "notes": {}
+  },
+  "trial08": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "d111e176",
+   "notes": {}
+  },
+  "trial09": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "63732de9",
+   "notes": {}
+  },
+  "trial10": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "f5fc7cc9",
+   "notes": {}
+  },
+  "trial11": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "e04c06ad",
+   "notes": {}
+  },
+  "trial12": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "43681dae",
+   "notes": {}
+  },
+  "trial13": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "62433436",
+   "notes": {}
+  },
+  "trial14": {
+   "count": 43,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "0a7ddcb2",
+   "notes": {}
+  },
+  "trial15": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "7d1f6e34",
+   "notes": {}
+  },
+  "trial16": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "9395e603",
+   "notes": {}
+  },
+  "trial17": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "de449ed9",
+   "notes": {}
+  },
+  "trial18": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "653df802",
+   "notes": {}
+  },
+  "trial19": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "1dfd3d88",
+   "notes": {}
+  },
+  "trial20": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "f98fea0a",
+   "notes": {}
+  },
+  "trial21": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "07141eba",
+   "notes": {}
+  },
+  "trial22": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "65bb59cc",
+   "notes": {}
+  },
+  "trial23": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "1b7db628",
+   "notes": {}
+  },
+  "trial24": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ee3fffc5",
+   "notes": {}
+  },
+  "trial25": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "e6b6132b",
+   "notes": {}
+  },
+  "trial26": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "0d696a10",
+   "notes": {}
+  },
+  "trial27": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "b359c873",
+   "notes": {}
+  },
+  "trial28": {
+   "count": 44,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ac871733",
+   "notes": {}
+  },
+  "trial29": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "40b2a18e",
+   "notes": {}
+  },
+  "trial30": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ae30d167",
+   "notes": {}
+  },
+  "trial31": {
+   "count": 44,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "d6ac8861",
+   "notes": {}
+  },
+  "trial32": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ceab14c7",
+   "notes": {}
+  },
+  "trial33": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "2a6c6603",
+   "notes": {}
+  },
+  "trial34": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ec41e1c9",
+   "notes": {}
+  },
+  "trial35": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "c5fb1114",
+   "notes": {}
+  },
+  "trial36": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "65d10fac",
+   "notes": {}
+  },
+  "trial37": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "b768d066",
+   "notes": {}
+  },
+  "trial38": {
+   "count": 44,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "6c3ac72a",
+   "notes": {}
+  },
+  "trial39": {
+   "count": 40,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "65700c4a",
+   "notes": {}
+  },
+  "trial40": {
+   "count": 43,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "30b275af",
+   "notes": {}
+  },
+  "trial41": {
+   "count": 37,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "b996c2ea",
+   "notes": {}
+  },
+  "trial42": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "1354325c",
+   "notes": {}
+  },
+  "trial43": {
+   "count": 37,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "503fc078",
+   "notes": {}
+  },
+  "trial44": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "f3936077",
+   "notes": {}
+  },
+  "trial45": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "f2dfa142",
+   "notes": {}
+  },
+  "trial46": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "4b34341e",
+   "notes": {}
+  },
+  "trial47": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "cb210f71",
+   "notes": {}
+  },
+  "trial48": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "a5e4c846",
+   "notes": {}
+  },
+  "trial49": {
+   "count": 37,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "c8e14afd",
+   "notes": {}
+  },
+  "trial50": {
+   "count": 42,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "75fe93f2",
+   "notes": {}
+  },
+  "trial51": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "b60a5367",
+   "notes": {}
+  },
+  "trial52": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "c0207477",
+   "notes": {}
+  },
+  "trial53": {
+   "count": 37,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "474a3958",
+   "notes": {}
+  },
+  "trial54": {
+   "count": 38,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "07b63654",
+   "notes": {}
+  },
+  "trial55": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "0717d2cb",
+   "notes": {}
+  },
+  "trial56": {
+   "count": 41,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "15cb9837",
+   "notes": {}
+  },
+  "trial57": {
+   "count": 39,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "8cb3109b",
+   "notes": {}
+  },
+  "trial58": {
+   "count": 36,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "6bbf918b",
+   "notes": {}
+  },
+  "trial59": {
+   "count": 37,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "ac6ea598",
+   "notes": {}
+  },
+  "clock": {
+   "frame_us": 25000.0,
+   "grid_us": 15447.645833015442,
+   "start_offset_us": null,
+   "latch_target_us": null,
+   "pico_boot": "2026-10-07T13:42:18+0200",
+   "pico_boot_epoch": 1791373338.219
+  }
+ }
+}

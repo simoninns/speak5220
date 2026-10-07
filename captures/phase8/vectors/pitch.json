@@ -1,0 +1,458 @@
+{
+ "name": "vectors_pitch",
+ "title": "Phase 8 test vectors: pitch",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase8/vectors/pitch.bin",
+  "kind": "synthetic",
+  "size": 2394,
+  "sha256": "c1c83a1c06618303aa590bc8f1934cbcde9d213a4e0c580518b82844353a837a",
+  "crc32": "a7903456"
+ },
+ "bank": 0,
+ "format": "vectors",
+ "provenance": "tools/vectors.py set 'pitch': Every non-zero pitch index, with neutral K.",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "p01",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 2,
+   "address": "0x00026",
+   "name": "p02",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 3,
+   "address": "0x0004C",
+   "name": "p03",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 4,
+   "address": "0x00072",
+   "name": "p04",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 5,
+   "address": "0x00098",
+   "name": "p05",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 6,
+   "address": "0x000BE",
+   "name": "p06",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 7,
+   "address": "0x000E4",
+   "name": "p07",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 8,
+   "address": "0x0010A",
+   "name": "p08",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 9,
+   "address": "0x00130",
+   "name": "p09",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 10,
+   "address": "0x00156",
+   "name": "p10",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 11,
+   "address": "0x0017C",
+   "name": "p11",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 12,
+   "address": "0x001A2",
+   "name": "p12",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 13,
+   "address": "0x001C8",
+   "name": "p13",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 14,
+   "address": "0x001EE",
+   "name": "p14",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 15,
+   "address": "0x00214",
+   "name": "p15",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 16,
+   "address": "0x0023A",
+   "name": "p16",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 17,
+   "address": "0x00260",
+   "name": "p17",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 18,
+   "address": "0x00286",
+   "name": "p18",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 19,
+   "address": "0x002AC",
+   "name": "p19",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 20,
+   "address": "0x002D2",
+   "name": "p20",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 21,
+   "address": "0x002F8",
+   "name": "p21",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 22,
+   "address": "0x0031E",
+   "name": "p22",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 23,
+   "address": "0x00344",
+   "name": "p23",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 24,
+   "address": "0x0036A",
+   "name": "p24",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 25,
+   "address": "0x00390",
+   "name": "p25",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 26,
+   "address": "0x003B6",
+   "name": "p26",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 27,
+   "address": "0x003DC",
+   "name": "p27",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 28,
+   "address": "0x00402",
+   "name": "p28",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 29,
+   "address": "0x00428",
+   "name": "p29",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 30,
+   "address": "0x0044E",
+   "name": "p30",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 31,
+   "address": "0x00474",
+   "name": "p31",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 32,
+   "address": "0x0049A",
+   "name": "p32",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 33,
+   "address": "0x004C0",
+   "name": "p33",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 34,
+   "address": "0x004E6",
+   "name": "p34",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 35,
+   "address": "0x0050C",
+   "name": "p35",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 36,
+   "address": "0x00532",
+   "name": "p36",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 37,
+   "address": "0x00558",
+   "name": "p37",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 38,
+   "address": "0x0057E",
+   "name": "p38",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 39,
+   "address": "0x005A4",
+   "name": "p39",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 40,
+   "address": "0x005CA",
+   "name": "p40",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 41,
+   "address": "0x005F0",
+   "name": "p41",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 42,
+   "address": "0x00616",
+   "name": "p42",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 43,
+   "address": "0x0063C",
+   "name": "p43",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 44,
+   "address": "0x00662",
+   "name": "p44",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 45,
+   "address": "0x00688",
+   "name": "p45",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 46,
+   "address": "0x006AE",
+   "name": "p46",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 47,
+   "address": "0x006D4",
+   "name": "p47",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 48,
+   "address": "0x006FA",
+   "name": "p48",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 49,
+   "address": "0x00720",
+   "name": "p49",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 50,
+   "address": "0x00746",
+   "name": "p50",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 51,
+   "address": "0x0076C",
+   "name": "p51",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 52,
+   "address": "0x00792",
+   "name": "p52",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 53,
+   "address": "0x007B8",
+   "name": "p53",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 54,
+   "address": "0x007DE",
+   "name": "p54",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 55,
+   "address": "0x00804",
+   "name": "p55",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 56,
+   "address": "0x0082A",
+   "name": "p56",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 57,
+   "address": "0x00850",
+   "name": "p57",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 58,
+   "address": "0x00876",
+   "name": "p58",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 59,
+   "address": "0x0089C",
+   "name": "p59",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 60,
+   "address": "0x008C2",
+   "name": "p60",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 61,
+   "address": "0x008E8",
+   "name": "p61",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 62,
+   "address": "0x0090E",
+   "name": "p62",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 63,
+   "address": "0x00934",
+   "name": "p63",
+   "frames": 7,
+   "bytes": 38
+  }
+ ]
+}

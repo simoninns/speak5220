@@ -3,8 +3,9 @@
 
     TMS5220 LPC frame parsing: the frame boundaries and the coded
     parameter indices of each frame (frames.csv, plan section 6). It gives
-    the indices the chip was sent, not the values it looks them up to;
-    those tables are Phase 8 of the capture plan.
+    the indices the chip was sent, not the values it looks them up to
+    (reference datasheet section 8.1). encodeFrames writes frames back
+    to bytes.
 
     The chip reads its data serially, least significant bit of each byte
     first (the original datasheet: the FIFO shifts data out "starting with
@@ -17,7 +18,7 @@
       K5-K10 4,4,4,3,3,3 absent if repeat = 1 or pitch = 0
 
     Each parameter is taken most significant bit first from the bit stream
-    (as MAME assumes; still to be confirmed, Phase 8). The frame boundaries
+    (confirmed in Phase 8, datasheet section 8.1). The frame boundaries
     do not depend on this: energy 0 and 15 and pitch 0 read the same
     either way.
 
@@ -93,3 +94,34 @@ def frameRow(index, frame):
     return ([index, frame["offset"], frame["bits"], frame["kind"], frame["energy"],
              frame.get("repeat", ""), frame.get("pitch", "")]
             + [k[i] if i < len(k) else "" for i in range(10)])
+
+
+def frameBits(frame, pitchBits=6):
+    """The bits of one frame (a parseFrames dict, or one built by hand with
+    energy, and repeat, pitch and k where they apply), each field most
+    significant bit first: the inverse of parseFrames."""
+    def field(value, n):
+        if not 0 <= value < (1 << n):
+            raise ValueError(f"{value} does not fit in {n} bits")
+        return [(value >> (n - 1 - i)) & 1 for i in range(n)]
+
+    bits = field(frame["energy"], 4)
+    if frame["energy"] in (0, 15):
+        return bits
+    bits += field(frame.get("repeat", 0), 1) + field(frame["pitch"], pitchBits)
+    if frame.get("repeat", 0):
+        return bits
+    widths = K_BITS_VOICED if frame["pitch"] else K_BITS_UNVOICED
+    if len(frame["k"]) < len(widths):
+        raise ValueError(f"frame needs {len(widths)} K parameters")
+    for value, n in zip(frame["k"], widths):
+        bits += field(value, n)
+    return bits
+
+
+def encodeFrames(frames):
+    """The byte stream for a list of frames, packed as the chip reads it
+    (least significant bit of each byte first), padded with zero bits."""
+    bits = [b for frame in frames for b in frameBits(frame)]
+    bits += [0] * (-len(bits) % 8)
+    return np.packbits(np.array(bits, dtype=np.uint8), bitorder="little").tobytes()

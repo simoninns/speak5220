@@ -1,0 +1,16 @@
+{
+ "test": "held_command",
+ "time": "2026-10-07T15:34:33+0200",
+ "firmware": "d66eeef-dirty",
+ "steps": {
+  "two_load_address": {
+   "count": 1187,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "cbb6aecf",
+   "notes": {
+    "write1": "READY timeout on byte 0"
+   }
+  }
+ }
+}

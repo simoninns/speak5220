@@ -1,0 +1,49 @@
+{
+ "test": "starve",
+ "time": "2026-10-07T16:12:45+0200",
+ "firmware": "d66eeef-dirty",
+ "steps": {
+  "bytes09": {
+   "count": 5505,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "433607ed",
+   "notes": {}
+  },
+  "bytes10": {
+   "count": 5528,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "599297c1",
+   "notes": {}
+  },
+  "bytes13": {
+   "count": 5523,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "c6bda0cd",
+   "notes": {}
+  },
+  "bytes14": {
+   "count": 5532,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "e22b3f00",
+   "notes": {}
+  },
+  "bytes15": {
+   "count": 5509,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "d21a9725",
+   "notes": {}
+  },
+  "bytes16": {
+   "count": 5521,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "7fa30e85",
+   "notes": {}
+  }
+ }
+}

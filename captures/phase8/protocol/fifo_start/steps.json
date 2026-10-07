@@ -1,0 +1,96 @@
+{
+ "test": "fifo_start",
+ "time": "2026-10-07T15:32:40+0200",
+ "firmware": "d66eeef-dirty",
+ "steps": {
+  "bytes08": {
+   "count": 2065,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "9f716e27",
+   "notes": {
+    "status_after_each_byte": [
+     127,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95
+    ]
+   }
+  },
+  "bytes09": {
+   "count": 2105,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "61bb885d",
+   "notes": {
+    "status_after_each_byte": [
+     127,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     159
+    ]
+   }
+  },
+  "bytes12": {
+   "count": 2127,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "012d0a8e",
+   "notes": {
+    "status_after_each_byte": [
+     127,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     159,
+     159,
+     159,
+     159
+    ]
+   }
+  },
+  "bytes16": {
+   "count": 2157,
+   "dropped": 0,
+   "clock_hz": 144000000,
+   "crc": "e764e947",
+   "notes": {
+    "status_after_each_byte": [
+     127,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     95,
+     159,
+     159,
+     159,
+     159,
+     159,
+     159,
+     159,
+     159
+    ]
+   }
+  }
+ }
+}
