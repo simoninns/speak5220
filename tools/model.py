@@ -19,8 +19,8 @@
     is computed in its PC's A sample and reaches the filter a fixed number
     of samples later (param_delay). The interpolator's registers (cur) and
     what the filter sees (view) are kept apart: a Speak hides the registers
-    from the filter but does not clear them, so they carry from one
-    utterance to the next.
+    from the filter, and its zero targets clear them in IP 0. What carries
+    from one utterance to the next is the coded indices (newIdx).
 
       python tools/model.py <take dir>...     # model each standard take and compare
 

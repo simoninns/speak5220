@@ -375,7 +375,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 6. PROM inventory | — | Done |
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Done |
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Done |
-| 9. Reference emulator | 8 (runs alongside it) | Not started |
+| 9. Reference emulator | 8 (runs alongside it) | In progress: emulator and harness done; not yet bit-exact |
 | 10. Remaining PROM corpora | 6, 7 | Not started |
 | 11. Authoring, and confirmation with new speech data | 8, 9 | Not started |
 | 12. Publish | All | Not started |
@@ -683,6 +683,45 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
   - Fix any mismatch in the datasheet first, then in the emulator. MAME's `tms5220.cpp` may be used as a source of hypotheses, never as a reference.
 - **Delivers:** the emulator, and a regression harness that reruns the whole data set.
 - **Done when:** it matches all Phase 7 and Phase 8 captures bit for bit. This is acceptance test 1 (§1.5), for the data captured so far.
+- **Done (2026-10-07):**
+  - **The emulator** (`emulator/`, C99). It was written by a separate agent that read only the reference datasheet and, where that defers, the original manual; it did not see the tools, the captures or MAME. It is stepped one slot at a time and covers the host interface, the FIFO, the VSM interface and the synthesis path. It has a scenario language, a bulk mode and a self-test. `emulator/GAPS.md` lists every choice the text left open.
+  - **The regression harness** (`tools/regress.py`). It rebuilds every standard take from its `capture.json`, with its predecessors, runs the emulator, and compares:
+    - the `I/O` codes (layer 2);
+    - the VSM timing (layer 1);
+    - optionally, the model.
+
+    Results are in `captures/phase9/regress/`.
+  - **Datasheet fixes found by the emulator.** Writing the emulator exposed 36 gaps. All that affect the output are now closed in the text:
+    - the parameter tables had been left out (a `{tables}` placeholder);
+    - the Booth multiplier was underspecified;
+    - the noise state was off by one sample;
+    - energy 0 and the idle value were wrong;
+    - what carries between utterances was wrong: it is the coded parameters, not the interpolator's registers;
+    - the inhibit and zeroing rules were incomplete;
+    - Speak External's timing was not stated;
+    - §8.9 now gives an exact reference algorithm.
+
+    The host-interface details that no capture has measured are listed as such (datasheet §3).
+  - **A new vector set,** `ring` (48 vectors, 192 takes): the longest pitch, for 140-sample free ringing, including a strong resonance at two energies. Evidence p9-01 and p9-02.
+- **Status:** in progress.
+  - **The datasheet is complete for what the model knows.** The emulator gives the model's codes at every sample of every take: the 2,104 vector takes and the 1,660 corpus word takes and the 17,184 address-sweep takes. The VSM timing matched in every VSM take. The Phase 8 host-interface tests (p8-19 to p8-25) have not been replayed through the emulator yet; GAPS.md lists the host timings it had to choose.
+  - **It is not yet bit-exact against the chip,** because the model is not:
+    - **voiced data** is one code off at a few samples per pitch period (95–97 % of samples equal on speech-like vectors, 79.6 % on the Acorn words);
+    - **the chip does not repeat itself exactly** (upsets);
+    - **data far outside the range of speech** turns one-code differences into large ones.
+- **Findings:**
+  - **The voiced error starts earlier than thought.** With a strong resonance it appears 6 samples into the first chirp (p9-01). In steady state the chip's output is then not periodic with the pitch period, deterministically, while the model's is. Large coefficients hide it, and positive K8–K10 bring it out.
+  - **Newly ruled out** (datasheet §8.8):
+    - a once-per-interpolation-period disturbance of each K;
+    - a half-written K on arrival;
+    - *b*₁ through a 10-bit Y latch;
+    - toward-zero rounding in one chain;
+    - per-stage inversion masks, rescored on the ring set;
+    - free corrections to the energy product.
+- **Open (what acceptance test 1 still needs):**
+  - **The lowest-order arithmetic.** No form tried, on data or patent grounds, reproduces it. A die photograph of the multiplier and adder (as MAME's tables came from a decap), or a second chip to show whether the error is in the design or this part, would settle it. The ring vectors are the sharpest test of any new idea: `python tools/regress.py captures/vectors/vectors_ring --model` together with a change to `model.py`.
+  - **Upsets.** These need the bench changes of Phase 5 (temperature, `VDD`, a second chip). Until their cause is known, bit-exactness on PROM words can be judged only against takes that repeat.
+  - **A first frame of silence** is approximate in the model (§7), so in the emulator too.
 
 ### Phase 10: Remaining PROM corpora
 

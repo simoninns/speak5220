@@ -312,3 +312,27 @@ Each vector was captured twice through each path with the standard procedure, by
 | `p8-25` | `vsm_commands` | Load Address with 1 to 6 nibbles, repeated Read Bytes, Read and Branch, and Speak after Read and Branch |
 
 The `load_address` step of `p8-22` left a command held when the test host gave up on READY; the next step needed retried resets (recorded in its notes).
+
+## Phase 9 captures (2026-10-07)
+
+Board, chip, firmware and procedure: as Phase 8. One more synthetic vector set, `ring` (`tools/vectors.py`), built to expose the filter's lowest-order arithmetic: 48 vectors, each held for six voiced frames at the longest pitch (160 samples), so that every pitch period ends in about 140 samples of free ringing.
+
+| Vectors | Count | What they hold |
+|---|---|---|
+| `n_e01` … `n_e14` | 14 | Neutral K at every energy |
+| `k<j>_<i>` | 20 | One K at each end of its table, the others neutral, energy index 10 |
+| `res_e06_k1_<i>`, `res_e14_k1_<i>` | 14 | K2 = 506 (a resonance of radius about 0.99) with K1 at 7 values, at energy indices 6 and 14 |
+
+Captured twice through each path with the standard procedure (192 takes, kept local in `captures/vectors/vectors_ring/`; `index.md` and `takes.csv` committed):
+
+    python tools/vectors.py build ring
+    python tools/run.py captures/phase8/vectors/ring.json all --takes 2 --path both --out captures/vectors --zip-only --resume
+
+The four `res_e14_k1_16` takes failed only the `layer2_vs_layer3` check (the DAC model at very loud codes, §8.2); their `I/O` codes are exact.
+
+**Evidence takes**, copied with their raw data (zipped, unchanged) into `captures/phase9/evidence/<id>/`; `captures/phase9/evidence/SHA256SUMS` lists the hashes of the copied files.
+
+| ID | Take (under `captures/vectors/`) | Vector | Path | Model | SHA-256 of `scope_raw.npz` | SHA-256 of `vsm_trace.bin` | What it shows |
+|---|---|---|---|---|---|---|---|
+| p9-01 | `vectors_ring/38_res_e06_k1_20/vsm01` | res_e06_k1_20 | vsm | 630 of 1899 differ (max 3), first at 188 | `5026c999a61e1e3167c9f92df14804f62fc16f1a70198da8c7de6aab6e60da4d` | `e42b191b7775bab4fc7164f30df9f113d58e0a2a5ce04d29eebfc4988bdd6a98` | The earliest divergence seen: 6 samples into the first chirp, while the coefficients are still arriving one per PC (§8.8) |
+| p9-02 | `vectors_ring/14_n_e14/vsm01` | n_e14 | vsm | 271 of 1899 differ (max 1), first at 220 | `2b5f073a2ec965ccd84e7581556afd0fa35d95a736ad81f9de2d69c990202f37` | `93abf637ad43540a396091bb7ea70c042c363d02d806f09f5974f09b0901cdc5` | Neutral K, energy index 14: in the 140-sample tails the chip and the model settle into different low-order limit cycles |

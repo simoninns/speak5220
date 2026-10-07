@@ -88,3 +88,11 @@ The Pico's USB serial port is `/dev/ttyACM1` here (`tools/pico.py` finds it by i
 - `proms/` – the speech PROM inventory (`proms/README.md`) and manifests: image hashes, provenance and word tables. `python tools/promimport.py` rebuilds the images
 - `captures/` – evidence captures cited by the reference datasheet. The PROM reference sets in `captures/corpus/` are kept local, apart from each PROM's index (`index.md`, `takes.csv`, `sweep.csv`). The Phase 8 vector captures in `captures/vectors/` are kept local in the same way; the vector sets themselves are in `captures/phase8/vectors/`.
 - `docs-tech/` – Datasheets and reference schematics
+
+## Reference emulator
+
+`emulator/` holds a C99 emulator of the TMS5220, written from the reference datasheet (`docs-tech/tms5220_reference_datasheet/`) alone. `tools/regress.py` replays the captured data set through it (`tools/README.md`).
+
+```bash
+nix develop -c make -C emulator test
+```

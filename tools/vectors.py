@@ -195,8 +195,26 @@ def setLoud(count=24, seed=8):
     return out
 
 
+def setRing():
+    """Phase 9: the filter's lowest-order arithmetic. Voiced frames at the
+    longest pitch (160 samples), so that each period ends in about 140
+    samples of free ringing with zero excitation: the neutral K at every
+    energy; one K at a time at its extremes; and the K2 = 506 resonance
+    (radius about 0.99) at several frequencies set by K1, at a quiet and a
+    loud energy."""
+    out = [(f"n_e{e:02d}", [V(e, 63)] * HOLD) for e in range(1, 15)]
+    for j in range(10):
+        for i in (0, K_SIZES[j] - 1):
+            out.append((f"k{j + 1}_{i:02d}", [V(10, 63, withK(j, i))] * HOLD))
+    for e in (6, 14):
+        for i in (0, 8, 16, 20, 23, 26, 31):
+            out.append((f"res_e{e:02d}_k1_{i:02d}", [V(e, 63, withK(0, i, withK(1, 31)))] * HOLD))
+    return out
+
+
 SETS = {"energy": setEnergy, "pitch": setPitch, "k": setK, "noise": setNoise,
-        "interp": setInterp, "special": setSpecial, "random": setRandom, "loud": setLoud}
+        "interp": setInterp, "special": setSpecial, "random": setRandom, "loud": setLoud,
+        "ring": setRing}
 
 
 # ---- writing a set ----------------------------------------------------

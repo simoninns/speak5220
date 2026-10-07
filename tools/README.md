@@ -155,9 +155,9 @@ python tools/protocol.py all                       # host interface and VSM comm
 python tools/protocol.py fifo_start --analyse      # rebuild a test's result.json from its traces
 ```
 
-- **`vectors.py`** builds sets of frame sequences (energy, pitch, K, noise, interpolation, special frames, random, loud). Each set is a synthetic PROM: a manifest (`<set>.json`) whose word table lists the vectors, the image (`<set>.bin`), and every vector's frames (`<set>.csv`). `run.py` accepts a manifest path in place of a PROM name. Speak External streams are the vectors' bytes up to their stop codes. `lpc.encodeFrames` does the encoding: each field most significant bit first, the bytes read least significant bit first.
+- **`vectors.py`** builds sets of frame sequences (energy, pitch, K, noise, interpolation, special frames, random, loud, and Phase 9's ring set). Each set is a synthetic PROM: a manifest (`<set>.json`) whose word table lists the vectors, the image (`<set>.bin`), and every vector's frames (`<set>.csv`). `run.py` accepts a manifest path in place of a PROM name. Speak External streams are the vectors' bytes up to their stop codes. `lpc.encodeFrames` does the encoding: each field most significant bit first, the bytes read least significant bit first.
 - **`model.py`** is the candidate model of the synthesis path that the datasheet's §8.5–§8.9 describe. Its defaults are the measured behaviour; its options select the alternatives that were tested.
-  - **`compareTake`** models a standard-procedure take and compares it with the chip's `I/O` codes. The noise state and alignment for each path come from `STANDARD_START`. Its `before` argument speaks earlier utterances first: the interpolator's registers carry over (datasheet §7).
+  - **`compareTake`** models a standard-procedure take and compares it with the chip's `I/O` codes. The noise state and alignment for each path come from `STANDARD_START`. Its `before` argument speaks earlier utterances first: the coded parameters carry over (datasheet §7).
   - **It is not the Phase 9 emulator.** That is written from the datasheet alone.
 - **`vecfit.py`** writes `captures/phase8/analysis/`:
   - `vectors.csv`: every take compared with the model;
@@ -170,7 +170,24 @@ python tools/protocol.py fifo_start --analyse      # rebuild a test's result.jso
 
 The vector captures, like the corpus, are kept local; each set's `index.md` and `takes.csv` are committed.
 
-## Driving the Pico
+## The reference emulator and the regression harness (Phase 9)
+
+```
+nix develop -c make -C emulator test               # build the emulator and run its self-test
+python tools/vectors.py build ring                 # the Phase 9 vector set (filter arithmetic)
+python tools/regress.py vectors corpus             # every vector set and the Acorn PHROM A words
+python tools/regress.py corpus --sweep             # ... and its address sweep
+python tools/regress.py vectors --model            # also compare the emulator with model.py
+```
+
+- **`emulator/`** is the reference emulator: C99, written from the reference datasheet alone (its `README.md` and `GAPS.md`). It is stepped one slot at a time and covers the host interface, the VSM interface and the synthesis path.
+- **`regress.py`** runs the emulator on every standard take that passed its checks, and compares it with the chip.
+  - **Rebuilding a take.** Each take is rebuilt from its `capture.json`: the image and address, the path, and the time the command was latched before the frame boundary. The takes captured before it are spoken first, back to the latest that has a voiced frame, because the coded parameters carry over (datasheet §7).
+  - **Layer 2:** the `I/O` codes, from 5 samples before the first frame read to the end of the capture.
+  - **Layer 1, VSM path:** the number of bits read, the sample period of each frame read, and when Talk Status cleared.
+  - **`--model`:** also runs `model.py` on the same take, and counts the samples where the emulator and the model differ. Zero means the datasheet text reproduces the model exactly.
+  - **Output:** one CSV per set and `summary.json` in `captures/phase9/regress/`. `TMS5220EMU` selects another emulator binary.
+
 
 `pico.py` talks to the firmware. It finds the Pico by its USB ID; `--port` overrides that.
 
@@ -244,6 +261,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser and encoder: frame boundaries, the coded parameters of each frame, and frames back to bytes.
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the Phase 8 vectors, the synthesis model, the table measurements and the host interface tests (see above).
+- `regress.py`: the Phase 9 regression harness for the reference emulator in `emulator/` (see above).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.
