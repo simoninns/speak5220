@@ -182,8 +182,11 @@ Still to do:
 ```
 captures/<prom>/
   prom.json           # inventory: name, hash, provenance, target chip, word table
-  index.md            # browsable page: word list, frame counts, links to audio
-  <word>/             # one directory per word, <number>_<name> (addr_<address> for a swept address)
+  index.md            # browsable page: word list, frame counts, links to audio, sweep summary
+  takes.csv           # every take: its checks, the hash of its output and of its raw files
+  sweep.csv           # every swept address: its parse, checks and output hash
+  sweep/addr_<address>/   # one directory per swept address, laid out like a word
+  <word>/             # one directory per word, <number>_<name>
     compare.json      # every take compared with the first (tools/compare.py)
     vsm01/, vsm02/    # one capture directory per take: VSM Speak ...
     ext01/, ...       # ... and Speak External
@@ -240,7 +243,7 @@ Record at least:
 The raw scope data is large. Four channels at 2 MS/s is about 8 MB per second of speech uncompressed, so a full PROM with repeats runs to gigabytes. Zip compression brings that down by about 10× (the Phase 1 captures shrank from 305 MB to 26 MB), because the digital channels compress well. There are two kinds of capture:
 
 - **Evidence captures** live in `captures/phase<N>/<id>/`, are cited by the datasheet, and are **committed to the repo**. The raw file is committed as `raw/scope_raw.npz.zip`: a zip that holds the original `scope_raw.npz` unchanged, so its SHA-256 still matches the evidence index. The tools read the zip directly, and `.gitignore` excludes the unzipped `.npz`. Keep each phase's evidence to a few tens of MB.
-- **PROM corpus captures** (Phases 7 and 10) live in `captures/corpus/<prom>/` and are **kept local for now**. The whole directory is git-ignored. How to publish them (release archives, Git LFS or elsewhere) is decided in Phase 12. Until then, the repo holds the scripts, manifests, `prom.json`, `index.md` and the hashes of the local raw files, so the local copies can be checked. Back up the local corpus separately, because it is the only copy.
+- **PROM corpus captures** (Phases 7 and 10) live in `captures/corpus/<prom>/` and are **kept local for now**. Only the raw data's zip is kept (`run.py --zip-only`), which makes a take about 2 MB. Apart from each PROM's `prom.json`, `index.md`, `takes.csv` and `sweep.csv`, the directory is git-ignored. How to publish the corpus (release archives, Git LFS or elsewhere) is decided in Phase 12. Until then, the repo holds the scripts, manifests and those index files. `takes.csv` gives the SHA-256 of every take's raw files, so the local copies can be checked, and of its output, so an emulator can be checked against the output without the raw data. Back up the local corpus separately, because it is the only copy.
 
 ## 7. Automation architecture
 
@@ -288,7 +291,7 @@ Information:
 
 When the images are imported, record which source each came from, along with its hash, in `prom.json`. Where the same PROM appears in more than one source, compare the copies. Phase 6 did this (`proms/README.md`).
 
-For each image, the word table gives the entry points. Also do a **sweep of every byte address**, not just the word starts. Starting mid-word produces garbage, but it is deterministic garbage, which makes it excellent emulator test material.
+For each image, the word table gives the entry points. Also do a **sweep of every byte address**, not just the word starts. Starting mid-word produces garbage, which exercises the frame parser with data no encoder would write. It turned out not to be deterministic: such data can drive the filter far outside the range of speech, where the smallest upset grows to the full output range (Phase 7). The sweep leaves out addresses whose data reaches the end of the image without a stop code, because those read on into an empty bank (`prom.sweepPoints`).
 
 The corpus also feeds the authoring guide. Analysing how the original PROMs were encoded (frame rates, use of repeat frames, energy and pitch ranges, word table and header layout) shows what real speech data looks like and what the original tools produced.
 
@@ -348,7 +351,7 @@ Keep a change log in the datasheet listing every correction and addition to the 
 ## 11. Risks and open questions
 
 - **What does `I/O` carry?** Resolved (§2): the 10-bit sample, LSB first, which matches the DAC.
-- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself. In the louder TI-99 words (Phase 6) they reach 15 codes.
+- **Run-to-run differences.** Mostly resolved in Phase 5 (datasheet §7). The start delay comes from a free-running frame clock, and the noise from a free-running generator that Reset holds until the next Speak. The standard procedure fixes both, so repeats match to within ±3 codes. What is left are "upsets": small departures that start at a few recurring points in a word, and that no controlled state explains. They are the main open question for Phase 8, because an emulator cannot match the chip bit for bit while the chip does not match itself. In the louder TI-99 words (Phase 6) they reach 15 codes. Phase 7 found a third kind of carried state: the previous utterance changes the first samples of the next one, through the reset sequence. And across the Acorn PHROM A, only 25 % of takes match their word's majority exactly.
 - **Internal state that is not visible on `I/O`.** If `I/O` carries only the final sample, the inner filter state has to be inferred. Carefully designed vectors (for example, one K parameter active at a time) keep that inference tractable.
 - **`TEST` and `PROM OUT`.** These may expose internal ROM contents or test modes. They are undocumented and might put the chip into an unexpected state. Treat any exploration of them as a separate, later, deliberate experiment, preferably on a spare chip.
 - **Chip variation.** Capture on more than one TMS5220 (and a 5220C, if one is available) to separate design behaviour from part-to-part analogue variation. The digital outputs should match exactly. The analogue outputs will not. Document any 5220/5220C differences in the datasheet.
@@ -369,7 +372,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 4. Host tooling | 1, 3 | Done |
 | 5. Repeatability | 3, 4 | Done |
 | 6. PROM inventory | — | Done |
-| 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Not started |
+| 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Done |
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Not started |
 | 9. Reference emulator | 8 (runs alongside it) | Not started |
 | 10. Remaining PROM corpora | 6, 7 | Not started |
@@ -587,8 +590,45 @@ This phase can run alongside Phases 1–5.
   - Capture every word, several times each, with the Phase 5 procedure.
   - Run the byte-address sweep (§8).
   - Generate the index page and the readable formats.
-- **Delivers:** `captures/acorn_phrom_a/`, with raw data and readable formats (§1.3) and an index page.
+- **Delivers:** `captures/corpus/acorn_phrom_a/`, with raw data and readable formats (§1.3) and an index page.
 - **Done when:** every word and swept address has been captured, all checks pass, and the repeats are consistent with Phase 5.
+- **Done:**
+  - **The reference set**, `captures/corpus/acorn_phrom_a/`, kept local (§6), about 40 GB. It holds 18,936 takes:
+    - **Words:** all 165, with at least five takes through each path that passed every check. That is 1660 passing takes, plus 10 kept that missed their start slot.
+    - **Sweep:** one take from each of the 16,144 sweep addresses, and five from every 64th: 17,266 takes. The sweep covers every byte of the image that is not a word start, except 75 addresses whose data runs off the end of the image without a stop code.
+    - **Index:** `index.md`, `takes.csv` and `sweep.csv` are committed. `takes.csv` gives every take's checks and the SHA-256 of its raw files and of its output (`talk_sha256`, the codes from sample 0 to the end of talk). So the local copies can be checked, and an emulator can be checked against the outputs without the raw data.
+  - **A faster runner** (`run.py`):
+    - **Speed:** the scope is held open for the whole run, so a take costs its talk time plus about 1.5 s, against 8–11 s before. The whole set took about 12 hours.
+    - **Long runs:** `--sweep`, `--sweep-step`, `--resume` (restart an interrupted run with the same command), and `--zip-only` (keep only the raw data's zip, about 2 MB a take, compressed in the background).
+    - **Retakes:** a take that fails only a check of the capture procedure is kept and retaken. After a narrow start-slot miss, the start is recalibrated first.
+    - **Banks:** only the PROM's own banks are kept loaded.
+  - **Tool fixes:**
+    - **`pico.hostCycles` lost READY edges.** The firmware ends a write as soon as it sees READY go low, and when the two shared one trace event, the edge was lost. That caused most apparent start-slot misses.
+    - **`frameclock.commandLatch` mistook data for the command.** It could time the latch from a Speak External stream byte that looked like the command. It now looks only at the command write, and `start_slot` fails if READY is never seen going low.
+    - **`process.py` (version 4):**
+      - It records `talk_sha256`.
+      - `duration` allows for a stop code as the first frame.
+      - The DAC check judges the gain only over a span of 32 codes or more, so near-silent words no longer fail it, and handles takes with one code only.
+    - **`compare.py`** leaves takes that failed a check out of the majority, and lists them.
+  - **The previous-utterance test**, `captures/phase7/previous_utterance/` (p7-01 to p7-06). Five more takes from the set are copied into the repo as evidence (p7-07 to p7-11), with the scripts in `captures/phase7/scripts/`.
+  - **Datasheet:** §4 (reads and Talk Status), §7 (the previous utterance, upset statistics) and §8.2 (the DAC on loud data).
+- **Status:** done (2026-10-07). Every word and sweep address has been captured. Every word, through each path, has at least five takes that passed every check, and every sweep address has a passing take, with two exceptions. Sweep starts 0x3F40D and 0x3F416 fail the DAC check (`layer2_vs_layer3`) on every take, at 3.06–3.16 mV rms against a 3 mV limit, because their data is louder than the DAC model holds for (§8.2). That is a limit of the model, handed to Phase 8, not a fault in the capture. Of all 18,936 takes, 106 failed a check and are kept. 92 missed the start slot; two of those also failed the DAC check. 14 failed only the DAC check, most of them deliberate retakes of the loud sweep starts. The repeats of words are consistent with Phase 5, with upsets up to 7 codes. Those of the sweep are not: see below.
+- **Findings:**
+  - **The frame format holds for any data.** From all 16,144 sweep starts, the chip read exactly the bits of its frames up to the end of the stop code, and nothing more: 395,398 frames, 12.2 million bits. Silence and stop frames take 4 bits, repeat frames 11, unvoiced 29, voiced 50. Frames were read 25 ms apart in every one.
+  - **When Talk Status clears.** It clears *frames* × 25 ms − 0.13 ms after the first frame read, 0.133–0.136 ms in every sweep start. When the first frame is a stop code, it clears 0.09 ms after the read, and the output never leaves idle (569 starts).
+  - **The previous utterance changes the start of the next.** The reset sequence does not clear it. Takes of a loud sweep start spoken after the same predecessor matched from the start of speech; after different predecessors, they differed from sample 0–2 [p7-01 to p7-06]. Across the sweep's repeat sample, 46–51 % of takes that followed a different address departed within 20 samples, against 1–2 % of those that followed the same address. No word showed it. A candidate is that the chip interpolates from parameters left by the previous utterance.
+  - **Upsets across a whole PROM.** Only 27 of the 330 word groups (word and path) were bit-identical. 25 % of takes matched their group's per-sample majority exactly and 93 % were within 2 codes, with 7 codes at most. Onsets recur at the same sample.
+  - **Upsets grow without limit in loud garbage data.** Where a sweep start drives the filter far outside the range of speech, a one-code upset grows to the full 10-bit range. Only 8 of 251 sweep groups were identical, so the sweep is not a deterministic reference, contrary to §8's first assumption.
+  - **Across days.** ACORN's majority output is within 3 codes of its Phase 5 majority.
+  - **The start slot matters, again.** The 10 word takes accepted one slot (about 6 µs) off target differed from the others by 12–63 codes [p7-09, p7-10]. That is the noise generator's slot-counted restart (Phase 5).
+  - **The DAC model fails for very loud data inside ±119 too.** It is 3–6 mV high for codes 64–119 in size [p7-11].
+  - **Reads past the end of the image.** They continue into the next bank (address 0x40000), which the Pico serves as empty and the chip reads as zeros, that is, silence frames for ever. That is the emulation, not the chip; the sweep leaves those addresses out.
+- **Handed on:**
+  - **The previous utterance → Phase 8.** What is carried over (the interpolation's start values, the filter state or something else), and whether the reset sequence or a silent frame clears it. Until then, an emulator is compared with takes spoken after the same predecessor (datasheet §7).
+  - **Upsets → Phase 8,** as before. The sweep's loud data amplifies them, which may help to find where they start.
+  - **The DAC model → Phase 8** (§8.2), for very loud data.
+  - **Phase 10** uses the same commands for the other PROMs. The runner's `--sweep` needs each PROM's image to end in a stop code or to be followed by a defined bank.
+  - **Phase 12:** how to publish the local corpus, about 40 GB for this PROM.
 
 ### Phase 8: Synthetic vectors and the core datasheet
 

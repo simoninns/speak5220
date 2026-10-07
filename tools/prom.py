@@ -109,9 +109,32 @@ def wordDir(word):
     return f"{word['number']}_{slug(name if slug(name) != 'x' else first)}"
 
 
+SWEEP_DIR = "sweep"
+
+
+def sweepPoints(manifest, data):
+    """The address sweep (plan section 8): ([VSM addresses], [left out]).
+    It covers every byte address of the image that is not a word start,
+    except those whose data reaches the end of the image without a stop
+    code. Those run into the next bank, which the Pico serves as empty, so
+    what the chip reads there depends on the board, not on the PROM."""
+    import lpc
+    first = base(manifest)
+    starts = {address(w) for w in manifest["words"]}
+    bits = lpc.bitsLsbFirst(data)
+    points, runOff = [], []
+    for offset in range(len(data)):
+        if first + offset in starts:
+            continue
+        frames, _ = lpc.parseFrames(bits[offset * 8:])
+        (points if frames and frames[-1]["kind"] == "stop" else runOff).append(first + offset)
+    return points, runOff
+
+
 def addressDir(vsmAddress):
-    """The capture directory name for an address that is not in the word table."""
-    return f"addr_{vsmAddress:05x}"
+    """The capture directory, relative to the PROM's, for an address that is
+    not in the word table: a point of the address sweep (plan section 8)."""
+    return os.path.join(SWEEP_DIR, f"addr_{vsmAddress:05x}")
 
 
 def main():

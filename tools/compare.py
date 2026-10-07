@@ -13,7 +13,8 @@
     word and that no controlled state explains (datasheet section 7). For
     each path, the per-sample majority of those takes is the reference
     output; each take is described by how it departs from it, and the
-    number of distinct outputs is counted.
+    number of distinct outputs is counted. Takes that failed a check are
+    left out of the majority and listed (standard_failed_takes).
 
     Give it a word directory (it compares every take in it, and writes
     compare.json there) or any capture directories (--out to save).
@@ -57,7 +58,8 @@ def loadTake(directory):
     summary = meta.get("processed", {}).get("summary", {})
     return {"dir": directory, "code": data["code"].astype(int), "summary": summary,
             "frames": frames, "path": summary.get("path"),
-            "standard": (meta.get("procedure") or {}).get("start") == "standard"}
+            "standard": (meta.get("procedure") or {}).get("start") == "standard",
+            "passed": bool(meta.get("processed", {}).get("passed"))}
 
 
 def bestShift(ref, other, start, end):
@@ -151,10 +153,16 @@ def compare(directories, log=print):
     takes = [loadTake(d) for d in directories]
     ref = takes[0]
     pairs = [comparePair(ref, t) for t in takes[1:]]
-    standard = {}
+    # The reference output is the majority of the standard takes that passed
+    # every check: a take that missed its start slot has different noise
+    # (Phase 7), and is listed separately
+    standard, excluded = {}, []
     for t in takes:
         if t["standard"] and t["summary"].get("speech_first_sample") is not None:
-            standard.setdefault(t["path"], []).append(t)
+            if t["passed"]:
+                standard.setdefault(t["path"], []).append(t)
+            else:
+                excluded.append(t["dir"])
     groups = [g for g in (variants(v) for v in standard.values() if len(v) > 1) if g]
     result = {
         "reference": ref["dir"], "reference_path": ref["path"],
@@ -164,6 +172,7 @@ def compare(directories, log=print):
         "all_frames_identical": all(p.get("frames_identical") is not False for p in pairs),
         "pairs": pairs,
         "standard_variants": groups,
+        "standard_failed_takes": excluded,
     }
     log(f"reference {ref['dir']} ({ref['path']}), speech from sample "
         f"{result['reference_speech_first_sample']}")

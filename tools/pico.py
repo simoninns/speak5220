@@ -267,6 +267,13 @@ def hostCycles(trace):
                 current = {"kind": kind, "byte": int(row["data"]) if kind == "write" else None,
                            "start": row["time_s"], "ready_high": None, "ready_low": None}
             elif prev[strobe] == 0 and row[strobe] == 1 and current and current["kind"] == kind:
+                # The firmware ends a cycle as soon as it sees READY go low,
+                # so the two can share one event (Phase 7)
+                if (prev["ready"] == 1 and row["ready"] == 0 and current["ready_high"] is not None
+                        and current["ready_low"] is None):
+                    current["ready_low"] = row["time_s"]
+                    if kind == "read":
+                        current["byte"] = int(row["data"])
                 current["end"] = row["time_s"]
                 cycles.append(current)
                 current = None

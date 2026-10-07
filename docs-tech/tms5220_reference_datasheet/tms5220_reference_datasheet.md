@@ -16,7 +16,7 @@ The aim is that someone working from this document alone can author new phrases,
 
 ## Conventions
 
-- **Evidence.** Every measured statement cites one or more capture IDs in brackets, for example [p1-03]. `evidence/README.md` lists each capture with its settings and the SHA-256 hash of its raw data.
+- **Evidence.** Every measured statement cites one or more capture IDs in brackets, for example [p1-03]. `evidence/README.md` lists each capture with its settings and the SHA-256 hash of its raw data. A citation of the form [corpus `acorn_phrom_a`] refers to a PROM's whole reference set (plan §6). The set itself is kept outside the repository until it is published, but its index is committed in `captures/corpus/<prom>/`: `index.md`, `takes.csv` and `sweep.csv`. These give every take's checks and the SHA-256 hashes of its output and raw files.
 - **New and corrected content.** Content the original does not have is marked **New**. Content that disagrees with the original is marked **Correction** and says what the original states.
 - **Voltages** are measured at the probe tip, referred to board ground (`VREF`, 0 V), with `VSS` = +5 V and `VDD` = −5 V. Probes are 10 MΩ passive ×10 probes unless stated. Edge times are 10–90 % unless stated, and edge positions are taken at the midpoint between the low and high levels.
 - **Slots.** A *slot* is one ROMCLK period, 6.25 µs at the nominal clock. Each 125 µs sample period has 20 slots, numbered 0–19. Slot 0 is the one in which `T11` is high (§8.4).
@@ -62,8 +62,16 @@ Driving `OSC` from an external clock is covered in Appendix A.
 **New:** early observations from the Phase 3 traces, to be confirmed by the Phase 8 tests:
 
 - **No read-ahead.** A Speak reads the VSM exactly up to the last bit of the stop code and no further. For ACORN that is 1152 bits, starting with a Dummy Read at the loaded address [p3-01, p3-03].
+- **From any address (Phase 7).** The address sweep of the Acorn PHROM A spoke from 16,144 start addresses: every byte of the image that is not a word start, except the 75 whose data runs off the end of the image without a stop code. From every one, the chip read exactly the bits of the frames up to the end of the stop code, and nothing more. In all, that is 395,398 frames and 12.2 million bits [p7-07, p7-08, corpus `acorn_phrom_a`]. Most of these starts give data no encoder would write, so the frame lengths hold for any bits:
+  - energy 0 (silence) and energy 15 (stop): 4 bits;
+  - repeat: 11 bits;
+  - unvoiced: 29 bits;
+  - voiced: 50 bits.
+
+  The frames were 204,144 voiced, 142,816 repeat, 22,841 silence and 9,453 unvoiced.
 - **Reset uses the VSM.** Every Reset command issues a Load Address and then a Dummy Read to the VSM, as the original's §6.6 says. This includes each `0xFF` byte of the initialisation sequence, which decodes as Reset (`X111XXXX`) [p3-01].
-- **One frame every 25 ms.** During a Speak, the chip reads each frame's bits in a burst, and the bursts start exactly 25.000 ms apart (within 0.12 µs, at the nominal clock) [p4-01, p4-02].
+- **One frame every 25 ms.** During a Speak, the chip reads each frame's bits in a burst, and the bursts start exactly 25.000 ms apart (within 0.12 µs, at the nominal clock) [p4-01, p4-02]. This held for all 15,575 sweep starts with more than one frame, silence frames included [corpus `acorn_phrom_a`].
+- **When Talk Status clears (Phase 7).** It clears 0.13 ms before the end of the frame that follows the stop frame: 24.87 ms after the stop frame is read. Measured from the first frame read, that is *frames* × 25 ms − 0.13 ms, counting the stop frame. Across 15,575 sweep starts it was 0.133–0.136 ms short of *frames* × 25 ms, so ACORN's 674.87 ms is 27 × 25 ms − 0.13 ms [p7-08, corpus `acorn_phrom_a`]. **If the first frame read is a stop code**, Talk Status clears 0.09 ms after it is read, and the output never leaves its idle value. This held at all 569 such starts [p7-07, corpus `acorn_phrom_a`].
 - **The start waits for the frame clock.** A Speak starts on the next boundary of a frame clock that runs all the time, so the first read comes 0.3–25.3 ms after the Speak (§7) [p5-09, p5-10]. The time from the first read to Talk Status clearing is the same for every Speak of a word: 674.87 ms, 27 frames, for ACORN [p3-01, p4-01, p4-02].
 - **When a frame is read.** Each frame's first bit is read about 106 µs after `T11` rises, at the start of slot 17 of a sample period, in every frame [p5-01]. The bits of a frame follow one every 12.5 µs (two ROMCLK periods) [p5-18].
 - **When the data must be valid.** The VSM emulation puts each data bit on `ADD8` after it sees `M0` rise. The chip still read every bit correctly with that delayed by up to 9.5 µs, but not by 10 µs [p5-18]. So the chip samples `ADD8` about 10 µs after `M0` rises, shortly before the next read. The emulation, which normally answers within about 1.5 µs, has a wide margin.
@@ -88,7 +96,7 @@ Driving `OSC` from an external clock is covered in Appendix A.
 
 **Status: drafted (Phase 5).** Measured on one chip at 640 kHz. Phase 8 explains the noise generator itself (§8).
 
-The original's §7 lists what the power-up clear does, and says that it resembles Reset. It does not say what the chip keeps from one utterance to the next. Two things are kept: the phase of a frame clock, and the state of the noise generator. Together they explain why repeats of a word were not identical (plan §2). A third, smaller effect is not explained yet ("Upsets", below).
+The original's §7 lists what the power-up clear does, and says that it resembles Reset. It does not say what the chip keeps from one utterance to the next. Three things are kept: the phase of a frame clock, the state of the noise generator, and something left by the previous utterance that changes how the next one starts (Phase 7). The first two explain why repeats of a word were not identical (plan §2). A smaller effect is not explained yet ("Upsets", below).
 
 **Power-up (New).** After a power cycle with `OSC` running, the chip spoke at once, without a Reset, so the power-up clear worked [p5-16].
 
@@ -106,10 +114,19 @@ The original's §7 lists what the power-up clear does, and says that it resemble
 - **Reset holds it, and the next Speak restarts it.** After the reset sequence, takes of ACORN on frames 800 apart all matched (to 3 codes), although their frames differed. A take with another Speak between the Reset and the take differed by up to 32 codes [p5-12]. So after a Reset, the generator stays in a fixed state until the next Speak, and runs freely from that Speak onwards.
 - **The restart counts from the Speak, in slots.** After a Reset, Speaks at random times within a frame gave different noise [p5-13]. Speaks accepted (READY low) in the same slot before the frame boundary gave the same noise, even in different clock sessions. One accepted one slot later (6.35 µs) gave different noise [p5-14].
 - **The state after Reset is fixed.** After a power cycle, the same Reset-then-Speak timing gave the same output as before it [p5-16].
+- **Confirmed across the Acorn PHROM A (Phase 7).** Ten word takes were accepted one slot (about 6 µs) away from the target. Each differed from its word's other takes by 12–63 codes. For example, F through Speak External, accepted 5.9 µs early, differed by up to 63 codes [p7-09, p7-10, corpus `acorn_phrom_a`].
 
 **Speak External (New).** Accepted at the same time before the frame boundary as a VSM Speak, Speak External starts its output 2 samples earlier, and its noise differs [p5-01, p5-05]. Its takes repeat among themselves as well as VSM takes do.
 
-**Upsets (New, not explained).** With the start delay and the noise fixed, repeats of a word match to within ±1–3 codes. They are often not identical:
+**The previous utterance (New, Phase 7).** What the chip spoke last changes the start of what it speaks next, even with the reset sequence in between. A sweep start whose data begins with loud voiced frames was spoken repeatedly. Before some takes, a different address was spoken first [p7-01 to p7-06]:
+- **Same predecessor, same start.** Takes spoken after the same thing matched from the start of speech. After the same loud address, the first difference was 258 samples in. After the word B, it was 6802 samples in. After a take of the same address, it was 4473 samples in.
+- **Different predecessor, different start.** Takes spoken after different things differed from the first or third sample of speech. They then diverged to the full 10-bit range, because this data drives the filter far outside the range of speech.
+- **The same in the sweep.** In the repeat sample (every 64th sweep start, 5 takes each), takes spoken after a different address differed from the others within 20 samples of the start in 46–51 % of cases. Takes spoken after the same address did so in 1–2 % [corpus `acorn_phrom_a`].
+- **Not in words.** No such early difference appeared between the takes of any word, of 1660 takes. Word takes, too, follow different words, so either real speech does not show the effect or it ends in a state that does not matter.
+
+What is carried over is not known. One candidate is the parameters the chip interpolates from at the start of a new utterance, which would be left from the end of the previous one. A word that starts in silence would hide this. Another is the lattice filter's internal state. Phase 8 tests both.
+
+**Upsets (New, not explained).** With the start delay and the noise fixed, repeats of a word match to within a few codes. They are often not identical:
 - In a sequence of takes, some pairs are bit-identical. For example, three of six takes, and two others, matched exactly [p5-15]; two takes from different clock sessions matched exactly [p5-14]. In other runs, no two takes matched [p5-01 to p5-04].
 - Where takes differ, the difference starts with a single ±1 at one sample. It then appears as scattered ±1 differences, now and then ±2 or ±3, for the rest of the word, as if a small difference had entered the filter's internal state.
 - Each word has a few points where these departures start, and they recur from take to take. For ACORN they are about 2490, 2880 and 3280 samples after speech starts [p5-01 to p5-04, p5-12, p5-15].
@@ -123,9 +140,16 @@ The original's §7 lists what the power-up clear does, and says that it resemble
 
 Phase 8 investigates them [p5-12 to p5-16].
 
+**Upsets across a whole PROM (Phase 7).** Every word of the Acorn PHROM A was taken five times through each path, with the standard procedure: 1660 takes that passed every check [corpus `acorn_phrom_a`].
+- **Exact matches are the exception.** Only 27 of the 330 groups (word and path) were bit-identical across all their takes. 420 takes (25 %) matched their group's per-sample majority exactly, and 93 % were within 2 codes of it. The largest departure was 7 codes (D, VSM). 141 groups have samples with no majority.
+- **Recurring onsets.** Most departing takes have one upset onset (978 takes), some two to four. Onsets recur at the same sample from take to take. NEW's VSM takes, for example, depart at sample 717 in two takes.
+- **Across days.** ACORN's majority output in Phase 7 differs from its Phase 5 majority by at most 3 codes, in about 900 of its samples, for each path.
+- **Larger in garbage data.** In the sweep's repeat sample, the effect is much larger. Where a sweep start's data drives the filter far outside the range of speech, a one-code difference grows to the full 10-bit range. Only 8 of 251 such groups were identical across their takes.
+
 **For emulator writers.** To reproduce a capture, start from:
 1. **The start time.** The Speak starts on the first frame boundary at least about 320 µs after it is written.
 2. **The noise generator.** After a Reset or power-up it is in a fixed state. It starts when the Speak is accepted, and advances by slots from then on, through speech and idle alike, until the next Reset. Its state after a Reset, and the number of steps per slot, are for Phase 8.
+3. **The previous utterance.** Something left by the previous utterance changes the first samples of the next one (Phase 7, above). Until Phase 8 identifies it, compare an emulator with captures spoken after the same predecessor. Each capture's predecessor is the take before it, in the order of the `captured` times in `takes.csv`.
 
 `capture.json` records both for every capture taken with the standard procedure (plan §12, Phase 5): the frame, and the time the Speak was accepted before it.
 
@@ -186,7 +210,7 @@ The two loads agree to within 2 %, so the mismatch belongs to the DAC. It shows 
 
 The step between −1 and 0 is **about six times a normal step**: 26–27 µA, or 26 mV across 996 Ω [p2-01, p2-02, p2-04, p2-05]. The original's Table 4 implies a single 5.86 µA step. Every zero crossing of the waveform passes through this step, so the analogue output has a small crossover distortion that a linear DAC model does not reproduce.
 
-**Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3). At the rails the model fails outright: fitted to codes inside ±119 of TI-99 speech with a gain and an offset, it puts code −128 about 10 mV (2 LSB) too high and code +127 about 6 mV (1.3 LSB) too high, in every take [p6-01 to p6-08]. Phase 2 measured +127 1.6 LSB from the model too. Full scale is 1.92 times the idle current (code −1), against 1.94 in the model.
+**Large currents.** For codes below about −55, the current falls progressively short of the bit-weight model fitted to codes −50 and above. The shortfall is 2.4 LSB at code −110 into 996 Ω (pin at 1.08 V), and 1.5 LSB into 482 Ω (pin at 0.55 V). Part of it is in the DAC, and part depends on the pin voltage (§8.3). At the rails the model fails outright: fitted to codes inside ±119 of TI-99 speech with a gain and an offset, it puts code −128 about 10 mV (2 LSB) too high and code +127 about 6 mV (1.3 LSB) too high, in every take [p6-01 to p6-08]. Phase 2 measured +127 1.6 LSB from the model too. Full scale is 1.92 times the idle current (code −1), against 1.94 in the model. In the loudest sweep data of Phase 7, the model also fails inside ±119. It sits 3–6 mV above the measurement for codes 64–119 in size, and the fit leaves more than 3 mV rms. That is just over the limit of the capture checks, in 10 of 16,144 sweep starts. Two of them failed again on every retake [p7-11, corpus `acorn_phrom_a`]. The codes recovered from the voltage were still within ±2 for 99.7 % of samples or more.
 
 **No memory between samples (New).** Each sample's output depends only on its own code. Regressing the residual from the per-code table on the levels of the four previous samples gives coefficients of 0.2 % or less, and removes less than 0.02 mV of residual [p2-01, p2-02, p2-04, p2-05]. Within one capture, the noise on a sample's mean is 0.5–0.8 mV while the chip is idle. During speech, samples of the same code scatter more (1–2 mV). That extra scatter does not depend on the code or on earlier codes, so it is probably interference on the test board while the VSM is being read, not DAC behaviour. Between captures a few minutes apart, the whole table moved by up to 0.35 %. Some hours later, after the chip had been power-cycled, the whole scale was 7 % higher (code −1 at 0.635 V against 0.592 V), with the supplies within 6 mV of nominal [p4-01 to p4-04]. The shape of the table still fitted to 2.2–2.3 mV rms. The step then stayed put: over the next three hours, through another power cycle, the fitted scale was 1.068–1.079 times the table [p5-01 to p5-08]. A meter on TP2 read 0.642 V for the idle level, against the scope's 0.631 V, so the step is real, in the chip or the load, not in the scope. So the absolute current figures in this section can vary by at least 7 %; the cause is not known yet.
 
@@ -346,3 +370,6 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-06 | §8.2 | The DAC scale step confirmed with a meter (0.642 V idle); stable over three hours | p5-01 to p5-08 |
 | 2026-10-06 | §8.4 | The output's return to idle at the end of a word | p5-01 |
 | 2026-10-06 | §8.2 | Clipping at the negative end observed; full scale measured; the bit-weight model fails at the rails. The full 10-bit `I/O` range observed | p6-01 to p6-08 |
+| 2026-10-07 | §4 | New: reads stop at the stop code from any of 16,144 start addresses, confirming the frame lengths. Frames 25 ms apart in all of them. When Talk Status clears, including at once for a stop code as the first frame | p7-07, p7-08, corpus `acorn_phrom_a` |
+| 2026-10-07 | §7 | New: the previous utterance changes the start of the next, through the reset sequence. Upset statistics across the whole Acorn PHROM A. The start-slot sensitivity of the noise confirmed | p7-01 to p7-06, p7-09, p7-10, corpus `acorn_phrom_a` |
+| 2026-10-07 | §8.2 | The bit-weight model is 3–6 mV high for codes 64–119 in size in very loud data | p7-11, corpus `acorn_phrom_a` |

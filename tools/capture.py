@@ -20,6 +20,7 @@
 """
 
 import argparse
+import contextlib
 import json
 import os
 import time
@@ -60,11 +61,12 @@ BOARD_CONFIGS = {
 }
 
 
-def scopeCapture(seconds, preMs, timebase, triggerChannel, armed=None):
+def scopeCapture(seconds, preMs, timebase, triggerChannel, armed=None, scope=None):
     """Arm the scope with the standard channel setup, call armed() (which
     should make the trigger happen), and capture one block. Returns a dict
-    with the raw ADC arrays and the settings."""
-    with Scope() as scope:
+    with the raw ADC arrays and the settings. Opening the scope takes about
+    4 s, so a caller making many captures can pass one it holds open."""
+    with contextlib.nullcontext(scope) if scope else Scope() as scope:
         for channel, (rangeV, offsetV) in CHANNEL_SETUP.items():
             scope.setChannel(channel, rangeV, offsetV)
         scope.setTrigger(triggerChannel, TRIGGER_V)

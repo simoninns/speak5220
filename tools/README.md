@@ -37,9 +37,19 @@ python tools/run.py acorn_phrom_a 160 179 --takes 3 --path both
 python tools/run.py acorn_phrom_a all --takes 5            # the whole PROM
 python tools/run.py acorn_phrom_a --address 0x3CBB7        # a sweep point outside the word table
 python tools/prom.py list acorn_phrom_a                    # the word table
+
+# A reference set (plan §12, Phase 7): every word, then the address sweep
+python tools/run.py acorn_phrom_a all --takes 5 --path both --sweep --resume --zip-only
+python tools/run.py acorn_phrom_a --sweep --sweep-step 64 --sweep-takes 5 --resume --zip-only
 ```
 
-Words are given by number or by name. `--path` is `vsm` (Speak from the emulated VSM, the default), `external` (Speak External of the same bytes) or `both`. The output goes under `captures/corpus/` (kept local) unless `--out` says otherwise; `--zip` also archives each `raw/scope_raw.npz` as `.npz.zip`, for evidence captures. `--board` is as in the table above; `--load-ohms` defaults to 996.
+Words are given by number or by name. `--path` is `vsm` (Speak from the emulated VSM, the default), `external` (Speak External of the same bytes) or `both`. The output goes under `captures/corpus/` (kept local) unless `--out` says otherwise. `--zip` also archives each `raw/scope_raw.npz` as `.npz.zip`, for evidence captures. `--zip-only` keeps only the zip, compressed in the background, which makes corpus takes about 7× smaller. `--board` is as in the table above; `--load-ohms` defaults to 996.
+
+**Long runs.**
+- **`--sweep`** adds the address sweep (plan §8), one take through the VSM from each sweep address (`--sweep-takes`). The sweep covers every byte address of the image that is not a word start, except addresses whose data reaches the end of the image without a stop code. Those run into the next bank, which the Pico serves as empty, so what the chip reads there depends on the board, not on the PROM. `--sweep START:END` limits the sweep to a range. `--sweep-step N` takes every Nth address, to give a sample of the sweep extra takes.
+- **`--resume`** counts the takes already made that passed every check, and makes only the missing ones, so an interrupted run can be restarted with the same command.
+- **Retakes.** A take that fails only checks of the capture procedure (`start_slot`, `start_frame`, `trace_complete`, `scope_overflow`, `io_format`, `fosc`, `external_stream`, `vsm_image`) is kept and retaken, up to `--retries` times (2). If `start_slot` was missed by less than a frame, the path's start may have drifted, so it is recalibrated first. Failures that come from the speech data, such as a sweep point without a stop code, are not retaken.
+- **Speed.** The scope is opened once per run, so a take costs its talk time plus about 1.5 s. The runner prints the time left after each entry. If a take raises an error, the runner keeps its directory, which has no `capture.json`, so the tools skip it. Five errors in a row stop the run.
 
 **The standard procedure** (the default, plan §12 Phase 5, datasheet §7). The TMS5220 carries two things from one utterance to the next:
 - **A frame clock.** It runs all the time, and a Speak waits for its next boundary.
@@ -48,7 +58,7 @@ Words are given by number or by name. `--path` is `vsm` (Speak from the emulated
 So that every take starts from the same state, the runner works in two stages.
 
 At the start of a run, it:
-1. Uploads the PROM image to its bank, if the Pico does not hold it already.
+1. Uploads the PROM image to its bank, if the Pico does not hold it already, and empties every other bank. Reads that run past the end of the image then find an empty bank in every run.
 2. Locates the frame clock on the Pico's timer from one Speak's trace (`frameclock.py`).
 3. For each path, calibrates the start, so that the chip accepts the Speak command 12256.1 µs before a frame boundary, in the same 6.25 µs slot every time. This takes about 40 s per path.
 
@@ -61,17 +71,25 @@ For each take, it:
 
 `--start free` speaks as soon as the scope is armed, as in Phase 4; `--reset` then adds the reset sequence before each take, and `--idle` sets the wait between takes.
 
-After each word it runs `compare.py`, and at the end it rewrites the PROM's `index.md` with `promindex.py`. It exits non-zero if any check failed.
+After each word it runs `compare.py`. At the end, and every 500 entries, it rewrites the PROM's index with `promindex.py`:
+- **`index.md`:** the word table and a summary of the sweep.
+- **`takes.csv`:** one row per take, with its checks, the SHA-256 of its output and of its raw files. The output hash, `talk_sha256`, covers the `I/O` codes from sample 0 to the end of talk, as 16-bit little-endian integers.
+- **`sweep.csv`:** one row per sweep address, with its parse, its checks, its output hash and the number of distinct outputs among its takes.
+
+The corpus is kept local (plan §6). These index files and `prom.json` are the only parts of it in the repo. The runner exits non-zero if any check failed.
 
 ```
 <out>/<prom>/
-  prom.json, index.md
-  <number>_<name>/          one per word (addr_<address> for an address sweep point)
+  prom.json, index.md, takes.csv, sweep.csv
+  sweep/addr_<address>/     one per address sweep point, laid out like a word
+  <number>_<name>/          one per word
     compare.json
     vsm01/, vsm02/, ...     one per take: VSM Speak
     ext01/, ...             Speak External
-      capture.json          metadata, plus "processed": summary and checks
-      raw/scope_raw.npz     raw scope data (never modified)
+      capture.json          metadata, the raw files' SHA-256 (raw_sha256),
+                            plus "processed": summary and checks
+      raw/scope_raw.npz     raw scope data (never modified; with --zip-only, only
+                            raw/scope_raw.npz.zip, which holds it unchanged)
       raw/vsm_trace.bin     raw VSM trace (never modified)
       vsm_trace.csv, frames.csv, samples.wav, samples.csv, dac.wav, listen.wav
 ```
@@ -111,7 +129,7 @@ The checks go into `capture.json` under `processed.checks`. Each is true, false,
 | `external_stream` | Speak External: the bytes on the bus are the stream sent |
 | `start_frame` | VSM: the first frame read is on the frame clock's grid (within 5 µs), and on the frame it was timed for. Speak External: the timed start was not late |
 | `start_slot` | Standard procedure: the chip accepted the Speak within 2 µs of the target time before the frame |
-| `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. All three are judged on codes inside ±119: at the rails (127, and −128, which clipped codes take) the chip sits 6–10 mV below the model, so the rail samples are reported separately (`rail_samples`, `rail_residual_mean_mv`). Null for `--board audio` |
+| `layer2_vs_layer3` | The Phase 2 DAC model of the `I/O` codes, fitted with a gain and an offset, leaves 3 mV rms or less; the gain is within 15 %; and 99 % of the recovered DAC codes are within ±2. All three are judged on codes inside ±119: at the rails (127, and −128, which clipped codes take) the chip sits 6–10 mV below the model, so the rail samples are reported separately (`rail_samples`, `rail_residual_mean_mv`). The gain is judged only when the codes span at least 32 (`gain_judged`): over a few codes around 0 the fit is dominated by the 6-LSB step between −1 and 0. Null for `--board audio` |
 
 The gain limit is wide on purpose. It catches a wrong board configuration (half load gives about 0.5, and the audio stage leaves a large residual), not drift: the DAC scale was 7 % above the Phase 2 table in Phase 4. The fitted gain is recorded in every capture.
 
@@ -119,7 +137,7 @@ The gain limit is wide on purpose. It catches a wrong board configuration (half 
 
 `compare.py` compares the takes of a word with the first one taken: `python tools/compare.py <word dir>` writes `compare.json` there. Each take is shifted by up to ±400 samples to match the first one best, because without the standard procedure the start of speech varies. Then the comparison reports the differing samples, the first difference (counted from the start of speech), the largest and rms difference, and whether the frames are identical.
 
-Takes made with the standard procedure should match exactly, apart from upsets (datasheet §7). These are small departures of 1–3 codes that start at a few points in a word. For each path, `compare.json` (`standard_variants`) gives:
+Takes made with the standard procedure should match exactly, apart from upsets (datasheet §7). These are small departures, of a few codes, that start at a few points in a word. Only the standard takes that passed every check count. A take that missed its start slot has different noise, so it is listed in `standard_failed_takes` instead. For each path, `compare.json` (`standard_variants`) gives:
 - the per-sample majority of those takes, as the reference output;
 - for each take, how far it departs from that majority, and the sample where each upset starts;
 - the number of distinct outputs;
@@ -194,7 +212,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `pico.py`: the host side of the firmware protocol, with the trace decoder, the self-test and a command line.
 - `run.py`: the capture runner (see "Capturing PROM words").
 - `process.py`: builds a capture's readable files from `raw/` and runs the checks.
-- `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`.
+- `compare.py`: the repeat comparator. `promindex.py`: writes a PROM's `index.md`, `takes.csv` and `sweep.csv`.
 - `prom.py`: PROM manifests (`proms/`). `promimport.py`: the PROM inventory; it rebuilds the images and writes the manifests. `bench.json`: the bench details recorded in every capture.
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser: frame boundaries and the coded parameters of each frame.

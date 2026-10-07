@@ -1,0 +1,163 @@
+{
+  "reference": "captures/phase7/previous_utterance/vsm01",
+  "reference_path": "vsm",
+  "reference_speech_first_sample": 305,
+  "takes": 6,
+  "all_identical": false,
+  "all_frames_identical": true,
+  "pairs": [
+    {
+      "take": "captures/phase7/previous_utterance/vsm02",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 305,
+      "compared_samples": 10835,
+      "identical": false,
+      "differing_samples": 6840,
+      "first_difference": 2,
+      "max_abs_difference": 1023,
+      "rms_difference": 58.68373542092725,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": 2.7777777827919792e-08
+    },
+    {
+      "take": "captures/phase7/previous_utterance/vsm03",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 305,
+      "compared_samples": 10835,
+      "identical": false,
+      "differing_samples": 6847,
+      "first_difference": 2,
+      "max_abs_difference": 1022,
+      "rms_difference": 68.99086501464082,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": 1.319444444536355e-07
+    },
+    {
+      "take": "captures/phase7/previous_utterance/vsm04",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 307,
+      "compared_samples": 10835,
+      "identical": false,
+      "differing_samples": 7170,
+      "first_difference": 0,
+      "max_abs_difference": 1023,
+      "rms_difference": 73.59952498793365,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": 6.944444436163266e-09
+    },
+    {
+      "take": "captures/phase7/previous_utterance/vsm07",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 305,
+      "compared_samples": 10835,
+      "identical": false,
+      "differing_samples": 6565,
+      "first_difference": 258,
+      "max_abs_difference": 1023,
+      "rms_difference": 37.60377304361663,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": -6.9444444916744175e-09
+    },
+    {
+      "take": "captures/phase7/previous_utterance/vsm09",
+      "path": "vsm",
+      "shift_samples": 0,
+      "speech_first_sample": 307,
+      "compared_samples": 10835,
+      "identical": false,
+      "differing_samples": 7226,
+      "first_difference": 0,
+      "max_abs_difference": 1023,
+      "rms_difference": 73.59536850157302,
+      "frames_identical": true,
+      "standard": true,
+      "first_frame_read_difference_s": 1.1111111111739014e-07
+    }
+  ],
+  "standard_variants": [
+    {
+      "path": "vsm",
+      "takes": 6,
+      "variants": 6,
+      "takes_matching_majority": 0,
+      "samples_without_majority": 5955,
+      "members": [
+        {
+          "take": "captures/phase7/previous_utterance/vsm01",
+          "variant": 1,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 5290,
+          "max_abs_deviation": 1023,
+          "upset_onsets": [
+            2
+          ]
+        },
+        {
+          "take": "captures/phase7/previous_utterance/vsm02",
+          "variant": 2,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 4408,
+          "max_abs_deviation": 1023,
+          "upset_onsets": [
+            6
+          ]
+        },
+        {
+          "take": "captures/phase7/previous_utterance/vsm03",
+          "variant": 3,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 4217,
+          "max_abs_deviation": 958,
+          "upset_onsets": [
+            6
+          ]
+        },
+        {
+          "take": "captures/phase7/previous_utterance/vsm04",
+          "variant": 4,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 4034,
+          "max_abs_deviation": 1022,
+          "upset_onsets": [
+            0
+          ]
+        },
+        {
+          "take": "captures/phase7/previous_utterance/vsm07",
+          "variant": 5,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 4817,
+          "max_abs_deviation": 1017,
+          "upset_onsets": [
+            2
+          ]
+        },
+        {
+          "take": "captures/phase7/previous_utterance/vsm09",
+          "variant": 6,
+          "shift_samples": 0,
+          "matches_majority": false,
+          "deviating_samples": 4085,
+          "max_abs_deviation": 1022,
+          "upset_onsets": [
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "standard_failed_takes": []
+}

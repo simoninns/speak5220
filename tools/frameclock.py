@@ -64,12 +64,14 @@ def frameReads(trace):
 
 def commandLatch(trace, command):
     """The cycle count at which the chip accepted the first write of command
-    (an opcode, high nibble only) after SCOPE_TRIG rose: READY going low."""
+    (an opcode, high nibble only) after SCOPE_TRIG rose: READY going low.
+    None if the trace shows no READY low for that write. Later writes are
+    not searched: a Speak External's stream bytes can look like the command
+    (Phase 7), and the chip did not always drive READY low for the command."""
     rise = triggerRise(trace) / picolib.TRACE_CLOCK_HZ
     for c in picolib.hostCycles(trace):
-        if (c["kind"] == "write" and c["start"] >= rise and c["byte"] & 0xF0 == command
-                and c["ready_low"] is not None):
-            return c["ready_low"] * picolib.TRACE_CLOCK_HZ
+        if c["kind"] == "write" and c["start"] >= rise and c["byte"] & 0xF0 == command:
+            return None if c["ready_low"] is None else c["ready_low"] * picolib.TRACE_CLOCK_HZ
     return None
 
 

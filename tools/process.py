@@ -30,12 +30,14 @@
       vsm_image         VSM: the bits read are the image's, from the word address
       bits_vs_frames    VSM: the bits read are exactly the frames up to the stop code
       frame_period      VSM: one frame read every 25 ms
-      duration          the talk time matches the frame count
+      duration          the talk time matches the frame count (VSM: one frame
+                        per frame read; none if the first frame is a stop code)
       external_stream   Speak External: the bytes on the bus are the stream sent
       start_frame       timed starts: the speech started on the frame it was timed
                         for (VSM: the first read is on the frame grid)
       start_slot        standard procedure: the chip accepted the Speak in the
-                        target slot before that frame
+                        target slot before that frame (false if READY was not
+                        seen going low for the command write)
       layer2_vs_layer3  the DAC voltage follows the I/O codes (plan section 3)
 
     This file is part of speak5220.
@@ -44,6 +46,7 @@
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import subprocess
@@ -60,7 +63,7 @@ import pico as picolib
 import prom as promlib
 import tms5220_decode as td
 
-PROCESS_VERSION = 3
+PROCESS_VERSION = 4
 ROOT = promlib.ROOT
 
 # Phase 2 DAC tables per board configuration (captures/phase2, datasheet 8.2)
@@ -80,6 +83,11 @@ LAYER3_RMS_MV = 3.0                    # Phase 2: 1.8 mV, 2.3 mV during speech
 # drifted by 8 % since Phase 2 (idle -1 at 0.592 V then, 0.635 V on
 # 2026-10-06 in Phase 4), so the gain is recorded in every capture
 LAYER3_GAIN = 0.15
+# ... judged only when the codes span at least this many: over a few codes
+# around 0 the fitted gain is set mostly by the -1 to 0 step, which is
+# 6 LSB rather than 1, and is meaningless (a near-silent word, Phase 7,
+# gave 1.18)
+LAYER3_GAIN_SPAN = 32
 LAYER3_WITHIN = (2, 0.99)              # this fraction of codes recovered within +/- 2
 # The bit-weight model holds inside these codes. Phase 2 measured code 127
 # 7 mV below it and never reached the negative rail; loud words (TI-99) sit
@@ -144,7 +152,12 @@ def layer3(code, dacV, model):
     clipped = np.clip(code, -128, 127)
     predicted = model[clipped + 128]
     inner = np.abs(clipped) < LAYER3_INNER
-    gain, offset = np.polyfit(predicted[inner], dacV[inner], 1)
+    if np.ptp(clipped[inner]) > 0:
+        gain, offset = np.polyfit(predicted[inner], dacV[inner], 1)
+    else:
+        # One code only (a stop code as the first frame: no speech), so
+        # only the offset can be fitted
+        gain, offset = 1.0, float(np.mean(dacV[inner] - predicted[inner]))
     residual = dacV - (gain * predicted + offset)
     rails = residual[~inner]
     residual = residual[inner]
@@ -162,8 +175,10 @@ def layer3(code, dacV, model):
              "rail_residual_mean_mv": float(rails.mean() * 1e3) if rails.size else None,
              f"rail_recovered_within_{LAYER3_WITHIN[0]}":
                  float(np.mean(difference[~inner] <= LAYER3_WITHIN[0])) if rails.size else None}
+    span = int(np.ptp(clipped[inner])) if inner.any() else 0
+    stats["gain_judged"] = span >= LAYER3_GAIN_SPAN
     stats["pass"] = bool(stats["residual_rms_mv"] <= LAYER3_RMS_MV
-                         and abs(gain - 1) <= LAYER3_GAIN
+                         and (abs(gain - 1) <= LAYER3_GAIN or not stats["gain_judged"])
                          and stats[f"recovered_within_{LAYER3_WITHIN[0]}"] >= LAYER3_WITHIN[1])
     return recovered, stats
 
@@ -231,6 +246,11 @@ def startFrame(meta, path, trace, summary, checks):
     if trace is not None and "trig_us" in result:
         cycles = frameclock.commandLatch(trace, picolib.CMD_SPEAK if path == "vsm"
                                          else picolib.CMD_SPEAK_EXTERNAL)
+        if cycles is None and timing.get("latch_target_us") is not None:
+            # READY never went low for the command write, so when the chip
+            # took it is unknown; once, it took it late (Phase 7)
+            summary["command_ready_low_seen"] = False
+            checks["start_slot"] = False
         if cycles is not None and timing.get("frame") is not None:
             # On the grid, as frameclock.calibrate() measures it
             boundary = timing["grid_us"] + timing["frame"] * frameUs
@@ -317,6 +337,9 @@ def process(directory, listenFilter="bbc", log=print):
         "speech_first_sample_s": float(t11[changed[0]]) if len(changed) else None,
         "speech_last_sample": int(changed[-1]) if len(changed) else None,
         "code_range": [int(code.min()), int(code.max())],
+        # Identifies the output without the raw data: the I/O codes from
+        # sample 0 to the end of talk, as 16-bit little-endian integers
+        "talk_sha256": hashlib.sha256(code[:talkSamples].astype("<i2").tobytes()).hexdigest(),
     })
 
     model, tablePath = dacModel(meta.get("board", {}).get("config"))
@@ -368,8 +391,12 @@ def process(directory, listenFilter="bbc", log=print):
         if traceFall is not None and len(frames):
             talk = traceFall - traceRise - frameTimes[0]
             summary["talk_after_first_read_s"] = float(talk)
-            checks["duration"] = bool(abs(talk - len(frames) * lpc.FRAME_SAMPLES / sampleRate)
-                                      <= VSM_DURATION_TOLERANCE_S)
+            # Talk Status clears one frame after the stop frame is read, as
+            # the last frame plays out; a stop code as the very first frame
+            # ends the speech at once (Phase 7)
+            expected = (len(frames) if len(frames) > 1 else 0) * lpc.FRAME_SAMPLES / sampleRate
+            summary["talk_expected_s"] = expected
+            checks["duration"] = bool(abs(talk - expected) <= VSM_DURATION_TOLERANCE_S)
     elif trace is not None and path == "external":
         writes = [c["byte"] for c in picolib.hostCycles(trace) if c["kind"] == "write"]
         start = next(i for i, b in enumerate(writes) if b & 0xF0 == picolib.CMD_SPEAK_EXTERNAL)
