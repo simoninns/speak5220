@@ -59,6 +59,12 @@ captures/vectors_chip4/*
 captures/vectors_chip4/*/*
 !captures/vectors_chip4/*/index.md
 !captures/vectors_chip4/*/takes.csv
+# Chip 1's unvoiced K sweeps captured again two days later (datasheet section 8.8)
+captures/vectors_chip1_repeat/*
+!captures/vectors_chip1_repeat/*/
+captures/vectors_chip1_repeat/*/*
+!captures/vectors_chip1_repeat/*/index.md
+!captures/vectors_chip1_repeat/*/takes.csv
 captures/**/raw/*.npz
 captures/**/dac_step_response.npy
 

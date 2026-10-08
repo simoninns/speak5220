@@ -212,9 +212,39 @@ def setRing():
     return out
 
 
+def setLoc():
+    """Phase 9: localising the lowest-order error
+    (docs-tech/lowest_order_arithmetic_ideas.md sections 4.2 and 4.3).
+    Unvoiced frames (no tails; K5-K10 zero) with two of K1-K4 large at
+    once, so that an error in one product reaches the output by a
+    different route from an error in another; K1 = -488 (index 6, the
+    worst unvoiced K1) at energies with each lowest Booth digit; and loud
+    frames followed by silence frames, which keep the K and let the filter
+    ring down freely from a large amplitude to its limit cycle."""
+    out = []
+    # K1 = -488 with K2 at -328, 392, 408, 506 and neutral
+    for i in (0, 22, 23, 31, NEUTRAL_K[1]):
+        out.append((f"u_k1_06_k2_{i:02d}", [U(10, withK(0, 6, withK(1, i)))] * HOLD))
+    # K2 = 392 with K1 at -501, -469, 436 and neutral
+    for i in (0, 10, 31, NEUTRAL_K[0]):
+        out.append((f"u_k2_22_k1_{i:02d}", [U(10, withK(1, 22, withK(0, i)))] * HOLD))
+    # K1 = -488 with K3 = 152, and with K4 = -328
+    out.append(("u_k1_06_k3_11", [U(10, withK(0, 6, withK(2, 11)))] * HOLD))
+    out.append(("u_k1_06_k4_00", [U(10, withK(0, 6, withK(3, 0)))] * HOLD))
+    # K1 = -488 at energies 1, 4, 6, 8, 11, 16, 33, 47, 85, 114 (indices)
+    for e in (1, 4, 5, 6, 7, 8, 10, 11, 13, 14):
+        out.append((f"u_k1_06_e{e:02d}", [U(e, withK(0, 6))] * HOLD))
+    # free decay: loud voiced or unvoiced, then silence (K2 = 506 resonance)
+    for i in (0, 6, 10, 20, 31):
+        k = withK(0, i, withK(1, 31))
+        out.append((f"dv_k1_{i:02d}", [V(14, 63, k)] * 2 + [SILENCE] * 7))
+        out.append((f"du_k1_{i:02d}", [U(14, k)] * 2 + [SILENCE] * 7))
+    return out
+
+
 SETS = {"energy": setEnergy, "pitch": setPitch, "k": setK, "noise": setNoise,
         "interp": setInterp, "special": setSpecial, "random": setRandom, "loud": setLoud,
-        "ring": setRing}
+        "ring": setRing, "loc": setLoc}
 
 
 # ---- writing a set ----------------------------------------------------

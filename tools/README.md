@@ -178,6 +178,8 @@ python tools/vectors.py build ring                 # the Phase 9 vector set (fil
 python tools/regress.py vectors corpus             # every vector set and the Acorn PHROM A words
 python tools/regress.py corpus --sweep             # ... and its address sweep
 python tools/regress.py vectors --model            # also compare the emulator with model.py
+python tools/vectors.py build loc                  # localisation and decay vectors (lowest-order error)
+python tools/variance.py                           # chip against itself, chip against chip, model against chip
 python tools/replay.py                             # the Phase 8 host tests (p8-19 to p8-25) through the emulator
 python tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip and emulator side by side
 ```
@@ -197,6 +199,13 @@ python tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip
   - **Layer 1, VSM path:** the number of bits read, the sample period of each frame read, and when Talk Status cleared.
   - **`--model`:** also runs `model.py` on the same take, and counts the samples where the emulator and the model differ. Zero means the datasheet text reproduces the model exactly.
   - **Output:** one CSV per set and `summary.json` in `captures/phase9/regress/`. `TMS5220EMU` selects another emulator binary.
+- **`variance.py`** measures how far apart two outputs of the same utterance are, the same way for five kinds of pair:
+  - chip 1's own takes, in the same session;
+  - chip 1 two days apart (`captures/vectors_chip1_repeat/`);
+  - chip 4 against chip 1;
+  - the model against each chip, rebuilt as `regress.py` does.
+
+  For each pair it gives the share of samples equal, the RMS and largest difference, and the signal-to-difference ratio, over the speech window. Corpus takes are paired only when both follow the same word, because the filter's state carries over. Output: `pairs.csv` and `summary.json` in `captures/phase9/variance/` (datasheet §8.8, "Expected agreement").
 
 
 **Other clocks.** `python tools/pico.py clock <hz>` (while the chip is idle) sets `OSC`, and `run.py` then works as at 640 kHz. The frame period is taken from the exact PWM divider, because `INFO` rounds the frequency to whole hertz. The Speak's target latch time scales with the clock, so the noise generator restarts in the same slot and `model.py` lines up as at 640 kHz. Restore 640 kHz afterwards.
@@ -273,7 +282,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser and encoder: frame boundaries, the coded parameters of each frame, and frames back to bytes.
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the Phase 8 vectors, the synthesis model, the table measurements and the host interface tests (see above).
-- `regress.py`: the Phase 9 regression harness for the reference emulator in `emulator/` (see above).
+- `regress.py`, `variance.py`: the Phase 9 regression harness for the reference emulator in `emulator/`, and the measured agreement between chips and the model (see above).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.
