@@ -300,7 +300,7 @@ Information:
 
 When the images are imported, record which source each came from, along with its hash, in `prom.json`. Where the same PROM appears in more than one source, compare the copies. Phase 6 did this (`proms/README.md`).
 
-For each image, the word table gives the entry points. Also do a **sweep of every byte address**, not just the word starts. Starting mid-word produces garbage, which exercises the frame parser with data no encoder would write. It turned out not to be deterministic: such data can drive the filter far outside the range of speech, where the smallest upset grows to the full output range (Phase 7). The sweep leaves out addresses whose data reaches the end of the image without a stop code, because those read on into an empty bank (`prom.sweepPoints`).
+For each image, the word table gives the entry points. Also do a **sweep of every byte address**, not just the word starts. Starting mid-word produces garbage, which exercises the frame parser with data no encoder would write. It turned out not to be deterministic: such data can drive the filter far outside the range of speech, where the smallest upset grows to the full output range (Phase 7). The sweep leaves out addresses whose data reaches the end of the image without a stop code, because those read on into an empty bank (`prom.sweepPoints`). Only the Acorn PHROM A is swept at every address (Phase 7). The other dumps are swept at a sample of addresses, and the assembled images are not swept (Phase 10).
 
 The corpus also feeds the authoring guide. Analysing how the original PROMs were encoded (frame rates, use of repeat frames, energy and pitch ranges, word table and header layout) shows what real speech data looks like and what the original tools produced.
 
@@ -771,9 +771,49 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
 ### Phase 10: Remaining PROM corpora
 
 - **Goal:** cover every PROM in the frozen Phase 6 inventory.
-- **Tasks:** capture each one, as in Phase 7, and run the emulator against each.
+- **Tasks:**
+  - Capture every word of the seven PROMs as in Phase 7: five takes through each path with the standard procedure. `starwars_speech` is captured through Speak External only, because the game has no VSM.
+  - Sweep a sample of addresses in the four dumped images, one take each, VSM only:
+    - every 8th sweep address of `vm61002`, `vm61004` and `vm71003a`;
+    - every 32nd of `ti99_speech`.
+  - Do not sweep the three assembled images (`vm61003_words`, `vm61005_words`, `starwars_speech`). Their bytes are original only word by word, so data between the words is not original (Phase 6).
+  - Generate each PROM's index page, and run the emulator against each PROM.
+- **Why a sample, not every address:**
+  - A full sweep of the seven PROMs would be about 110,000 takes, about 54 hours on the bench.
+  - The full Acorn sweep (Phase 7) has already shown what a sweep shows about the chip: the frame format holds for any data, and Talk Status clears at a fixed time.
+  - Mid-word starts often drive the filter outside the range of speech. There one-code upsets grow without limit, takes don't repeat, and the tolerance of §1.5 does not hold. So such takes can't serve as acceptance data, and a full sweep would mostly add unrepeatable output.
+  - The sample still checks the frame format and Talk Status on data from four more PROMs.
+  - `ti99_speech` is sampled most sparsely: its target chip is the TMS5200, not the TMS5220.
+- **Commands,** per PROM:
+
+  ```
+  python tools/run.py <prom> all --takes 5 --path both --resume --zip-only
+  python tools/run.py <prom> --sweep --sweep-step 8 --resume --zip-only      # vm61002, vm61004, vm71003a
+  python tools/run.py ti99_speech --sweep --sweep-step 32 --resume --zip-only
+  ```
+
+  For `starwars_speech`, use `--path external`.
+- **Budget:** about 7.2 hours of capture, without retakes or restarts. It is estimated from each take's frames, plus 0.94 s a take of fixed cost measured in Phase 7. That estimate gives 0.75 h for the Acorn words, which took 0.78 h.
+
+  | PROM | Words | Word takes (h) | Sweep takes | Sweep (h) |
+  |---|---|---|---|---|
+  | `ti99_speech` | 339 | 1.6 | 1,002 (every 32nd) | 0.6 |
+  | `vm61002` | 206 | 1.0 | 1,983 (every 8th) | 0.9 |
+  | `vm61004` | 148 | 0.7 | 1,944 (every 8th) | 0.9 |
+  | `vm71003a` | 35 | 0.2 | 489 (every 8th) | 0.2 |
+  | `vm61003_words` | 116 | 0.6 | none | 0 |
+  | `vm61005_words` | 116 | 0.6 | none | 0 |
+  | `starwars_speech` | 23 | 0.1 | none | 0 |
+  | **Total** | **983** | **4.8** | **5,418** | **2.6** |
+
 - **Delivers:** a reference data set for each PROM.
-- **Done when:** every inventoried PROM has been captured and the emulator matches all of them. Acceptance test 1 then holds for the whole data set.
+- **Done when:**
+  - every word of every inventoried PROM has been captured;
+  - the sampled sweep addresses have been captured;
+  - the emulator matches all of them within the tolerance of §1.5.
+
+  Acceptance test 1 then holds for the whole data set, on speech-range data, as in Phase 9.
+- **Version 1.x:** the full sweeps, if a faster runner or a second bench makes them cheap.
 
 ### Phase 11: Authoring, and confirmation with new speech data
 
