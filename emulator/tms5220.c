@@ -137,13 +137,16 @@ void tms5220_default_config(tms5220_config *cfg)
     cfg->fifo_latch = 3;         /* 18.75 us */
     cfg->read_ready = 3;         /* 18.75 us */
     /* §4 gives the Load Address function "about 35-45 us after the write":
-     * latch (4) + 2 = 37.5 us.  UNMEASURED (§3): the same delay is used for
-     * every other command's first VSM function, the Dummy Read included. */
+     * latch (4) + 2 = 37.5 us.  §4 gives the Read Byte's Dummy Read 2 slots
+     * after the latch too.  UNMEASURED (§3): the same delay is used for every
+     * other command's first VSM function, the Speak's Dummy Read included. */
     cfg->vsm_delay = 2;
-    cfg->vsm_spacing = 2;        /* §4: one bit every 12.5 us */
-    /* UNMEASURED (§3): the Read and Branch timer's start; 48 bit times
-     * (the patent's timer) from the Branch function. */
-    cfg->branch_timer = 48;
+    cfg->vsm_spacing = 2;        /* §4: bits two slots (12.5 us) apart */
+    /* §3 "When READY returns": READY for the next write goes active at the
+     * start of the first slot 15 that comes more than 59 and at most 63 slots
+     * after the Branch function.  DATASHEET GAP: the exact limit is not
+     * settled (two cases); 60, the "more than 59 slots" of the text. */
+    cfg->branch_ready = 60;
     /* §8.5, §8.9: the first frame-read sample whose slot 17 is at least 52
      * slots after the latch. */
     cfg->speak_lead = 52;
@@ -271,6 +274,7 @@ void tms5220_init(tms5220 *c, const tms5220_config *cfg)
     c->held_cmd = -1;
     c->ts_clear_at = -1;
     c->busy_until = -1000;
+    c->ready_min = -1000;
     /* §8.9 "Not known for this path": the power-up state is not measured;
      * every index, register and flag at 0 and the filter at its idle state
      * (u11 = +1, each stage one less, u1 = -9; b_i as left by that state).
@@ -417,6 +421,14 @@ static void frame_finished(tms5220 *c, int truncated)
     c->utt_frames++;
 }
 
+/* §4 "The rest of the frame": slots from the frame's first bit to the first
+ * bit of each parameter (energy, repeat and pitch, K1..K10).  Within a
+ * parameter the bits are two slots apart.  The table gives repeat and pitch
+ * as one parameter of 1 + 6 bits, so the pitch follows the repeat bit.
+ * K10's last bit (slot 446) still comes before the frame is loaded, in PC 12
+ * of IP 0, 25 samples after the read sample (483 slots after the first bit). */
+static const int param_slot[12] = { 0, 34, 78, 118, 160, 200, 240, 280, 320, 362, 402, 442 };
+
 static void frame_read_start(tms5220 *c)
 {
     memset(&c->fr, 0, sizeof c->fr);
@@ -429,18 +441,25 @@ static void frame_read_slot(tms5220 *c)
 {
     int bit;
     if (!c->speak_se) {
-        /* §4: one bit per Read function, every 12.5 us. */
+        /* §4: one bit per Read function, two slots apart within a
+         * parameter; each parameter starts at its offset from the frame's
+         * first bit.  A frame that ends early stops after its last field. */
         bit = vsm_call(c, TMS5220_VSM_READ, 0);
         frame_feed(&c->fr, bit);
         if (c->fr.done)
             frame_finished(c, 0);
-        else
+        else if (c->fr.fbits > 0 || c->fr.field == 2)
             c->fr_next += c->cfg.vsm_spacing;
+        else
+            c->fr_next = c->fr_start + param_slot[c->fr.field <= 1 ? c->fr.field : c->fr.field - 1];
         return;
     }
-    /* §5: from the FIFO all of a frame's bits leave at once, at the frame's
-     * read time.  DATASHEET GAP (minor): the slot is not given; slot 17 of
-     * the (Speak External) frame-read sample, as for the VSM's first bit. */
+    /* §5: bits leave the FIFO as the chip reads each frame.  DATASHEET GAP:
+     * §5 says the flags fit the VSM path's 446-slot schedule (§4) better than
+     * taking all the bits at once, but leaves the rule (and so the times of
+     * BL, BE and TS within a frame) "not yet settled".  Kept: all of a
+     * frame's bits leave at once, at slot 17 of the (Speak External)
+     * frame-read sample, as for the VSM's first bit. */
     while (!c->fr.done) {
         if (!fifo_pop_bit(c, &bit))
             break;
@@ -691,34 +710,63 @@ static void period_start(tms5220 *c)
 /* Commands (§6)                                                        */
 /* ------------------------------------------------------------------ */
 
-static void read_byte_start(tms5220 *c, int64_t s0)
+/* §4 "When Read Byte reads": the slot of a sample period at which the eight
+ * bits start (13, 15, ..., 19, 1, ..., 7). */
+#define RB_FIRST_SLOT 13
+/* §4: after a Dummy Read, the first slot 13 at least this many slots on. */
+#define RB_AFTER_DUMMY 22
+
+/* A Read Byte latched (or, held, released) at slot ref, whose first VSM
+ * function may occur at slot s0. */
+static void read_byte_start(tms5220 *c, int64_t ref, int64_t s0)
 {
+    int64_t first;
     int i;
     if (c->need_dummy) {
+        /* §4: after a Load Address the Dummy Read comes first, 2 slots after
+         * the latch (s0); reading starts at the first slot 13 that is at
+         * least 22 slots after it. */
+        int64_t m = s0 + RB_AFTER_DUMMY;
         qadd(c, s0, Q_DUMMY, 0);
-        s0 += c->cfg.vsm_spacing;
         c->need_dummy = 0;
+        first = m + (RB_FIRST_SLOT - m % TMS5220_SLOTS_PER_SAMPLE + TMS5220_SLOTS_PER_SAMPLE)
+                    % TMS5220_SLOTS_PER_SAMPLE;
+    } else {
+        /* §4: without a Dummy Read, slot 13 of the sample period after the
+         * one in which the command was latched; held during speech, after
+         * the one in which Talk Status cleared. */
+        first = (ref / TMS5220_SLOTS_PER_SAMPLE + 1) * TMS5220_SLOTS_PER_SAMPLE + RB_FIRST_SLOT;
     }
     c->rb_done = 0;
     c->rb_bits = 0;
     c->rb_value = 0;
     for (i = 0; i < 8; i++)
-        qadd(c, s0 + (int64_t)i * c->cfg.vsm_spacing, Q_RBBIT, i);
-    c->busy_until = s0 + 7 * (int64_t)c->cfg.vsm_spacing;
+        qadd(c, first + (int64_t)i * c->cfg.vsm_spacing, Q_RBBIT, i);
+    /* UNMEASURED (§3): a command written after Read Byte waits for the
+     * eighth bit, then the normal latency. */
+    c->busy_until = first + 7 * (int64_t)c->cfg.vsm_spacing;
 }
 
-/* Execute a command whose first VSM function may occur at slot s0. */
-static void exec_cmd(tms5220 *c, int byte, int64_t s0)
+/* Execute a command latched (or released from hold) at slot ref, whose first
+ * VSM function may occur at slot s0. */
+static void exec_cmd(tms5220 *c, int byte, int64_t ref, int64_t s0)
 {
     int cmd = (byte >> 4) & 7;
+    int64_t r;
     switch (cmd) {
     case 1:                                  /* Read Byte */
-        read_byte_start(c, s0);
+        read_byte_start(c, ref, s0);
         break;
     case 3:                                  /* Read and Branch */
         qadd(c, s0, Q_BRANCH, 0);
         c->need_dummy = 0;                   /* §4: no Dummy Read needed after it */
-        c->busy_until = s0 + c->cfg.branch_timer;
+        c->busy_until = s0;
+        /* §3 "When READY returns": READY for the next write goes active at
+         * the start of the first slot 15 at least branch_ready slots after
+         * the Branch function, whenever the write is made. */
+        r = s0 + c->cfg.branch_ready;
+        r += (15 - r % TMS5220_SLOTS_PER_SAMPLE + TMS5220_SLOTS_PER_SAMPLE) % TMS5220_SLOTS_PER_SAMPLE;
+        c->ready_min = r;
         break;
     case 4:                                  /* Load Address */
         qadd(c, s0, Q_LOAD, byte & 0xF);
@@ -789,7 +837,7 @@ static void latch_cmd(tms5220 *c, int byte, int64_t L)
             c->held_cmd = byte;
             ev_speech(c, "held", byte, 0);
         } else {
-            exec_cmd(c, byte, s0);
+            exec_cmd(c, byte, L, s0);
         }
         break;
     case 5:                                  /* Speak */
@@ -842,11 +890,12 @@ static void ts_cleared(tms5220 *c)
     c->se_active = 0;
     c->se_ready = 0;
     if (c->held_cmd >= 0) {
-        /* §6: a held command reaches the VSM at the moment TS clears. */
+        /* §6: a held command reaches the VSM at the moment TS clears; a held
+         * Read Byte reads from slot 13 of the next sample period (§4). */
         int b = c->held_cmd;
         c->held_cmd = -1;
         ev_speech(c, "held_exec", b, 0);
-        exec_cmd(c, b, c->slot);
+        exec_cmd(c, b, c->slot, c->slot);
     }
 }
 
@@ -895,11 +944,15 @@ static void host_progress(tms5220 *c)
             return;
         }
         {
-            /* UNMEASURED (§3): what a command waits for after Read and
-             * Branch (or Read Byte): the latency counts from the end of the
-             * busy period. */
+            /* UNMEASURED (§3): what a command waits for after Read Byte or a
+             * Load Address: the latency counts from the end of the busy
+             * period.  After Read and Branch READY returns at ready_min (§3),
+             * or later with the normal latency. */
             int64_t from = c->h_start > c->busy_until ? c->h_start : c->busy_until;
-            if (s >= from + c->cfg.cmd_latch && c->held_cmd < 0) {
+            int64_t ready = from + c->cfg.cmd_latch;
+            if (ready < c->ready_min)
+                ready = c->ready_min;
+            if (s >= ready && c->held_cmd < 0) {
                 latch_cmd(c, c->h_value, s);
                 host_done(c, c->h_value);
             }
@@ -910,10 +963,22 @@ static void host_progress(tms5220 *c)
     if (s < c->h_start + c->cfg.read_ready)
         return;
     if (c->data_mode) {
-        if (!c->rb_done || c->held_cmd >= 0)
+        if (c->held_cmd >= 0) {
+            /* §3: while a Read Byte is held during speech, reads do not wait:
+             * they return 0xFF at once and do not use it up.  DATASHEET GAP:
+             * whether such a read acts as a status read is not said; it is
+             * logged as a data read and leaves INT as it is. */
+            c->h_kind = TMS5220_HOST_DATA;
+            host_done(c, 0xFF);
             return;
-        /* UNMEASURED (§3): which reads return Read Byte data: only the
-         * first read after the Read Byte. */
+        }
+        /* §3: the data read's READY goes active 4 slots after the eighth bit
+         * is read.  DATASHEET GAP: for a read made later, the normal
+         * status-read latency applies (whichever is later). */
+        if (!c->rb_done || s < c->rb_ready_at)
+            return;
+        /* UNMEASURED (§3): which reads return Read Byte data when it is not
+         * held: only the first read after the Read Byte. */
         c->data_mode = 0;
         c->h_kind = TMS5220_HOST_DATA;
         host_done(c, c->rb_value);
@@ -1005,8 +1070,10 @@ static void run_queue(tms5220 *c)
             int bit = vsm_call(c, TMS5220_VSM_READ, 0);
             /* §6: the first bit read appears on D0, TI's MSB (host bit 7). */
             c->rb_value |= bit << (7 - c->rb_bits);
-            if (++c->rb_bits == 8)
+            if (++c->rb_bits == 8) {
                 c->rb_done = 1;
+                c->rb_ready_at = c->slot + 4;    /* §3: READY 4 slots later */
+            }
             break;
         }
         case Q_TS_SET:

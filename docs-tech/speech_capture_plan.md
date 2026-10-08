@@ -485,7 +485,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
   - **The frame decoder** (`tools/lpc.py`): every frame's bit offset, length, kind, energy, repeat flag, pitch and K1–K10 indices. For the VSM path, `frames.csv` also gives when each frame's first bit was read, and in which output sample period.
   - **Layer 2 against layer 3.** The Phase 2 bit-weight model of each `I/O` code is fitted to the DAC voltage with a gain and an offset. The check needs a residual of 3 mV rms or less, a gain within 15 % of the table's, and 99 % of the DAC codes recovered within ±2 of `I/O`.
   - **`tools/compare.py`** aligns each take with the first and compares them sample for sample, and frame for frame. **`tools/promindex.py`** writes `index.md`.
-  - **`tools/bench.json`** records the chip (TMS5220NL, `DEP 8423`) and the measured supplies.
+  - **`tools/bench.json`** records the chip (TMS5220NL, `DEP 8423`, and from 2026-10-08 its number) and the measured supplies. Four chips are labelled 1–4 (datasheet Conventions). Chip 1 made every capture before 2026-10-08.
   - **Block mode** is chosen (§4).
 - **Status:** done (2026-10-06). One command, `run.py acorn_phrom_a ACORN --takes 2 --path both --out captures/phase4 --zip`, wrote `captures/phase4/acorn_phrom_a/` with four takes. Every check passed on every take, and the runner exited 0. The set is p4-01 to p4-04 in the evidence index.
 - **Findings:**
@@ -704,7 +704,7 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
     The host-interface details that no capture has measured are listed as such (datasheet §3).
   - **A new vector set,** `ring` (48 vectors, 192 takes): the longest pitch, for 140-sample free ringing, including a strong resonance at two energies. Evidence p9-01 and p9-02.
 - **Status:** in progress.
-  - **The datasheet is complete for what the model knows.** The emulator gives the model's codes at every sample of every take: the 2,104 vector takes and the 1,660 corpus word takes and the 17,184 address-sweep takes. The VSM timing matched in every VSM take. The Phase 8 host-interface tests (p8-19 to p8-25) have not been replayed through the emulator yet; GAPS.md lists the host timings it had to choose.
+  - **The datasheet is complete for what the model knows.** The emulator gives the model's codes at every sample of every take: the 2,104 vector takes and the 1,660 corpus word takes and the 17,184 address-sweep takes. The VSM timing matched in every VSM take.
   - **It is not yet bit-exact against the chip,** because the model is not:
     - **voiced data** is one code off at a few samples per pitch period (95–97 % of samples equal on speech-like vectors, 79.6 % on the Acorn words);
     - **the chip does not repeat itself exactly** (upsets);
@@ -717,11 +717,36 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
     - *b*₁ through a 10-bit Y latch;
     - toward-zero rounding in one chain;
     - per-stage inversion masks, rescored on the ring set;
-    - free corrections to the energy product.
+    - free corrections to the energy product;
+    - the product's lowest bit forced to 0 (the Mega99 core's reading of the patent), in any role;
+    - a lowest-bit change on alternate samples;
+    - the multiplier of US 4,700,323.
+  - **A survey of outside sources** found nothing that settles the error:
+    - no public netlist of the filter;
+    - MAME says its own multiplier is not the chip's;
+    - the other decoders and VHDL cores derive from MAME;
+    - nobody has published a bit-exact comparison with a real chip.
+
+    The one independent gate-level reading of US 4,335,277, the Mega99 Verilog core, has exactly the model's lattice, apart from the lowest bit, where the chip agrees with the model. So the missing detail is probably one the patents do not describe. The remaining route is a trace of the adder and the delay stack's low-order bits on the TMS5220NL die images (siliconpr0n, through the Wayback Machine).
+  - **A second chip** (2026-10-08; ring, pitch and energy vectors, `captures/vectors_chip4/`, kept local). Chips 2 and 3 could not be used: chip 2 gave no `M0` pulses, and chip 3 loaded a wrong address and then stopped responding to writes, perhaps the wedge that a power cycle clears. Chip 4 was compared with chip 1, both against the model (datasheet §8.8):
+    - **The voiced error is in the design.** On 121 of 126 pitch-vector pairs, both chips leave the model at the same sample with the same ±1.
+    - **There is also a chip-specific ±1.** In about a third of the ring vectors, one chip departs where the other matches the model. It repeats on each chip, and it does not change with the clock (480, 560 and 720 kHz on chip 4, `captures/vectors_chip4/clk*/`). So it is not a timing margin. Chips 1 and 4 are both marked TMS5220NL DEP 8423, so it is probably not a die revision either. A marginal level, such as charge sharing on a precharged node, is the likely cause.
+    - **Chip 4's upsets depend on the clock:** about 30 % of pairs of takes differ at 480–640 kHz, and 2 % at 720 kHz.
+    - **Chip 4 has more upsets than chip 1,** and its DAC gain differs, so it fails `layer2_vs_layer3` against the Phase 2 table.
+  - **The host tests replayed** (2026-10-08, `tools/replay.py`, `captures/phase9/replay/`). All 88 steps of p8-19 to p8-25 were run through the emulator from their recorded host cycles, with each step's frame position fitted.
+    - **Datasheet corrections:**
+      - a frame's parameters are read over 446 slots, not in one burst (§4);
+      - Read Byte reads its bits from slot 13 of a sample period, at least 22 slots after a Dummy Read (§4);
+      - reads during a held Read Byte return 0xFF (§3);
+      - READY after Read and Branch returns at slot 15, 60–63 slots after the Branch (§3).
+    - **The emulator was updated from the revised text alone,** by a separate agent. It now matches every VSM function and every bit read of every VSM step to within 3 µs, every READY latency to within a slot, and every status and data value, apart from two kinds of difference:
+      - one read from an unloaded bank, where the Pico's VSM returns 1s and the emulator's returns 0s;
+      - Speak External streams that run out of data, where BE and the final Talk Status change by up to 0.5 ms (64 of 15,262 reads).
 - **Open (what acceptance test 1 still needs):**
-  - **The lowest-order arithmetic.** No form tried, on data or patent grounds, reproduces it. A die photograph of the multiplier and adder (as MAME's tables came from a decap), or a second chip to show whether the error is in the design or this part, would settle it. The ring vectors are the sharpest test of any new idea: `python tools/regress.py captures/vectors/vectors_ring --model` together with a change to `model.py`.
-  - **Upsets.** These need the bench changes of Phase 5 (temperature, `VDD`, a second chip). Until their cause is known, bit-exactness on PROM words can be judged only against takes that repeat.
+  - **The lowest-order arithmetic.** No form tried, on data or patent grounds, reproduces it. Chip 4 shows that the voiced error is in the design, so it can be modelled. A die photograph of the multiplier and adder (as MAME's tables came from a decap) would settle it. Bit-exactness on strongly resonant vectors cannot be expected from any one model, because of the chip-specific departures. The acceptance test needs to say which chip is the reference (chip 1, which made every earlier capture, is the natural choice), or to compare only up to each vector's first chip-specific departure. The ring vectors are the sharpest test of any new idea: `python tools/regress.py captures/vectors/vectors_ring --model` together with a change to `model.py`.
+  - **Upsets.** These need the bench changes of Phase 5 (temperature, `VDD`). Chip 4 has more of them, so they are likely marginal internal logic. On chip 4 they become rare at 720 kHz, which fits leakage from dynamic nodes. The chip-specific departures from the model did not change with the clock. Until their cause is known, bit-exactness on PROM words can be judged only against takes that repeat.
   - **A first frame of silence** is approximate in the model (§7), so in the emulator too.
+  - **Speak External's flags within a frame.** When BL, BE and TS change at the end of a stream that runs out is not settled (datasheet §5). It needs a test with status reads much closer together than 1 ms.
 
 ### Phase 10: Remaining PROM corpora
 

@@ -178,9 +178,19 @@ python tools/vectors.py build ring                 # the Phase 9 vector set (fil
 python tools/regress.py vectors corpus             # every vector set and the Acorn PHROM A words
 python tools/regress.py corpus --sweep             # ... and its address sweep
 python tools/regress.py vectors --model            # also compare the emulator with model.py
+python tools/replay.py                             # the Phase 8 host tests (p8-19 to p8-25) through the emulator
+python tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip and emulator side by side
 ```
 
 - **`emulator/`** is the reference emulator: C99, written from the reference datasheet alone (its `README.md` and `GAPS.md`). It is stepped one slot at a time and covers the host interface, the VSM interface and the synthesis path.
+- **`replay.py`** replays the Phase 8 host-interface and VSM command tests (`protocol.py`, p8-19 to p8-25) through the emulator. Each step's recorded host cycles become a scenario, written at the slots of their recorded strobes. The step's position against the frame clock is not recorded, so it is fitted: one value per step, searched over all 4000 slots of a frame. It compares:
+  - the value of every status and data read;
+  - READY latencies;
+  - INT edges;
+  - the times of the Load Address, Dummy Read and Read and Branch functions;
+  - every VSM bit read.
+
+  A step is compared only up to the end of its recording, or up to a host cycle that the chip never released. Results are in `captures/phase9/replay/`. `--detail TEST STEP` prints one step's recorded and emulated timelines side by side.
 - **`regress.py`** runs the emulator on every standard take that passed its checks, and compares it with the chip.
   - **Rebuilding a take.** Each take is rebuilt from its `capture.json`: the image and address, the path, and the time the command was latched before the frame boundary. The takes captured before it are spoken first, back to the latest that has a voiced frame, because the coded parameters carry over (datasheet §7).
   - **Layer 2:** the `I/O` codes, from 5 samples before the first frame read to the end of the capture.
@@ -188,6 +198,8 @@ python tools/regress.py vectors --model            # also compare the emulator w
   - **`--model`:** also runs `model.py` on the same take, and counts the samples where the emulator and the model differ. Zero means the datasheet text reproduces the model exactly.
   - **Output:** one CSV per set and `summary.json` in `captures/phase9/regress/`. `TMS5220EMU` selects another emulator binary.
 
+
+**Other clocks.** `python tools/pico.py clock <hz>` (while the chip is idle) sets `OSC`, and `run.py` then works as at 640 kHz. The frame period is taken from the exact PWM divider, because `INFO` rounds the frequency to whole hertz. The Speak's target latch time scales with the clock, so the noise generator restarts in the same slot and `model.py` lines up as at 640 kHz. Restore 640 kHz afterwards.
 
 `pico.py` talks to the firmware. It finds the Pico by its USB ID; `--port` overrides that.
 

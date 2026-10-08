@@ -75,7 +75,12 @@ def commandLatch(trace, command):
     return None
 
 
-def frameUs(oscHz):
+def frameUs(oscHz, sysHz=None):
+    """The frame period. OSC is a whole number of sysHz cycles, and INFO
+    rounds its frequency to whole hertz, so the period is taken from the
+    divider when sysHz is known (exact at 640 kHz either way)."""
+    if sysHz:
+        return FRAME_OSC_CYCLES * round(sysHz / oscHz) * 1e6 / sysHz
     return FRAME_OSC_CYCLES * 1e6 / oscHz
 
 
@@ -94,16 +99,18 @@ class FrameClock:
         pico.traceClear()
         result = pico.speak(address)
         trace = picolib.decodeTrace(pico.trace()[0], picolib.TRACE_CLOCK_HZ)
-        period = frameUs(int(pico.info()["osc_hz"]))
+        info = pico.info()
+        period = frameUs(int(info["osc_hz"]), int(info["sys_hz"]))
         reads = [toUs(trace, result["trig_us"], c) for c in frameReads(trace)]
         first = min(t - k * period for k, t in enumerate(reads))
         bootTime = time.time() - pico.time() * 1e-6
         return cls(first % period, bootTime, period)
 
     def latchTarget(self):
-        """LATCH_BEFORE_FRAME_US, moved by the same time as mid-frame when
-        the clock is not 640 kHz."""
-        return LATCH_BEFORE_FRAME_US + (self.frameUs - FRAME_US) / 2
+        """LATCH_BEFORE_FRAME_US, scaled with the clock: the noise generator
+        counts slots, so the latch must stay the same number of slots before
+        the frame boundary when the clock is not 640 kHz."""
+        return LATCH_BEFORE_FRAME_US * self.frameUs / FRAME_US
 
     def calibrate(self, pico, path, address=CALIBRATION_ADDRESS, data=None, log=print):
         """Find the start offset that has the chip accept the command

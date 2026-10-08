@@ -71,7 +71,8 @@ typedef struct {
     int read_ready;         /* slots from read strobe to READY active */
     int vsm_delay;          /* slots from command latch to its first VSM function */
     int vsm_spacing;        /* slots between consecutive VSM functions (12.5 us = 2) */
-    int branch_timer;       /* slots the chip stays busy after a Read and Branch function */
+    int branch_ready;       /* READY after Read and Branch: the first slot 15 at least
+                             * this many slots after the Branch function (60..63) */
     int speak_lead;         /* min slots from command accepted to the first frame read */
     int ts_set_delay;       /* slots from Speak latched to Talk Status set */
     int ts_clear_stop;      /* slots from a stop frame's first bit to TS clear (24.87 ms) */
@@ -113,10 +114,12 @@ typedef struct tms5220 {
     int h_active, h_write, h_kind, h_value;
     int64_t h_start;
     int64_t busy_until;       /* chip cannot latch a new command before this */
+    int64_t ready_min;        /* a command's READY not before this (Read and Branch) */
     int held_cmd;             /* command held during speech, or -1 */
     int need_dummy;           /* a Load Address has been issued since the last read */
     int data_mode;            /* next read returns the Read Byte data */
     int rb_done, rb_bits, rb_value;
+    int64_t rb_ready_at;      /* earliest READY of the data read (8th bit + 4) */
 
     tms5220_qent q[64];
     int nq;

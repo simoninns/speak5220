@@ -167,7 +167,7 @@ static int set_param(tms5220_config *c, const char *k, int v)
     struct { const char *name; int *p; } t[] = {
         { "cmd_latch", &c->cmd_latch }, { "fifo_latch", &c->fifo_latch },
         { "read_ready", &c->read_ready }, { "vsm_delay", &c->vsm_delay },
-        { "vsm_spacing", &c->vsm_spacing }, { "branch_timer", &c->branch_timer },
+        { "vsm_spacing", &c->vsm_spacing }, { "branch_ready", &c->branch_ready },
         { "speak_lead", &c->speak_lead }, { "ts_set_delay", &c->ts_set_delay },
         { "ts_clear_stop", &c->ts_clear_stop }, { "ts_clear_first_stop", &c->ts_clear_first_stop },
         { "noise_rel_speak", &c->noise_rel_speak }, { "noise_rel_se", &c->noise_rel_se },
@@ -236,6 +236,12 @@ static void run_line(emu *e, char *line)
         if (s < e->chip.slot)
             die(e, "slot is in the past:", argv[1]);
         step_to(e, s);
+    } else if (!strcmp(argv[0], "at")) {
+        /* as slot, but a slot already passed is not an error (replays of
+         * recorded host cycles, which may arrive while READY is still held) */
+        int64_t s = parse_num(e, argv[1], 10);
+        if (s > e->chip.slot)
+            step_to(e, s);
     } else if (!strcmp(argv[0], "wait")) {
         step_to(e, e->chip.slot + parse_num(e, argv[1], 10));
     } else if (!strcmp(argv[0], "write")) {

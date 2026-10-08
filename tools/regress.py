@@ -196,9 +196,10 @@ def runTake(job):
         after = [(s, e) for s, e in events if s > mark]
         readSlots = [s for s, e in after if e[:2] == ["VSM", "READ"]]
         bits = len(readSlots)
-        # A frame's bits are read 2 slots apart; its first read follows a gap
+        # A frame's parameters are read over 446 slots, with gaps of up to
+        # 42 inside it (datasheet section 4); frames are 4000 slots apart
         frameSamples = [s // 20 - emuFirst for i, s in enumerate(readSlots)
-                        if i == 0 or s - readSlots[i - 1] > 2]
+                        if i == 0 or s - readSlots[i - 1] > 1000]
         chipFrames = [r - chipFirst for r in chipReads]
         tsClear = next((s for s, e in after if e[:3] == ["FLAG", "TS", "0"]), None)
         firstReadSlot = next(s for s, e in after if e[:2] == ["VSM", "READ"])
@@ -279,7 +280,8 @@ def main():
     totals = {}
     with tempfile.TemporaryDirectory() as tmp, multiprocessing.Pool(args.jobs) as pool:
         for root in roots:
-            name = os.path.basename(root.rstrip("/")) + ("_sweep" if args.sweep else "")
+            hasSweep = args.sweep and os.path.isdir(os.path.join(root, "sweep"))
+            name = os.path.basename(root.rstrip("/")) + ("_sweep" if hasSweep else "")
             jobs = [(t, p, tmp, args.model) for t, p in takesOf(root, args.sweep)]
             rows = pool.map(runTake, jobs, chunksize=8)
             with open(os.path.join(args.out, f"{name}.csv"), "w", newline="") as f:

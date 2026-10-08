@@ -1,0 +1,392 @@
+{
+ "bytes09": {
+  "shift_slots": 1960,
+  "strobe_frac": 0.5,
+  "frame_fitted": true,
+  "cost": 40562.5,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1588,
+   "differ": 4,
+   "first_differ": 147,
+   "cycles_measured": 1598,
+   "cycles_emulated": 1598
+  },
+  "ready": {
+   "write": {
+    "n": 10,
+    "mean_us": 2.2,
+    "min_us": -0.92,
+    "max_us": 3.83
+   },
+   "read": {
+    "n": 1588,
+    "mean_us": 4.21,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "int_off": {
+   "n": 1,
+   "mean_us": -5.56,
+   "min_us": -5.56,
+   "max_us": -5.56,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 1,
+   "unmatched_emulated": 1
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ },
+ "bytes10": {
+  "shift_slots": 1013,
+  "strobe_frac": 0.375,
+  "frame_fitted": true,
+  "cost": 61075.1,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1588,
+   "differ": 6,
+   "first_differ": 166,
+   "cycles_measured": 1599,
+   "cycles_emulated": 1599
+  },
+  "ready": {
+   "write": {
+    "n": 11,
+    "mean_us": 1.96,
+    "min_us": -1.31,
+    "max_us": 5.2
+   },
+   "read": {
+    "n": 1588,
+    "mean_us": 4.07,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "int_off": {
+   "n": 1,
+   "mean_us": -0.94,
+   "min_us": -0.94,
+   "max_us": -0.94,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 1,
+   "unmatched_emulated": 1
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ },
+ "bytes13": {
+  "shift_slots": 3865,
+  "strobe_frac": 0.625,
+  "frame_fitted": true,
+  "cost": 82056.2,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1596,
+   "differ": 8,
+   "first_differ": 94,
+   "cycles_measured": 1610,
+   "cycles_emulated": 1610
+  },
+  "ready": {
+   "write": {
+    "n": 14,
+    "mean_us": 2.21,
+    "min_us": -0.12,
+    "max_us": 6.38
+   },
+   "read": {
+    "n": 1596,
+    "mean_us": 4.11,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 1,
+   "mean_us": 55.11,
+   "min_us": 55.11,
+   "max_us": 55.11,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 1,
+   "unmatched_emulated": 1
+  },
+  "int_off": {
+   "n": 1,
+   "mean_us": -1.13,
+   "min_us": -1.13,
+   "max_us": -1.13,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 1,
+   "unmatched_emulated": 1
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ },
+ "bytes14": {
+  "shift_slots": 1877,
+  "strobe_frac": 0.875,
+  "frame_fitted": true,
+  "cost": 112901.1,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1593,
+   "differ": 11,
+   "first_differ": 48,
+   "cycles_measured": 1608,
+   "cycles_emulated": 1608
+  },
+  "ready": {
+   "write": {
+    "n": 15,
+    "mean_us": 2.25,
+    "min_us": 0.4,
+    "max_us": 5.19
+   },
+   "read": {
+    "n": 1593,
+    "mean_us": 4.06,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "int_off": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ },
+ "bytes15": {
+  "shift_slots": 164,
+  "strobe_frac": 0.125,
+  "frame_fitted": true,
+  "cost": 30329.3,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1591,
+   "differ": 3,
+   "first_differ": 285,
+   "cycles_measured": 1607,
+   "cycles_emulated": 1607
+  },
+  "ready": {
+   "write": {
+    "n": 16,
+    "mean_us": 2.06,
+    "min_us": -0.13,
+    "max_us": 3.49
+   },
+   "read": {
+    "n": 1591,
+    "mean_us": 4.14,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "int_off": {
+   "n": 2,
+   "mean_us": -2.15,
+   "min_us": -2.19,
+   "max_us": -2.11,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ },
+ "bytes16": {
+  "shift_slots": 2516,
+  "strobe_frac": 0.875,
+  "frame_fitted": true,
+  "cost": 51043.8,
+  "host_timeout_at_us": null,
+  "status": {
+   "reads": 1594,
+   "differ": 5,
+   "first_differ": 231,
+   "cycles_measured": 1611,
+   "cycles_emulated": 1611
+  },
+  "ready": {
+   "write": {
+    "n": 17,
+    "mean_us": 1.99,
+    "min_us": -0.26,
+    "max_us": 2.65
+   },
+   "read": {
+    "n": 1594,
+    "mean_us": 4.11,
+    "min_us": 0.92,
+    "max_us": 7.26
+   },
+   "no_ready_measured": 0
+  },
+  "int_on": {
+   "n": 0,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 2,
+   "unmatched_emulated": 2
+  },
+  "int_off": {
+   "n": 1,
+   "mean_us": -3.41,
+   "min_us": -3.41,
+   "max_us": -3.41,
+   "measured": 2,
+   "emulated": 2,
+   "unmatched_measured": 1,
+   "unmatched_emulated": 1
+  },
+  "frames": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "vsm": {
+   "n": 0,
+   "measured": 0,
+   "emulated": 0,
+   "same_sequence": true,
+   "unmatched_measured": 0,
+   "unmatched_emulated": 0
+  },
+  "reads": {
+   "measured": 0,
+   "emulated": 0
+  }
+ }
+}

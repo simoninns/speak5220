@@ -3,8 +3,9 @@
 The emulator in this directory was written only from
 `docs-tech/tms5220_reference_datasheet/tms5220_reference_datasheet.md` (and the
 original manual where the reference defers to it). This file lists what that
-text still leaves open, revised against the datasheet of 2026-10-07 with the
-exact reference algorithm of §8.9. In the code, open points are marked
+text still leaves open, revised against the datasheet of 2026-10-08 (the
+frame read schedule, Read Byte timing, the held Read Byte and READY after Read
+and Branch, §3–§5), with the exact reference algorithm of §8.9. In the code, open points are marked
 `DATASHEET GAP:` and the unmeasured host-interface items `UNMEASURED (§3)`.
 Timing choices are fields of `tms5220_config` (script operation `set`).
 
@@ -31,15 +32,37 @@ Most important first.
 3. **§5, the FIFO after a frame runs out.** Whether the bits a truncated frame
    used, or any left over, stay in the FIFO is not said. (§8.9 now settles that
    the frame counts as a stop code.) **Chosen:** the FIFO is emptied.
-4. **§5, when FIFO bits are taken.** "at the frame's read time". **Chosen:**
-   slot 17 of the frame-read sample (sample 198 of the frame clock for Speak
-   External).
+4. **§5, when FIFO bits are taken, and the times of BL, BE and TS within a
+   frame.** §5 now says the Speak External flags fit the VSM path's 446-slot
+   parameter schedule (§4) better than taking all of a frame's bits at once,
+   and that with all the bits at once BE and the final INT are within a frame
+   of the chip but not in the right slot. It leaves the rule "not yet
+   settled": not whether bits leave on the §4 schedule, when a byte counts as
+   left within it, when BL and BE are judged, nor when TS clears after a frame
+   that runs out. **Chosen:** unchanged, since the text does not require a
+   rule: all of a frame's bits leave at once at slot 17 of the frame-read
+   sample (sample 198 of the frame clock for Speak External), BL and BE are
+   judged then, and TS clears 3979 slots after that slot, as for a stop frame.
 5. **§8.9 "Not known for this path": Reset during speech.** "the model treats it
    as the end of speech (step 3 from then on)". It is not said what happens to
    requested, Z, U, a frame half read, or writes already queued for `seen`.
    **Chosen:** talking and requested are cleared, the frame being read is
    dropped, and Z, U, idx, cur and the write queue are left as they are.
-6. **Power-up noise register.** §8.9 gives the power-up state of the synthesis
+6. **§3, a read while a Read Byte is held.** It returns 0xFF at once and does
+   not use the Read Byte up, but the text does not say whether it otherwise
+   acts as a status read (releasing INT). **Chosen:** it is a data read
+   (`READ_DATA 0xFF`) with the status-read latency (`read_ready`), and INT is
+   left as it is.
+7. **§3, READY after Read and Branch.** The first slot 15 more than 59 and
+   at most 63 slots after the Branch function (two cases). **Chosen:**
+   `branch_ready` = 60, the first slot 15 at least 60 slots after the Branch
+   (the text's "more than 59 slots"); the measured cases (Branch in slot 16:
+   79 slots; slot 12: 63) hold for any value in 60–63. A write whose normal
+   latency ends later than that slot gets the normal latency.
+8. **§3, the data read after Read Byte.** READY goes active 4 slots after the
+   eighth bit. **Chosen:** for a read whose strobe comes later, the larger of
+   that and the status-read latency.
+9. **Power-up noise register.** §8.9 gives the power-up state of the synthesis
     state, but the noise register is outside that loop and §7 does not cover
     power-up. **Chosen:** held at 0x1FFF, as after Reset.
 
@@ -55,12 +78,13 @@ of the captures. The emulator keeps these choices:
 | When the Speak's Dummy Read and each command's VSM functions occur | Latch + 2 slots (Load Address then lands 37.5 µs after the strobe, inside §4's 35–45 µs); further functions 2 slots apart |
 | What releases READY after a second command while one is held | The held command running when TS clears, then the normal 4-slot latency |
 | A held command when a Reset arrives | Discarded |
-| Which reads return Read Byte data | Only the first read after a Read Byte, which waits for the 8th bit |
+| Which reads return Read Byte data when it is not held | Only the first read after a Read Byte, which waits for the 8th bit (§3 now settles the held case) |
+| What a command written after Read Byte waits for | The 8th bit, then the 4-slot latency |
 | INT for the FIFO purges of Speak External and Reset; Reset releasing INT | A purge that sets BL raises INT; Reset releases INT after its own changes |
 | A 17th byte to a full FIFO | Discarded (logged `INFO fifo_overflow`) |
 | When writes stop going to the FIFO after Speak External | When TS clears |
 | Speak External during a VSM Speak; Speak while another waits for its boundary | Both ignored |
-| Read and Branch timer start, and what the next command waits for | 48 slots from the Branch function, then the 4-slot latency. This gives about 331 µs after the next strobe, short of the measured 386–486 µs |
+| The exact length of the Read and Branch wait | See §1 item 7: `branch_ready` = 60 |
 | Power-up VSM functions and INT | None issued; INT inactive; status 0x7F |
 | Speak External counters after the utterance (§8.5 "for that utterance") | The 2-sample offset is kept until the next Speak starts. At a Speak External start, positions 198–199 (IP 7, PC 11) are skipped; at the next Speak start, positions 0–1 are repeated. Neither changes `cur`, because the IP 0 that follows sets every register |
 | Speak External start lead (§5 "as for Speak") | 52 slots from both the command's latch and the 9th byte |
@@ -87,6 +111,10 @@ Earlier entries now settled by the text and implemented as written:
 - a truncated Speak External frame acting as a stop code;
 - the Speak start threshold (52 slots from the latch);
 - Read and Branch byte order (§4);
+- the VSM frame read: each parameter's first bit at 0, 34, 78, 118, 160, 200, 240, 280, 320, 362, 402 and 442 slots from the frame's first bit, its bits two slots apart, repeat and pitch read as one 7-bit parameter, and shorter frames stopping after their last parameter (§4, 2026-10-08). The frame is loaded 483 slots after its first bit, after K10's last bit (446);
+- Read Byte's bits at slot 13 onwards: of the sample period after the latch; after a Load Address, the Dummy Read 2 slots after the latch and the bits from the first slot 13 at least 22 slots after it; for a held one, of the sample period after Talk Status cleared; the data read's READY 4 slots after the 8th bit (§3, §4);
+- reads while a Read Byte is held return 0xFF at once and do not use it up (§3);
+- READY after Read and Branch at slot 15, whenever the next write is made (§3); the old 48-slot `branch_timer` is replaced by `branch_ready`;
 - every frame load clears both Z and U ("clear Z and U", §8.9), so a silence frame ends the K5–K10 zeroing (§8.7);
 - the energy target of a stop frame (Table 8-4 now gives 0 at index 15);
 - where a Speak takes effect: Z, U, loads and requested at the start of the frame-read sample, talking at its end (confirmed).

@@ -49,7 +49,11 @@ typedef struct {
     tms5220 c;
     tms6100 v;
     int64_t reads[4096]; int nreads;    /* slots of VSM READ functions */
+    int rbits[4096];                    /* the bits they returned */
     int ndummy, nload;
+    int64_t dummy_slot, branch_slot;    /* last Dummy Read, last Read and Branch */
+    int host_kind;                      /* last completed host cycle */
+    int64_t host_start, host_ready;
     int64_t ts_clear_slot, ts_set_slot;
     int min_code, max_code, nonidle;
     int64_t first_nonidle;
@@ -60,9 +64,18 @@ static void ev(void *ctx, const tms5220_event *e)
 {
     H *h = ctx;
     if (e->type == TMS5220_EV_VSM) {
-        if (e->func == TMS5220_VSM_READ && h->nreads < 4096) h->reads[h->nreads++] = e->slot;
-        if (e->func == TMS5220_VSM_DUMMY) h->ndummy++;
+        if (e->func == TMS5220_VSM_READ && h->nreads < 4096) {
+            h->rbits[h->nreads] = e->arg;
+            h->reads[h->nreads++] = e->slot;
+        }
+        if (e->func == TMS5220_VSM_DUMMY) { h->ndummy++; h->dummy_slot = e->slot; }
+        if (e->func == TMS5220_VSM_BRANCH) h->branch_slot = e->slot;
         if (e->func == TMS5220_VSM_LOAD) h->nload++;
+    }
+    if (e->type == TMS5220_EV_HOST) {
+        h->host_kind = e->kind;
+        h->host_start = e->start;
+        h->host_ready = e->ready;
     }
     if (e->type == TMS5220_EV_FLAG && e->flag == TMS5220_FLAG_TS) {
         if (e->state) h->ts_set_slot = e->slot; else h->ts_clear_slot = e->slot;
@@ -179,10 +192,19 @@ static void test_frame_lengths(void)
     static const int kv[10] = { 20, 10, 7, 8, 8, 8, 8, 4, 4, 4 };
     static const int ku[4] = { 20, 10, 7, 8 };
     static const int expect[5] = { 50, 11, 29, 4, 4 };
+    /* §4 "The rest of the frame": first bit of each parameter, in slots from
+     * the frame's first bit, and its width (repeat and pitch as one). */
+    static const int pslot[12] = { 0, 34, 78, 118, 160, 200, 240, 280, 320, 362, 402, 442 };
+    static const int pbits[12] = { 4, 7, 5, 5, 4, 4, 4, 4, 4, 3, 3, 3 };
+    int off[64], noff = 0, p, q;
     bits s;
     H h;
-    int i, j, burst[16], nb = 0, phase;
+    int i, j, burst[16], first[16], nb = 0, phase;
     int64_t stop_read;
+
+    for (p = 0; p < 12; p++)
+        for (q = 0; q < pbits[p]; q++)
+            off[noff++] = pslot[p] + 2 * q;
 
     for (phase = 0; phase < 200; phase += 37) {
         memset(&s, 0, sizeof s);
@@ -203,21 +225,27 @@ static void test_frame_lengths(void)
         run(&h, 4000);
 
         CHECK(h.ndummy == 1, "one Dummy Read before the first frame (got %d)", h.ndummy);
-        /* group reads into bursts */
+        /* group reads into frames: since the revision of 2026-10-08 a frame's
+         * bits are spread over up to 446 slots (§4), so frames are told apart
+         * by the gap between them, not by a one-bit-every-two-slots burst */
         nb = 0;
         for (i = 0; i < h.nreads; i++) {
-            if (i == 0 || h.reads[i] - h.reads[i - 1] > 2) burst[nb++] = 0;
+            if (i == 0 || h.reads[i] - h.reads[i - 1] > 1000) { first[nb] = i; burst[nb++] = 0; }
             burst[nb - 1]++;
         }
         CHECK(nb == 5, "5 frame reads (got %d)", nb);
-        for (j = 0; j < 5 && j < nb; j++)
+        for (j = 0; j < 5 && j < nb; j++) {
             CHECK(burst[j] == expect[j], "frame %d length %d, expected %d", j, burst[j], expect[j]);
-        /* frames 25 ms (4000 slots) apart, first bit in slot 17 */
-        for (i = 1, j = 0; i < h.nreads; i++)
-            if (h.reads[i] - h.reads[i - 1] > 2) {
-                CHECK((h.reads[i] - h.reads[0]) % 4000 == 0, "frame start spacing");
-                j++;
-            }
+            /* §4: each parameter's bits two slots apart from its offset; the
+             * shorter frames stop after the parameters they have */
+            for (i = 0; i < burst[j] && i < noff; i++)
+                CHECK(h.reads[first[j] + i] - h.reads[first[j]] == off[i],
+                      "frame %d bit %d at +%lld, expected +%d", j, i,
+                      (long long)(h.reads[first[j] + i] - h.reads[first[j]]), off[i]);
+            /* frames 25 ms (4000 slots) apart, first bit in slot 17 */
+            CHECK((h.reads[first[j]] - h.reads[0]) % 4000 == 0, "frame start spacing");
+        }
+        CHECK(nb < 1 || h.reads[first[0] + 49] - h.reads[0] == 446, "voiced frame spans 446 slots");
         CHECK(h.reads[0] % 20 == 17, "first bit in slot 17 (slot %lld)", (long long)h.reads[0]);
         stop_read = h.reads[h.nreads - 4];
         CHECK(h.ts_clear_slot - stop_read == 3979, "TS clears 24.87 ms after the stop frame (%lld)",
@@ -280,19 +308,154 @@ static void test_speak_external(void)
     tms6100_free(&h.v);
 }
 
+/* §4 "When Read Byte reads": slot 13 of the sample period after 'ref' (no
+ * Dummy Read), or the first slot 13 at least 22 slots after the Dummy Read. */
+static int64_t rb_after_period(int64_t ref) { return (ref / 20 + 1) * 20 + 13; }
+static int64_t rb_after_dummy(int64_t d)
+{
+    int64_t m = d + 22;
+    return m + (13 - m % 20 + 20) % 20;
+}
+
+/* Eight bits two slots apart from 'want'; §3: the data read's READY 4 slots
+ * after the 8th. */
+static void check_rb_timing(H *h, int64_t want, const char *what)
+{
+    static const int sl[8] = { 13, 15, 17, 19, 1, 3, 5, 7 };
+    int i;
+    CHECK(h->nreads == 8, "%s: 8 bits read (got %d)", what, h->nreads);
+    if (h->nreads < 8)
+        return;
+    CHECK(h->reads[0] == want, "%s: first bit at %lld, expected %lld", what,
+          (long long)h->reads[0], (long long)want);
+    for (i = 0; i < 8; i++) {
+        CHECK(h->reads[i] % 20 == sl[i], "%s: bit %d in slot %d", what, i, (int)(h->reads[i] % 20));
+        CHECK(h->reads[i] - h->reads[0] == 2 * i, "%s: bit %d two slots apart", what, i);
+    }
+    CHECK(h->host_kind == TMS5220_HOST_DATA && h->host_ready == h->reads[7] + 4,
+          "%s: data READY %lld, expected 4 slots after the 8th bit (%lld)", what,
+          (long long)h->host_ready, (long long)h->reads[7] + 4);
+}
+
 static void test_read_byte(void)
 {
     uint8_t img[4] = { 0x23, 0x9B, 0x35, 0x85 };
+    int64_t L, d;
+    int k, seen21 = 0, seen22 = 0, seen14 = 0;
     H h;
+    for (k = 0; k < 20; k++) {
+        hinit(&h);
+        tms6100_load_mem(&h.v, img, 4, 0x3C140);
+        run(&h, k);
+        load_addr(&h, 0x3C140);
+        reset_counts(&h);
+        wr(&h, 0x10);
+        CHECK(rd(&h) == 0xC4, "Read Byte 0x23 -> 0xC4");
+        CHECK(h.ndummy == 1, "Dummy Read before the first Read Byte");
+        d = h.dummy_slot;
+        check_rb_timing(&h, rb_after_dummy(d), "after Load Address");
+        /* §4's measured cases: a slot 13 21 or 14 slots after the Dummy Read
+         * is not used, one 22 slots after is */
+        if (d % 20 == 12) { seen21 = 1; CHECK(h.reads[0] - d == 41, "slot 13 at +21 skipped (+%lld)", (long long)(h.reads[0] - d)); }
+        if (d % 20 == 11) { seen22 = 1; CHECK(h.reads[0] - d == 22, "slot 13 at +22 used (+%lld)", (long long)(h.reads[0] - d)); }
+        if (d % 20 == 19) { seen14 = 1; CHECK(h.reads[0] - d == 34, "slot 13 at +14 skipped (+%lld)", (long long)(h.reads[0] - d)); }
+        reset_counts(&h);
+        wr(&h, 0x10);
+        L = h.host_ready;
+        CHECK(rd(&h) == 0xD9, "Read Byte 0x9B -> 0xD9");
+        check_rb_timing(&h, rb_after_period(L), "second Read Byte");
+        wr(&h, 0x10); CHECK(rd(&h) == 0xAC, "Read Byte 0x35 -> 0xAC");
+        wr(&h, 0x10); CHECK(rd(&h) == 0xA1, "Read Byte 0x85 -> 0xA1");
+        CHECK(h.ndummy == 0, "one Dummy Read for four Read Bytes");
+        tms6100_free(&h.v);
+    }
+    CHECK(seen21 && seen22 && seen14, "Dummy Read slots 21, 22 and 14 before a slot 13 covered");
+}
+
+/* §3, §4, §6: a Read Byte written during speech is held; reads return 0xFF
+ * at once without using it up; after Talk Status clears the byte is read from
+ * slot 13 of the next sample period and the next read returns it. */
+static void test_read_byte_held(void)
+{
+    static const int kv[10] = { 20, 10, 7, 8, 8, 8, 8, 4, 4, 4 };
+    bits s;
+    H h;
+    int i, v, want;
+    memset(&s, 0, sizeof s);
+    f_voiced(&s, 10, 30, kv);
+    f_voiced(&s, 10, 30, kv);
+    f_stop(&s);
+    put(&s, 0x5A, 8);
     hinit(&h);
-    tms6100_load_mem(&h.v, img, 4, 0x3C140);
-    load_addr(&h, 0x3C140);
-    wr(&h, 0x10); CHECK(rd(&h) == 0xC4, "Read Byte 0x23 -> 0xC4");
-    wr(&h, 0x10); CHECK(rd(&h) == 0xD9, "Read Byte 0x9B -> 0xD9");
-    wr(&h, 0x10); CHECK(rd(&h) == 0xAC, "Read Byte 0x35 -> 0xAC");
-    wr(&h, 0x10); CHECK(rd(&h) == 0xA1, "Read Byte 0x85 -> 0xA1");
-    CHECK(h.ndummy == 1, "one Dummy Read for four Read Bytes");
+    tms5220_set_phase(&h.c, 120);
+    tms6100_load_mem(&h.v, s.b, (uint32_t)((s.nbits + 7) / 8), 0x800);
+    run(&h, 500);
+    load_addr(&h, 0x800);
+    wr(&h, 0x50);
+    run(&h, 400);
+    CHECK(rd(&h) & 0x80, "talking");
+    wr(&h, 0x10);
+    for (i = 0; i < 2; i++) {
+        v = rd(&h);
+        CHECK(v == 0xFF, "read %d while held returns 0xFF (0x%02X)", i, v);
+        CHECK(h.host_ready - h.host_start == h.c.cfg.read_ready,
+              "read while held does not wait (%lld slots)", (long long)(h.host_ready - h.host_start));
+    }
+    h.ts_clear_slot = -1;
+    while (h.ts_clear_slot < 0) tms5220_step(&h.c);
+    reset_counts(&h);
+    v = rd(&h);
+    for (i = 0, want = 0; i < 8 && i < h.nreads; i++)
+        want |= h.rbits[i] << (7 - i);
+    CHECK(v == want, "held Read Byte returns its byte (0x%02X, expected 0x%02X)", v, want);
+    check_rb_timing(&h, rb_after_period(h.ts_clear_slot), "held Read Byte");
     tms6100_free(&h.v);
+}
+
+/* §3 "When READY returns": after Read and Branch, READY for the next write at
+ * the start of the first slot 15 more than 59 (and at most 63) slots after the
+ * Branch function, whenever the write is made. */
+static void test_branch_ready(void)
+{
+    uint8_t ptr[2] = { 0xB6, 0x0B }, word = 0x23;
+    tms5220_config cfg;
+    int k, n, seen12 = 0, seen16 = 0;
+    int64_t d, L;
+    H h;
+    for (n = 60; n <= 63; n++)
+        for (k = 0; k < 20; k++) {
+            hinit(&h);
+            tms5220_default_config(&cfg);
+            if (n != 60)
+                cfg.branch_ready = n;
+            tms5220_init(&h.c, &cfg);
+            tms5220_set_vsm(&h.c, tms6100_func, &h.v);
+            tms5220_set_event_cb(&h.c, ev, &h);
+            tms6100_load_mem(&h.v, ptr, 2, 0x3C140);
+            tms6100_load_mem(&h.v, &word, 1, 0x3CBB6);
+            run(&h, k);
+            load_addr(&h, 0x3C140);
+            wr(&h, 0x30);
+            if (k & 1)
+                run(&h, 30);                     /* a later write: same READY */
+            reset_counts(&h);
+            wr(&h, 0x10);
+            d = h.host_ready - h.branch_slot;
+            CHECK(h.host_ready % 20 == 15, "READY after Read and Branch in slot %d",
+                  (int)(h.host_ready % 20));
+            CHECK(d >= n && d - 20 < n, "READY %lld slots after the Branch (limit %d)", (long long)d, n);
+            CHECK(d > 59 && d - 20 < 63, "READY %lld slots after the Branch: outside §3's bounds", (long long)d);
+            if (h.branch_slot % 20 == 16) { seen16 = 1; CHECK(d == 79, "Branch in slot 16: READY 79 slots on (%lld)", (long long)d); }
+            if (h.branch_slot % 20 == 12) { seen12 = 1; CHECK(d == 63, "Branch in slot 12: READY 63 slots on (%lld)", (long long)d); }
+            /* §4: a Read Byte straight after it reads the target, no Dummy
+             * Read; it is latched when READY returns */
+            L = h.host_ready;
+            CHECK(rd(&h) == 0xC4, "Read Byte after Read and Branch reads the target");
+            CHECK(h.ndummy == 0, "no Dummy Read after Read and Branch");
+            check_rb_timing(&h, rb_after_period(L), "after Read and Branch");
+            tms6100_free(&h.v);
+        }
+    CHECK(seen12 && seen16, "the two measured Branch slots were covered");
 }
 
 int main(void)
@@ -303,6 +466,8 @@ int main(void)
     test_stop_first();
     test_speak_external();
     test_read_byte();
+    test_read_byte_held();
+    test_branch_ready();
     if (failures) {
         printf("%d check(s) failed\n", failures);
         return 1;

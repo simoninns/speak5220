@@ -93,12 +93,12 @@ def nextTake(wordDir, path):
     return os.path.join(wordDir, f"{prefix}{max(numbers, default=0) + 1:02d}")
 
 
-def expectedSeconds(image, address, base=None):
+def expectedSeconds(image, address, base=None, oscHz=640000):
     """Talk time from the frames in the image at the address, plus margin."""
     frames, _ = lpc.parseFrames(lpc.bitsLsbFirst(image[picolib.imageOffset(address, base):]))
     if not frames or frames[-1]["kind"] != "stop":
         return UNPARSED_S, None
-    return (len(frames) + 2) * lpc.FRAME_SAMPLES / 8000 + POST_S, len(frames)
+    return (len(frames) + 2) * lpc.FRAME_SAMPLES / (oscHz / 80) + POST_S, len(frames)
 
 
 def zipRaw(takeDir, level=9, remove=False):
@@ -134,7 +134,7 @@ def captureTake(pico, args, manifest, image, word, address, path, wordDir, bench
     takeDir = nextTake(wordDir, path)
     standard = args.start == "standard"
     base = promlib.base(manifest)
-    seconds, frames = expectedSeconds(image, address, base)
+    seconds, frames = expectedSeconds(image, address, base, int(pico.firmware["osc_hz"]))
     picoMeta = {"firmware": pico.firmware.get("firmware"),
                 "osc_hz": int(pico.firmware["osc_hz"]), "banks": pico.info()["banks"]}
     if standard or args.reset:

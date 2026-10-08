@@ -42,7 +42,12 @@ From the repository root: `nix develop -c make -C emulator test`.
   absolute slot 0 is power-up and is slot 0 of a sample period.
 - The **frame clock** runs all the time, 200 samples per frame. Its position
   is 0 in the sample period in which a VSM frame is read (PC 12 of IP 7); the
-  first bit is read in slot 17. `phase` sets the position at power-up.
+  first bit is read in slot 17, and each parameter's bits follow two slots
+  apart from its offset in §4 (0, 34, 78, …, 442 slots), so a voiced frame
+  takes 446 slots. `phase` sets the position at power-up.
+- A Read Byte reads its eight bits two slots apart from slot 13 of the sample
+  period after its latch, or after a Load Address from the first slot 13 at
+  least 22 slots after the Dummy Read (§4).
 - The code of each sample period is computed at its slot 0 and is the code
   sent on `I/O` in slots 2–11 of that period (and to the DAC from slot 1).
 - A host cycle starts at a slot (the strobe) and completes at the slot where
@@ -103,6 +108,7 @@ bytes and addresses, which are hex.
 | `phase <sample>` | Frame-clock position (0–199) of the sample period at power-up; 0 = the period in which a frame would be read. Only before anything runs |
 | `set <param> <value>` | Change a gap choice (a `tms5220_config` field, e.g. `se_shift 0`). Only before anything runs |
 | `slot <n>` | Advance to absolute slot n |
+| `at <n>` | As `slot`, but a slot already passed is not an error (for replays of recorded host cycles) |
 | `wait <slots>` | Advance n slots |
 | `write <hexbyte>` | Host write at the current slot; advances until READY goes active |
 | `writes <hexbyte>...` | Several writes, each starting at the slot after the previous one's READY |
@@ -181,9 +187,16 @@ lines just before it; sort on the first field if strict slot order is needed.
 the §8.8 multiplier worked examples, and the noise register's period; that the idle output is code −1 (u₁ = −9)
 and the status after power-up and Reset is 0x7F; that frames parse to 50, 11,
 29, 4 and 4 bits (voiced, repeat, unvoiced, silence, stop) at several clock
-phases, read from slot 17, 4000 slots apart, with nothing read past the stop
-code and Talk Status clearing 24.87 ms after the stop frame; that a stop code
+phases, read from slot 17 with each parameter's bits at the §4 offsets, 4000
+slots apart, with nothing read past the stop code and Talk Status clearing
+24.87 ms after the stop frame; that a stop code
 as the first frame reads 4 bits, gives no output change, clears Talk Status
 0.09 ms later and raises INT; the Speak External FIFO thresholds (0x5F at 8
-bytes and no speech, 0x9F at the 9th); and Read Byte bit reversal
-(0x23 → 0xC4 and the other §6 examples).
+bytes and no speech, 0x9F at the 9th); Read Byte bit reversal
+(0x23 → 0xC4 and the other §6 examples), its bits from slot 13 of the sample
+period after the latch, or the first slot 13 at least 22 slots after the Dummy
+Read, and the data read's READY 4 slots
+after the eighth bit; a Read Byte held during speech (reads return 0xFF at
+once, then the byte, read from slot 13 after Talk Status clears); and READY
+after Read and Branch at slot 15, 60–79 slots after the Branch (79 and 63 for
+a Branch in slots 16 and 12), for each `branch_ready` from 60 to 63.

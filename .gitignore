@@ -53,6 +53,12 @@ captures/vectors/*/*
 !captures/vectors/*/index.md
 !captures/vectors/*/takes.csv
 captures/vectors/experiments/
+# The same vector sets captured on chip 4 (datasheet section 8.8)
+captures/vectors_chip4/*
+!captures/vectors_chip4/*/
+captures/vectors_chip4/*/*
+!captures/vectors_chip4/*/index.md
+!captures/vectors_chip4/*/takes.csv
 captures/**/raw/*.npz
 captures/**/dac_step_response.npy
 
@@ -62,3 +68,7 @@ proms/images/
 
 # Python bytecode
 __pycache__/
+
+# Local, not for the repository: third-party code built for comparison
+# (MAME's TMS5220, local/mame5220/) and its outputs
+local/
