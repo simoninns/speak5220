@@ -1,6 +1,6 @@
 # TMS5220NL die analysis plan
 
-**Status: Phase 0 done; Phase 1 done except the DAC; Phase 2 done as far as this image allows (`phase0.md`, `phase1.md`, `phase2.md`), 2026-10-09.** The pin map has been re-derived from the pads' drivers. A and B are 14 bits wide, with row 14 the LSB, and the delay stack has 18 clocked inverters per bit. The reference multiplier cell is consistent with the patent's at the level of its links. Both ROMs have been read: the parameter ROM equals `PROM OUT`, and the chirp ROM confirms Table 8-7 (T5 done). The image shows every gate but little of the diffusion, so random logic cannot be traced blind. Averaging the copies of a repeated cell shows much more of it (`phase2.md` §4.2). Phases 2 (step 3), 3 and 4 therefore check the patent's cells against the die and compare cells with each other, giving provisional results that the regression must confirm (§5). A delayered image is wanted, but not required. The block identifications in §2 are still hypotheses unless `phase1.md` §2 says otherwise.
+**Status: Phase 0 done; Phase 1 done except the DAC; Phase 2 done as far as this image allows; Phase 3 done, to its second exit (`phase0.md` to `phase3.md`), 2026-10-09.** The pin map has been re-derived from the pads' drivers. A and B are 14 bits wide, with row 14 the LSB, and the delay stack has 18 clocked inverters per bit. The reference multiplier cell is consistent with the patent's at the level of its links. Both ROMs have been read: the parameter ROM equals `PROM OUT`, and the chirp ROM confirms Table 8-7 (T5 done). The image shows every gate but little of the diffusion, so random logic cannot be traced blind. Averaging the copies of a repeated cell shows much more of it (`phase2.md` §4.2). Phases 2 (step 3), 3 and 4 therefore check the patent's cells against the die and compare cells with each other, giving provisional results that the regression must confirm (§5). A delayered image is wanted, but not required. The block identifications in §2 are still hypotheses unless `phase1.md` §2 says otherwise.
 
 The capture work has taken the reference datasheet as far as measurement can take it. Most of what is still unknown sits in the arithmetic, and the vectors constrain it without naming it. The lowest-order arithmetic in particular (datasheet §8.8, `lowest_order_arithmetic_ideas.md`) has survived every model built from the data and from the patents. A die image shows the circuit itself. This plan sets out how to read the image in phases, ordered so that each one either answers one of the important unknowns or makes the next phase reliable.
 
@@ -141,6 +141,12 @@ This is the main phase. It works by **difference from the reference cell** of Ph
 
 **Exit:** either the voiced first departures in the pitch set disappear (the answer, provisional until a delayered image confirms it), or no difference in the low-end cells changes the model, which moves the search to Phase 4.
 
+**Result (`phase3.md`): the second exit.**
+- **Bits 1 and 2 are the middle cell in every stage.** Bit 0 differs only in that its inputs from below are tied off, to a diffusion band and contact plate. What they are tied to turns on one ambiguous rim.
+- **No tie-off variant improves the model.** Each stage's ties were set to NEG, 0 or 1 in turn: 41 variants, scored on the unvoiced K sweeps and the ring and pitch sets.
+- **Stage 0 has no adder** (group 1 lacks the reference cell's left logic block). So the +1 completing its negative digit has nowhere to enter. That is the form the model had already fitted (datasheet §8.8), which is now *consistent with the die*.
+- **Stages 1–3 are the same cell with the same ties,** yet only *d*₁ < 0 goes wrong. That points at stage 1's input: stage 0's output, which comes from select logic rather than an adder. This is the first candidate for Phase 5's marginal node.
+
 ### Phase 4: the adder, the multiplexers and the delay stack (T2, T3)
 
 The method is the same as in Phase 3: find the adder's repeated cell, check it against the patent, then compare bits 0 and 1 with it.
@@ -196,10 +202,10 @@ This phase is open-ended, and much of it can also be measured on the bench, so i
 | 0 Preparation | done (`phase0.md`); pin map moved to Phase 1 | — |
 | 1 Floorplan | done except the DAC (`phase1.md`); open items in its §6 | 0 |
 | 2 Calibration and chirp | done (`phase2.md`) | 1 |
-| 3 Multiplier low end | 3–5 evenings; results provisional until a delayered image exists | 2 (step 3) |
+| 3 Multiplier low end | done (`phase3.md`): no change to the model; the stage 0 → stage 1 link is the lead for Phase 5 | 2 (step 3) |
 | 4 Adder and stack | 2–3 evenings | 1; scored together with 3 |
 | 5 Marginal nodes | 2–4 evenings, if needed | 3, 4 |
 | 6 DAC | 2 evenings | 0 |
 | 7 Control | open-ended | 1 |
 
-**Order from here:** Phases 3 and 4, starting from the row 14 tie-offs (`phase2.md` §4.4), using `die.py copies` to average cells. The Phase 1 open items (the DAC, the `VDD` path, naming the clock phases) can be done alongside; Phase 3 needs φ2 and φ3 on the cell. Phase 6 and the PLA of Phase 7 can be read directly on this image, do not depend on the datapath, and can be done at any time.
+**Order from here:** Phase 4 (the adder, the summer multiplexer, stage 4's cell and the MSB ends, which `phase3.md` left to it), then Phase 5, starting with the stage 0 → stage 1 link (`phase3.md` §5). The temperature and supply test (`lowest_order_arithmetic_ideas.md` §4.5) would say whether that lead is a level effect, without the die. The Phase 1 open items (the DAC and naming the clock phases) can be done alongside; Phase 5 needs the clock phases on stage 1's input. Phase 6 and the PLA of Phase 7 can be read directly on this image, do not depend on the datapath, and can be done at any time.

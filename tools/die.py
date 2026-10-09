@@ -13,6 +13,7 @@
       python tools/die.py annotate [--out F]        # the overview with cells.json drawn on it
       python tools/die.py rom                       # read the parameter and chirp ROMs
       python tools/die.py copies                    # the multiplier cell against its copies
+      python tools/die.py lowend                    # each stage's end rows against its middle rows
 
     The image and everything made from it stay under local/die_image/
     (git-ignored): the JPEG is 85 MB, its raw cache 809 MB and the tiles
@@ -473,6 +474,77 @@ def cmd_copies(args):
     print(f'averaged {len(regular)} copies; wrote {out} and {sat_out}')
 
 
+def grab(name, x, y, w, h):
+    """A region of either image, in this image's coordinates."""
+    if name == '5220':
+        return np.asarray(image()[y:y + h, x:x + w]).astype(float)
+    return crop_5200(x + OFFSET_5200[0], y + OFFSET_5200[1], w, h).astype(float)
+
+
+def cmd_lowend(args):
+    """Compare every row of each column group of A with its own group's
+    middle rows (3-11, averaged), in both images, and each group's average
+    with group 3's. Prints the scores and the difference blobs; writes the
+    averages and a difference overview of rows 1, 2, 12, 13 and 14 to
+    local/die_image/phase3/."""
+    from scipy import ndimage as ndi
+    W, H, M = A_COL, A_ROW, 30
+    out = os.path.join(LOCAL, 'phase3')
+    os.makedirs(out, exist_ok=True)
+    ends = (1, 2, 12, 13, 14)
+    avgs, diffs, rows = {}, {}, {}
+    for name in ('5220', '5200'):
+        for g, gx in enumerate(A_GROUPS, 1):
+            tpl = grab(name, gx, A_ROW1 + 5 * H, W, H)
+            copies, scores = {}, []
+            for r in range(1, 15):
+                x, y = gx - M, A_ROW1 + (r - 1) * H - M
+                win = grab(name, x, y, W + 2 * M, H + 2 * M)
+                s, dx, dy = best_match(win[..., 1], tpl[..., 1])
+                copies[r] = win[dy:dy + H, dx:dx + W]
+                scores.append(s)
+            avg = np.mean([copies[r] for r in range(3, 12)], 0)
+            avgs[name, g] = avg
+            np.save(os.path.join(out, f'avg_{name}_g{g}.npy'), avg)
+            for r in ends:
+                diffs[name, g, r] = ndi.gaussian_filter(np.abs(copies[r][..., 1] - avg[..., 1]), 3)
+                rows[name, g, r] = copies[r]
+            print(f'{name} group {g}, rows 1-14 against row 6: ' + ' '.join(f'{s:.2f}' for s in scores))
+
+    def blobs(d, limit=150):
+        lab, _ = ndi.label(d > 30)
+        found = []
+        for i, s in enumerate(ndi.find_objects(lab), 1):
+            area = int((lab[s] == i).sum())
+            if area > limit:
+                found.append((s[1].start, s[0].start, s[1].stop - s[1].start, s[0].stop - s[0].start, area))
+        return sorted(found, key=lambda b: -b[4])
+
+    print('differences present in both images (cell x, y, w, h, area):')
+    tiles = []
+    for g in range(1, 6):
+        line = []
+        for r in ends:
+            d = np.minimum(diffs['5220', g, r], diffs['5200', g, r])
+            b = blobs(d)
+            if r >= 12:
+                print(f'  group {g} row {r}: {b[:6]}')
+            m = np.clip((d - 15) / 25, 0, 1)[..., None]
+            o = rows['5220', g, r] * (1 - 0.7 * m) + np.array([255, 0, 255]) * 0.7 * m
+            line.append(Image.fromarray(o.astype(np.uint8)).resize((420, 151)))
+        tiles.append(line)
+    sheet = Image.new('RGB', (5 * 425, 5 * 156), 'white')
+    for i, line in enumerate(tiles):
+        for j, t in enumerate(line):
+            sheet.paste(t, (j * 425, i * 156))
+    sheet.save(os.path.join(out, 'diff_overview.png'))
+    for g in (1, 2, 4, 5):
+        a, b = avgs['5220', 3], avgs['5220', g]
+        s, dx, dy = best_match(np.pad(b[..., 1], 20, mode='edge'), a[20:-20, 20:-20, 1])
+        print(f'group {g} average against group 3: {s:.2f}')
+    print(f'wrote {out}/')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1].strip(),
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -496,9 +568,10 @@ def main():
     sub.add_parser('rom', help='read the parameter and chirp ROMs')
     k = sub.add_parser('copies', help='the multiplier cell against its copies, and their average')
     k.add_argument('--out', help='the averaged cell (default local/die_image/cell_average.png)')
+    sub.add_parser('lowend', help="each stage's end rows against its middle rows (Phase 3)")
     args = p.parse_args()
-    {'cache': cmd_cache, 'tiles': cmd_tiles, 'crop': cmd_crop,
-     'annotate': cmd_annotate, 'rom': cmd_rom, 'copies': cmd_copies}[args.cmd](args)
+    {'cache': cmd_cache, 'tiles': cmd_tiles, 'crop': cmd_crop, 'annotate': cmd_annotate,
+     'rom': cmd_rom, 'copies': cmd_copies, 'lowend': cmd_lowend}[args.cmd](args)
 
 
 if __name__ == '__main__':

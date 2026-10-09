@@ -341,6 +341,9 @@ python tools/die.py crop 16500 4300 1300 1600 --scale 0.75 --out p.png
 python tools/die.py crop --cell pad21       # a record of cells.json, with a margin
 python tools/die.py annotate                # redraw docs-tech/die_analysis/fig_floorplan.jpg
 python tools/die.py tiles --viewer-only     # refresh the viewer's overlay after editing cells.json
+python tools/die.py rom                     # read the parameter and chirp ROMs (phase2.md)
+python tools/die.py copies                  # the multiplier cell against its copies, and their average
+python tools/die.py lowend                  # each stage's end rows against its middle rows (phase3.md)
 ```
 
 The viewer draws every record of `docs-tech/die_analysis/cells.json` and shows the image coordinates under the mouse, ready to copy into a new record.

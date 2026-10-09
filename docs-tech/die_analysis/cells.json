@@ -9,7 +9,7 @@
    5774,
    6780
   ],
-  "notes": "Array multiplier? Header row (y 5282), 14 bit rows of 452 px, five column groups of 1,260 px from x 1480; groups 2-4 identical, 1 and 5 differ. Row 14 is the LSB (phase2.md section 4.3)"
+  "notes": "Array multiplier: header row (y 5282), 14 bit rows of 452 px, five column groups (stages 0-4) of 1,260 px from x 1480. Groups 2-4 are the same cell; group 1 (stage 0) lacks the left logic block (no adder); group 5 differs. Row 14 is the LSB (phase2.md section 4.3, phase3.md)"
  },
  {
   "name": "block_B",
@@ -1091,5 +1091,41 @@
    310
   ],
   "notes": "SPEAKER output: one P-channel transistor, W about 1.2 mm, L about 17 um. Source = outer C on VSS; gate = two wide plates (x 8303-10035); drain = inner line, joined to P13 via the column at x 10040-10075 (read by eye, phase1.md section 2)"
+ },
+ {
+  "name": "lsb_ties_g3",
+  "label": "T",
+  "kind": "feature",
+  "box": [
+   4380,
+   11940,
+   880,
+   110
+  ],
+  "notes": "Row 14 (LSB) of group 3: the channel lines stop at y 11,960 above a diffusion band and a long contact plate (x 4,515-4,745, y 12,000-12,040) whose bar runs right; the same in groups 2 and 4, longer in group 1, absent in group 5 (phase3.md section 2)"
+ },
+ {
+  "name": "stage_line_945",
+  "label": "945",
+  "kind": "feature",
+  "box": [
+   4930,
+   5630,
+   25,
+   6370
+  ],
+  "notes": "Stage-wide line at cell x ~945 in every group: from a contact at the top of row 1 (4,952, 5,645) to a contact at the bottom of row 14 (4,948, 11,988), beside the tie plate's bar; not a supply or a G clock (phase3.md section 2.2)"
+ },
+ {
+  "name": "stage0_cell",
+  "label": "S0",
+  "kind": "cell",
+  "box": [
+   1480,
+   8446,
+   1260,
+   452
+  ],
+  "notes": "Stage 0 cell (group 1, row 7): no left logic block (an empty field box and one long window per row), right block as the reference cell's: select and MR passing without an adder (phase3.md section 3)"
  }
 ]

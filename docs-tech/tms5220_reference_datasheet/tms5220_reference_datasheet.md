@@ -627,6 +627,13 @@ This matched the chip better than every other form tried:
 - K negated before or after the product;
 - (from the patent) stage 0 seeing only the twelve high bits of *M*, and the previous output fed back with its four or six low bits dropped, in the multiplier or in the adder. Each fitted the vectors as well as or worse than the form above, by up to 20 times [vectors `pitch`, `k`, `interp`, `energy`].
 
+**From the die (provisional).** The die image agrees with this form (`docs-tech/die_analysis/phase3.md`).
+- **Stage 0 is built without an adder.** Its cells lack the half that adds the incoming partial sum, so the +1 that would complete its negative digit has no carry-in to enter.
+- **Stages 1–3 are one cell, with identical bit-0 tie-offs.** Each stage's own +1 enters there. Stage 4 is a different cell.
+- **Bits 1 and 2 of every stage are the ordinary cell.**
+
+No reading of the bit-0 tie-offs fitted the vectors better than the form above.
+
 Using it for the energy product too, as the patent describes, cut the mismatch on the energy and pitch vectors by a factor of 4 to 5. The forced 1 also explains the idle output: with the energy and all coefficients zero, *u*₁₁ = +1 and each stage subtracts 1, so *u*₁ settles at −9 and the code is −1 [vectors `energy`, vectors `pitch`].
 
 **Word length and overflow.** The filter's values are 14-bit two's complement, −8192 to +8191. Every sum (*u*₁₁, each *u*ᵢ and each *b*ᵢ) wraps at 14 bits; nothing saturates. US 4,335,277 gives the adder, the delay stack and the multiplier input as 14 bits (D0–D13). On data that stays in the speech range the wrap never acts. On the loud and random vectors, wrapping every sum cut the model's total difference from the chip to a third (loud) and a half (random), against unbounded sums. These did worse:
@@ -1163,3 +1170,4 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-09 | §12, §8.9 | New: the authoring guide (bit budget, frame timing for authors, levels, the excitation's spectrum, the K sign convention, an encoding method, VSM images, word tables, Speak External streams, how the original data was encoded). §8.9 clarified where an encoder written from it found it ambiguous. New speech data, encoded from this datasheet alone, plays on the chip as the emulator predicted | `captures/phase11/` |
 | 2026-10-09 | §8.10, §8.1, §11.2 | New: `PROM OUT` (pin 10) is the parameter ROM's serial output (US 4,335,277 Fig. 8f): each parameter's table value at its stored index, 10 bits LSB first, repeating every 25 sample periods; open drain. All 248 energy, pitch and K entries read from chip 1 equal Tables 8-4 to 8-6, which confirms the 26 K entries the fit had left unconfirmed. In an unvoiced frame it shows K5–K10 at their stored indices, as §12.2 describes | `captures/promout/chip1/` |
 | 2026-10-09 | §8.1, §8.10 | Both ROMs read from the die image: every readable parameter-ROM bit equals `PROM OUT`. The chirp ROM (52 × 8 bits) equals Table 8-7 at every address, which confirms the 26 chirp entries the fit had left unconfirmed (no † remains). The ROM stores pitch unshifted | `docs-tech/die_analysis/phase2.md`, `rom_chirp.csv`, `rom_parameters.csv` |
+| 2026-10-09 | §8.8 | The multiplier compared with the die's low-end cells (provisional). Stage 0 has no adder, which explains why only its negative digits lack the +1. Bits 1 and 2 of every stage are the ordinary cell. Bit 0 has its inputs from below tied off, and no reading of the ties fits better. The multiplier form is unchanged | `docs-tech/die_analysis/phase3.md` |
