@@ -155,7 +155,7 @@ python tools/protocol.py all                       # host interface and VSM comm
 python tools/protocol.py fifo_start --analyse      # rebuild a test's result.json from its traces
 ```
 
-- **`vectors.py`** builds sets of frame sequences (energy, pitch, K, noise, interpolation, special frames, random, loud, and Phase 9's ring set). Each set is a synthetic PROM: a manifest (`<set>.json`) whose word table lists the vectors, the image (`<set>.bin`), and every vector's frames (`<set>.csv`). `run.py` accepts a manifest path in place of a PROM name. Speak External streams are the vectors' bytes up to their stop codes. `lpc.encodeFrames` does the encoding: each field most significant bit first, the bytes read least significant bit first.
+- **`vectors.py`** builds sets of frame sequences (energy, pitch, K, noise, interpolation, special frames, random, loud, Phase 9's ring and loc sets, and Phase 10's onset set). Each set is a synthetic PROM: a manifest (`<set>.json`) whose word table lists the vectors, the image (`<set>.bin`), and every vector's frames (`<set>.csv`). `run.py` accepts a manifest path in place of a PROM name. Speak External streams are the vectors' bytes up to their stop codes. `lpc.encodeFrames` does the encoding: each field most significant bit first, the bytes read least significant bit first.
 - **`model.py`** is the candidate model of the synthesis path that the datasheet's §8.5–§8.9 describe. Its defaults are the measured behaviour; its options select the alternatives that were tested.
   - **`compareTake`** models a standard-procedure take and compares it with the chip's `I/O` codes. The noise state and alignment for each path come from `STANDARD_START`. Its `before` argument speaks earlier utterances first: the coded parameters carry over (datasheet §7).
   - **It is not the Phase 9 emulator.** That is written from the datasheet alone.
@@ -179,7 +179,9 @@ python tools/regress.py vectors corpus             # every vector set and the Ac
 python tools/regress.py corpus --sweep             # ... and its address sweep
 python tools/regress.py vectors --model            # also compare the emulator with model.py
 python tools/vectors.py build loc                  # localisation and decay vectors (lowest-order error)
+python tools/vectors.py build onset                # Phase 10: the first pitch pulse after silence
 python tools/variance.py                           # chip against itself, chip against chip, model against chip
+python tools/departures.py corpus repeat            # where the chip departs from the model and from itself
 python tools/replay.py                             # the Phase 8 host tests (p8-19 to p8-25) through the emulator
 python tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip and emulator side by side
 ```
@@ -202,10 +204,12 @@ python tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip
 - **`variance.py`** measures how far apart two outputs of the same utterance are, the same way for five kinds of pair:
   - chip 1's own takes, in the same session;
   - chip 1 two days apart (`captures/vectors_chip1_repeat/`);
-  - chip 4 against chip 1;
+  - chip 4 against chip 1: the vector sets in `captures/vectors_chip4/`, and the PROM words in `captures/corpus_chip4/` (takes 2-5, which follow the same word on both chips);
   - the model against each chip, rebuilt as `regress.py` does.
 
   For each pair it gives the share of samples equal, the RMS and largest difference, and the signal-to-difference ratio, over the speech window. Corpus takes are paired only when both follow the same word, because the filter's state carries over. Output: `pairs.csv` and `summary.json` in `captures/phase9/variance/` (datasheet §8.8, "Expected agreement").
+
+- **`departures.py`** (Phase 10) finds where the chip departs from the model, and from itself, in groups of takes of one word and path that all follow a take of the same word. Its sources are `corpus` (every PROM's words) and `repeat` (`captures/phase10/repeat/`, 49 takes of six words). It labels deterministic departures (every take agrees, the model differs), upset starts (the model and the takes agree, then some takes leave) and a sample of controls, each with the model's state there: u1 and its position in the output step, the excitation, and each K with its Booth digits and the b value it multiplies. Output in `captures/phase10/departures/<source>/`: `events.csv` (kept local), `words.csv` and `summary.json`, with a logistic fit of each kind against the controls (`docs-tech/lowest_order_arithmetic_ideas.md`).
 
 
 **Other clocks.** `python tools/pico.py clock <hz>` (while the chip is idle) sets `OSC`, and `run.py` then works as at 640 kHz. The frame period is taken from the exact PWM divider, because `INFO` rounds the frequency to whole hertz. The Speak's target latch time scales with the clock, so the noise generator restarts in the same slot and `model.py` lines up as at 640 kHz. Restore 640 kHz afterwards.

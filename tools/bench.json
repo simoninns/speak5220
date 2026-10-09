@@ -6,7 +6,7 @@
     "marking": "TMS5220NL / DEP 8423",
     "date_code": "8423",
     "revision": "TMS5220 (not 5220C)",
-    "note": "labelled 1 on the package; the original reference chip, refitted 2026-10-08 after chip 4"
+    "note": "labelled 1 on the package; the original reference chip, refitted 2026-10-09 after chip 4"
   },
   "board": {
     "build": "breadboard, wired to the schematic in kicad/ (git hash in host_git)"

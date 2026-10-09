@@ -102,7 +102,7 @@ Earlier entries now settled by the text and implemented as written:
 - the start-of-speech zeroing driving the registers to 0 in IP 0;
 - indices (not values) persisting;
 - stop counted as silence in all three inhibit rules, with silence and stop keeping the previous voicing;
-- the pitch-counter hold through IP 0's PC 0 A and B, and the counter advancing only while talking;
+- the pitch-counter hold through IP 0's PC 0 A and B and PC 1 A (three samples), and the counter advancing only while talking;
 - the excitation voicing from oldU of the previous sample;
 - the idle zero writes one sample earlier;
 - K5–K10 zeroing, with silence frames and voiced repeats;

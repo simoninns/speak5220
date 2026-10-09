@@ -659,8 +659,9 @@ static void period_start(tms5220 *c)
             }
             wq_add(c, c->period + filt_delay[pc_a], pc_a, value);
         }
-        /* 2.3 */
-        if (ip == 0 && local == 1)
+        /* 2.3 In the A sample of PC 1 of IP 0 (local 2), clear hold: the
+         * counter is held through PC 0 A and B and PC 1 A (§8.6). */
+        if (ip == 0 && local == 2)
             c->hold = 0;
     } else {
         /* 3. */

@@ -1,0 +1,381 @@
+{
+ "name": "vectors_onset",
+ "title": "Phase 8 test vectors: onset",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase8/vectors/onset.bin",
+  "kind": "synthetic",
+  "size": 1997,
+  "sha256": "efeff5f577618d8917ce238ea3d275446ea88ccc4b693717d53bbab844f14425",
+  "crc32": "040ab533"
+ },
+ "bank": 0,
+ "format": "vectors",
+ "provenance": "tools/vectors.py set 'onset': Phase 10: the first pitch pulse after silence. In the PROM words the\nchip's chirp starts one sample later than the model's after voiced\nspeech and one or two silence frames, and on time after three or after\nunvoiced speech. Voiced, n silence frames, voiced: n from 1 to 6, at\npitches before the silence that leave the pitch counter at different\nphases; other pitches after it; and the same after unvoiced speech,\ninto a repeat frame, at a loud resonant setting, and with no silence.",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "v_p12_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 2,
+   "address": "0x00027",
+   "name": "v_p20_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 3,
+   "address": "0x0004E",
+   "name": "v_p28_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 4,
+   "address": "0x00075",
+   "name": "v_p36_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 5,
+   "address": "0x0009C",
+   "name": "v_p44_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 6,
+   "address": "0x000C3",
+   "name": "v_p52_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 7,
+   "address": "0x000EA",
+   "name": "v_p60_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 8,
+   "address": "0x00111",
+   "name": "v_p12_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 9,
+   "address": "0x00138",
+   "name": "v_p20_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 10,
+   "address": "0x0015F",
+   "name": "v_p28_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 11,
+   "address": "0x00186",
+   "name": "v_p36_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 12,
+   "address": "0x001AD",
+   "name": "v_p44_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 13,
+   "address": "0x001D4",
+   "name": "v_p52_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 14,
+   "address": "0x001FB",
+   "name": "v_p60_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 15,
+   "address": "0x00222",
+   "name": "v_p12_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 16,
+   "address": "0x0024A",
+   "name": "v_p20_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 17,
+   "address": "0x00272",
+   "name": "v_p28_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 18,
+   "address": "0x0029A",
+   "name": "v_p36_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 19,
+   "address": "0x002C2",
+   "name": "v_p44_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 20,
+   "address": "0x002EA",
+   "name": "v_p52_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 21,
+   "address": "0x00312",
+   "name": "v_p60_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 22,
+   "address": "0x0033A",
+   "name": "v_p12_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 23,
+   "address": "0x00362",
+   "name": "v_p20_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 24,
+   "address": "0x0038A",
+   "name": "v_p28_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 25,
+   "address": "0x003B2",
+   "name": "v_p36_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 26,
+   "address": "0x003DA",
+   "name": "v_p44_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 27,
+   "address": "0x00402",
+   "name": "v_p52_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 28,
+   "address": "0x0042A",
+   "name": "v_p60_s4_v_p24",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 29,
+   "address": "0x00452",
+   "name": "v_p12_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 30,
+   "address": "0x0047B",
+   "name": "v_p20_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 31,
+   "address": "0x004A4",
+   "name": "v_p28_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 32,
+   "address": "0x004CD",
+   "name": "v_p36_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 33,
+   "address": "0x004F6",
+   "name": "v_p44_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 34,
+   "address": "0x0051F",
+   "name": "v_p52_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 35,
+   "address": "0x00548",
+   "name": "v_p60_s6_v_p24",
+   "frames": 13,
+   "bytes": 41
+  },
+  {
+   "number": 36,
+   "address": "0x00571",
+   "name": "v_p28_s1_v_p12",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 37,
+   "address": "0x00598",
+   "name": "v_p28_s3_v_p12",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 38,
+   "address": "0x005C0",
+   "name": "v_p28_s1_v_p44",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 39,
+   "address": "0x005E7",
+   "name": "v_p28_s3_v_p44",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 40,
+   "address": "0x0060F",
+   "name": "v_p28_s1_v_p63",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 41,
+   "address": "0x00636",
+   "name": "v_p28_s3_v_p63",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 42,
+   "address": "0x0065E",
+   "name": "u_s1_v_p24",
+   "frames": 8,
+   "bytes": 31
+  },
+  {
+   "number": 43,
+   "address": "0x0067D",
+   "name": "v_p28_s1_r_p24",
+   "frames": 8,
+   "bytes": 24
+  },
+  {
+   "number": 44,
+   "address": "0x00695",
+   "name": "loud_v_p28_s1_v_p24",
+   "frames": 8,
+   "bytes": 39
+  },
+  {
+   "number": 45,
+   "address": "0x006BC",
+   "name": "u_s2_v_p24",
+   "frames": 9,
+   "bytes": 32
+  },
+  {
+   "number": 46,
+   "address": "0x006DC",
+   "name": "v_p28_s2_r_p24",
+   "frames": 9,
+   "bytes": 25
+  },
+  {
+   "number": 47,
+   "address": "0x006F5",
+   "name": "loud_v_p28_s2_v_p24",
+   "frames": 9,
+   "bytes": 39
+  },
+  {
+   "number": 48,
+   "address": "0x0071C",
+   "name": "u_s3_v_p24",
+   "frames": 10,
+   "bytes": 32
+  },
+  {
+   "number": 49,
+   "address": "0x0073C",
+   "name": "v_p28_s3_r_p24",
+   "frames": 10,
+   "bytes": 25
+  },
+  {
+   "number": 50,
+   "address": "0x00755",
+   "name": "loud_v_p28_s3_v_p24",
+   "frames": 10,
+   "bytes": 40
+  },
+  {
+   "number": 51,
+   "address": "0x0077D",
+   "name": "v_p28_v_p24",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 52,
+   "address": "0x007A3",
+   "name": "v_p28_u_v_p24",
+   "frames": 8,
+   "bytes": 42
+  }
+ ]
+}

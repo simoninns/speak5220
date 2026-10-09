@@ -384,7 +384,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 7. Acorn PHROM A reference set | 2, 4, 5, 6 | Done |
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Done |
 | 9. Reference emulator | 8 (runs alongside it) | In progress: emulator and harness done; not yet bit-exact |
-| 10. Remaining PROM corpora | 6, 7 | Not started |
+| 10. Remaining PROM corpora | 6, 7 | Done (within the tolerance of §1.5 on every PROM) |
 | 11. Authoring, and confirmation with new speech data | 8, 9 | Not started |
 | 12. Publish | All | Not started |
 
@@ -833,31 +833,45 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
     - **Bench time:** 8.7 hours in one unattended run, against the 7.2 budgeted. The fixed cost per take was 1.5–2.0 s, more than in Phase 7, mostly on the longer TI-99 and VM61002 words.
   - **Words too short for Speak External.** Speak External does not start speech until the FIFO holds 9 bytes (datasheet §6). Two words are shorter: `vm71003a` 35 "(0.25)" (5 bytes) and `vm61004` 35 "(Pause)" (8 bytes), both silence followed by a stop code. Through Speak External, "(0.25)" never spoke, and its five takes are kept with `talk_status` and `duration` failing. The bytes such a word leaves in the FIFO also turn the next reset sequence into data, so its Reset is never executed and the next take does not start from the standard state. `run.py` now speaks words shorter than 9 bytes through the VSM only, so "(Pause)" was captured that way.
   - **The tools cover every PROM.** `regress.py corpus` and `variance.py` now take every PROM in `captures/corpus/`.
-  - **The emulator against the chip** (`captures/phase10/regress/`, `captures/phase10/variance/`):
-    - **It equals `tools/model.py`** on every take of every PROM, words and sweeps: 15,123 takes, no sample different.
-    - **Layer 1 (VSM path):** the bits read and the time Talk Status cleared match on every take (within 4.2 µs). The frame-read samples match on every take but 18 (below).
-    - **Layer 2, against the tolerance of §1.5:**
+  - **The follow-up tests (2026-10-09),** run after the first regression left `starwars_speech` outside the tolerance:
+    - **Where the emulator's error comes from.** Over every PROM word, the takes 2–5 of each word and path (which follow the same word) were compared with each other and with the model. About 87 % of the model's departures from the chip start at samples where all four takes agree. So most of the emulator's error is deterministic: the lowest-order arithmetic (datasheet §8.8). The rest starts where the chip's takes disagree (upsets), and a small share, large in a few words, came from the onset after silence (below).
+    - **The onset vectors** (`tools/vectors.py` set `onset`, 52 vectors, 2 takes per path, chips 1 and 4; `captures/vectors/vectors_onset/`, `captures/vectors_chip4/vectors_onset/`): voiced, then 1 to 6 silence frames, then voiced, at seven pitches before and four after; and the same after unvoiced speech, into a repeat frame, at a loud resonant setting, and with no silence.
+    - **The repeat test** (49 takes each of six words, chip 1; `captures/phase10/repeat/`): `acorn_phrom_a` 213 L, `vm61002` 115 NOR, `vm61004` 71 ERROR and `ti99_speech` 345 WELL through the VSM, and `starwars_speech` 12 and 13 through Speak External.
+    - **Chip 4 on PROM words** (`captures/corpus_chip4/`, index files committed): every `starwars_speech` word through Speak External, and every `vm61003_words` word through both paths, five takes each. Chip 4 fails `layer2_vs_layer3` on every take, as in Phase 9 (its DAC gain differs); no other check failed apart from start-slot retakes.
+    - **Corpus mining** (`tools/departures.py`, `captures/phase10/departures/`). The model's internal state at every clean deterministic departure (15,851), every clean upset start (387) and a 3 % sample of agreeing samples (56,999 controls), over every PROM word; and the same over the repeat test.
+    - **Bench time:** about 1.4 hours (chip 1 0.6 h, chip 4 0.9 h).
+  - **The emulator against the chip** (`captures/phase10/regress/`, `captures/phase10/variance/`), after the correction of datasheet §8.6 below:
+    - **It equals `tools/model.py`** on every take of every PROM, words and sweeps, the Acorn PHROM A included: no sample different.
+    - **Layer 1 (VSM path):** the bits read and the time Talk Status cleared match on every take (within 4.4 µs). The frame-read samples match on every take but 18 (below).
+    - **Layer 2, against the tolerance of §1.5,** with chip 4 as the reference where it was captured, as §1.5 prescribes:
 
-      | PROM | Chip 1 take to take (dB) | Emulator (dB) | Gap (dB) | |
-      |---|---|---|---|---|
-      | `ti99_speech` | 39.6 | 34.8 | 4.9 | within |
-      | `vm61002` | 34.8 | 31.3 | 3.6 | within |
-      | `vm61004` | 35.3 | 31.2 | 4.2 | within |
-      | `vm71003a` | 38.7 | 32.8 | 5.9 | within |
-      | `vm61003_words` | 35.7 | 31.6 | 4.0 | within |
-      | `vm61005_words` | 36.1 | 31.6 | 4.5 | within |
-      | `starwars_speech` | 40.0 (40.7, capped) | 32.5 | 7.5 | **outside** |
+      | PROM | Reference | Reference (dB) | Emulator (dB) | Gap (dB) | |
+      |---|---|---|---|---|---|
+      | `ti99_speech` | chip 1 takes | 39.6 | 34.8 | 4.9 | within |
+      | `vm61002` | chip 1 takes | 34.8 | 31.3 | 3.6 | within |
+      | `vm61004` | chip 1 takes | 35.3 | 31.3 | 4.1 | within |
+      | `vm71003a` | chip 1 takes | 38.7 | 32.8 | 5.9 | within |
+      | `vm61003_words` | chip 4 | 32.0 | 31.7 | 0.3 | within |
+      | `vm61005_words` | chip 1 takes | 36.1 | 31.6 | 4.5 | within |
+      | `starwars_speech` | chip 4 | 35.6 | 32.5 | 3.1 | within |
 
-      *Median SDR over the speech window. The Acorn PHROM A gives 37.5, 32.5 and 5.0 for comparison.*
-- **Status:** captured (2026-10-09). The emulator is within the tolerance on six of the seven PROMs. It is outside on `starwars_speech`, by 0.5 dB, so the done-when is not met for that PROM. Whether that calls for a change to the tolerance or to the emulator is open (below).
+      *Median SDR over the speech window. The Acorn PHROM A gives 37.5, 32.6 and 4.9. Against chip 1's own takes, `starwars_speech` was outside (40.7 dB capped at 40, against 32.5: a gap of 7.5 dB).*
+- **Status:** done (2026-10-09). Every word of every inventoried PROM is captured, the sampled sweep addresses are captured, and the emulator matches all of them within the tolerance of §1.5: the VSM timing exactly, and layer 2 on every PROM. The tolerance rule was not changed. `starwars_speech` came within it through the reference that §1.5 already names, a second chip.
 - **Findings:**
-  - **Star Wars is outside because the chip repeats it better, not because the emulator does worse.** The emulator's median SDR, 32.5 dB, is the same as on the Acorn PHROM A. Chip 1's own takes agree better than on any other PROM (median 40.7 dB), so the tolerance asks more there. Path does not explain it: on every other PROM the two paths agree equally well. The set is also small, 46 take pairs from 23 words. A tolerance measured against chip 1's own takes therefore depends on how repeatable the data happens to be. A second chip on this set (Phase 9's chip 4) would give a reference that does not.
-  - **After a silence frame, the chip's first pitch pulse is one sample later than the datasheet's rule** (§8.6, the counter hold after an inhibited change). In the frames that follow voiced speech and one or two silence frames, the chip's chirp starts one sample later than the model's in 97 of 121 such onsets in the Acorn PHROM A, and in every such onset in `vm61003_words`, `vm61004` and `starwars_speech`. After three silence frames, and after unvoiced frames (790 of 795), the timing matches. The error then runs on through the voiced sound, and gives the worst Star Wars word, LOOK AT THE SIZE OF THAT THING (18 dB, up to 86 codes). Found with a script that compares chip and model around each onset. It is not yet in the datasheet.
-  - **TI-99 is loud, as in Phase 6.** Only 61 % of samples are equal, against 73–79 % for the other PROMs, with differences of up to 25 codes at the 90th percentile. Its take-to-take agreement is high, though, and the emulator is within the tolerance.
+  - **After silence that followed voiced speech, the chirp starts one sample later than the datasheet said.** The pitch counter's hold at an inhibited change lasts three samples of IP 0 (PC 0 A and B, and PC 1 A), not two. The onset vectors show it on both chips, through both paths, every take: after 1 to 6 silence frames, at every pitch before and after, into a voiced or a repeat frame. After unvoiced speech the hold's length makes no difference, because the counter is at 0 until the new pitch arrives. With the correction the model matches the onset of every onset vector on both chips. Across the data set its error power fell by up to 13 times (`vm61003_words`; 6.6 times `vm61004`, 2.2 times `starwars_speech`), and no PROM or vector set got worse; 28 of about 40,000 takes lost a few matching samples in chaotic stretches. The median SDRs barely moved, because the error was concentrated in a few words. Datasheet §8.6 and §8.9 were corrected first, then `tools/model.py` (option `pitch_hold`), then the emulator, by a separate agent from the revised text alone (`emulator/tms5220.c`, step 2.3). In the PROM words the corrected model now matches every such onset in the Acorn, `vm61003_words`, `vm61004` and Star Wars words (166, whatever the number of silence frames). So the first report's "on time after three silence frames" did not hold; the lag measure used then (best shift over 40 samples) is coarse. In TI-99 the measure gives mixed lags on its loud onsets, and its words that start with a silence frame are 3 samples off: the known approximation of a first silence frame (datasheet §7).
+  - **What is different about the Star Wars data.** Not the chip's behaviour: its upsets start at the same rate as on every other PROM (about 5 a second) and carry the same energy each. Two things in the data make chip 1 repeat it unusually well:
+    - **It is loud,** an RMS of 30.7 codes against 19–20 for the Acorn and VM PROMs. So the same upsets weigh less in the SDR (about 3.7 dB).
+    - **It has many short pitch periods.** Of its 23 words, 9 have a mean pitch index below 25, against 13 of the 2,201 other word groups. There upsets die away sooner (a median of 77 samples at indices 1–15, against about 500 at 32–47), so chip 1's takes agree better (43.6 dB below index 25). The emulator's deterministic error does not shrink with them. Star Wars' words with a pitch index of 32 or more were within the old reference (a gap of 4.9 dB), and the short-pitch words of `vm61002` and `vm61004` show the same large gap.
+
+    The emulator's deterministic departures start twice as often on Star Wars as on most PROMs, but a model of them fitted without Star Wars predicts its rate (474 against 564 predicted; 0.44–1.08 of the prediction elsewhere). So that too is its data: more unvoiced samples, and more coefficients of the kind below.
+  - **What an upset is.** Each starts as a single ±1 at one of a few fixed samples per word, and at each such sample a take in step leaves with a fixed chance, 2 % to about 50 % (the repeat test). It goes towards the nearer output step. There, the model's 15-bit value is one or two internal steps from the boundary, the same place the deterministic departures start. Upsets and deterministic departures are both enriched for coefficients whose second Booth digit is negative (*d*₁ < 0, Phase 9), independently for each K. K6–K10 matter most, and K7 more for upsets than for deterministic departures. In the repeat test the emulator's deterministic departures never varied: at 99.6 % of them no take out of 49 gave the emulator's value. So the lowest-order arithmetic is deterministic at most samples and marginal at a few, which are the upsets. Datasheet §7 and §8.8 now say this.
+  - **Two chips agree on PROM words no better than the emulator agrees with either.** On `vm61003_words` chip 4 is 32.0 dB from chip 1 and the emulator 31.7 dB; on Star Wars 35.6 and 32.5 dB. A chip agrees with itself much better, because its upsets are few and its departures from the model repeat.
+  - **TI-99 is loud, as in Phase 6.** Only 61 % of samples are equal, against 73–79 % for the other PROMs, with differences of up to 16 codes at the 90th percentile. Its take-to-take agreement is high, though, and the emulator is within the tolerance.
   - **Long takes: one frame read off by a sample.** In 18 TI-99 sweep takes of 5.5 s or more, all in the index area at 0x0000–0x0D20, one frame read falls one sample later than the 200-sample grid gives, always between samples 44,100 and 45,500. The 25 ms frame period check passes on all of them. The Pico's timer, which times the reads, drifts against the chip's sample clock, and by then a read late in its sample moves into the next. This is a limit of the measurement, not of the chip or the emulator.
 - **Handed on:**
-  - **Star Wars and the tolerance → for decision.** Either measure the reference on a second chip, or keep the observed rule and record `starwars_speech` as outside it.
-  - **The onset after silence → datasheet §8.6, then the emulator** (Phase 9 follow-up). The datasheet comes first, and the emulator follows it.
+  - **The lowest-order arithmetic → `docs-tech/lowest_order_arithmetic_ideas.md`.** The corpus departures and upset starts above are a far larger set of labelled cases than Phase 9's vectors, and they point at the same coefficients (*d*₁ < 0). The repeat test gives each marginal sample a probability, which a candidate rule should place nearest the boundary. `tools/departures.py` writes them with the model's state at each (`events.csv`, kept local), per word (`words.csv`) and summarised (`summary.json`).
+  - **Upsets and the bench (plan Phase 5):** the repeat test at a second `VDD` or temperature would show whether each marginal sample's chance moves, as a marginal node predicts.
+  - **Chip 1 refitted:** `tools/bench.json` names chip 4 while it is fitted. Change it back when chip 1 returns.
 
 ### Phase 11: Authoring, and confirmation with new speech data
 

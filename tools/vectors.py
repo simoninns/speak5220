@@ -242,9 +242,34 @@ def setLoc():
     return out
 
 
+def setOnset():
+    """Phase 10: the first pitch pulse after silence. In the PROM words the
+    chip's chirp starts one sample later than the model's after voiced
+    speech and one or two silence frames, and on time after three or after
+    unvoiced speech. Voiced, n silence frames, voiced: n from 1 to 6, at
+    pitches before the silence that leave the pitch counter at different
+    phases; other pitches after it; and the same after unvoiced speech,
+    into a repeat frame, at a loud resonant setting, and with no silence."""
+    k2 = withK(0, 28, withK(1, 20, NEUTRAL_K))
+    out = []
+    for n in (1, 2, 3, 4, 6):
+        for p in (12, 20, 28, 36, 44, 52, 60):
+            out.append((f"v_p{p:02d}_s{n}_v_p24", [V(10, p)] * 3 + [SILENCE] * n + [V(10, 24)] * 3))
+    for q in (12, 44, 63):
+        for n in (1, 3):
+            out.append((f"v_p28_s{n}_v_p{q:02d}", [V(10, 28)] * 3 + [SILENCE] * n + [V(10, q)] * 3))
+    for n in (1, 2, 3):
+        out.append((f"u_s{n}_v_p24", [U(10)] * 3 + [SILENCE] * n + [V(10, 24)] * 3))
+        out.append((f"v_p28_s{n}_r_p24", [V(10, 28)] * 3 + [SILENCE] * n + [R(10, 24)] * 3))
+        out.append((f"loud_v_p28_s{n}_v_p24", [V(14, 28, k2)] * 3 + [SILENCE] * n + [V(14, 24, k2)] * 3))
+    out.append(("v_p28_v_p24", [V(10, 28)] * 3 + [V(10, 24)] * 3))
+    out.append(("v_p28_u_v_p24", [V(10, 28)] * 3 + [U(10)] + [V(10, 24)] * 3))
+    return out
+
+
 SETS = {"energy": setEnergy, "pitch": setPitch, "k": setK, "noise": setNoise,
         "interp": setInterp, "special": setSpecial, "random": setRandom, "loud": setLoud,
-        "ring": setRing, "loc": setLoc}
+        "ring": setRing, "loc": setLoc, "onset": setOnset}
 
 
 # ---- writing a set ----------------------------------------------------

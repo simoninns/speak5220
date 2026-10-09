@@ -260,6 +260,14 @@ Phase 8 investigates them [p5-12 to p5-16].
 
 *Hypothesis (not tested).* US 4,335,277 builds the chip from precharged, conditional-discharge (dynamic) logic, clocked in four phases. A node that is marginal only for particular data would fit what is seen: departures that start at the same samples from take to take, but not in every take. If that is the cause, the upset rate should depend strongly on temperature and on `VDD`.
 
+**What upsets look like (Phase 10).** Measured on every PROM word (takes 2 to 5 of each word and path, which follow the same word), and on 49 takes each of six words [corpus, every PROM; `captures/phase10/repeat/`]:
+- **Each starts as a single ±1** (11,299 of 11,327 starts between pairs of takes), which the filter then carries on, typically for 250–700 samples.
+- **They start at a few fixed samples per word,** one to four in most words, and at each such sample a take that is in step leaves it with a fixed chance, from 2 % to about 50 %. Nothing else in the take decides which way it goes: not the position in the frame, the interpolation period or the pitch period, and not the path.
+- **They go towards the nearer output step.** Where the model's value (the 15-bit u₁ before the shift of §8.4) lies just below a step, the takes that leave go up a code; just above, down a code. Where the model also differs from the majority of takes there, the takes that leave usually give the model's value (19 of 26).
+- **They follow the same coefficients as the lowest-order error (§8.8):** coefficients whose second Booth digit is negative (*d*₁ < 0), K6–K10 most of all and K7 more than for the deterministic error.
+
+So an upset is the lowest-order arithmetic of §8.8 coming out either way at a sample where it is marginal. A word of short pitch periods (pitch index below about 24) repeats better, because its upsets die away sooner (a median of 77 samples at indices 1–15, against about 500 at 32–47), not because they are rarer.
+
 **For emulator writers.** To reproduce a capture, start from:
 1. **The start time.** The Speak starts on the first frame boundary at least about 320 µs after it is written (§6). In the standard procedure it is latched 1961 slots before the first frame bit is read.
 2. **The noise generator.** Held at 0x1FFF by Reset; released 6 slots (Speak) or 1 slot (Speak External) after the latch; one step per slot from then on, through speech and idle alike, until the next Reset (above).
@@ -543,7 +551,7 @@ Sample numbers below count from the sample period in which a frame's first bit i
 
 **Status: drafted (Phase 8).**
 
-**Voiced: the chirp.** A pitch counter counts samples from 0. When it is equal to or greater than the pitch value it returns to 0, so **the period is the pitch value plus one sample** (Table 8-5). That is one more than in MAME, whose counter returns to 0 at the pitch value: it was measured at every pitch index [vectors `pitch`] and in the PROM corpus (the Acorn tones, 25 and 35 samples for values 24 and 34). It agrees with US 4,335,277, where the counter is zeroed once its contents equal or exceed the pitch register. The patent's chirp ROM has 52 locations: addresses above 51 are held at 51, which stores zero, until the counter returns to 0. Each sample, the counter's value addresses the chirp (Table 8-7): values 0 to 20 give the chirp, and 21 or more give 0. The counter advances only while the chip is talking (§8.5). When the change to the current target is inhibited (§8.7), the counter is held at 0 from the end of the frame-read sample that precedes the jump (sample 200 of the target's frame, §8.5) to the end of the first two samples of IP 0 (PC 0, A and B): those two samples read chirp address 0, the next reads address 1. So each inhibited change restarts the chirp with the jump.
+**Voiced: the chirp.** A pitch counter counts samples from 0. When it is equal to or greater than the pitch value it returns to 0, so **the period is the pitch value plus one sample** (Table 8-5). That is one more than in MAME, whose counter returns to 0 at the pitch value: it was measured at every pitch index [vectors `pitch`] and in the PROM corpus (the Acorn tones, 25 and 35 samples for values 24 and 34). It agrees with US 4,335,277, where the counter is zeroed once its contents equal or exceed the pitch register. The patent's chirp ROM has 52 locations: addresses above 51 are held at 51, which stores zero, until the counter returns to 0. Each sample, the counter's value addresses the chirp (Table 8-7): values 0 to 20 give the chirp, and 21 or more give 0. The counter advances only while the chip is talking (§8.5). When the change to the current target is inhibited (§8.7), the counter is held at 0 from the end of the frame-read sample that precedes the jump (sample 200 of the target's frame, §8.5) to the end of the first three samples of IP 0 (PC 0 A and B, and PC 1 A): those three samples read chirp address 0, the next reads address 1. So each inhibited change restarts the chirp with the jump. The third sample was found in Phase 10: a voiced frame after silence that followed voiced speech starts its chirp one sample later than a two-sample hold gives, after any number of silence frames (1 to 6 tested), at any pitch before or after, through both paths. After unvoiced speech the hold's length makes no difference, because the counter is already at 0 (pitch 0) until the new pitch reaches the filter in sample 5 [vectors `onset`; corpus, every PROM].
 
 **Unvoiced: the noise register.** The excitation is +64 or −64, half of full scale, with the sign chosen by a 13-bit linear-feedback shift register:
 - **Each step:** shift the register left by one, and bring in, as the new bit 0, the exclusive OR of bits 12, 3, 2 and 0.
@@ -673,10 +681,15 @@ Using it for the energy product too, as the patent describes, cut the mismatch o
     | Model against chip 1 | ring | 192 | 2 % | 81.0 % | 21.9 | 24 |
     | Model against chip 1 | energy | 112 | 48 % | 99.8 % | 52.1 | 1 |
     | Model against chip 1 | K | 1,056 | 9 % | 98.6 % | 38.6 | 12 |
-    | Model against chip 1 | Acorn words | 1,660 | 0 % | 78.6 % | 32.5 | 10 |
+    | Model against chip 1 | Acorn words | 1,660 | 0 % | 79.4 % | 32.6 | 4 |
+    | Chip 4 against chip 1 | Star Wars words (Phase 10) | 89 | 0 % | 75.8 % | 35.6 | 5 |
+    | Chip 4 against chip 1 | `vm61003_words` (Phase 10) | 908 | 0 % | 79.4 % | 32.0 | 3 |
+    | Model against chip 1 | Star Wars words (Phase 10) | 115 | 0 % | 72.7 % | 32.5 | 46 |
+    | Model against chip 1 | `vm61003_words` (Phase 10) | 1,160 | 0 % | 78.1 % | 31.7 | 7 |
     | Model against chip 4 | pitch, ring, energy | 555 | 10 % | 95.6 % | 30.7 | 7 |
 
     - **The model is as close to chip 4 as to chip 1.** It is not fitted to one part.
+    - **On PROM words, two chips agree no better than the model agrees with either** (Phase 10, with the pitch hold of §8.6 corrected): on `vm61003_words` chip 4 is 32.0 dB from chip 1 and the model 31.7 dB; on the Star Wars words 35.6 and 32.5 dB. A chip agrees much better with itself (35–41 dB), because its upsets are few and its departures from the model repeat. The model rows are for the model with that correction.
     - **On strongly resonant data, the model is as close to either chip as the two chips are to each other** (ring: 81–84 % against 85 %, 22–23 dB against 22 dB).
     - **On ordinary voiced data, the model is further from the chips than they are from each other**, by about 6 dB (pitch: 31 dB against 37 dB). This is the design error that is still unknown. On real speech (the Acorn words) it is about 5 dB below the chip's agreement with itself: 32.5 dB against 37.5 dB.
     - **Every set has a typical difference of one code.** Larger ones come from a one-code difference growing in a resonant or overloaded filter, as they do between takes on the chip itself (§7). The loud, random and decay vectors, not in the table, are dominated by that growth: their median SDR is 18–28 dB, and chip 1's own takes of them agree at a median of 45–99 dB.
@@ -770,7 +783,7 @@ Where the model differs from the chip in voiced speech-like data, it is by one c
           else:           cur[i] = cur[i] + step;  value = cur[i]
           queue (n + d(i), i, value)
 
-   3. In the B sample of PC 0 of IP 0, clear hold.
+   3. In the A sample of PC 1 of IP 0, clear hold.
    4. The excitation's voicing is oldU *as it was in sample n − 1*. Unvoiced: −64 if bit 0 of noise is 1, else +64. Voiced: the chirp at address min(count, 51) (Table 8-7).
 3. **If not talking:** in the A sample of PC *p* (0–11), write 0 to seen[*p*] at n + d(*p*) − 1, that is in this sample for a K, one sample later for the energy and two for the pitch; cur and idx are kept. The excitation's voicing is oldU as it is now.
 4. **Filter.** With E = seen[0], K*j* = seen[*j* + 1] and x the excitation:
@@ -914,3 +927,5 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-08 | §8.8 | The unvoiced departures follow the coefficient's second Booth digit (*d*₁ < 0) and drift between days on one chip: part of the error is marginal. The expected agreement measured: chip against itself, chip against chip, model against each chip | vectors `k`, `loc`, chip 1 repeat; `captures/phase9/variance/` |
 | 2026-10-08 | Conventions | The four TMS5220NLs numbered 1–4; chip 1 made every earlier measurement | — |
 | 2026-10-08 | §3, §4, §5 | Phase 8 host tests replayed through the emulator (`tools/replay.py`). Correction: a frame's parameters are read over 446 slots, not all at once. New: Read Byte's bits start at slot 13 (at least 22 slots after a Dummy Read); a held Read Byte's reads return 0xFF; READY after Read and Branch returns at slot 15, 60–63 slots on. Speak External's BL, BE and TS timing within a frame not yet settled | p8-19 to p8-25 |
+| 2026-10-09 | §8.6, §8.9 | Correction (to this datasheet): the pitch counter's hold at an inhibited change lasts three samples of IP 0, not two, so a voiced frame after silence that followed voiced speech starts its chirp one sample later. It cut the model's error power on the PROM words by up to 13 times, and made no PROM or vector set worse | vectors `onset`; corpus, every PROM |
+| 2026-10-09 | §7, §8.8 | Upsets characterised: single ±1 starts at a few fixed samples per word, each with a fixed chance; towards the nearer output step; on the same coefficients (*d*₁ < 0) as the lowest-order error. Chip 4 against chip 1 on PROM words | corpus, every PROM; `captures/phase10/repeat/`; chip 4, `starwars_speech`, `vm61003_words` |

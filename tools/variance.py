@@ -8,7 +8,8 @@
 
       take   chip 1 against itself, two takes of the same session
       day    chip 1 against itself, takes two days apart (the chip refitted)
-      chip   chip 4 against chip 1
+      chip   chip 4 against chip 1 (vector sets, and PROM words where
+             chip 4 has captured them)
       model  the model (= the emulator, which matches it on every take)
              against chip 1
       model4 the model against chip 4
@@ -47,6 +48,7 @@ CHIP1 = os.path.join(ROOT, "captures", "vectors")
 CHIP1_REPEAT = os.path.join(ROOT, "captures", "vectors_chip1_repeat")
 CHIP4 = os.path.join(ROOT, "captures", "vectors_chip4")
 CORPUS = os.path.join(ROOT, "captures", "corpus")     # one directory per PROM
+CORPUS4 = os.path.join(ROOT, "captures", "corpus_chip4")
 SDR_CAP = 99.0          # dB, reported for identical outputs
 # The tolerance of acceptance test 1 (plan section 1.5), as observed at the
 # close of Phase 9 and not derived from the chip: per set, the emulator's
@@ -89,7 +91,7 @@ def measure(ref, other):
 
 def setOf(takeDir):
     parts = os.path.relpath(takeDir, ROOT).split(os.sep)
-    return parts[2] if parts[1] == "corpus" else next(p for p in parts[2:] if p.startswith("vectors_"))
+    return parts[2] if parts[1] in ("corpus", "corpus_chip4") else next(p for p in parts[2:] if p.startswith("vectors_"))
 
 
 def pairJob(job):
@@ -145,8 +147,14 @@ def jobs():
             ref = os.path.join(CHIP1, os.path.relpath(t, root))
             if os.path.isdir(ref) and standard(ref):
                 out.append((pairJob, (kind, ref, t)))
+    # chip 4 against chip 1 on PROM words: takes 02-05, which follow a take
+    # of the same word on both chips
+    for t in sorted(glob.glob(os.path.join(CORPUS4, "*", "*", "*0[2-5]"))):
+        ref = os.path.join(CORPUS, os.path.relpath(t, CORPUS4))
+        if os.path.isdir(ref) and standard(ref) and standard(t):
+            out.append((pairJob, ("chip", ref, t)))
     # the model against each chip, with the takes spoken before each
-    for kind, root in (("model", CHIP1), ("model", CORPUS), ("model4", CHIP4)):
+    for kind, root in (("model", CHIP1), ("model", CORPUS), ("model4", CHIP4), ("model4", CORPUS4)):
         for take, previous in regress.takesOf(root, False):
             if os.sep + "clk" in take or "experiments" in take or "/sweep/" in take:
                 continue

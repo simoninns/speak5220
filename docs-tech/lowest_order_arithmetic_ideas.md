@@ -126,6 +126,15 @@ Four of 68 unvoiced energy and noise takes differ from the model in one sample, 
 
 Separate from the voiced error, but cheap. The loud and random vectors match only 49–54 % of samples because one-code differences grow without limit there, and the 14-bit wrap of the sums is "the best fit, not a proof" (§8.8). The model's partial sums inside the multiplier are exact; the patent's array is 14 cells wide with the MSB kept in the leftmost column, so a partial sum of (±2*M*) + (shifted sum) can exceed 14 bits for |*M*| near 8192. Wrapping each partial sum at 14 bits (or 15, if the row has a guard cell) costs one option in `model.py` and may lift the loud and random scores, which would also say how wide the rows are.
 
+### 3.7 The corpus departures and the upsets (Phase 10)
+
+`tools/departures.py corpus repeat` labels every clean departure in the PROM words, with the model's state at each (`captures/phase10/departures/`; `events.csv` is kept local). Over every PROM: 15,851 deterministic departures, 387 upset starts and 56,999 controls, far more cases, and more varied, than the vectors of §2.
+- **Every departure starts at the edge of an output step.** Where the chip is one code below the model, the model's u₁ is 1 above a multiple of 16 in 74 % of cases. Where it is one code above, u₁ is 1 below in 68 %. So the chip's u₁ differs from the model's by a few units of the lowest bit, never more, and is seen only where that crosses a step.
+- **Both kinds follow *d*₁ < 0,** independently for each K once the step position is allowed for (logistic fit, `summary.json`). For deterministic departures K8 (z = +42), K2, K3, K6, K1 and K4 matter most; for upsets K9, K7, K8 and K10. K7 marks an upset rather than a deterministic departure: at deterministic departures, once the other features are allowed for, its *d*₁ < 0 is rarer than at the controls (z = −10).
+- **An upset is the same error at a marginal sample.** Each upset starts as a single ±1, towards the nearer output step, at a few fixed samples per word, and at each with a fixed chance (2 % to about 50 % over 49 takes, `departures.py repeat`). Where the model also departs there, the takes that leave usually give the model's value.
+
+A candidate rule should therefore: give the corpus's deterministic departures with the right sign; leave the controls alone; and put the upset samples nearest the margin, in the order of their chance. The repeat test gives that chance for the six words in `captures/phase10/repeat/`.
+
 ## 4. Bench tests
 
 All are vector sets in the style of `tools/vectors.py`, captured with the standard procedure through both paths. Each is a few dozen vectors, an hour or two of bench time. Chip 4 is in the bench now; everything below is worth capturing on both chips, because the comparison is what separates the design error from the chip-specific ones (constraint 9), and chip 1 must be refitted (and `tools/bench.json` set back) before any capture that counts for the reference set.

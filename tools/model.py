@@ -89,7 +89,7 @@ class Model:
                         "idle_zero_all": "pc", "idle_zero_shift": -1,
                         "uv_zero_inhibited": True, "excitation_delay": 1,
                         "lfsr_unvoiced_only": False, "excitation_pipeline": False,
-                        "pitch_zero": True, "zpar_until_sound": False,
+                        "pitch_zero": True, "pitch_hold": 3, "zpar_until_sound": False,
                         "energy_zero_delay": None, "idle_keep_registers": True,
                         "zpar_view_only": True, "uv_zero_view_only": False,
                         "zpar_parses": 2, "repeat_keeps_uv": True,
@@ -322,7 +322,9 @@ class Model:
                     if i >= 2:
                         delayX = (self.options["param_delay_x"] or self.options["param_delay"])[i]
                         self.pending.append((self.t + delayX, 12 + i, value))
-            if self.sub == 2 and self.pc == 0 and self.ip == 0:
+            # The pitch counter's hold ends in the pitch_hold-th sample of IP 0
+            # (datasheet section 8.6: PC 0 A and B, and PC 1 A)
+            if self.ip == 0 and 2 * self.pc + self.sub == self.options["pitch_hold"]:
                 self.pitchZero = False
             self.oldpHistory = (self.oldpHistory + [self.oldp])[-8:]
             unvoiced = self.oldpHistory[-1 - self.options["excitation_delay"]] \

@@ -78,3 +78,17 @@ __pycache__/
 # Local, not for the repository: third-party code built for comparison
 # (MAME's TMS5220, local/mame5220/) and its outputs
 local/
+# Phase 10's repeat test (50 takes of a few words) is kept local in the same way
+captures/phase10/repeat/*
+!captures/phase10/repeat/*/
+captures/phase10/repeat/*/*
+!captures/phase10/repeat/*/index.md
+!captures/phase10/repeat/*/takes.csv
+# PROM words captured on chip 4 (Phase 10), kept local in the same way
+captures/corpus_chip4/*
+!captures/corpus_chip4/*/
+captures/corpus_chip4/*/*
+!captures/corpus_chip4/*/index.md
+!captures/corpus_chip4/*/takes.csv
+# tools/departures.py: the labelled samples are large; words.csv and summary.json are committed
+captures/phase10/departures/*/events.csv
