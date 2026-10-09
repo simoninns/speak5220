@@ -1,0 +1,1035 @@
+[
+ {
+  "name": "block_A",
+  "label": "A",
+  "kind": "block",
+  "box": [
+   1506,
+   5282,
+   5774,
+   6780
+  ],
+  "notes": "Array multiplier? Header row (y 5282), 14 bit rows of 452 px, five column groups of 1,260 px from x 1480; groups 2-4 identical, 1 and 5 differ"
+ },
+ {
+  "name": "block_B",
+  "label": "B",
+  "kind": "block",
+  "box": [
+   7430,
+   6527,
+   2731,
+   6525
+  ],
+  "notes": "Adder, delay stack, Y latch? 14 bit rows of 452 px from y 6724, two rows lower than A"
+ },
+ {
+  "name": "block_C",
+  "label": "C",
+  "kind": "block",
+  "box": [
+   12300,
+   11346,
+   3113,
+   1757
+  ],
+  "notes": "Dense mask ROM (parameter tables?). Cell pitch 36.3 x 31.9 px"
+ },
+ {
+  "name": "block_D",
+  "label": "D",
+  "kind": "block",
+  "box": [
+   12300,
+   4518,
+   3163,
+   5623
+  ],
+  "notes": "Regular arrays, ~16 rows (FIFO, K-stack?)"
+ },
+ {
+  "name": "block_E",
+  "label": "E",
+  "kind": "block",
+  "box": [
+   1105,
+   1406,
+   3163,
+   2912
+  ],
+  "notes": "ROM or PLA array (regular cells with contacts under a decoder row). Not the DAC"
+ },
+ {
+  "name": "block_F",
+  "label": "F",
+  "kind": "block",
+  "box": [
+   4318,
+   201,
+   13455,
+   4619
+  ],
+  "notes": "Control and timing logic"
+ },
+ {
+  "name": "block_G",
+  "label": "G",
+  "kind": "block",
+  "box": [
+   251,
+   12451,
+   6979,
+   2309
+  ],
+  "notes": "Large drivers: four identical comb pairs (top row) and two mirrored pairs (bottom row). Clock drivers? Not a binary-weighted DAC"
+ },
+ {
+  "name": "block_H",
+  "label": "H",
+  "kind": "block",
+  "box": [
+   16819,
+   5824,
+   1155,
+   8234
+  ],
+  "notes": "Large drivers by the right-hand pads (bus I/O?)"
+ },
+ {
+  "name": "pad01",
+  "label": "P1",
+  "kind": "pad",
+  "box": [
+   425,
+   754,
+   346,
+   342
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "torn wire",
+  "pin": 10,
+  "pin_name": "PROM OUT",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad02",
+  "label": "P2",
+  "kind": "pad",
+  "box": [
+   421,
+   2963,
+   359,
+   379
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "torn wire",
+  "pin": 11,
+  "pin_name": "VREF",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad03",
+  "label": "P3",
+  "kind": "pad",
+  "box": [
+   413,
+   4169,
+   351,
+   352
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "torn wire",
+  "pin": 12,
+  "pin_name": "D2",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad04",
+  "label": "P4",
+  "kind": "pad",
+  "box": [
+   406,
+   6248,
+   370,
+   346
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "torn wire",
+  "pin": 13,
+  "pin_name": "D1",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad05",
+  "label": "P5",
+  "kind": "pad",
+  "box": [
+   366,
+   6969,
+   377,
+   354
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4) Wide strap straight into the substrate ring; probably bonded down to the paddle (phase1.md \u00a71)",
+  "side": "left",
+  "bond": "ball",
+  "pin": 5,
+  "pin_name": "VSS",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad06",
+  "label": "P6",
+  "kind": "pad",
+  "box": [
+   296,
+   8694,
+   470,
+   467
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "ball",
+  "pin": 14,
+  "pin_name": "D0",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad07",
+  "label": "P7",
+  "kind": "pad",
+  "box": [
+   382,
+   9921,
+   340,
+   340
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "ball",
+  "pin": 15,
+  "pin_name": "M0",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad08",
+  "label": "P8",
+  "kind": "pad",
+  "box": [
+   380,
+   11363,
+   369,
+   342
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left",
+  "bond": "ball",
+  "pin": 16,
+  "pin_name": "M1",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad09",
+  "label": "P9",
+  "kind": "pad",
+  "box": [
+   246,
+   13944,
+   545,
+   561
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "left (corner)",
+  "bond": "torn wire",
+  "pin": 17,
+  "pin_name": "INT",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad10",
+  "label": "P10",
+  "kind": "pad",
+  "box": [
+   1044,
+   14281,
+   365,
+   360
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4) Wide strap straight into the substrate ring; probably bonded down to the paddle (phase1.md \u00a71)",
+  "side": "bottom",
+  "bond": "ball",
+  "pin": 5,
+  "pin_name": "VSS",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad11",
+  "label": "P11",
+  "kind": "pad",
+  "box": [
+   7341,
+   14157,
+   359,
+   339
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "bottom",
+  "bond": "torn wire",
+  "pin": 18,
+  "pin_name": "READY",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad12",
+  "label": "P12",
+  "kind": "pad",
+  "box": [
+   8275,
+   14163,
+   498,
+   489
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "bottom",
+  "bond": "torn wire",
+  "pin": 19,
+  "pin_name": "D3",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad13",
+  "label": "P13",
+  "kind": "pad",
+  "box": [
+   9094,
+   14163,
+   359,
+   347
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "bottom",
+  "bond": "torn wire",
+  "pin": 20,
+  "pin_name": "TEST",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad14",
+  "label": "P14",
+  "kind": "pad",
+  "box": [
+   13630,
+   14162,
+   351,
+   340
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "bottom",
+  "bond": "torn wire",
+  "pin": 21,
+  "pin_name": "ADD8",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad15",
+  "label": "P15",
+  "kind": "pad",
+  "box": [
+   14414,
+   14146,
+   418,
+   414
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "bottom",
+  "bond": "torn wire",
+  "pin": 22,
+  "pin_name": "D4",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad16",
+  "label": "P16",
+  "kind": "pad",
+  "box": [
+   16950,
+   14088,
+   340,
+   340
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right (corner)",
+  "bond": "ball",
+  "pin": 23,
+  "pin_name": "ADD4",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad17",
+  "label": "P17",
+  "kind": "pad",
+  "box": [
+   16850,
+   11700,
+   384,
+   405
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "ball",
+  "pin": 24,
+  "pin_name": "D5",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad18",
+  "label": "P18",
+  "kind": "pad",
+  "box": [
+   16872,
+   10879,
+   447,
+   391
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "torn wire",
+  "pin": 25,
+  "pin_name": "ADD2",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad19",
+  "label": "P19",
+  "kind": "pad",
+  "box": [
+   16912,
+   10349,
+   428,
+   381
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "ball",
+  "pin": 26,
+  "pin_name": "D6",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad20",
+  "label": "P20",
+  "kind": "pad",
+  "box": [
+   16804,
+   5455,
+   342,
+   334
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "ball",
+  "pin": 27,
+  "pin_name": "WS",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad21",
+  "label": "P21",
+  "kind": "pad",
+  "box": [
+   16805,
+   4426,
+   342,
+   336
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "torn wire",
+  "pin": 28,
+  "pin_name": "RS",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad22",
+  "label": "P22",
+  "kind": "pad",
+  "box": [
+   16813,
+   1352,
+   341,
+   336
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "torn wire",
+  "pin": 1,
+  "pin_name": "D7",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad23",
+  "label": "P23",
+  "kind": "pad",
+  "box": [
+   16799,
+   781,
+   357,
+   336
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "right",
+  "bond": "torn wire",
+  "pin": 2,
+  "pin_name": "ADD1",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad24",
+  "label": "P24",
+  "kind": "pad",
+  "box": [
+   10871,
+   420,
+   346,
+   336
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "torn wire",
+  "pin": 3,
+  "pin_name": "ROMCLK",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad25",
+  "label": "P25",
+  "kind": "pad",
+  "box": [
+   10062,
+   400,
+   362,
+   365
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "ball",
+  "pin": 4,
+  "pin_name": "VDD",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad26",
+  "label": "P26",
+  "kind": "pad",
+  "box": [
+   8384,
+   407,
+   421,
+   340
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "ball",
+  "pin": 6,
+  "pin_name": "OSC",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad27",
+  "label": "P27",
+  "kind": "pad",
+  "box": [
+   3410,
+   384,
+   344,
+   336
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "torn wire",
+  "pin": 7,
+  "pin_name": "T11",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad28",
+  "label": "P28",
+  "kind": "pad",
+  "box": [
+   2568,
+   384,
+   340,
+   338
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "torn wire",
+  "pin": 8,
+  "pin_name": "SPEAKER",
+  "pin_status": "working"
+ },
+ {
+  "name": "pad29",
+  "label": "P29",
+  "kind": "pad",
+  "box": [
+   1361,
+   372,
+   340,
+   349
+  ],
+  "notes": "Pin not yet assigned (phase0.md section 4)",
+  "side": "top",
+  "bond": "torn wire",
+  "pin": 9,
+  "pin_name": "I/O",
+  "pin_status": "working"
+ },
+ {
+  "name": "osc_cap",
+  "label": "Cosc",
+  "kind": "feature",
+  "box": [
+   4012,
+   248,
+   3692,
+   560
+  ],
+  "notes": "Isolated metal plate, about 1.26 x 0.19 mm: about 10 pF over field oxide. Probably the RC oscillator capacitor"
+ },
+ {
+  "name": "osc_circuit",
+  "label": "osc",
+  "kind": "feature",
+  "box": [
+   7380,
+   250,
+   1950,
+   700
+  ],
+  "notes": "Serpentine long-channel device at the plate end, small circuit, P26. P24 line returns into it"
+ },
+ {
+  "name": "dac_candidate",
+  "label": "DAC?",
+  "kind": "feature",
+  "box": [
+   1930,
+   270,
+   470,
+   600
+  ],
+  "notes": "Small circuit between P29 and P28 with bars of different lengths. Candidate DAC if P28 is SPEAKER"
+ },
+ {
+  "name": "A_row01",
+  "label": "A1",
+  "kind": "cell",
+  "box": [
+   1506,
+   5734,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row01",
+  "label": "B1",
+  "kind": "cell",
+  "box": [
+   7430,
+   6724,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row02",
+  "label": "A2",
+  "kind": "cell",
+  "box": [
+   1506,
+   6186,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row02",
+  "label": "B2",
+  "kind": "cell",
+  "box": [
+   7430,
+   7176,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row03",
+  "label": "A3",
+  "kind": "cell",
+  "box": [
+   1506,
+   6638,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row03",
+  "label": "B3",
+  "kind": "cell",
+  "box": [
+   7430,
+   7628,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row04",
+  "label": "A4",
+  "kind": "cell",
+  "box": [
+   1506,
+   7090,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row04",
+  "label": "B4",
+  "kind": "cell",
+  "box": [
+   7430,
+   8080,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row05",
+  "label": "A5",
+  "kind": "cell",
+  "box": [
+   1506,
+   7542,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row05",
+  "label": "B5",
+  "kind": "cell",
+  "box": [
+   7430,
+   8532,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row06",
+  "label": "A6",
+  "kind": "cell",
+  "box": [
+   1506,
+   7994,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row06",
+  "label": "B6",
+  "kind": "cell",
+  "box": [
+   7430,
+   8984,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row07",
+  "label": "A7",
+  "kind": "cell",
+  "box": [
+   1506,
+   8446,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row07",
+  "label": "B7",
+  "kind": "cell",
+  "box": [
+   7430,
+   9436,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row08",
+  "label": "A8",
+  "kind": "cell",
+  "box": [
+   1506,
+   8898,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row08",
+  "label": "B8",
+  "kind": "cell",
+  "box": [
+   7430,
+   9888,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row09",
+  "label": "A9",
+  "kind": "cell",
+  "box": [
+   1506,
+   9350,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row09",
+  "label": "B9",
+  "kind": "cell",
+  "box": [
+   7430,
+   10340,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row10",
+  "label": "A10",
+  "kind": "cell",
+  "box": [
+   1506,
+   9802,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row10",
+  "label": "B10",
+  "kind": "cell",
+  "box": [
+   7430,
+   10792,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row11",
+  "label": "A11",
+  "kind": "cell",
+  "box": [
+   1506,
+   10254,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row11",
+  "label": "B11",
+  "kind": "cell",
+  "box": [
+   7430,
+   11244,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row12",
+  "label": "A12",
+  "kind": "cell",
+  "box": [
+   1506,
+   10706,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row12",
+  "label": "B12",
+  "kind": "cell",
+  "box": [
+   7430,
+   11696,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row13",
+  "label": "A13",
+  "kind": "cell",
+  "box": [
+   1506,
+   11158,
+   5774,
+   452
+  ],
+  "notes": "A bit row"
+ },
+ {
+  "name": "B_row13",
+  "label": "B13",
+  "kind": "cell",
+  "box": [
+   7430,
+   12148,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_row14",
+  "label": "A14",
+  "kind": "cell",
+  "box": [
+   1506,
+   11610,
+   5774,
+   452
+  ],
+  "notes": "A bit row. Row 1 = top. Row 14 differs: channel lines end (LSB end?)"
+ },
+ {
+  "name": "B_row14",
+  "label": "B14",
+  "kind": "cell",
+  "box": [
+   7430,
+   12600,
+   2731,
+   452
+  ],
+  "notes": "B bit row"
+ },
+ {
+  "name": "A_header",
+  "label": "Ah",
+  "kind": "cell",
+  "box": [
+   1506,
+   5282,
+   5774,
+   452
+  ],
+  "notes": "Header row above A (drivers into the channel lines)"
+ },
+ {
+  "name": "A_col1",
+  "label": "Ac1",
+  "kind": "cell",
+  "box": [
+   1480,
+   5282,
+   1260,
+   6780
+  ],
+  "notes": "Column group 1: matches the middle groups only partly (0.42)"
+ },
+ {
+  "name": "A_col2",
+  "label": "Ac2",
+  "kind": "cell",
+  "box": [
+   2740,
+   5282,
+   1260,
+   6780
+  ],
+  "notes": "Column group: identical to the other middle groups"
+ },
+ {
+  "name": "A_col3",
+  "label": "Ac3",
+  "kind": "cell",
+  "box": [
+   4000,
+   5282,
+   1260,
+   6780
+  ],
+  "notes": "Column group: identical to the other middle groups"
+ },
+ {
+  "name": "A_col4",
+  "label": "Ac4",
+  "kind": "cell",
+  "box": [
+   5260,
+   5282,
+   1260,
+   6780
+  ],
+  "notes": "Column group: identical to the other middle groups"
+ },
+ {
+  "name": "A_col5",
+  "label": "Ac5",
+  "kind": "cell",
+  "box": [
+   6520,
+   5282,
+   760,
+   6780
+  ],
+  "notes": "Column group 5: narrower (ends at x 7280); its left 700 px match the middle groups (0.58)"
+ }
+]

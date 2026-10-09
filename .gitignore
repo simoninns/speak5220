@@ -92,3 +92,10 @@ captures/corpus_chip4/*/*
 !captures/corpus_chip4/*/takes.csv
 # tools/departures.py: the labelled samples are large; words.csv and summary.json are committed
 captures/phase10/departures/*/events.csv
+# Phase 11's captures of the new speech data, kept local in the same way
+captures/phase11/takes/*
+!captures/phase11/takes/*/
+captures/phase11/takes/*/*
+!captures/phase11/takes/*/index.md
+!captures/phase11/takes/*/prom.json
+!captures/phase11/takes/*/takes.csv

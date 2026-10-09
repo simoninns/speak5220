@@ -595,7 +595,11 @@ def compareTake(job):
 def pairJob(job):
     kind, setName, a, b = job
     row = {"kind": kind, "set": setName, "take": os.path.relpath(a, ROOT), "other": os.path.relpath(b, ROOT)}
-    row.update(variance.measure(variance.chipCodes(a), variance.chipCodes(b)))
+    other = variance.chipCodes(b)
+    if kind == "paths":
+        # Speak External runs 2 samples ahead of the VSM Speak (datasheet section 8.5)
+        other = (other[0], other[1] - 2)
+    row.update(variance.measure(variance.chipCodes(a), other))
     return row
 
 

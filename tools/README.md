@@ -258,6 +258,35 @@ python tools/recimport.py check  # check those files against their index
 - **`ttsgen.py`** renders them with Piper (in `nix develop`) from nine voices, UK and US, from about 90 Hz to 250 Hz median pitch. The voices' datasets are public domain, CC0, CC BY or CC BY-SA. Each render is resampled to 8 kHz, 16-bit mono, with its peak at −3 dBFS, and written to `captures/phase11/inputs/tts/` as FLAC (lossless; `soundfile` reads it). Each file's row in `index.csv` gives its text, voice, active level, median and spread of pitch, voiced share, and the SHA-256 of its decoded samples (16-bit little-endian), which does not depend on the FLAC encoder. `README.md` there credits the voices. Piper's render is random, so the same text never gives the same file twice: the committed files are the frozen inputs, and `render` never overwrites one without `--force`. The renders at Piper's own rate are kept in `local/piper/renders/`.
 - **`recimport.py`** imports real recordings. The originals stay in the gitignored `local/recordings/`, listed in its `sources.csv`: the file, a text file of its prompts (`1. text` per line, in the order spoken), an id prefix, a voice key, and the speaker, source and licence to credit. A recording may hold many prompts with a pause between each. The split takes, of the pauses of 150 ms or more, the set that best fits each segment's duration to its text length while preferring long pauses, then pads each segment with up to 150 ms of its pauses. The segments are written as the TTS files are, to `captures/phase11/inputs/recordings/<id>_<voice>.flac`, with an `index.csv` that also gives each one's place in the original, and a `README.md`. The split depends only on the original, so it is repeatable.
 
+## New speech data and its predictions (Phase 11)
+
+```
+nix develop -c python3 encoder/test_tms5220enc.py   # the encoder's self-test
+python tools/promstats.py          # how the original PROMs were encoded (datasheet section 12.10)
+python tools/phase11.py roundtrip  # acceptance test 3: every PROM word parsed and re-packed
+python tools/phase11.py build      # encode the inputs, write the data sets to captures/phase11/data/
+python tools/phase11.py predict    # the emulator's predictions, to captures/phase11/predictions/
+python tools/phase11.py check      # the sets and predictions against their hashes
+captures/phase11/bench.sh          # capture every set: 3 takes per path, standard procedure
+python tools/phase11.py compare    # the chip against the predictions (captures/phase11/results/)
+python tools/asrcheck.py           # word error rates of input, prediction and chip (whisper.cpp)
+```
+
+- **`encoder/`** is the project's encoder and packager. It was written from the reference datasheet alone, by a separate agent, as the emulator was. Its `README.md` gives the method, and its `GAPS.md` lists what the datasheet left open.
+- **`promstats.py`** parses every word of the eight PROMs. It reports the frame kinds, the energy, pitch and K indices used, how words start and end, and the bit rate (`captures/phase11/promstats/`).
+- **`phase11.py`**:
+  - **`roundtrip`** parses each PROM word with the encoder's frame parser and packs it again. The bits must be identical up to the end of the stop code.
+  - **`build`** writes five synthetic PROMs, which `run.py` captures like any other:
+    - **`phrom`:** an Acorn-format PHROM of the single words, numbers and computer phrases;
+    - **`tts1`, `tts2`:** every TTS input;
+    - **`rec`:** the recordings;
+    - **`hand`:** frame sequences built by hand to use every frame kind and transition.
+
+    Inputs longer than 8 s are cut at a pause into several utterances, because the Pico's trace holds about 16 s of VSM speech.
+  - **`predict`** runs the emulator on every word and path, spoken after the word `run.py` speaks before it. Where the predecessor changes the output, it also predicts the word after itself. The predictions were committed before the chip ran.
+  - **`compare`** judges each set against the tolerance of plan §1.5 and checks the VSM timing. It also compares the chip's VSM output with its Speak External output.
+- **`asrcheck.py`** transcribes each item's input, prediction and chip output with whisper.cpp (`whisper-cli`; the model is kept in `local/whisper/`), and reports the word error rate against the prompt. It is a check that words survive, not a substitute for listening.
+
 ## Single captures and analysis
 
 ```
@@ -290,6 +319,22 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `word<N>_samples.wav`: the decoded `I/O` samples as 16-bit PCM at 8 kHz. Each 10-bit code (−512 to 511) is left-justified (× 64), so the chip's full scale is the WAV's full scale. It is lossless: the code is the sample shifted right by 6.
 - `word<N>_samples.csv`: the sample index, the code, the mean DAC voltage and the `T11` time.
 
+## Die image
+
+`die.py` reads the TMS5220NL die photograph (`docs-tech/die_analysis/`). The image goes in `local/die_image/` (git-ignored), along with everything made from it. All positions are full-resolution pixels, origin top left.
+
+```
+python tools/die.py cache                   # decode the 85 MB JPEG once, to a raw memmap (809 MB)
+python tools/die.py tiles                   # Deep Zoom pyramid and viewer.html (114 MB)
+python -m http.server -d local/die_image/tiles   # then open http://localhost:8000/viewer.html
+python tools/die.py crop 16500 4300 1300 1600 --scale 0.75 --out p.png
+python tools/die.py crop --cell pad21       # a record of cells.json, with a margin
+python tools/die.py annotate                # redraw docs-tech/die_analysis/fig_floorplan.jpg
+python tools/die.py tiles --viewer-only     # refresh the viewer's overlay after editing cells.json
+```
+
+The viewer draws every record of `docs-tech/die_analysis/cells.json` and shows the image coordinates under the mouse, ready to copy into a new record.
+
 ## Files
 
 - `pico.py`: the host side of the firmware protocol, with the trace decoder, the self-test and a command line.
@@ -302,9 +347,11 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the Phase 8 vectors, the synthesis model, the table measurements and the host interface tests (see above).
 - `regress.py`, `variance.py`: the Phase 9 regression harness for the reference emulator in `emulator/`, and the measured agreement between chips and the model (see above).
 - `ttsgen.py`, `prompts.csv`, `recimport.py`: the Phase 11 encoder test speech and recordings (see above).
+- `promstats.py`, `phase11.py`, `asrcheck.py`: Phase 11's PROM statistics, new speech data, predictions, comparison and intelligibility check (see above). The encoder itself is in `encoder/`.
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.
 - `dac_transfer.py`: the static DAC transfer function from one or more captures. It writes a per-code table of TP2 voltage and current (`dac_table.csv`), fits one weight per DAC input bit, and reports linearity, the step from −1 to 0, and whether the output depends on earlier samples (`dac_transfer.json`, `dac_transfer.png`). `--zero` subtracts the scope's zero offset, measured from a capture taken with probe A's tip grounded.
 - `dac_compare.py`: compares the tables from two loads, giving the current ratio per code and the equivalent output resistance. The reference datasheet's §8.2 and §8.3 come from these two tools.
 - `edge_timing.py`: measures `T11`, `I/O`, DAC and, if probe D is on TP1, ROMCLK edge timing. It writes `edge_timing.json`, and `edge_timing.png` (one annotated sample period). The reference datasheet's §8.4 and §9.5 come from its output.
+- `die.py`: the die image tools (see "Die image").

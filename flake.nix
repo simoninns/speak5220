@@ -35,6 +35,8 @@
 
               # Text to speech for the encoder's test inputs (tools/ttsgen.py)
               piper-tts
+              # Speech recognition, for the intelligibility check (tools/asrcheck.py)
+              whisper-cpp
 
               # Raspberry Pi Pico 2 (RP2350) firmware
               cmake

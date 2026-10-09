@@ -1,0 +1,76 @@
+{
+ "phrom": {
+  "input": {
+   "wer": 0.493,
+   "words": 144
+  },
+  "prediction": {
+   "wer": 0.722,
+   "words": 144
+  },
+  "chip": {
+   "wer": 0.667,
+   "words": 144
+  }
+ },
+ "all": {
+  "input": {
+   "wer": 0.218,
+   "words": 2133
+  },
+  "prediction": {
+   "wer": 0.335,
+   "words": 2133
+  },
+  "chip": {
+   "wer": 0.33,
+   "words": 2133
+  }
+ },
+ "rec": {
+  "input": {
+   "wer": 0.058,
+   "words": 313
+  },
+  "prediction": {
+   "wer": 0.153,
+   "words": 313
+  },
+  "chip": {
+   "wer": 0.166,
+   "words": 313
+  }
+ },
+ "tts1": {
+  "input": {
+   "wer": 0.28,
+   "words": 1309
+  },
+  "prediction": {
+   "wer": 0.406,
+   "words": 1309
+  },
+  "chip": {
+   "wer": 0.401,
+   "words": 1309
+  }
+ },
+ "tts2": {
+  "input": {
+   "wer": 0.025,
+   "words": 367
+  },
+  "prediction": {
+   "wer": 0.082,
+   "words": 367
+  },
+  "chip": {
+   "wer": 0.084,
+   "words": 367
+  }
+ },
+ "model": {
+  "file": "ggml-small.en.bin",
+  "sha256": "c6138d6d58ecc8322097e0f987c32f1be8bb0a18532a3f88f734d1bbf9c41e5d"
+ }
+}

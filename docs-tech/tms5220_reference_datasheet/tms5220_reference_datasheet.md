@@ -4,7 +4,7 @@ This datasheet describes the TMS5220 as measured on real hardware. It follows th
 
 The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. `../speech_capture_plan.md` describes how the measurements are made.
 
-**Status (2026-10-07):** These sections are drafted:
+**Status (2026-10-09):** These sections are drafted:
 - the system clock (§2, Appendix A);
 - the CPU interface, the FIFO and the commands (§3, §5, §6);
 - the VSM interface (§4);
@@ -13,7 +13,8 @@ The aim is that someone working from this document alone can author new phrases,
 - the DAC and the audio output (§8.2, §8.3);
 - the serial sample output (§8.4);
 - the measured output characteristics (§9.5);
-- the pin functions (§11.2).
+- the pin functions (§11.2);
+- authoring speech data (§12).
 
 What is not yet known is listed where it applies. The main gap is in §8.8: the filter's lowest-order arithmetic, which leaves the model of §8.9 one code off at a few samples per pitch period. Overflow is now modelled as a 14-bit wrap, following US 4,335,277.
 
@@ -1023,7 +1024,10 @@ Every word of the eight PROMs in the data set, 1148 words, parsed with the frame
 
 ### 12.11 The project's encoder (Phase 11)
 
-`encoder/` holds an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its round trip and its output on the chip are described in the capture plan (Phase 11).
+`encoder/` holds an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its `README.md` gives the method, and its `GAPS.md` lists what this datasheet left open.
+
+- **The round trip.** Every word of the eight PROMs (1148), parsed with the frame format of §8.1 and packed again, is bit-identical to the original up to the end of its stop code [`captures/phase11/roundtrip/`].
+- **New speech on the chip** (Phase 11). 347 utterances (10.4 minutes) were encoded from new speech and hand-designed frames, and packaged as an Acorn-format PHROM and as other VSM images. The reference emulator's predictions were committed before the chip was run. Each utterance was then captured three times through each path on chip 1. The speech is within the tolerance of the capture plan's §1.5 in every set: the emulator's median SDR is 28.4–29.7 dB, against 34.0–36.5 dB for chip 1's own takes. Every VSM take read exactly the predicted bits, and every frame read on time, apart from a known limit of the measurement in takes over 5.7 s [`captures/phase11/results/`]. The hand-designed frames are quiet synthetic data, on which the one-code error of §8.8 weighs as it does on the Phase 8 vectors.
 
 ## Appendix A: System clock
 
@@ -1109,3 +1113,4 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-08 | §3, §4, §5 | Phase 8 host tests replayed through the emulator (`tools/replay.py`). Correction: a frame's parameters are read over 446 slots, not all at once. New: Read Byte's bits start at slot 13 (at least 22 slots after a Dummy Read); a held Read Byte's reads return 0xFF; READY after Read and Branch returns at slot 15, 60–63 slots on. Speak External's BL, BE and TS timing within a frame not yet settled | p8-19 to p8-25 |
 | 2026-10-09 | §8.6, §8.9 | Correction (to this datasheet): the pitch counter's hold at an inhibited change lasts three samples of IP 0, not two, so a voiced frame after silence that followed voiced speech starts its chirp one sample later. It cut the model's error power on the PROM words by up to 13 times, and made no PROM or vector set worse | vectors `onset`; corpus, every PROM |
 | 2026-10-09 | §7, §8.8 | Upsets characterised: single ±1 starts at a few fixed samples per word, each with a fixed chance; towards the nearer output step; on the same coefficients (*d*₁ < 0) as the lowest-order error. Chip 4 against chip 1 on PROM words | corpus, every PROM; `captures/phase10/repeat/`; chip 4, `starwars_speech`, `vm61003_words` |
+| 2026-10-09 | §12, §8.9 | New: the authoring guide (bit budget, frame timing for authors, levels, the excitation's spectrum, the K sign convention, an encoding method, VSM images, word tables, Speak External streams, how the original data was encoded). §8.9 clarified where an encoder written from it found it ambiguous. New speech data, encoded from this datasheet alone, plays on the chip as the emulator predicted | `captures/phase11/` |

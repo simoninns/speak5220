@@ -1,0 +1,248 @@
+{
+ "name": "phase11_rec",
+ "title": "Phase 11 recorded speech",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase11/data/rec.bin",
+  "kind": "synthetic",
+  "size": 16671,
+  "sha256": "d29e5433179243cd423c4c72906712ada8c23d677b3c643b0ecbbc567479013e",
+  "crc32": "0103b85b"
+ },
+ "bank": 0,
+ "format": "phase11",
+ "provenance": "tools/phase11.py: real recordings (captures/phase11/inputs/recordings/), encoded by encoder/",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "arctic_a0001_si",
+   "frames": 135,
+   "bytes": 523
+  },
+  {
+   "number": 2,
+   "address": "0x0020B",
+   "name": "arctic_a0002_si",
+   "frames": 153,
+   "bytes": 540
+  },
+  {
+   "number": 3,
+   "address": "0x00427",
+   "name": "arctic_a0003_si",
+   "frames": 118,
+   "bytes": 493
+  },
+  {
+   "number": 4,
+   "address": "0x00614",
+   "name": "arctic_a0004_si",
+   "frames": 103,
+   "bytes": 395
+  },
+  {
+   "number": 5,
+   "address": "0x0079F",
+   "name": "arctic_a0005_si",
+   "frames": 43,
+   "bytes": 208
+  },
+  {
+   "number": 6,
+   "address": "0x0086F",
+   "name": "arctic_a0006_si",
+   "frames": 133,
+   "bytes": 527
+  },
+  {
+   "number": 7,
+   "address": "0x00A7E",
+   "name": "arctic_a0007_si",
+   "frames": 111,
+   "bytes": 482
+  },
+  {
+   "number": 8,
+   "address": "0x00C60",
+   "name": "arctic_a0008_si",
+   "frames": 85,
+   "bytes": 372
+  },
+  {
+   "number": 9,
+   "address": "0x00DD4",
+   "name": "arctic_a0009_si",
+   "frames": 115,
+   "bytes": 502
+  },
+  {
+   "number": 10,
+   "address": "0x00FCA",
+   "name": "arctic_a0010_si",
+   "frames": 110,
+   "bytes": 599
+  },
+  {
+   "number": 11,
+   "address": "0x01221",
+   "name": "arctic_a0011_si",
+   "frames": 120,
+   "bytes": 578
+  },
+  {
+   "number": 12,
+   "address": "0x01463",
+   "name": "arctic_a0012_si",
+   "frames": 111,
+   "bytes": 475
+  },
+  {
+   "number": 13,
+   "address": "0x0163E",
+   "name": "arctic_a0013_si",
+   "frames": 160,
+   "bytes": 639
+  },
+  {
+   "number": 14,
+   "address": "0x018BD",
+   "name": "arctic_a0014_si",
+   "frames": 110,
+   "bytes": 468
+  },
+  {
+   "number": 15,
+   "address": "0x01A91",
+   "name": "arctic_a0015_si",
+   "frames": 71,
+   "bytes": 320
+  },
+  {
+   "number": 16,
+   "address": "0x01BD1",
+   "name": "arctic_a0016_si",
+   "frames": 117,
+   "bytes": 501
+  },
+  {
+   "number": 17,
+   "address": "0x01DC6",
+   "name": "arctic_a0017_si",
+   "frames": 203,
+   "bytes": 744
+  },
+  {
+   "number": 18,
+   "address": "0x020AE",
+   "name": "arctic_a0018_si",
+   "frames": 45,
+   "bytes": 218
+  },
+  {
+   "number": 19,
+   "address": "0x02188",
+   "name": "arctic_a0019_si",
+   "frames": 143,
+   "bytes": 608
+  },
+  {
+   "number": 20,
+   "address": "0x023E8",
+   "name": "arctic_a0020_si",
+   "frames": 106,
+   "bytes": 502
+  },
+  {
+   "number": 21,
+   "address": "0x025DE",
+   "name": "arctic_a0021_si",
+   "frames": 89,
+   "bytes": 412
+  },
+  {
+   "number": 22,
+   "address": "0x0277A",
+   "name": "arctic_a0022_si",
+   "frames": 155,
+   "bytes": 688
+  },
+  {
+   "number": 23,
+   "address": "0x02A2A",
+   "name": "arctic_a0023_si",
+   "frames": 187,
+   "bytes": 850
+  },
+  {
+   "number": 24,
+   "address": "0x02D7C",
+   "name": "arctic_a0024_si",
+   "frames": 155,
+   "bytes": 643
+  },
+  {
+   "number": 25,
+   "address": "0x02FFF",
+   "name": "arctic_a0025_si",
+   "frames": 112,
+   "bytes": 520
+  },
+  {
+   "number": 26,
+   "address": "0x03207",
+   "name": "arctic_a0026_si",
+   "frames": 107,
+   "bytes": 500
+  },
+  {
+   "number": 27,
+   "address": "0x033FB",
+   "name": "arctic_a0027_si",
+   "frames": 147,
+   "bytes": 714
+  },
+  {
+   "number": 28,
+   "address": "0x036C5",
+   "name": "arctic_a0028_si",
+   "frames": 89,
+   "bytes": 331
+  },
+  {
+   "number": 29,
+   "address": "0x03810",
+   "name": "arctic_a0029_si",
+   "frames": 108,
+   "bytes": 498
+  },
+  {
+   "number": 30,
+   "address": "0x03A02",
+   "name": "arctic_a0030_si",
+   "frames": 42,
+   "bytes": 214
+  },
+  {
+   "number": 31,
+   "address": "0x03AD8",
+   "name": "arctic_a0031_si",
+   "frames": 74,
+   "bytes": 349
+  },
+  {
+   "number": 32,
+   "address": "0x03C35",
+   "name": "arctic_a0032_si",
+   "frames": 146,
+   "bytes": 611
+  },
+  {
+   "number": 33,
+   "address": "0x03E98",
+   "name": "arctic_a0033_si",
+   "frames": 140,
+   "bytes": 647
+  }
+ ]
+}
