@@ -19,7 +19,7 @@ The site sits behind Cloudflare and refuses scripted fetches, so these details w
 | Die | Marking | siliconpr0n map | Use in this analysis |
 |---|---|---|---|
 | TMS5220CNL | — | `/map/ti/tms5220cnl/mz_mit20x/` (15,931 × 12,936) | The later revision. If its multiplier differs, compare the two (ideas §4.6) |
-| TMS5200NL | `T0285E 2501E`, 6,166 × 5,121 µm | `/map/ti/tms5200nl/mz_mit20x/` | Same die family (T0285E). Its page says the metal "(C) 1978" was etched off, so parts of it may be **without metal**. Check this first: it may show what lies under the metal here |
+| TMS5200NL | `T0285E 2501E`, 6,166 × 5,121 µm | `/map/ti/tms5200nl/mz_mit20x/` | Same die family (T0285E). Its page says the "(C) 1978" mark, which was in metal, is "etched off": the mark, not the image. **Correction (Phase 2):** the map is titled "TMS5200 top metal @ Mit20x" and its multiplier is fully metallised, so it is top metal like this one. Its layout matches this die's, so it can stand in where this image is damaged |
 | TMS5100NL | `TO280B 0281 A (C)3-78`, 5,288 × 5,388 µm | `/map/ti/tms5100nl/mz_mit20x/` | The filter of US 4,335,277 (plan T1) |
 | TMC0280FNL (CD2801) | — | `/map/ti/tmc0280fnl/mz_mit20x/` | The Speak & Spell chip |
 | TMS5111NLL | `TMS5100AJ` | `/map/ti/tms5111nll/mz_mit20x/` | — |
@@ -132,7 +132,7 @@ Neither order fits everything, so the assignment is left open (`"pin": null` in 
 
 ### 4.3 How Phase 1 settles it
 
-**Update (Phase 1):** neither order holds. P5 and P10 both join the substrate ring and are probably bonded down to the paddle, which explains the 29th pad without a doubled pin. `phase1.md` §1 gives the resulting working map.
+**Update (Phase 1):** the map has been re-derived from the pads' drivers (`phase1.md` §1.2). It is **Order 2 shifted by one pad**: P6 = pin 1, P10 = `VSS`, P13 = `SPEAKER`, P16 = `VREF`, and the mirrored pair P20/P21 are `M0`/`M1`. The extra pad is P5, a second `VSS` bond on the ring. The eight identical output drivers fall exactly on D0–D7, which decides it.
 
 Three traces, each a few hours of work with the viewer, decide the order:
 1. **The supply rails.** Follow the two widest rails of the datapath (A, B) to their pads. They are `VDD` and `VSS` (pins 4, 5), and they fix the offset.
@@ -146,4 +146,4 @@ Then fill in `pin` in `cells.json`, add pin names to the figure, and update this
 - §1: source, licence, the part's date code, and P-channel in place of NMOS.
 - §4 Phase 0: marked done apart from the pin map. The pin map moves to the start of Phase 1.
 - §4 Phase 2: notes that MAME has already checked the tables against this decap.
-- The TMS5200NL image (possibly partly delayered) and the TMS5220CNL image are added as resources for Phases 3 and 4.
+- The TMS5200NL image and the TMS5220CNL image are added as resources for Phases 3 and 4. (The TMS5200NL image was first thought to be partly without metal. It is not: see §1.)

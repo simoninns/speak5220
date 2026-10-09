@@ -9,7 +9,7 @@
    5774,
    6780
   ],
-  "notes": "Array multiplier? Header row (y 5282), 14 bit rows of 452 px, five column groups of 1,260 px from x 1480; groups 2-4 identical, 1 and 5 differ"
+  "notes": "Array multiplier? Header row (y 5282), 14 bit rows of 452 px, five column groups of 1,260 px from x 1480; groups 2-4 identical, 1 and 5 differ. Row 14 is the LSB (phase2.md section 4.3)"
  },
  {
   "name": "block_B",
@@ -21,7 +21,7 @@
    2731,
    6525
   ],
-  "notes": "Adder, delay stack, Y latch? 14 bit rows of 452 px from y 6724, two rows lower than A"
+  "notes": "Adder, delay stack (x 8450-9300, 18 clocked inverters per bit), Y latch? 14 bit rows of 452 px from y 6724, two rows lower than A"
  },
  {
   "name": "block_C",
@@ -33,7 +33,7 @@
    3113,
    1757
   ],
-  "notes": "Dense mask ROM (parameter tables?). Cell pitch 36.3 x 31.9 px"
+  "notes": "Parameter ROM (energy, pitch, K1-K10), read in phase2.md: 10 output bits x 4 gaps x 68 columns, plus 4 gap-selector columns. Every readable bit equals PROM OUT. Cell pitch 36.3 x 31.9 px"
  },
  {
   "name": "block_D",
@@ -57,7 +57,7 @@
    3163,
    2912
   ],
-  "notes": "ROM or PLA array (regular cells with contacts under a decoder row). Not the DAC"
+  "notes": "K-stack (inferred): 10 identical columns of 17-18 rows; its outputs drop into the recoding driver row above A (phase1.md section 2). Not a ROM, not the chirp ROM (block I), not the DAC"
  },
  {
   "name": "block_F",
@@ -81,7 +81,7 @@
    6979,
    2309
   ],
-  "notes": "Large drivers: four identical comb pairs (top row) and two mirrored pairs (bottom row). Clock drivers? Not a binary-weighted DAC"
+  "notes": "Large drivers: four identical comb pairs (top row) and two mirrored pairs (bottom row). Clock drivers by position: four wide lines run from under G round A (phase1.md section 5); which driver feeds which line is not traced"
  },
  {
   "name": "block_H",
@@ -93,7 +93,7 @@
    1155,
    8234
   ],
-  "notes": "Large drivers by the right-hand pads (bus I/O?)"
+  "notes": "D0-D7 output drivers: five large single-transistor cells (y 5950-9950) plus about three beside P17-P19, on a shared return rail into P16 (VREF) (phase1.md section 2)"
  },
  {
   "name": "pad01",
@@ -108,8 +108,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "torn wire",
-  "pin": 10,
-  "pin_name": "PROM OUT",
+  "pin": 25,
+  "pin_name": "ADD2",
   "pin_status": "working"
  },
  {
@@ -125,8 +125,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "torn wire",
-  "pin": 11,
-  "pin_name": "VREF",
+  "pin": 26,
+  "pin_name": "D6",
   "pin_status": "working"
  },
  {
@@ -142,8 +142,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "torn wire",
-  "pin": 12,
-  "pin_name": "D2",
+  "pin": 27,
+  "pin_name": "WS",
   "pin_status": "working"
  },
  {
@@ -159,8 +159,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "torn wire",
-  "pin": 13,
-  "pin_name": "D1",
+  "pin": 28,
+  "pin_name": "RS",
   "pin_status": "working"
  },
  {
@@ -176,8 +176,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4) Wide strap straight into the substrate ring; probably bonded down to the paddle (phase1.md \u00a71)",
   "side": "left",
   "bond": "ball",
-  "pin": 5,
-  "pin_name": "VSS",
+  "pin": null,
+  "pin_name": "ring",
   "pin_status": "working"
  },
  {
@@ -193,8 +193,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "ball",
-  "pin": 14,
-  "pin_name": "D0",
+  "pin": 1,
+  "pin_name": "D7",
   "pin_status": "working"
  },
  {
@@ -210,8 +210,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "ball",
-  "pin": 15,
-  "pin_name": "M0",
+  "pin": 2,
+  "pin_name": "ADD1",
   "pin_status": "working"
  },
  {
@@ -227,8 +227,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left",
   "bond": "ball",
-  "pin": 16,
-  "pin_name": "M1",
+  "pin": 3,
+  "pin_name": "ROMCLK",
   "pin_status": "working"
  },
  {
@@ -244,8 +244,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "left (corner)",
   "bond": "torn wire",
-  "pin": 17,
-  "pin_name": "INT",
+  "pin": 4,
+  "pin_name": "VDD",
   "pin_status": "working"
  },
  {
@@ -278,8 +278,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "bottom",
   "bond": "torn wire",
-  "pin": 18,
-  "pin_name": "READY",
+  "pin": 6,
+  "pin_name": "OSC",
   "pin_status": "working"
  },
  {
@@ -295,8 +295,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "bottom",
   "bond": "torn wire",
-  "pin": 19,
-  "pin_name": "D3",
+  "pin": 7,
+  "pin_name": "T11",
   "pin_status": "working"
  },
  {
@@ -312,8 +312,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "bottom",
   "bond": "torn wire",
-  "pin": 20,
-  "pin_name": "TEST",
+  "pin": 8,
+  "pin_name": "SPEAKER",
   "pin_status": "working"
  },
  {
@@ -329,8 +329,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "bottom",
   "bond": "torn wire",
-  "pin": 21,
-  "pin_name": "ADD8",
+  "pin": 9,
+  "pin_name": "I/O",
   "pin_status": "working"
  },
  {
@@ -346,8 +346,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "bottom",
   "bond": "torn wire",
-  "pin": 22,
-  "pin_name": "D4",
+  "pin": 10,
+  "pin_name": "PROM OUT",
   "pin_status": "working"
  },
  {
@@ -363,8 +363,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right (corner)",
   "bond": "ball",
-  "pin": 23,
-  "pin_name": "ADD4",
+  "pin": 11,
+  "pin_name": "VREF",
   "pin_status": "working"
  },
  {
@@ -380,8 +380,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "ball",
-  "pin": 24,
-  "pin_name": "D5",
+  "pin": 12,
+  "pin_name": "D2",
   "pin_status": "working"
  },
  {
@@ -397,8 +397,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "torn wire",
-  "pin": 25,
-  "pin_name": "ADD2",
+  "pin": 13,
+  "pin_name": "D1",
   "pin_status": "working"
  },
  {
@@ -414,8 +414,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "ball",
-  "pin": 26,
-  "pin_name": "D6",
+  "pin": 14,
+  "pin_name": "D0",
   "pin_status": "working"
  },
  {
@@ -431,8 +431,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "ball",
-  "pin": 27,
-  "pin_name": "WS",
+  "pin": 15,
+  "pin_name": "M0",
   "pin_status": "working"
  },
  {
@@ -448,8 +448,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "torn wire",
-  "pin": 28,
-  "pin_name": "RS",
+  "pin": 16,
+  "pin_name": "M1",
   "pin_status": "working"
  },
  {
@@ -465,8 +465,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "torn wire",
-  "pin": 1,
-  "pin_name": "D7",
+  "pin": 17,
+  "pin_name": "INT",
   "pin_status": "working"
  },
  {
@@ -482,8 +482,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "right",
   "bond": "torn wire",
-  "pin": 2,
-  "pin_name": "ADD1",
+  "pin": 18,
+  "pin_name": "READY",
   "pin_status": "working"
  },
  {
@@ -499,8 +499,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "torn wire",
-  "pin": 3,
-  "pin_name": "ROMCLK",
+  "pin": 19,
+  "pin_name": "D3",
   "pin_status": "working"
  },
  {
@@ -516,8 +516,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "ball",
-  "pin": 4,
-  "pin_name": "VDD",
+  "pin": 20,
+  "pin_name": "TEST",
   "pin_status": "working"
  },
  {
@@ -533,8 +533,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "ball",
-  "pin": 6,
-  "pin_name": "OSC",
+  "pin": 21,
+  "pin_name": "ADD8",
   "pin_status": "working"
  },
  {
@@ -550,8 +550,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "torn wire",
-  "pin": 7,
-  "pin_name": "T11",
+  "pin": 22,
+  "pin_name": "D4",
   "pin_status": "working"
  },
  {
@@ -567,8 +567,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "torn wire",
-  "pin": 8,
-  "pin_name": "SPEAKER",
+  "pin": 23,
+  "pin_name": "ADD4",
   "pin_status": "working"
  },
  {
@@ -584,8 +584,8 @@
   "notes": "Pin not yet assigned (phase0.md section 4)",
   "side": "top",
   "bond": "torn wire",
-  "pin": 9,
-  "pin_name": "I/O",
+  "pin": 24,
+  "pin_name": "D5",
   "pin_status": "working"
  },
  {
@@ -598,7 +598,7 @@
    3692,
    560
   ],
-  "notes": "Isolated metal plate, about 1.26 x 0.19 mm: about 10 pF over field oxide. Probably the RC oscillator capacitor"
+  "notes": "Isolated metal plate, about 1.26 x 0.19 mm (~10 pF over field oxide), beside P26 (ADD8 under the driver-derived pin map). Purpose unknown: not the oscillator if P11 is OSC"
  },
  {
   "name": "osc_circuit",
@@ -610,7 +610,7 @@
    1950,
    700
   ],
-  "notes": "Serpentine long-channel device at the plate end, small circuit, P26. P24 line returns into it"
+  "notes": "Serpentine long-channel device and small circuit at the plate end, leading to P26. Purpose unknown"
  },
  {
   "name": "dac_candidate",
@@ -622,7 +622,7 @@
    470,
    600
   ],
-  "notes": "Small circuit between P29 and P28 with bars of different lengths. Candidate DAC if P28 is SPEAKER"
+  "notes": "Small circuit of about 10 devices on P29 (D5) line; not the DAC (phase1.md section 1.3)"
  },
  {
   "name": "A_row01",
@@ -1031,5 +1031,65 @@
    6780
   ],
   "notes": "Column group 5: narrower (ends at x 7280); its left 700 px match the middle groups (0.58)"
+ },
+ {
+  "name": "block_I",
+  "kind": "block",
+  "label": "I",
+  "box": [
+   10700,
+   8980,
+   780,
+   1240
+  ],
+  "notes": "Chirp ROM, read in phase2.md: 8 bits (4 bands of 2) x 4 gaps x 13 columns = 52 words; window = 0. All 52 words equal Table 8-7"
+ },
+ {
+  "name": "delay_stack",
+  "label": "DS",
+  "kind": "cell",
+  "box": [
+   8450,
+   6880,
+   850,
+   6300
+  ],
+  "notes": "Delay stack: three columns of clocked inverters per bit row, 7 + 5 + 6 = 18 jumpers per bit = 9 two-phase stages (phase1.md section 4)"
+ },
+ {
+  "name": "ds_clock_buffers",
+  "label": "clkB",
+  "kind": "feature",
+  "box": [
+   7600,
+   6350,
+   800,
+   210
+  ],
+  "notes": "Four identical buffers above B; their lines clock the delay stack (patent phi1B-phi4B, clock buffers 417)"
+ },
+ {
+  "name": "ref_cell",
+  "label": "ref",
+  "kind": "cell",
+  "box": [
+   4000,
+   8446,
+   1260,
+   452
+  ],
+  "notes": "Reference multiplier cell (group 3, row 7): identical in groups 3-4 of every row in both chips; one two-row channel link per cell = Sigma(x-2) (phase2.md section 4)"
+ },
+ {
+  "name": "speaker_out",
+  "label": "SPK",
+  "kind": "feature",
+  "box": [
+   8250,
+   13765,
+   1850,
+   310
+  ],
+  "notes": "SPEAKER output: one P-channel transistor, W about 1.2 mm, L about 17 um. Source = outer C on VSS; gate = two wide plates (x 8303-10035); drain = inner line, joined to P13 via the column at x 10040-10075 (read by eye, phase1.md section 2)"
  }
 ]

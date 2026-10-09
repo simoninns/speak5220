@@ -296,7 +296,13 @@ Each setting was held for six frames, so the filter settles. Every vector was ca
 
 An unconfirmed entry (†) is one where a neighbouring value fits as well or slightly better. That happens because the model is not yet exact for voiced frames (§8.9): a nearby value can offset its one-code slips at a few samples. No neighbouring value made any vector exact. So the listed values are kept, and none is contradicted.
 
-**Read from the ROM (2026-10-09).** The energy, pitch and K tables were then read directly from chip 1's parameter ROM through `PROM OUT` (§8.10). All 248 entries equal Tables 8-4 to 8-6, including the 26 K entries the fit left unconfirmed, so those are no longer marked [`captures/promout/chip1/`]. The chirp ROM is separate and does not appear on `PROM OUT`, so 26 of its entries remain unconfirmed (†, Table 8-7).
+**Read from the ROM (2026-10-09).** The energy, pitch and K tables were then read directly from chip 1's parameter ROM through `PROM OUT` (§8.10). All 248 entries equal Tables 8-4 to 8-6, including the 26 K entries the fit left unconfirmed, so those are no longer marked [`captures/promout/chip1/`]. The chirp ROM is separate and does not appear on `PROM OUT`.
+
+**Read from the die (2026-10-09).** Both ROMs were then read from the die image (`docs-tech/die_analysis/phase2.md`).
+- **The parameter ROM:** every readable bit of the 248 entries equals `PROM OUT`.
+- **The chirp ROM:** a separate array of 52 words of 8 bits. All 52 equal Table 8-7, so the 26 chirp entries that the fit left unconfirmed are no longer marked. The die has no locations 52–63.
+
+[`docs-tech/die_analysis/rom_chirp.csv`, `rom_parameters.csv`]
 
 **The values are MAME's.** All of them agree with the tables in MAME's `tms5110r.hxx` for the TMS5220 (`TI_028X_LATER_ENERGY`, `TI_5220_PITCH`, `TI_5110_5220_LPC`, `TI_LATER_CHIRP`; MAME states that its K and chirp tables match a decapped TMS5220), except that the pitch period is one sample longer than MAME's pitch value (§8.6). The original lists only coded index ranges, not values. The energy table is also the one in US 4,335,277 (its Table IV). That patent's pitch and K tables belong to an earlier chip and differ, though it stores them in the same form: 10-bit two's-complement values in a ROM addressed by the coded index.
 
@@ -368,11 +374,11 @@ An unconfirmed entry (†) is one where a neighbouring value fits as well or sli
 
 | Address | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| Value | 0 | 3 | 15 † | 40 | 76 | 108 † | 113 † | 80 | 37 † | 38 | 76 |
+| Value | 0 | 3 | 15 | 40 | 76 | 108 | 113 | 80 | 37 | 38 | 76 |
 | **Address** | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 |
-| Value | 68 † | 26 † | 50 | 59 | 19 † | 55 | 26 † | 37 † | 31 † | 29 † | 0, to 51 |
+| Value | 68 | 26 | 50 | 59 | 19 | 55 | 26 | 37 | 31 | 29 | 0, to 51 |
 
-† Not confirmed against its neighbours; see above.
+Every value has been read from the die's chirp ROM (see above).
 
 **Frame format (confirms the original; New detail).** Each parameter is read **most significant bit first**, from a stream whose bytes are read least significant bit first (§6). Fields, in order:
 
@@ -825,7 +831,7 @@ The original lists pin 10 only as "Testing use only". It is the serial output of
 | Parameter | Sample period (from energy's) | First slot | Value |
 |---|---|---|---|
 | Energy | 0 | 0 | Table 8-4, two's complement |
-| Pitch | 2 | 0 | Table 8-5 × 4, unsigned (the value in bits 2–9) |
+| Pitch | 2 | 0 | Table 8-5 × 4, unsigned (the value in bits 2–9). The ROM itself stores the value unshifted, in bits 0–7 (die, `phase2.md` §2.2) |
 | K1 | 3 | 19 | Table 8-6, two's complement |
 | K2 | 5 | 18 | 〃 |
 | K3 | 7 | 17 | 〃 |
@@ -1156,3 +1162,4 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-09 | §7, §8.8 | Upsets characterised: single ±1 starts at a few fixed samples per word, each with a fixed chance; towards the nearer output step; on the same coefficients (*d*₁ < 0) as the lowest-order error. Chip 4 against chip 1 on PROM words | corpus, every PROM; `captures/phase10/repeat/`; chip 4, `starwars_speech`, `vm61003_words` |
 | 2026-10-09 | §12, §8.9 | New: the authoring guide (bit budget, frame timing for authors, levels, the excitation's spectrum, the K sign convention, an encoding method, VSM images, word tables, Speak External streams, how the original data was encoded). §8.9 clarified where an encoder written from it found it ambiguous. New speech data, encoded from this datasheet alone, plays on the chip as the emulator predicted | `captures/phase11/` |
 | 2026-10-09 | §8.10, §8.1, §11.2 | New: `PROM OUT` (pin 10) is the parameter ROM's serial output (US 4,335,277 Fig. 8f): each parameter's table value at its stored index, 10 bits LSB first, repeating every 25 sample periods; open drain. All 248 energy, pitch and K entries read from chip 1 equal Tables 8-4 to 8-6, which confirms the 26 K entries the fit had left unconfirmed. In an unvoiced frame it shows K5–K10 at their stored indices, as §12.2 describes | `captures/promout/chip1/` |
+| 2026-10-09 | §8.1, §8.10 | Both ROMs read from the die image: every readable parameter-ROM bit equals `PROM OUT`. The chirp ROM (52 × 8 bits) equals Table 8-7 at every address, which confirms the 26 chirp entries the fit had left unconfirmed (no † remains). The ROM stores pitch unshifted | `docs-tech/die_analysis/phase2.md`, `rom_chirp.csv`, `rom_parameters.csv` |
