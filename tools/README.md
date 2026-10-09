@@ -344,6 +344,7 @@ python tools/die.py tiles --viewer-only     # refresh the viewer's overlay after
 python tools/die.py rom                     # read the parameter and chirp ROMs (phase2.md)
 python tools/die.py copies                  # the multiplier cell against its copies, and their average
 python tools/die.py lowend                  # each stage's end rows against its middle rows (phase3.md)
+python tools/die.py summer                  # block B's rows, and the MR lines from B to stage 0 (phase4.md)
 ```
 
 The viewer draws every record of `docs-tech/die_analysis/cells.json` and shows the image coordinates under the mouse, ready to copy into a new record.

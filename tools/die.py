@@ -14,6 +14,7 @@
       python tools/die.py rom                       # read the parameter and chirp ROMs
       python tools/die.py copies                    # the multiplier cell against its copies
       python tools/die.py lowend                    # each stage's end rows against its middle rows
+      python tools/die.py summer                    # block B's rows, and the MR lines it drives
 
     The image and everything made from it stay under local/die_image/
     (git-ignored): the JPEG is 85 MB, its raw cache 809 MB and the tiles
@@ -545,6 +546,93 @@ def cmd_lowend(args):
     print(f'wrote {out}/')
 
 
+# Block B: 14 bit rows of 452 px from y 6,724, logic from x 7,280 to the
+# MR bus on its right edge (phase4.md).
+B_ROW1, B_X0, B_W = 6724, 7280, 2700
+
+
+def metal_labels(name, x, y, w, h):
+    """Connected pieces of metal in a region: bright in the green channel,
+    with gaps of up to 9 px closed along the axes only."""
+    from scipy import ndimage as ndi
+    g = ndi.median_filter(grab(name, x, y, w, h)[..., 1], 5)
+    m = g > (np.percentile(g, 25) + np.percentile(g, 85)) / 2
+    m = ndi.binary_closing(m, np.ones((9, 1))) | ndi.binary_closing(m, np.ones((1, 9)))
+    return ndi.label(m)[0]
+
+
+def cmd_summer(args):
+    """Compare every row of block B with its middle rows (4-10, averaged),
+    in both images, as lowend does for A. Then trace the line that each
+    row of B sends into the bus on B's right edge, round under B and into
+    the MR channel below A, to the row of group 1 where it ends."""
+    from scipy import ndimage as ndi
+    H, M = A_ROW, 40
+    out = os.path.join(LOCAL, 'phase4')
+    os.makedirs(out, exist_ok=True)
+    copies, avgs = {}, {}
+    for name in ('5220', '5200'):
+        tpl = grab(name, B_X0, B_ROW1 + 6 * H, B_W, H)
+        scores = []
+        for r in range(1, 15):
+            x, y = B_X0 - M, B_ROW1 + (r - 1) * H - M
+            win = grab(name, x, y, B_W + 2 * M, H + 2 * M)
+            s, dx, dy = best_match(win[..., 1], tpl[..., 1])
+            copies[name, r] = win[dy:dy + H, dx:dx + B_W]
+            scores.append(s)
+        avgs[name] = np.mean([copies[name, r] for r in range(4, 11)], 0)
+        print(f'{name} B rows 1-14 against row 7: ' + ' '.join(f'{s:.2f}' for s in scores))
+    print('differences from the middle rows, present in both images (x, cell y, w, h, area):')
+    tiles = []
+    for r in range(1, 15):
+        d = np.minimum(*[ndi.gaussian_filter(np.abs(copies[n, r][..., 1] - avgs[n][..., 1]), 3)
+                         for n in ('5220', '5200')])
+        lab, _ = ndi.label(d > 30)
+        found = []
+        for i, s in enumerate(ndi.find_objects(lab), 1):
+            area = int((lab[s] == i).sum())
+            if area > 200:
+                found.append((B_X0 + s[1].start, s[0].start, s[1].stop - s[1].start,
+                              s[0].stop - s[0].start, area))
+        print(f'  row {r}: {sorted(found, key=lambda b: -b[4])[:5]}')
+        m = np.clip((d - 15) / 25, 0, 1)[..., None]
+        o = copies['5220', r] * (1 - 0.7 * m) + np.array([255, 0, 255]) * 0.7 * m
+        tiles.append(Image.fromarray(o.astype(np.uint8)).resize((B_W // 3, H // 3)))
+    sheet = Image.new('RGB', (B_W // 3, 14 * (H // 3 + 4)), 'white')
+    for i, t in enumerate(tiles):
+        sheet.paste(t, (0, i * (H // 3 + 4)))
+    sheet.save(os.path.join(out, 'b_diff_overview.png'))
+
+    # The loop: B's right-hand bus, under B, up its left side and left
+    # along the channel below A. Each line is found where it leaves its row
+    # of B (x 9,925-9,965, just below the row's top) and where it crosses
+    # x 6,700 in the channel; then followed left to its top in group 1.
+    print('the MR lines (B row: channel y at x 6,700 -> top of the line in group 1, and A row there):')
+    X0, Y0 = 900, 5500
+    for name in ('5220', '5200'):
+        right = metal_labels(name, 6650, 6800, 10350 - 6650, 14100 - 6800)
+        left = metal_labels(name, X0, Y0, 6750 - X0, 12650 - Y0)
+        line = []
+        for r in range(1, 15):
+            yt = B_ROW1 + (r - 1) * H - 6800
+            ids = [i for i in np.unique(right[max(yt - 10, 0):yt + 80, 9925 - 6650:9965 - 6650]) if i]
+            ych = None
+            for i in ids:
+                ys, xs = np.where(right == i)
+                at = xs < 50
+                if at.any():
+                    ych = int(ys[at].mean()) + 6800
+            if ych is None:
+                line.append(f'{r}: none')
+                continue
+            ids = [i for i in np.unique(left[ych - Y0 - 6:ych - Y0 + 7, 6700 - X0]) if i]
+            top = min(int(np.where(left == i)[0].min()) for i in ids) + Y0 if ids else None
+            row = f'A row {(top - A_ROW1) / A_ROW + 1:.1f}' if top else '?'
+            line.append(f'{r}: {ych} -> {top} ({row})')
+        print(f'  {name}: ' + '; '.join(line))
+    print(f'wrote {out}/')
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.split('\n\n')[1].strip(),
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -569,9 +657,11 @@ def main():
     k = sub.add_parser('copies', help='the multiplier cell against its copies, and their average')
     k.add_argument('--out', help='the averaged cell (default local/die_image/cell_average.png)')
     sub.add_parser('lowend', help="each stage's end rows against its middle rows (Phase 3)")
+    sub.add_parser('summer', help="block B's rows against its middle rows, and the MR lines (Phase 4)")
     args = p.parse_args()
     {'cache': cmd_cache, 'tiles': cmd_tiles, 'crop': cmd_crop, 'annotate': cmd_annotate,
-     'rom': cmd_rom, 'copies': cmd_copies, 'lowend': cmd_lowend}[args.cmd](args)
+     'rom': cmd_rom, 'copies': cmd_copies, 'lowend': cmd_lowend,
+     'summer': cmd_summer}[args.cmd](args)
 
 
 if __name__ == '__main__':

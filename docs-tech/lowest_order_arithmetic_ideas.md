@@ -178,7 +178,11 @@ The Phase 5 bench changes (heating or cooling the chip, `VDD` at the rails' limi
 
 ## 5. The die
 
-**Done in part (2026-10-09, `docs-tech/die_analysis/phase3.md`).** The array is found, and step 2 below is done as far as a top-metal image allows. Bits 1 and 2 of every stage are the ordinary cell. Bit 0's inputs from below are tied off, and no reading of the ties improves the model. Stage 0 has no adder, which explains its missing +1. Stages 1–3 are one cell, so the *d*₁ < 0 signature points at stage 1's input from stage 0 (Phase 5 of the die plan). The text below is the plan as first written.
+**Done in part (2026-10-09, `docs-tech/die_analysis/phase3.md`).** The array is found, and step 2 below is done as far as a top-metal image allows. Bits 1 and 2 of every stage are the ordinary cell. Bit 0's inputs from below are tied off, and no reading of the ties improves the model. Stage 0 has no adder, which explains its missing +1. Stages 1–3 are one cell, so the *d*₁ < 0 signature points at stage 1's input from stage 0 (Phase 5 of the die plan). Steps 3 and 4 are done as far as the image allows (`phase4.md`):
+- **The summer side is one cell per bit.** The adder, the summer multiplexer and the Y latch are the same at bit 0 as in the middle, and the Y latch is 14 bits wide.
+- **The traced multiplier input fits the model only with a constant 0 below its lowest bit.** That bit comes from a separate cell, which makes it a second Phase 5 candidate.
+
+The text below is the plan as first written.
 
 Images of the TMS5220NL die exist (the 2013 decaps that gave MAME its tables; siliconpr0n, reachable through the Wayback Machine). They have been used for the ROMs and some control logic, not for the filter. The datapath is regular and large, which makes it the easiest part of the chip to trace:
 

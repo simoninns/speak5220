@@ -21,7 +21,7 @@
    2731,
    6525
   ],
-  "notes": "Adder, delay stack (x 8450-9300, 18 clocked inverters per bit), Y latch? 14 bit rows of 452 px from y 6724, two rows lower than A"
+  "notes": "Summer side of the datapath: 14 bit rows of 452 px from y 6,724, the same cell in rows 2-12. Sections (inferred): summer multiplexer and adder x 7,450-8,450, delay stack x 8,450-9,300 (18 clocked inverters per bit), Y latch and the multiplier multiplexer x 9,300-9,900, whose output in each row drives one MR line into the bus on B's right edge. Row 1 (MSB end) lacks the upper half of the cell; row 14 adds one cell at its bottom (phase1.md sections 3-4, phase4.md)"
  },
  {
   "name": "block_C",
@@ -1127,5 +1127,41 @@
    452
   ],
   "notes": "Stage 0 cell (group 1, row 7): no left logic block (an empty field box and one long window per row), right block as the reference cell's: select and MR passing without an adder (phase3.md section 3)"
+ },
+ {
+  "name": "mr_bus",
+  "label": "MR",
+  "kind": "feature",
+  "box": [
+   9900,
+   7180,
+   400,
+   6900
+  ],
+  "notes": "The MR lines: each of B's rows 2-14 sends one line from x ~9,945 into this bus; it turns under B (y 13,200-14,000), rises on B's left (x 6,850-7,350) and runs left along the channel below A (y 12,064-12,524) to group 1, where B row r's line ends at the top of A row r-1 (phase4.md section 2)"
+ },
+ {
+  "name": "b_bottom_cell",
+  "label": "B0",
+  "kind": "cell",
+  "box": [
+   9370,
+   12770,
+   450,
+   290
+  ],
+  "notes": "An extra cell at the bottom of B row 14 (x 9,380-9,800): it drives the 14th MR channel line (y 12,064), which ends at group 1, row 14. The vectors require that line to carry 0 (phase4.md sections 2-3)"
+ },
+ {
+  "name": "delay_stage",
+  "label": "DS",
+  "kind": "cell",
+  "box": [
+   6950,
+   5734,
+   380,
+   6330
+  ],
+  "notes": "A column of small repeated cells between group 5 (stage 4) and B, in every row: probably the multiplier's delay stage of US 4,335,277; the product reaches B through it in diffusion (phase4.md section 1)"
  }
 ]
