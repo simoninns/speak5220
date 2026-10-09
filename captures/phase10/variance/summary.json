@@ -1,0 +1,1177 @@
+{
+ "chip": {
+  "vectors_energy": {
+   "pairs": 110,
+   "exact_pct": 50.0,
+   "equal_pct_p10_p50_p90": [
+    93.746,
+    99.894,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.023,
+    0.25
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.5,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    17.832,
+    75.522,
+    99.0
+   ]
+  },
+  "vectors_pitch": {
+   "pairs": 249,
+   "exact_pct": 13.3,
+   "equal_pct_p10_p50_p90": [
+    96.763,
+    98.803,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.109,
+    0.18
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    1.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    30.035,
+    37.15,
+    99.0
+   ]
+  },
+  "vectors_ring": {
+   "pairs": 189,
+   "exact_pct": 3.2,
+   "equal_pct_p10_p50_p90": [
+    37.553,
+    85.282,
+    99.019
+   ],
+   "rms_p10_p50_p90": [
+    0.099,
+    0.384,
+    1.814
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    6.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    7.901,
+    22.067,
+    43.609
+   ]
+  }
+ },
+ "day": {
+  "vectors_k": {
+   "pairs": 380,
+   "exact_pct": 89.5,
+   "equal_pct_p10_p50_p90": [
+    99.93,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.027
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    68.452,
+    99.0,
+    99.0
+   ]
+  }
+ },
+ "model": {
+  "acorn_phrom_a": {
+   "pairs": 1660,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    66.738,
+    78.591,
+    88.526
+   ],
+   "rms_p10_p50_p90": [
+    0.345,
+    0.485,
+    0.741
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    2.0,
+    10.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    26.737,
+    32.459,
+    35.2
+   ]
+  },
+  "starwars_speech": {
+   "pairs": 115,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    66.459,
+    72.711,
+    80.294
+   ],
+   "rms_p10_p50_p90": [
+    0.51,
+    0.671,
+    1.674
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    11.0,
+    46.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    24.973,
+    32.451,
+    39.053
+   ]
+  },
+  "ti99_speech": {
+   "pairs": 3390,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    45.6,
+    60.783,
+    71.913
+   ],
+   "rms_p10_p50_p90": [
+    0.594,
+    0.813,
+    1.87
+   ],
+   "max_abs_p10_p50_p90": [
+    3.0,
+    5.0,
+    25.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.277,
+    34.758,
+    38.532
+   ]
+  },
+  "vectors_energy": {
+   "pairs": 112,
+   "exact_pct": 48.2,
+   "equal_pct_p10_p50_p90": [
+    91.663,
+    99.824,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.04,
+    0.289
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    1.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    16.007,
+    52.15,
+    99.0
+   ]
+  },
+  "vectors_interp": {
+   "pairs": 100,
+   "exact_pct": 4.0,
+   "equal_pct_p10_p50_p90": [
+    72.089,
+    97.287,
+    99.442
+   ],
+   "rms_p10_p50_p90": [
+    0.139,
+    0.266,
+    2.252
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    2.0,
+    16.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    9.373,
+    34.496,
+    42.567
+   ]
+  },
+  "vectors_k": {
+   "pairs": 1056,
+   "exact_pct": 8.7,
+   "equal_pct_p10_p50_p90": [
+    89.743,
+    98.591,
+    99.93
+   ],
+   "rms_p10_p50_p90": [
+    0.027,
+    0.17,
+    0.458
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    12.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    27.705,
+    38.632,
+    56.728
+   ]
+  },
+  "vectors_loc": {
+   "pairs": 135,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    20.12,
+    61.041,
+    85.472
+   ],
+   "rms_p10_p50_p90": [
+    0.582,
+    1.912,
+    238.162
+   ],
+   "max_abs_p10_p50_p90": [
+    8.4,
+    55.0,
+    1023.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    0.464,
+    27.08,
+    36.138
+   ]
+  },
+  "vectors_loud": {
+   "pairs": 96,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    27.734,
+    44.089,
+    65.114
+   ],
+   "rms_p10_p50_p90": [
+    0.651,
+    3.661,
+    275.203
+   ],
+   "max_abs_p10_p50_p90": [
+    4.0,
+    57.0,
+    1022.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    -0.409,
+    27.684,
+    35.397
+   ]
+  },
+  "vectors_noise": {
+   "pairs": 12,
+   "exact_pct": 83.3,
+   "equal_pct_p10_p50_p90": [
+    99.989,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.01
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.9
+   ],
+   "sdr_db_p10_p50_p90": [
+    76.641,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_pitch": {
+   "pairs": 252,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    94.092,
+    95.704,
+    99.647
+   ],
+   "rms_p10_p50_p90": [
+    0.059,
+    0.207,
+    0.243
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.359,
+    30.925,
+    46.291
+   ]
+  },
+  "vectors_random": {
+   "pairs": 240,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    30.438,
+    43.665,
+    60.689
+   ],
+   "rms_p10_p50_p90": [
+    1.339,
+    9.928,
+    120.798
+   ],
+   "max_abs_p10_p50_p90": [
+    14.0,
+    81.0,
+    1011.3
+   ],
+   "sdr_db_p10_p50_p90": [
+    1.303,
+    18.301,
+    33.953
+   ]
+  },
+  "vectors_ring": {
+   "pairs": 192,
+   "exact_pct": 2.1,
+   "equal_pct_p10_p50_p90": [
+    30.666,
+    81.006,
+    98.987
+   ],
+   "rms_p10_p50_p90": [
+    0.101,
+    0.437,
+    2.704
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    23.7
+   ],
+   "sdr_db_p10_p50_p90": [
+    8.202,
+    21.904,
+    36.912
+   ]
+  },
+  "vectors_special": {
+   "pairs": 44,
+   "exact_pct": 6.8,
+   "equal_pct_p10_p50_p90": [
+    63.79,
+    85.77,
+    99.607
+   ],
+   "rms_p10_p50_p90": [
+    0.063,
+    0.509,
+    3.634
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    2.0,
+    25.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    0.406,
+    24.985,
+    33.308
+   ]
+  },
+  "vm61002": {
+   "pairs": 2060,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    66.227,
+    75.735,
+    85.113
+   ],
+   "rms_p10_p50_p90": [
+    0.394,
+    0.511,
+    0.652
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    2.0,
+    6.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.633,
+    31.275,
+    33.951
+   ]
+  },
+  "vm61003_words": {
+   "pairs": 1160,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    67.563,
+    78.038,
+    85.144
+   ],
+   "rms_p10_p50_p90": [
+    0.395,
+    0.496,
+    0.659
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    3.0,
+    7.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.579,
+    31.632,
+    34.015
+   ]
+  },
+  "vm61004": {
+   "pairs": 1475,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    66.029,
+    76.05,
+    84.459
+   ],
+   "rms_p10_p50_p90": [
+    0.406,
+    0.52,
+    0.749
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    3.0,
+    10.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    26.64,
+    31.174,
+    34.217
+   ]
+  },
+  "vm61005_words": {
+   "pairs": 1160,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    65.936,
+    76.283,
+    83.601
+   ],
+   "rms_p10_p50_p90": [
+    0.42,
+    0.512,
+    0.714
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    3.0,
+    7.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    27.954,
+    31.61,
+    33.966
+   ]
+  },
+  "vm71003a": {
+   "pairs": 345,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    65.277,
+    76.748,
+    84.284
+   ],
+   "rms_p10_p50_p90": [
+    0.419,
+    0.504,
+    0.803
+   ],
+   "max_abs_p10_p50_p90": [
+    2.0,
+    3.0,
+    6.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.403,
+    32.801,
+    35.956
+   ]
+  }
+ },
+ "model4": {
+  "vectors_energy": {
+   "pairs": 112,
+   "exact_pct": 48.2,
+   "equal_pct_p10_p50_p90": [
+    92.192,
+    99.824,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.04,
+    0.279
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    1.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    16.112,
+    53.416,
+    99.0
+   ]
+  },
+  "vectors_pitch": {
+   "pairs": 252,
+   "exact_pct": 0.0,
+   "equal_pct_p10_p50_p90": [
+    94.375,
+    96.189,
+    99.648
+   ],
+   "rms_p10_p50_p90": [
+    0.059,
+    0.195,
+    0.237
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    28.651,
+    31.098,
+    46.125
+   ]
+  },
+  "vectors_ring": {
+   "pairs": 191,
+   "exact_pct": 1.0,
+   "equal_pct_p10_p50_p90": [
+    31.034,
+    83.778,
+    99.298
+   ],
+   "rms_p10_p50_p90": [
+    0.084,
+    0.419,
+    2.744
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    1.0,
+    23.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    9.634,
+    22.957,
+    37.849
+   ]
+  }
+ },
+ "take": {
+  "acorn_phrom_a": {
+   "pairs": 655,
+   "exact_pct": 23.2,
+   "equal_pct_p10_p50_p90": [
+    77.788,
+    93.401,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.261,
+    0.491
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    1.0,
+    2.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    32.94,
+    37.486,
+    99.0
+   ]
+  },
+  "starwars_speech": {
+   "pairs": 46,
+   "exact_pct": 2.2,
+   "equal_pct_p10_p50_p90": [
+    77.986,
+    89.308,
+    97.466
+   ],
+   "rms_p10_p50_p90": [
+    0.165,
+    0.333,
+    0.524
+   ],
+   "max_abs_p10_p50_p90": [
+    1.0,
+    2.0,
+    3.5
+   ],
+   "sdr_db_p10_p50_p90": [
+    33.406,
+    40.712,
+    46.003
+   ]
+  },
+  "ti99_speech": {
+   "pairs": 1344,
+   "exact_pct": 16.0,
+   "equal_pct_p10_p50_p90": [
+    61.049,
+    82.091,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.51,
+    0.982
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    3.0,
+    6.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    33.609,
+    39.639,
+    99.0
+   ]
+  },
+  "vectors_energy": {
+   "pairs": 56,
+   "exact_pct": 100.0,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_interp": {
+   "pairs": 50,
+   "exact_pct": 94.0,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_k": {
+   "pairs": 515,
+   "exact_pct": 99.2,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_loc": {
+   "pairs": 65,
+   "exact_pct": 61.5,
+   "equal_pct_p10_p50_p90": [
+    98.221,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.133
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    1.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    49.165,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_loud": {
+   "pairs": 47,
+   "exact_pct": 63.8,
+   "equal_pct_p10_p50_p90": [
+    57.907,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    40.753
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    412.6
+   ],
+   "sdr_db_p10_p50_p90": [
+    18.827,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_noise": {
+   "pairs": 6,
+   "exact_pct": 100.0,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_pitch": {
+   "pairs": 125,
+   "exact_pct": 100.0,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_random": {
+   "pairs": 119,
+   "exact_pct": 34.5,
+   "equal_pct_p10_p50_p90": [
+    48.941,
+    86.649,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.467,
+    18.971
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    3.0,
+    167.8
+   ],
+   "sdr_db_p10_p50_p90": [
+    8.424,
+    45.218,
+    99.0
+   ]
+  },
+  "vectors_ring": {
+   "pairs": 95,
+   "exact_pct": 98.9,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vectors_special": {
+   "pairs": 22,
+   "exact_pct": 90.9,
+   "equal_pct_p10_p50_p90": [
+    100.0,
+    100.0,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    99.0,
+    99.0,
+    99.0
+   ]
+  },
+  "vm61002": {
+   "pairs": 814,
+   "exact_pct": 15.4,
+   "equal_pct_p10_p50_p90": [
+    73.753,
+    89.172,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.34,
+    0.544
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    2.0,
+    3.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    31.169,
+    34.848,
+    99.0
+   ]
+  },
+  "vm61003_words": {
+   "pairs": 460,
+   "exact_pct": 14.1,
+   "equal_pct_p10_p50_p90": [
+    76.032,
+    90.987,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.308,
+    0.509
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    2.0,
+    3.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    31.546,
+    35.653,
+    99.0
+   ]
+  },
+  "vm61004": {
+   "pairs": 587,
+   "exact_pct": 12.6,
+   "equal_pct_p10_p50_p90": [
+    74.173,
+    89.552,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.338,
+    0.547
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    2.0,
+    3.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    30.408,
+    35.327,
+    99.0
+   ]
+  },
+  "vm61005_words": {
+   "pairs": 460,
+   "exact_pct": 10.7,
+   "equal_pct_p10_p50_p90": [
+    77.341,
+    90.049,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.324,
+    0.511
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    2.0,
+    3.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    31.754,
+    36.13,
+    99.0
+   ]
+  },
+  "vm71003a": {
+   "pairs": 137,
+   "exact_pct": 17.5,
+   "equal_pct_p10_p50_p90": [
+    77.488,
+    91.752,
+    100.0
+   ],
+   "rms_p10_p50_p90": [
+    0.0,
+    0.297,
+    0.523
+   ],
+   "max_abs_p10_p50_p90": [
+    0.0,
+    2.0,
+    3.0
+   ],
+   "sdr_db_p10_p50_p90": [
+    32.268,
+    38.651,
+    99.0
+   ]
+  }
+ },
+ "tolerance": {
+  "margin_db": 7.0,
+  "agreement_cap_db": 40.0,
+  "note": "observed at the close of Phase 9, not derived",
+  "sets": {
+   "acorn_phrom_a": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 37.5,
+    "emulator_sdr_db": 32.5,
+    "gap_db": 5.0,
+    "within": true
+   },
+   "starwars_speech": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 32.5,
+    "gap_db": 7.5,
+    "within": false
+   },
+   "ti99_speech": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 39.6,
+    "emulator_sdr_db": 34.8,
+    "gap_db": 4.9,
+    "within": true
+   },
+   "vectors_energy": {
+    "reference": "chip 4",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 40.0,
+    "gap_db": 0.0,
+    "within": true
+   },
+   "vectors_interp": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 34.5,
+    "gap_db": 5.5,
+    "within": true
+   },
+   "vectors_k": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 38.6,
+    "gap_db": 1.4,
+    "within": true
+   },
+   "vectors_loc": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 27.1,
+    "gap_db": 12.9,
+    "within": false
+   },
+   "vectors_loud": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 27.7,
+    "gap_db": 12.3,
+    "within": false
+   },
+   "vectors_noise": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 40.0,
+    "gap_db": 0.0,
+    "within": true
+   },
+   "vectors_pitch": {
+    "reference": "chip 4",
+    "reference_sdr_db": 37.1,
+    "emulator_sdr_db": 30.9,
+    "gap_db": 6.2,
+    "within": true
+   },
+   "vectors_random": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 18.3,
+    "gap_db": 21.7,
+    "within": false
+   },
+   "vectors_ring": {
+    "reference": "chip 4",
+    "reference_sdr_db": 22.1,
+    "emulator_sdr_db": 21.9,
+    "gap_db": 0.2,
+    "within": true
+   },
+   "vectors_special": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 40.0,
+    "emulator_sdr_db": 25.0,
+    "gap_db": 15.0,
+    "within": false
+   },
+   "vm61002": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 34.8,
+    "emulator_sdr_db": 31.3,
+    "gap_db": 3.6,
+    "within": true
+   },
+   "vm61003_words": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 35.7,
+    "emulator_sdr_db": 31.6,
+    "gap_db": 4.0,
+    "within": true
+   },
+   "vm61004": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 35.3,
+    "emulator_sdr_db": 31.2,
+    "gap_db": 4.2,
+    "within": true
+   },
+   "vm61005_words": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 36.1,
+    "emulator_sdr_db": 31.6,
+    "gap_db": 4.5,
+    "within": true
+   },
+   "vm71003a": {
+    "reference": "chip 1 takes",
+    "reference_sdr_db": 38.7,
+    "emulator_sdr_db": 32.8,
+    "gap_db": 5.9,
+    "within": true
+   }
+  }
+ }
+}

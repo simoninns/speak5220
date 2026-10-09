@@ -814,6 +814,50 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
 
   Acceptance test 1 then holds for the whole data set, on speech-range data, as in Phase 9.
 - **Version 1.x:** the full sweeps, if a faster runner or a second bench makes them cheap.
+- **Done:**
+  - **The reference sets**, `captures/corpus/<prom>/` for the seven PROMs, kept local (§6), about 30 GB. They hold 15,178 takes, all from chip 1:
+
+    | PROM | Words | Word takes | Sweep addresses | Bench time |
+    |---|---|---|---|---|
+    | `ti99_speech` | 339 | 3,407 | 1,002 (every 32nd) | 2.9 h |
+    | `vm61002` | 206 | 2,070 | 1,983 (every 8th) | 2.0 h |
+    | `vm61004` | 148 | 1,479 | 1,944 (every 8th) | 1.7 h |
+    | `vm71003a` | 35 | 351 | 489 (every 8th) | 0.5 h |
+    | `vm61003_words` | 116 | 1,167 | none | 0.7 h |
+    | `vm61005_words` | 116 | 1,164 | none | 0.7 h |
+    | `starwars_speech` | 23 | 116 | none | 0.2 h |
+
+    - **Words:** every word, with at least five takes through each path that passed every check, except as below. Every retake was for a start-slot miss (48 word takes).
+    - **Sweep:** one take from each sampled address. All but nine have a take that passed every check. Those nine fail only `layer2_vs_layer3`, on quiet output (code spans of ±20 or less), which the DAC model's check does not judge well.
+    - **Index:** `index.md`, `takes.csv` and `sweep.csv` per PROM are committed, as in Phase 7.
+    - **Bench time:** 8.7 hours in one unattended run, against the 7.2 budgeted. The fixed cost per take was 1.5–2.0 s, more than in Phase 7, mostly on the longer TI-99 and VM61002 words.
+  - **Words too short for Speak External.** Speak External does not start speech until the FIFO holds 9 bytes (datasheet §6). Two words are shorter: `vm71003a` 35 "(0.25)" (5 bytes) and `vm61004` 35 "(Pause)" (8 bytes), both silence followed by a stop code. Through Speak External, "(0.25)" never spoke, and its five takes are kept with `talk_status` and `duration` failing. The bytes such a word leaves in the FIFO also turn the next reset sequence into data, so its Reset is never executed and the next take does not start from the standard state. `run.py` now speaks words shorter than 9 bytes through the VSM only, so "(Pause)" was captured that way.
+  - **The tools cover every PROM.** `regress.py corpus` and `variance.py` now take every PROM in `captures/corpus/`.
+  - **The emulator against the chip** (`captures/phase10/regress/`, `captures/phase10/variance/`):
+    - **It equals `tools/model.py`** on every take of every PROM, words and sweeps: 15,123 takes, no sample different.
+    - **Layer 1 (VSM path):** the bits read and the time Talk Status cleared match on every take (within 4.2 µs). The frame-read samples match on every take but 18 (below).
+    - **Layer 2, against the tolerance of §1.5:**
+
+      | PROM | Chip 1 take to take (dB) | Emulator (dB) | Gap (dB) | |
+      |---|---|---|---|---|
+      | `ti99_speech` | 39.6 | 34.8 | 4.9 | within |
+      | `vm61002` | 34.8 | 31.3 | 3.6 | within |
+      | `vm61004` | 35.3 | 31.2 | 4.2 | within |
+      | `vm71003a` | 38.7 | 32.8 | 5.9 | within |
+      | `vm61003_words` | 35.7 | 31.6 | 4.0 | within |
+      | `vm61005_words` | 36.1 | 31.6 | 4.5 | within |
+      | `starwars_speech` | 40.0 (40.7, capped) | 32.5 | 7.5 | **outside** |
+
+      *Median SDR over the speech window. The Acorn PHROM A gives 37.5, 32.5 and 5.0 for comparison.*
+- **Status:** captured (2026-10-09). The emulator is within the tolerance on six of the seven PROMs. It is outside on `starwars_speech`, by 0.5 dB, so the done-when is not met for that PROM. Whether that calls for a change to the tolerance or to the emulator is open (below).
+- **Findings:**
+  - **Star Wars is outside because the chip repeats it better, not because the emulator does worse.** The emulator's median SDR, 32.5 dB, is the same as on the Acorn PHROM A. Chip 1's own takes agree better than on any other PROM (median 40.7 dB), so the tolerance asks more there. Path does not explain it: on every other PROM the two paths agree equally well. The set is also small, 46 take pairs from 23 words. A tolerance measured against chip 1's own takes therefore depends on how repeatable the data happens to be. A second chip on this set (Phase 9's chip 4) would give a reference that does not.
+  - **After a silence frame, the chip's first pitch pulse is one sample later than the datasheet's rule** (§8.6, the counter hold after an inhibited change). In the frames that follow voiced speech and one or two silence frames, the chip's chirp starts one sample later than the model's in 97 of 121 such onsets in the Acorn PHROM A, and in every such onset in `vm61003_words`, `vm61004` and `starwars_speech`. After three silence frames, and after unvoiced frames (790 of 795), the timing matches. The error then runs on through the voiced sound, and gives the worst Star Wars word, LOOK AT THE SIZE OF THAT THING (18 dB, up to 86 codes). Found with a script that compares chip and model around each onset. It is not yet in the datasheet.
+  - **TI-99 is loud, as in Phase 6.** Only 61 % of samples are equal, against 73–79 % for the other PROMs, with differences of up to 25 codes at the 90th percentile. Its take-to-take agreement is high, though, and the emulator is within the tolerance.
+  - **Long takes: one frame read off by a sample.** In 18 TI-99 sweep takes of 5.5 s or more, all in the index area at 0x0000–0x0D20, one frame read falls one sample later than the 200-sample grid gives, always between samples 44,100 and 45,500. The 25 ms frame period check passes on all of them. The Pico's timer, which times the reads, drifts against the chip's sample clock, and by then a read late in its sample moves into the next. This is a limit of the measurement, not of the chip or the emulator.
+- **Handed on:**
+  - **Star Wars and the tolerance → for decision.** Either measure the reference on a second chip, or keep the observed rule and record `starwars_speech` as outside it.
+  - **The onset after silence → datasheet §8.6, then the emulator** (Phase 9 follow-up). The datasheet comes first, and the emulator follows it.
 
 ### Phase 11: Authoring, and confirmation with new speech data
 

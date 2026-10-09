@@ -46,7 +46,7 @@ OUT = os.path.join(ROOT, "captures", "phase9", "variance")
 CHIP1 = os.path.join(ROOT, "captures", "vectors")
 CHIP1_REPEAT = os.path.join(ROOT, "captures", "vectors_chip1_repeat")
 CHIP4 = os.path.join(ROOT, "captures", "vectors_chip4")
-CORPUS = os.path.join(ROOT, "captures", "corpus", "acorn_phrom_a")
+CORPUS = os.path.join(ROOT, "captures", "corpus")     # one directory per PROM
 SDR_CAP = 99.0          # dB, reported for identical outputs
 # The tolerance of acceptance test 1 (plan section 1.5), as observed at the
 # close of Phase 9 and not derived from the chip: per set, the emulator's
@@ -89,7 +89,7 @@ def measure(ref, other):
 
 def setOf(takeDir):
     parts = os.path.relpath(takeDir, ROOT).split(os.sep)
-    return "acorn_phrom_a" if "corpus" in parts else next(p for p in parts[2:] if p.startswith("vectors_"))
+    return parts[2] if parts[1] == "corpus" else next(p for p in parts[2:] if p.startswith("vectors_"))
 
 
 def pairJob(job):
@@ -133,7 +133,7 @@ def jobs():
     # word's first take, which follows another word, is paired only in the
     # vector sets, whose long held frames settle it: 01/02 there; 02/03 and
     # 04/05 in the corpus, where both takes follow the same word
-    for t in vectorTakes(CHIP1) + sorted(glob.glob(os.path.join(CORPUS, "*", "*0[0-9]"))):
+    for t in vectorTakes(CHIP1) + sorted(glob.glob(os.path.join(CORPUS, "*", "*", "*0[0-9]"))):
         m = re.match(r"(vsm|ext)(\d\d)$", os.path.basename(t))
         if m and int(m.group(2)) % 2 == (0 if t.startswith(CORPUS) else 1):
             partner = os.path.join(os.path.dirname(t), f"{m.group(1)}{int(m.group(2)) + 1:02d}")
@@ -146,7 +146,7 @@ def jobs():
             if os.path.isdir(ref) and standard(ref):
                 out.append((pairJob, (kind, ref, t)))
     # the model against each chip, with the takes spoken before each
-    for kind, root in (("model", CHIP1), ("model", os.path.dirname(CORPUS)), ("model4", CHIP4)):
+    for kind, root in (("model", CHIP1), ("model", CORPUS), ("model4", CHIP4)):
         for take, previous in regress.takesOf(root, False):
             if os.sep + "clk" in take or "experiments" in take or "/sweep/" in take:
                 continue

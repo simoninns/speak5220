@@ -80,6 +80,10 @@ START_LEAD_S = 0.6         # a timed take arms the held-open scope this long bef
 ZIP_ONLY_LEVEL = 6         # --zip-only: 7x smaller in 0.45 s per take (level 9 takes 4 s)
 INDEX_EVERY = 500          # rewrite index.md every this many entries during a long run
 MAX_ERRORS_IN_A_ROW = 5
+# Speak External starts speech only once the FIFO holds 9 bytes (datasheet
+# section 6). A shorter word never speaks, and the bytes it leaves in the FIFO
+# turn the next reset sequence into data, so its Reset is never executed
+MIN_EXTERNAL_BYTES = 9
 # Checks of the capture procedure rather than of the speech data: a take
 # failing only these is retaken
 CAPTURE_CHECKS = {"start_slot", "start_frame", "trace_complete", "scope_overflow", "io_format",
@@ -312,6 +316,12 @@ def main():
         word = promlib.wordAt(manifest, a)
         targets.append((word, a, promlib.wordDir(word) if word else promlib.addressDir(a),
                         paths, args.takes))
+    base = promlib.base(manifest)
+    for i, (word, address, name, targetPaths, takes) in enumerate(targets):
+        size = len(picolib.wordBytes(image, address, base))
+        if "external" in targetPaths and size < MIN_EXTERNAL_BYTES:
+            print(f"{name}: {size} bytes, too short for Speak External; VSM only")
+            targets[i] = (word, address, name, [p for p in targetPaths if p != "external"], takes)
     if args.sweep:
         targets += [(None, a, promlib.addressDir(a), ["vsm"], args.sweep_takes)
                     for a in sweepAddresses(manifest, image, args.sweep)[::args.sweep_step]]

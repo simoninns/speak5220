@@ -14,8 +14,8 @@
     frame, because the coded parameters carry over (datasheet section 7).
 
       python tools/regress.py vectors                 # every Phase 8/9 vector set
-      python tools/regress.py corpus                  # the Acorn PHROM A words
-      python tools/regress.py corpus --sweep          # ... and its address sweep
+      python tools/regress.py corpus                  # every PROM's words
+      python tools/regress.py corpus --sweep          # ... and their address sweeps
       python tools/regress.py captures/vectors/vectors_ring   # one set
 
     Writes <out>/<name>.csv (one row per take) and prints a summary per set.
@@ -273,7 +273,8 @@ def main():
         if w == "vectors":
             roots += sorted(glob.glob(os.path.join(ROOT, "captures", "vectors", "vectors_*")))
         elif w == "corpus":
-            roots.append(os.path.join(ROOT, "captures", "corpus", "acorn_phrom_a"))
+            roots += sorted(os.path.dirname(p) for p in
+                            glob.glob(os.path.join(ROOT, "captures", "corpus", "*", "takes.csv")))
         else:
             roots.append(os.path.abspath(w))
     os.makedirs(args.out, exist_ok=True)

@@ -1,0 +1,1852 @@
+{
+  "name": "ti99_speech",
+  "title": "TI-99/4A Solid State Speech Synthesizer VSMs (US male voice)",
+  "part": "CD2325A (0x0000-0x3FFF) and CD2326A (0x4000-0x7FFF)",
+  "target_chip": "TMS5200",
+  "target_chip_basis": "The TI-99/4A Speech Synthesizer used the TMS5200 (CD2501E). The frame format is the TMS5220's, but the TMS5200's parameter tables differ, so it plays on the TMS5220 slightly wrong.",
+  "image": {
+    "source": "proms/images/ti99_speech.bin",
+    "kind": "dump",
+    "size": 32768,
+    "sha256": "ae133ff9c238a3d26c68fe875925c5fdd132b0138df0bbda55798336289441d0",
+    "sha1": "310aa24719dfd78f78da057b8811dcda2e1037f0",
+    "crc32": "37c95626"
+  },
+  "reference": [
+    {
+      "mame": "cd2325a",
+      "listed_in": "https://github.com/mamedev/mame/blob/1ecdb5701405bd4cadba520fe1ff4d65f7c7e8aa/src/devices/bus/ti99/sidecar/speechsyn.cpp",
+      "size": 16384,
+      "crc32": "1f58b571",
+      "sha1": "0ef4f178716b575a1c0c970c56af8a8d97561ffe",
+      "matches": true
+    },
+    {
+      "mame": "cd2326a",
+      "listed_in": "https://github.com/mamedev/mame/blob/1ecdb5701405bd4cadba520fe1ff4d65f7c7e8aa/src/devices/bus/ti99/sidecar/speechsyn.cpp",
+      "size": 16384,
+      "crc32": "65d00401",
+      "sha1": "a367242c2c96cebf0e2bf21862f3f6734b2b3020",
+      "matches": true
+    }
+  ],
+  "copies": [
+    {
+      "repo": "https://github.com/eRadiofan/TMS6100-Multi-PHROM-Emulator-for-the-BBC-Micro",
+      "commit": "b1a0bd83570755eb02c873b6e24e7b80b341eb59",
+      "path": "Firmware/Common/Src/ROMdata_TI99.c",
+      "licence": "GPL-3.0",
+      "symbol": "phromData_TI99",
+      "size": 32468,
+      "sha256": "d58d96b7df73b228b010128f65886afe1cd2349755c32ad2db3be9945f568ac6",
+      "sha1": "4b64638dcfcb5ac56f307ce12128f657ca3a9934",
+      "crc32": "1ecfd004",
+      "note": "both VSMs in one array, truncated after the last phrase; the image is this padded with zeros to 32 KB"
+    }
+  ],
+  "bank": 0,
+  "format": "ti99",
+  "provenance": "TMS6100 Multi-PHROM Emulator (eRadiofan), ROMdata_TI99.c, padded with zeros to 32 KB; its two halves are MAME's dumps of the two VSMs. The phrase names are the ones stored in the image's index.",
+  "word_numbers": "the position of the phrase's record in the image's index, from 0 (the first record is the search tree's root, MORE; the rest are in alphabetical order). Phrases with several names (for example BUY, BY, BYE) are one word with aliases.",
+  "words": [
+    {
+      "number": 0,
+      "address": "0x04642",
+      "name": "MORE"
+    },
+    {
+      "number": 1,
+      "address": "0x048DC",
+      "name": "-, NEGATIVE",
+      "aliases": [
+        193
+      ]
+    },
+    {
+      "number": 2,
+      "address": "0x050EC",
+      "name": "., POINT",
+      "aliases": [
+        222
+      ]
+    },
+    {
+      "number": 3,
+      "address": "0x013C3",
+      "name": "0, ZERO",
+      "aliases": [
+        372
+      ]
+    },
+    {
+      "number": 4,
+      "address": "0x01409",
+      "name": "1, ONE, WON",
+      "aliases": [
+        207,
+        357
+      ]
+    },
+    {
+      "number": 5,
+      "address": "0x0145C",
+      "name": "2, TO, TOO, TWO",
+      "aliases": [
+        314,
+        317,
+        324
+      ]
+    },
+    {
+      "number": 6,
+      "address": "0x0149A",
+      "name": "3, THREE",
+      "aliases": [
+        310
+      ]
+    },
+    {
+      "number": 7,
+      "address": "0x014E7",
+      "name": "4, FOR, FOUR",
+      "aliases": [
+        99,
+        101
+      ]
+    },
+    {
+      "number": 8,
+      "address": "0x01531",
+      "name": "5, FIVE",
+      "aliases": [
+        98
+      ]
+    },
+    {
+      "number": 9,
+      "address": "0x015A8",
+      "name": "6, SIX",
+      "aliases": [
+        267
+      ]
+    },
+    {
+      "number": 10,
+      "address": "0x015E8",
+      "name": "7, SEVEN",
+      "aliases": [
+        257
+      ]
+    },
+    {
+      "number": 11,
+      "address": "0x01637",
+      "name": "8, EIGHT",
+      "aliases": [
+        78
+      ]
+    },
+    {
+      "number": 12,
+      "address": "0x01664",
+      "name": "9, NINE",
+      "aliases": [
+        196
+      ]
+    },
+    {
+      "number": 13,
+      "address": "0x016E4",
+      "name": "A"
+    },
+    {
+      "number": 14,
+      "address": "0x01700",
+      "name": "A1"
+    },
+    {
+      "number": 15,
+      "address": "0x01714",
+      "name": "ABOUT"
+    },
+    {
+      "number": 16,
+      "address": "0x01769",
+      "name": "AFTER"
+    },
+    {
+      "number": 17,
+      "address": "0x017A5",
+      "name": "AGAIN"
+    },
+    {
+      "number": 18,
+      "address": "0x01807",
+      "name": "ALL"
+    },
+    {
+      "number": 19,
+      "address": "0x01830",
+      "name": "AM"
+    },
+    {
+      "number": 20,
+      "address": "0x01876",
+      "name": "AN"
+    },
+    {
+      "number": 21,
+      "address": "0x018AC",
+      "name": "AND"
+    },
+    {
+      "number": 22,
+      "address": "0x01913",
+      "name": "ANSWER"
+    },
+    {
+      "number": 23,
+      "address": "0x01962",
+      "name": "ANY"
+    },
+    {
+      "number": 24,
+      "address": "0x0556E",
+      "name": "ARE, R",
+      "aliases": [
+        234
+      ]
+    },
+    {
+      "number": 25,
+      "address": "0x019A7",
+      "name": "AS"
+    },
+    {
+      "number": 26,
+      "address": "0x019E8",
+      "name": "ASSUME"
+    },
+    {
+      "number": 27,
+      "address": "0x01A25",
+      "name": "AT"
+    },
+    {
+      "number": 28,
+      "address": "0x01A42",
+      "name": "B, BE",
+      "aliases": [
+        31
+      ]
+    },
+    {
+      "number": 29,
+      "address": "0x01A64",
+      "name": "BACK"
+    },
+    {
+      "number": 30,
+      "address": "0x01A8F",
+      "name": "BASE"
+    },
+    {
+      "number": 32,
+      "address": "0x01ADE",
+      "name": "BETWEEN"
+    },
+    {
+      "number": 33,
+      "address": "0x01B47",
+      "name": "BLACK"
+    },
+    {
+      "number": 34,
+      "address": "0x01B8A",
+      "name": "BLUE"
+    },
+    {
+      "number": 35,
+      "address": "0x01BB6",
+      "name": "BOTH"
+    },
+    {
+      "number": 36,
+      "address": "0x01BEA",
+      "name": "BOTTOM"
+    },
+    {
+      "number": 37,
+      "address": "0x01C20",
+      "name": "BUT"
+    },
+    {
+      "number": 38,
+      "address": "0x01C48",
+      "name": "BUY, BY, BYE",
+      "aliases": [
+        39,
+        40
+      ]
+    },
+    {
+      "number": 41,
+      "address": "0x01C86",
+      "name": "C, SEE",
+      "aliases": [
+        254
+      ]
+    },
+    {
+      "number": 42,
+      "address": "0x01CD9",
+      "name": "CAN"
+    },
+    {
+      "number": 43,
+      "address": "0x01D10",
+      "name": "CASSETTE"
+    },
+    {
+      "number": 44,
+      "address": "0x01D47",
+      "name": "CENTER"
+    },
+    {
+      "number": 45,
+      "address": "0x01D82",
+      "name": "CHECK"
+    },
+    {
+      "number": 46,
+      "address": "0x01DA2",
+      "name": "CHOICE"
+    },
+    {
+      "number": 47,
+      "address": "0x01DE6",
+      "name": "CLEAR"
+    },
+    {
+      "number": 48,
+      "address": "0x01E20",
+      "name": "COLOR"
+    },
+    {
+      "number": 49,
+      "address": "0x01E54",
+      "name": "COME"
+    },
+    {
+      "number": 50,
+      "address": "0x01E87",
+      "name": "COMES"
+    },
+    {
+      "number": 51,
+      "address": "0x01EDE",
+      "name": "COMMA"
+    },
+    {
+      "number": 52,
+      "address": "0x01F1A",
+      "name": "COMMAND"
+    },
+    {
+      "number": 53,
+      "address": "0x01F71",
+      "name": "COMPLETE"
+    },
+    {
+      "number": 54,
+      "address": "0x01FCD",
+      "name": "COMPLETED"
+    },
+    {
+      "number": 55,
+      "address": "0x02034",
+      "name": "COMPUTER"
+    },
+    {
+      "number": 56,
+      "address": "0x0208B",
+      "name": "CONNECTED"
+    },
+    {
+      "number": 57,
+      "address": "0x020F3",
+      "name": "CONSOLE"
+    },
+    {
+      "number": 58,
+      "address": "0x0213C",
+      "name": "CORRECT"
+    },
+    {
+      "number": 59,
+      "address": "0x02182",
+      "name": "COURSE"
+    },
+    {
+      "number": 60,
+      "address": "0x021C0",
+      "name": "CYAN"
+    },
+    {
+      "number": 61,
+      "address": "0x02203",
+      "name": "D"
+    },
+    {
+      "number": 62,
+      "address": "0x0223C",
+      "name": "DATA"
+    },
+    {
+      "number": 63,
+      "address": "0x02294",
+      "name": "DECIDE"
+    },
+    {
+      "number": 64,
+      "address": "0x022FD",
+      "name": "DEVICE"
+    },
+    {
+      "number": 65,
+      "address": "0x02366",
+      "name": "DID"
+    },
+    {
+      "number": 66,
+      "address": "0x023C4",
+      "name": "DIFFERENT"
+    },
+    {
+      "number": 67,
+      "address": "0x0242D",
+      "name": "DISKETTE"
+    },
+    {
+      "number": 68,
+      "address": "0x02480",
+      "name": "DO"
+    },
+    {
+      "number": 69,
+      "address": "0x024B3",
+      "name": "DOES"
+    },
+    {
+      "number": 70,
+      "address": "0x024EA",
+      "name": "DOING"
+    },
+    {
+      "number": 71,
+      "address": "0x0253E",
+      "name": "DONE"
+    },
+    {
+      "number": 72,
+      "address": "0x02599",
+      "name": "DOUBLE"
+    },
+    {
+      "number": 73,
+      "address": "0x025D3",
+      "name": "DOWN"
+    },
+    {
+      "number": 74,
+      "address": "0x02612",
+      "name": "DRAW"
+    },
+    {
+      "number": 75,
+      "address": "0x02668",
+      "name": "DRAWING"
+    },
+    {
+      "number": 76,
+      "address": "0x026CB",
+      "name": "E"
+    },
+    {
+      "number": 77,
+      "address": "0x026F0",
+      "name": "EACH"
+    },
+    {
+      "number": 79,
+      "address": "0x02723",
+      "name": "EIGHTY"
+    },
+    {
+      "number": 80,
+      "address": "0x02759",
+      "name": "ELEVEN"
+    },
+    {
+      "number": 81,
+      "address": "0x027B6",
+      "name": "ELSE"
+    },
+    {
+      "number": 82,
+      "address": "0x027F5",
+      "name": "END"
+    },
+    {
+      "number": 83,
+      "address": "0x02866",
+      "name": "ENDS"
+    },
+    {
+      "number": 84,
+      "address": "0x028AD",
+      "name": "ENTER"
+    },
+    {
+      "number": 85,
+      "address": "0x028EF",
+      "name": "ERROR"
+    },
+    {
+      "number": 86,
+      "address": "0x02937",
+      "name": "EXACTLY"
+    },
+    {
+      "number": 87,
+      "address": "0x03793",
+      "name": "EYE, I",
+      "aliases": [
+        139
+      ]
+    },
+    {
+      "number": 88,
+      "address": "0x0299F",
+      "name": "F"
+    },
+    {
+      "number": 89,
+      "address": "0x029C2",
+      "name": "FIFTEEN"
+    },
+    {
+      "number": 90,
+      "address": "0x02A1D",
+      "name": "FIFTY"
+    },
+    {
+      "number": 91,
+      "address": "0x02A60",
+      "name": "FIGURE"
+    },
+    {
+      "number": 92,
+      "address": "0x02AD7",
+      "name": "FIND"
+    },
+    {
+      "number": 93,
+      "address": "0x02B1E",
+      "name": "FINE"
+    },
+    {
+      "number": 94,
+      "address": "0x02B5B",
+      "name": "FINISH"
+    },
+    {
+      "number": 95,
+      "address": "0x02B94",
+      "name": "FINISHED"
+    },
+    {
+      "number": 96,
+      "address": "0x02BD7",
+      "name": "FIRST"
+    },
+    {
+      "number": 97,
+      "address": "0x02C14",
+      "name": "FIT"
+    },
+    {
+      "number": 100,
+      "address": "0x02C3E",
+      "name": "FORTY"
+    },
+    {
+      "number": 102,
+      "address": "0x02C7F",
+      "name": "FOURTEEN"
+    },
+    {
+      "number": 103,
+      "address": "0x02D19",
+      "name": "FOURTH"
+    },
+    {
+      "number": 104,
+      "address": "0x02D74",
+      "name": "FROM"
+    },
+    {
+      "number": 105,
+      "address": "0x02DBC",
+      "name": "FRONT"
+    },
+    {
+      "number": 106,
+      "address": "0x02DEB",
+      "name": "G"
+    },
+    {
+      "number": 107,
+      "address": "0x02E28",
+      "name": "GAMES"
+    },
+    {
+      "number": 108,
+      "address": "0x02E8C",
+      "name": "GET"
+    },
+    {
+      "number": 109,
+      "address": "0x02EBA",
+      "name": "GETTING"
+    },
+    {
+      "number": 110,
+      "address": "0x02F38",
+      "name": "GIVE"
+    },
+    {
+      "number": 111,
+      "address": "0x02F8D",
+      "name": "GIVES"
+    },
+    {
+      "number": 112,
+      "address": "0x02FFC",
+      "name": "GO"
+    },
+    {
+      "number": 113,
+      "address": "0x03031",
+      "name": "GOES"
+    },
+    {
+      "number": 114,
+      "address": "0x03079",
+      "name": "GOING"
+    },
+    {
+      "number": 115,
+      "address": "0x030D6",
+      "name": "GOOD"
+    },
+    {
+      "number": 116,
+      "address": "0x030FA",
+      "name": "GOOD WORK"
+    },
+    {
+      "number": 117,
+      "address": "0x03148",
+      "name": "GOODBYE"
+    },
+    {
+      "number": 118,
+      "address": "0x031A0",
+      "name": "GOT"
+    },
+    {
+      "number": 119,
+      "address": "0x031D1",
+      "name": "GRAY"
+    },
+    {
+      "number": 120,
+      "address": "0x0321D",
+      "name": "GREEN"
+    },
+    {
+      "number": 121,
+      "address": "0x0327E",
+      "name": "GUESS"
+    },
+    {
+      "number": 122,
+      "address": "0x032C0",
+      "name": "H"
+    },
+    {
+      "number": 123,
+      "address": "0x032EF",
+      "name": "HAD"
+    },
+    {
+      "number": 124,
+      "address": "0x03339",
+      "name": "HAND"
+    },
+    {
+      "number": 125,
+      "address": "0x0337F",
+      "name": "HANDHELD UNIT"
+    },
+    {
+      "number": 126,
+      "address": "0x03405",
+      "name": "HAS"
+    },
+    {
+      "number": 127,
+      "address": "0x0344A",
+      "name": "HAVE"
+    },
+    {
+      "number": 128,
+      "address": "0x0348C",
+      "name": "HEAD"
+    },
+    {
+      "number": 129,
+      "address": "0x034E5",
+      "name": "HEAR, HERE",
+      "aliases": [
+        132
+      ]
+    },
+    {
+      "number": 130,
+      "address": "0x0351A",
+      "name": "HELLO"
+    },
+    {
+      "number": 131,
+      "address": "0x03571",
+      "name": "HELP"
+    },
+    {
+      "number": 133,
+      "address": "0x035AE",
+      "name": "HIGHER"
+    },
+    {
+      "number": 134,
+      "address": "0x0360A",
+      "name": "HIT"
+    },
+    {
+      "number": 135,
+      "address": "0x0363E",
+      "name": "HOME"
+    },
+    {
+      "number": 136,
+      "address": "0x03689",
+      "name": "HOW"
+    },
+    {
+      "number": 137,
+      "address": "0x036EF",
+      "name": "HUNDRED"
+    },
+    {
+      "number": 138,
+      "address": "0x03757",
+      "name": "HURRY"
+    },
+    {
+      "number": 140,
+      "address": "0x037CF",
+      "name": "I WIN"
+    },
+    {
+      "number": 141,
+      "address": "0x03850",
+      "name": "IF"
+    },
+    {
+      "number": 142,
+      "address": "0x03872",
+      "name": "IN"
+    },
+    {
+      "number": 143,
+      "address": "0x038B5",
+      "name": "INCH"
+    },
+    {
+      "number": 144,
+      "address": "0x038FA",
+      "name": "INCHES"
+    },
+    {
+      "number": 145,
+      "address": "0x0394B",
+      "name": "INSTRUCTION"
+    },
+    {
+      "number": 146,
+      "address": "0x039BD",
+      "name": "INSTRUCTIONS"
+    },
+    {
+      "number": 147,
+      "address": "0x03A32",
+      "name": "IS"
+    },
+    {
+      "number": 148,
+      "address": "0x03A7A",
+      "name": "IT"
+    },
+    {
+      "number": 149,
+      "address": "0x03AAE",
+      "name": "J"
+    },
+    {
+      "number": 150,
+      "address": "0x03AED",
+      "name": "JOYSTICK"
+    },
+    {
+      "number": 151,
+      "address": "0x03B4C",
+      "name": "JUST"
+    },
+    {
+      "number": 152,
+      "address": "0x03B8A",
+      "name": "K"
+    },
+    {
+      "number": 153,
+      "address": "0x03BB9",
+      "name": "KEY"
+    },
+    {
+      "number": 154,
+      "address": "0x03BE9",
+      "name": "KEYBOARD"
+    },
+    {
+      "number": 155,
+      "address": "0x03C4F",
+      "name": "KNOW, NO",
+      "aliases": [
+        198
+      ]
+    },
+    {
+      "number": 156,
+      "address": "0x03C8F",
+      "name": "L"
+    },
+    {
+      "number": 157,
+      "address": "0x03CD0",
+      "name": "LARGE"
+    },
+    {
+      "number": 158,
+      "address": "0x03D19",
+      "name": "LARGER"
+    },
+    {
+      "number": 159,
+      "address": "0x03D67",
+      "name": "LARGEST"
+    },
+    {
+      "number": 160,
+      "address": "0x03DDE",
+      "name": "LAST"
+    },
+    {
+      "number": 161,
+      "address": "0x03E1E",
+      "name": "LEARN"
+    },
+    {
+      "number": 162,
+      "address": "0x03E78",
+      "name": "LEFT"
+    },
+    {
+      "number": 163,
+      "address": "0x03EB2",
+      "name": "LESS"
+    },
+    {
+      "number": 164,
+      "address": "0x03F08",
+      "name": "LET"
+    },
+    {
+      "number": 165,
+      "address": "0x03F2F",
+      "name": "LIKE"
+    },
+    {
+      "number": 166,
+      "address": "0x03F6A",
+      "name": "LIKES"
+    },
+    {
+      "number": 167,
+      "address": "0x03FD5",
+      "name": "LINE"
+    },
+    {
+      "number": 168,
+      "address": "0x0404B",
+      "name": "LOAD"
+    },
+    {
+      "number": 169,
+      "address": "0x040D3",
+      "name": "LONG"
+    },
+    {
+      "number": 170,
+      "address": "0x0413D",
+      "name": "LOOK"
+    },
+    {
+      "number": 171,
+      "address": "0x04191",
+      "name": "LOOKS"
+    },
+    {
+      "number": 172,
+      "address": "0x041E7",
+      "name": "LOWER"
+    },
+    {
+      "number": 173,
+      "address": "0x04233",
+      "name": "M"
+    },
+    {
+      "number": 174,
+      "address": "0x04267",
+      "name": "MADE"
+    },
+    {
+      "number": 175,
+      "address": "0x042AE",
+      "name": "MAGENTA"
+    },
+    {
+      "number": 176,
+      "address": "0x0432E",
+      "name": "MAKE"
+    },
+    {
+      "number": 177,
+      "address": "0x0437D",
+      "name": "ME"
+    },
+    {
+      "number": 178,
+      "address": "0x043BD",
+      "name": "MEAN"
+    },
+    {
+      "number": 179,
+      "address": "0x04405",
+      "name": "MEMORY"
+    },
+    {
+      "number": 180,
+      "address": "0x0446C",
+      "name": "MESSAGE"
+    },
+    {
+      "number": 181,
+      "address": "0x044D7",
+      "name": "MESSAGES"
+    },
+    {
+      "number": 182,
+      "address": "0x04551",
+      "name": "MIDDLE"
+    },
+    {
+      "number": 183,
+      "address": "0x04593",
+      "name": "MIGHT"
+    },
+    {
+      "number": 184,
+      "address": "0x045DF",
+      "name": "MODULE"
+    },
+    {
+      "number": 185,
+      "address": "0x051B3",
+      "name": "+, POSITIVE",
+      "aliases": [
+        224
+      ]
+    },
+    {
+      "number": 186,
+      "address": "0x04693",
+      "name": "MOST"
+    },
+    {
+      "number": 187,
+      "address": "0x046DF",
+      "name": "MOVE"
+    },
+    {
+      "number": 188,
+      "address": "0x0473D",
+      "name": "MUST"
+    },
+    {
+      "number": 189,
+      "address": "0x04786",
+      "name": "N"
+    },
+    {
+      "number": 190,
+      "address": "0x047C0",
+      "name": "NAME"
+    },
+    {
+      "number": 191,
+      "address": "0x04833",
+      "name": "NEAR"
+    },
+    {
+      "number": 192,
+      "address": "0x04880",
+      "name": "NEED"
+    },
+    {
+      "number": 194,
+      "address": "0x04959",
+      "name": "NEXT"
+    },
+    {
+      "number": 195,
+      "address": "0x049A5",
+      "name": "NICE TRY"
+    },
+    {
+      "number": 197,
+      "address": "0x04A4E",
+      "name": "NINETY"
+    },
+    {
+      "number": 199,
+      "address": "0x04AAB",
+      "name": "NOT"
+    },
+    {
+      "number": 200,
+      "address": "0x04ADA",
+      "name": "NOW"
+    },
+    {
+      "number": 201,
+      "address": "0x04B20",
+      "name": "NUMBER"
+    },
+    {
+      "number": 202,
+      "address": "0x04B7D",
+      "name": "O, OH",
+      "aliases": [
+        205
+      ]
+    },
+    {
+      "number": 203,
+      "address": "0x04BBA",
+      "name": "OF"
+    },
+    {
+      "number": 204,
+      "address": "0x04C13",
+      "name": "OFF"
+    },
+    {
+      "number": 206,
+      "address": "0x04C41",
+      "name": "ON"
+    },
+    {
+      "number": 208,
+      "address": "0x04C8B",
+      "name": "ONLY"
+    },
+    {
+      "number": 209,
+      "address": "0x04CDC",
+      "name": "OR"
+    },
+    {
+      "number": 210,
+      "address": "0x04D34",
+      "name": "ORDER"
+    },
+    {
+      "number": 211,
+      "address": "0x04D8A",
+      "name": "OTHER"
+    },
+    {
+      "number": 212,
+      "address": "0x04DD4",
+      "name": "OUT"
+    },
+    {
+      "number": 213,
+      "address": "0x04E0A",
+      "name": "OVER"
+    },
+    {
+      "number": 214,
+      "address": "0x04E66",
+      "name": "P"
+    },
+    {
+      "number": 215,
+      "address": "0x04E9F",
+      "name": "PART"
+    },
+    {
+      "number": 216,
+      "address": "0x04EE0",
+      "name": "PARTNER"
+    },
+    {
+      "number": 217,
+      "address": "0x04F31",
+      "name": "PARTS"
+    },
+    {
+      "number": 218,
+      "address": "0x04F81",
+      "name": "PERIOD"
+    },
+    {
+      "number": 219,
+      "address": "0x04FE5",
+      "name": "PLAY"
+    },
+    {
+      "number": 220,
+      "address": "0x0502D",
+      "name": "PLAYS"
+    },
+    {
+      "number": 221,
+      "address": "0x05093",
+      "name": "PLEASE"
+    },
+    {
+      "number": 223,
+      "address": "0x05148",
+      "name": "POSITION"
+    },
+    {
+      "number": 225,
+      "address": "0x05231",
+      "name": "PRESS"
+    },
+    {
+      "number": 226,
+      "address": "0x0526D",
+      "name": "PRINT"
+    },
+    {
+      "number": 227,
+      "address": "0x052AA",
+      "name": "PRINTER"
+    },
+    {
+      "number": 228,
+      "address": "0x052F9",
+      "name": "PROBLEM"
+    },
+    {
+      "number": 229,
+      "address": "0x05360",
+      "name": "PROBLEMS"
+    },
+    {
+      "number": 230,
+      "address": "0x053EE",
+      "name": "PROGRAM"
+    },
+    {
+      "number": 231,
+      "address": "0x05477",
+      "name": "PUT"
+    },
+    {
+      "number": 232,
+      "address": "0x054AA",
+      "name": "PUTTING"
+    },
+    {
+      "number": 233,
+      "address": "0x05520",
+      "name": "Q"
+    },
+    {
+      "number": 235,
+      "address": "0x055A0",
+      "name": "RANDOMLY"
+    },
+    {
+      "number": 236,
+      "address": "0x05652",
+      "name": "READ"
+    },
+    {
+      "number": 237,
+      "address": "0x057C1",
+      "name": "READ1, RED",
+      "aliases": [
+        240
+      ]
+    },
+    {
+      "number": 238,
+      "address": "0x056B3",
+      "name": "READY TO START"
+    },
+    {
+      "number": 239,
+      "address": "0x05745",
+      "name": "RECORDER"
+    },
+    {
+      "number": 241,
+      "address": "0x05801",
+      "name": "REFER"
+    },
+    {
+      "number": 242,
+      "address": "0x05861",
+      "name": "REMEMBER"
+    },
+    {
+      "number": 243,
+      "address": "0x058CF",
+      "name": "RETURN"
+    },
+    {
+      "number": 244,
+      "address": "0x0593A",
+      "name": "REWIND"
+    },
+    {
+      "number": 245,
+      "address": "0x07C38",
+      "name": "RIGHT, WRITE",
+      "aliases": [
+        362
+      ]
+    },
+    {
+      "number": 246,
+      "address": "0x059C2",
+      "name": "ROUND"
+    },
+    {
+      "number": 247,
+      "address": "0x05A5A",
+      "name": "S"
+    },
+    {
+      "number": 248,
+      "address": "0x05AA1",
+      "name": "SAID"
+    },
+    {
+      "number": 249,
+      "address": "0x05AEF",
+      "name": "SAVE"
+    },
+    {
+      "number": 250,
+      "address": "0x05B65",
+      "name": "SAY"
+    },
+    {
+      "number": 251,
+      "address": "0x05BA2",
+      "name": "SAYS"
+    },
+    {
+      "number": 252,
+      "address": "0x05BFB",
+      "name": "SCREEN"
+    },
+    {
+      "number": 253,
+      "address": "0x05C5B",
+      "name": "SECOND"
+    },
+    {
+      "number": 255,
+      "address": "0x05CBF",
+      "name": "SEES"
+    },
+    {
+      "number": 256,
+      "address": "0x05D1B",
+      "name": "SET"
+    },
+    {
+      "number": 258,
+      "address": "0x05D50",
+      "name": "SEVENTY"
+    },
+    {
+      "number": 259,
+      "address": "0x05DA5",
+      "name": "SHAPE"
+    },
+    {
+      "number": 260,
+      "address": "0x05DDE",
+      "name": "SHAPES"
+    },
+    {
+      "number": 261,
+      "address": "0x05E27",
+      "name": "SHIFT"
+    },
+    {
+      "number": 262,
+      "address": "0x05E5C",
+      "name": "SHORT"
+    },
+    {
+      "number": 263,
+      "address": "0x05EA5",
+      "name": "SHORTER"
+    },
+    {
+      "number": 264,
+      "address": "0x05F24",
+      "name": "SHOULD"
+    },
+    {
+      "number": 265,
+      "address": "0x05F6D",
+      "name": "SIDE"
+    },
+    {
+      "number": 266,
+      "address": "0x05FC8",
+      "name": "SIDES"
+    },
+    {
+      "number": 268,
+      "address": "0x0601A",
+      "name": "SIXTY"
+    },
+    {
+      "number": 269,
+      "address": "0x06070",
+      "name": "SMALL"
+    },
+    {
+      "number": 270,
+      "address": "0x060AE",
+      "name": "SMALLER"
+    },
+    {
+      "number": 271,
+      "address": "0x060F1",
+      "name": "SMALLEST"
+    },
+    {
+      "number": 272,
+      "address": "0x06153",
+      "name": "SO"
+    },
+    {
+      "number": 273,
+      "address": "0x06197",
+      "name": "SOME, SUM",
+      "aliases": [
+        282
+      ]
+    },
+    {
+      "number": 274,
+      "address": "0x061C6",
+      "name": "SORRY"
+    },
+    {
+      "number": 275,
+      "address": "0x06226",
+      "name": "SPACE"
+    },
+    {
+      "number": 276,
+      "address": "0x0625D",
+      "name": "SPACES"
+    },
+    {
+      "number": 277,
+      "address": "0x062CC",
+      "name": "SPELL"
+    },
+    {
+      "number": 278,
+      "address": "0x06333",
+      "name": "SQUARE"
+    },
+    {
+      "number": 279,
+      "address": "0x0637C",
+      "name": "START"
+    },
+    {
+      "number": 280,
+      "address": "0x063C5",
+      "name": "STEP"
+    },
+    {
+      "number": 281,
+      "address": "0x063F7",
+      "name": "STOP"
+    },
+    {
+      "number": 283,
+      "address": "0x06423",
+      "name": "SUPPOSED"
+    },
+    {
+      "number": 284,
+      "address": "0x06489",
+      "name": "SUPPOSED TO"
+    },
+    {
+      "number": 285,
+      "address": "0x064F4",
+      "name": "SURE"
+    },
+    {
+      "number": 286,
+      "address": "0x06551",
+      "name": "T"
+    },
+    {
+      "number": 287,
+      "address": "0x0658B",
+      "name": "TAKE"
+    },
+    {
+      "number": 288,
+      "address": "0x065BF",
+      "name": "TEEN"
+    },
+    {
+      "number": 289,
+      "address": "0x06603",
+      "name": "TELL"
+    },
+    {
+      "number": 290,
+      "address": "0x0664E",
+      "name": "TEN"
+    },
+    {
+      "number": 291,
+      "address": "0x06696",
+      "name": "TEXAS INSTRUMENTS"
+    },
+    {
+      "number": 292,
+      "address": "0x0675B",
+      "name": "THAN"
+    },
+    {
+      "number": 293,
+      "address": "0x067B6",
+      "name": "THAT"
+    },
+    {
+      "number": 294,
+      "address": "0x06816",
+      "name": "THAT IS INCORRECT"
+    },
+    {
+      "number": 295,
+      "address": "0x068FE",
+      "name": "THAT IS RIGHT"
+    },
+    {
+      "number": 296,
+      "address": "0x06974",
+      "name": "THE"
+    },
+    {
+      "number": 297,
+      "address": "0x069B6",
+      "name": "THE1"
+    },
+    {
+      "number": 298,
+      "address": "0x06A72",
+      "name": "THEIR, THERE",
+      "aliases": [
+        300
+      ]
+    },
+    {
+      "number": 299,
+      "address": "0x069E1",
+      "name": "THEN"
+    },
+    {
+      "number": 301,
+      "address": "0x06ADE",
+      "name": "THESE"
+    },
+    {
+      "number": 302,
+      "address": "0x06B47",
+      "name": "THEY"
+    },
+    {
+      "number": 303,
+      "address": "0x06BA0",
+      "name": "THING"
+    },
+    {
+      "number": 304,
+      "address": "0x06C0F",
+      "name": "THINGS"
+    },
+    {
+      "number": 305,
+      "address": "0x06C73",
+      "name": "THINK"
+    },
+    {
+      "number": 306,
+      "address": "0x06CBC",
+      "name": "THIRD"
+    },
+    {
+      "number": 307,
+      "address": "0x06D11",
+      "name": "THIRTEEN"
+    },
+    {
+      "number": 308,
+      "address": "0x06DA2",
+      "name": "THIRTY"
+    },
+    {
+      "number": 309,
+      "address": "0x06DDE",
+      "name": "THIS"
+    },
+    {
+      "number": 311,
+      "address": "0x06E26",
+      "name": "THREW, THROUGH",
+      "aliases": [
+        312
+      ]
+    },
+    {
+      "number": 313,
+      "address": "0x06E69",
+      "name": "TIME"
+    },
+    {
+      "number": 315,
+      "address": "0x06EB0",
+      "name": "TOGETHER"
+    },
+    {
+      "number": 316,
+      "address": "0x06F1F",
+      "name": "TONE"
+    },
+    {
+      "number": 318,
+      "address": "0x06F8D",
+      "name": "TOP"
+    },
+    {
+      "number": 319,
+      "address": "0x06FBB",
+      "name": "TRY"
+    },
+    {
+      "number": 320,
+      "address": "0x0700F",
+      "name": "TRY AGAIN"
+    },
+    {
+      "number": 321,
+      "address": "0x07092",
+      "name": "TURN"
+    },
+    {
+      "number": 322,
+      "address": "0x070CE",
+      "name": "TWELVE"
+    },
+    {
+      "number": 323,
+      "address": "0x07119",
+      "name": "TWENTY"
+    },
+    {
+      "number": 325,
+      "address": "0x07170",
+      "name": "TYPE"
+    },
+    {
+      "number": 326,
+      "address": "0x071BE",
+      "name": "U, YOU",
+      "aliases": [
+        368
+      ]
+    },
+    {
+      "number": 327,
+      "address": "0x071F4",
+      "name": "UHOH"
+    },
+    {
+      "number": 328,
+      "address": "0x07245",
+      "name": "UNDER"
+    },
+    {
+      "number": 329,
+      "address": "0x0729D",
+      "name": "UNDERSTAND"
+    },
+    {
+      "number": 330,
+      "address": "0x0732F",
+      "name": "UNTIL"
+    },
+    {
+      "number": 331,
+      "address": "0x0739F",
+      "name": "UP"
+    },
+    {
+      "number": 332,
+      "address": "0x073C3",
+      "name": "UPPER"
+    },
+    {
+      "number": 333,
+      "address": "0x07403",
+      "name": "USE"
+    },
+    {
+      "number": 334,
+      "address": "0x07449",
+      "name": "V"
+    },
+    {
+      "number": 335,
+      "address": "0x07487",
+      "name": "VARY"
+    },
+    {
+      "number": 336,
+      "address": "0x074DA",
+      "name": "VERY"
+    },
+    {
+      "number": 337,
+      "address": "0x07520",
+      "name": "W"
+    },
+    {
+      "number": 338,
+      "address": "0x0759D",
+      "name": "WAIT, WEIGHT",
+      "aliases": [
+        344
+      ]
+    },
+    {
+      "number": 339,
+      "address": "0x075DF",
+      "name": "WANT"
+    },
+    {
+      "number": 340,
+      "address": "0x07621",
+      "name": "WANTS"
+    },
+    {
+      "number": 341,
+      "address": "0x076B0",
+      "name": "WAY, WEIGH",
+      "aliases": [
+        343
+      ]
+    },
+    {
+      "number": 342,
+      "address": "0x0767D",
+      "name": "WE"
+    },
+    {
+      "number": 345,
+      "address": "0x07717",
+      "name": "WELL"
+    },
+    {
+      "number": 346,
+      "address": "0x0775C",
+      "name": "WERE"
+    },
+    {
+      "number": 347,
+      "address": "0x077BC",
+      "name": "WHAT"
+    },
+    {
+      "number": 348,
+      "address": "0x077E9",
+      "name": "WHAT WAS THAT"
+    },
+    {
+      "number": 349,
+      "address": "0x07875",
+      "name": "WHEN"
+    },
+    {
+      "number": 350,
+      "address": "0x078AB",
+      "name": "WHERE"
+    },
+    {
+      "number": 351,
+      "address": "0x078F4",
+      "name": "WHICH"
+    },
+    {
+      "number": 352,
+      "address": "0x07924",
+      "name": "WHITE"
+    },
+    {
+      "number": 353,
+      "address": "0x07969",
+      "name": "WHO"
+    },
+    {
+      "number": 354,
+      "address": "0x079B4",
+      "name": "WHY"
+    },
+    {
+      "number": 355,
+      "address": "0x07A11",
+      "name": "WILL"
+    },
+    {
+      "number": 356,
+      "address": "0x07A6B",
+      "name": "WITH"
+    },
+    {
+      "number": 358,
+      "address": "0x07AAB",
+      "name": "WORD"
+    },
+    {
+      "number": 359,
+      "address": "0x07B0A",
+      "name": "WORDS"
+    },
+    {
+      "number": 360,
+      "address": "0x07B75",
+      "name": "WORK"
+    },
+    {
+      "number": 361,
+      "address": "0x07BBC",
+      "name": "WORKING"
+    },
+    {
+      "number": 363,
+      "address": "0x07C8D",
+      "name": "X"
+    },
+    {
+      "number": 364,
+      "address": "0x07CB2",
+      "name": "Y"
+    },
+    {
+      "number": 365,
+      "address": "0x07CF8",
+      "name": "YELLOW"
+    },
+    {
+      "number": 366,
+      "address": "0x07D58",
+      "name": "YES"
+    },
+    {
+      "number": 367,
+      "address": "0x07D99",
+      "name": "YET"
+    },
+    {
+      "number": 369,
+      "address": "0x07DDB",
+      "name": "YOU WIN"
+    },
+    {
+      "number": 370,
+      "address": "0x07E4D",
+      "name": "YOUR"
+    },
+    {
+      "number": 371,
+      "address": "0x07E99",
+      "name": "Z"
+    }
+  ],
+  "frame_format": {
+    "tms5200_tms5220": {
+      "words": 339,
+      "stop_code": 339,
+      "overruns": 0
+    },
+    "tms5100": {
+      "words": 339,
+      "stop_code": 337,
+      "overruns": 123
+    }
+  }
+}
