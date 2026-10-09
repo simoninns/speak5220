@@ -244,6 +244,20 @@ For every word it checks:
 
 The trace is saved as `raw/vsm_trace.bin` (the firmware's 8-byte events, unchanged) and `vsm_trace.csv` (decoded: one row per event, times in µs). `pico.py` can also be used as a library: the `Pico` class, `decodeTrace()`, `hostCycles()` and `bitsRead()`. `Pico.time()` reads the Pico's microsecond timer. `speak()` and `speakExternal()` take an optional `atUs`, a time on that timer at which the command starts.
 
+## Encoder test speech (Phase 11)
+
+```
+python tools/ttsgen.py fetch     # download the Piper voices into local/piper/ and check their SHA-256
+python tools/ttsgen.py render    # render every prompt not yet rendered; --force re-renders
+python tools/ttsgen.py check     # check every file against the index
+python tools/recimport.py        # split the real recordings in local/recordings/ into their prompts
+python tools/recimport.py check  # check those files against their index
+```
+
+- **`prompts.csv`** lists the encoder's test phrases: single words found in no PROM's word table, numbers, the first three Harvard sentence lists, phrases that stress one class of sound (sibilants, fricatives, plosives, nasals, liquids, vowels, voiced and unvoiced pairs, pitch, sustained sounds), computer phrases and longer passages. A prompt's `voices` column is `all`, a list of voice keys, or empty, for one voice chosen in turn within its category.
+- **`ttsgen.py`** renders them with Piper (in `nix develop`) from nine voices, UK and US, from about 90 Hz to 250 Hz median pitch. The voices' datasets are public domain, CC0, CC BY or CC BY-SA. Each render is resampled to 8 kHz, 16-bit mono, with its peak at −3 dBFS, and written to `captures/phase11/inputs/tts/` as FLAC (lossless; `soundfile` reads it). Each file's row in `index.csv` gives its text, voice, active level, median and spread of pitch, voiced share, and the SHA-256 of its decoded samples (16-bit little-endian), which does not depend on the FLAC encoder. `README.md` there credits the voices. Piper's render is random, so the same text never gives the same file twice: the committed files are the frozen inputs, and `render` never overwrites one without `--force`. The renders at Piper's own rate are kept in `local/piper/renders/`.
+- **`recimport.py`** imports real recordings. The originals stay in the gitignored `local/recordings/`, listed in its `sources.csv`: the file, a text file of its prompts (`1. text` per line, in the order spoken), an id prefix, a voice key, and the speaker, source and licence to credit. A recording may hold many prompts with a pause between each. The split takes, of the pauses of 150 ms or more, the set that best fits each segment's duration to its text length while preferring long pauses, then pads each segment with up to 150 ms of its pauses. The segments are written as the TTS files are, to `captures/phase11/inputs/recordings/<id>_<voice>.flac`, with an `index.csv` that also gives each one's place in the original, and a `README.md`. The split depends only on the original, so it is repeatable.
+
 ## Single captures and analysis
 
 ```
@@ -287,6 +301,7 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `lpc.py`: the LPC frame parser and encoder: frame boundaries, the coded parameters of each frame, and frames back to bytes.
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the Phase 8 vectors, the synthesis model, the table measurements and the host interface tests (see above).
 - `regress.py`, `variance.py`: the Phase 9 regression harness for the reference emulator in `emulator/`, and the measured agreement between chips and the model (see above).
+- `ttsgen.py`, `prompts.csv`, `recimport.py`: the Phase 11 encoder test speech and recordings (see above).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.

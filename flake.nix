@@ -22,6 +22,7 @@
             p.scipy
             p.matplotlib
             p.pyserial
+            p.soundfile
           ]);
         in
         {
@@ -31,6 +32,9 @@
               kicad
               python
               git
+
+              # Text to speech for the encoder's test inputs (tools/ttsgen.py)
+              piper-tts
 
               # Raspberry Pi Pico 2 (RP2350) firmware
               cmake

@@ -385,7 +385,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Done |
 | 9. Reference emulator | 8 (runs alongside it) | In progress: emulator and harness done; not yet bit-exact |
 | 10. Remaining PROM corpora | 6, 7 | Done (within the tolerance of §1.5 on every PROM) |
-| 11. Authoring, and confirmation with new speech data | 8, 9 | Not started |
+| 11. Authoring, and confirmation with new speech data | 8, 9 | Started (encoder test speech frozen) |
 | 12. Publish | All | Not started |
 
 ### Phase 1: Bench bring-up and signal identification
@@ -877,6 +877,10 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
 
 - **Goal:** prove that the documented mechanism is complete, by generating new speech data from the documentation and running it through the real TMS5220.
 - **Tasks:**
+  - **Freeze the encoder's test speech before writing the encoder.**
+    - Synthetic speech: `tools/ttsgen.py` renders the prompts in `tools/prompts.csv` with Piper. There are 122 prompts in nine voices, 210 files and about 9.5 minutes. They are written to `captures/phase11/inputs/tts/` as 8 kHz FLAC, 6 MB in all, with an index of hashes of the samples (done, 2026-10-09).
+    - Real recordings: the originals go in `local/recordings/`, which is kept local, each listed in its `sources.csv`. `tools/recimport.py` splits each original into its prompts and writes them to `captures/phase11/inputs/recordings/` in the same way as the TTS files. Only originals whose licence allows publication are imported. The first are 33 CMU ARCTIC prompts (a0001 to a0033), read by the project's author: 1.7 minutes, 1.2 MB (done, 2026-10-09).
+    - The hand-designed frame sequences need no audio. Rendered through the emulator, they give inputs whose frames are known, so the encoder's parameters can be checked directly, not only by ear.
   - Write the authoring guide and the encoder, using only the datasheet.
   - Check the round trip: decode every original PROM word to frames, re-encode it, and confirm the bits are identical (acceptance test 3).
   - Generate the project's own speech data: new phrases from new recordings, and hand-designed frame sequences that use every feature. Package it as a new PHROM image with a word table, and as Speak External streams.
