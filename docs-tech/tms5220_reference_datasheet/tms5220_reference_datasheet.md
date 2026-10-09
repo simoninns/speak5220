@@ -12,6 +12,7 @@ The aim is that someone working from this document alone can author new phrases,
 - speech synthesis: the frame format, the parameter tables, the excitation, interpolation and the lattice filter (§8.1, §8.5 to §8.9);
 - the DAC and the audio output (§8.2, §8.3);
 - the serial sample output (§8.4);
+- the parameter ROM output, `PROM OUT` (§8.10);
 - the measured output characteristics (§9.5);
 - the pin functions (§11.2);
 - authoring speech data (§12).
@@ -295,6 +296,8 @@ Each setting was held for six frames, so the filter settles. Every vector was ca
 
 An unconfirmed entry (†) is one where a neighbouring value fits as well or slightly better. That happens because the model is not yet exact for voiced frames (§8.9): a nearby value can offset its one-code slips at a few samples. No neighbouring value made any vector exact. So the listed values are kept, and none is contradicted.
 
+**Read from the ROM (2026-10-09).** The energy, pitch and K tables were then read directly from chip 1's parameter ROM through `PROM OUT` (§8.10). All 248 entries equal Tables 8-4 to 8-6, including the 26 K entries the fit left unconfirmed, so those are no longer marked [`captures/promout/chip1/`]. The chirp ROM is separate and does not appear on `PROM OUT`, so 26 of its entries remain unconfirmed (†, Table 8-7).
+
 **The values are MAME's.** All of them agree with the tables in MAME's `tms5110r.hxx` for the TMS5220 (`TI_028X_LATER_ENERGY`, `TI_5220_PITCH`, `TI_5110_5220_LPC`, `TI_LATER_CHIRP`; MAME states that its K and chirp tables match a decapped TMS5220), except that the pitch period is one sample longer than MAME's pitch value (§8.6). The original lists only coded index ranges, not values. The energy table is also the one in US 4,335,277 (its Table IV). That patent's pitch and K tables belong to an earlier chip and differ, though it stores them in the same form: 10-bit two's-complement values in a ROM addressed by the coded index.
 
 *Table 8-4. Energy. The coefficient by which the excitation is multiplied (§8.8), as a 10-bit two's-complement value. Index 0 is silence and index 15 the stop code; both give the value 0. A value of 0 is multiplied like any other, so it gives u₁₁ = +1 (§8.8).*
@@ -328,21 +331,21 @@ An unconfirmed entry (†) is one where a neighbouring value fits as well or sli
 
 | Index | K1 | K2 | K3 | K4 | K5 | K6 | K7 | K8 | K9 | K10 |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 0 | -501 | -328 | -441 | -328 | -328 | -256 † | -308 | -256 † | -256 | -205 |
+| 0 | -501 | -328 | -441 | -328 | -328 | -256 | -308 | -256 | -256 | -205 |
 | 1 | -498 | -303 | -387 | -273 | -282 | -212 | -260 | -161 | -176 | -132 |
-| 2 | -497 | -274 | -333 | -217 | -235 † | -168 | -212 | -66 | -96 | -59 † |
-| 3 | -495 | -244 | -279 | -161 | -189 † | -123 | -164 | 29 | -15 | 14 |
-| 4 | -493 | -211 | -225 | -106 | -142 | -79 | -117 | 124 † | 65 † | 87 |
-| 5 | -491 | -175 | -171 | -50 | -96 † | -35 | -69 | 219 † | 146 | 160 |
-| 6 | -488 | -138 | -117 | 5 | -50 † | 10 | -21 | 314 † | 226 | 234 |
-| 7 | -482 | -99 | -63 | 61 † | -3 | 54 | 27 | 409 | 307 † | 307 |
-| 8 | -478 | -59 | -9 | 116 | 43 † | 98 | 75 |  |  |  |
-| 9 | -474 | -18 | 45 | 172 | 90 † | 143 | 122 † |  |  |  |
-| 10 | -469 | 24 † | 98 | 228 | 136 † | 187 † | 170 † |  |  |  |
-| 11 | -464 | 64 | 152 | 283 | 182 † | 232 | 218 |  |  |  |
-| 12 | -459 | 105 † | 206 | 339 | 229 | 276 | 266 † |  |  |  |
-| 13 | -452 | 143 | 260 | 394 | 275 † | 320 | 314 |  |  |  |
-| 14 | -445 | 180 † | 314 | 450 | 322 | 365 | 361 |  |  |  |
+| 2 | -497 | -274 | -333 | -217 | -235 | -168 | -212 | -66 | -96 | -59 |
+| 3 | -495 | -244 | -279 | -161 | -189 | -123 | -164 | 29 | -15 | 14 |
+| 4 | -493 | -211 | -225 | -106 | -142 | -79 | -117 | 124 | 65 | 87 |
+| 5 | -491 | -175 | -171 | -50 | -96 | -35 | -69 | 219 | 146 | 160 |
+| 6 | -488 | -138 | -117 | 5 | -50 | 10 | -21 | 314 | 226 | 234 |
+| 7 | -482 | -99 | -63 | 61 | -3 | 54 | 27 | 409 | 307 | 307 |
+| 8 | -478 | -59 | -9 | 116 | 43 | 98 | 75 |  |  |  |
+| 9 | -474 | -18 | 45 | 172 | 90 | 143 | 122 |  |  |  |
+| 10 | -469 | 24 | 98 | 228 | 136 | 187 | 170 |  |  |  |
+| 11 | -464 | 64 | 152 | 283 | 182 | 232 | 218 |  |  |  |
+| 12 | -459 | 105 | 206 | 339 | 229 | 276 | 266 |  |  |  |
+| 13 | -452 | 143 | 260 | 394 | 275 | 320 | 314 |  |  |  |
+| 14 | -445 | 180 | 314 | 450 | 322 | 365 | 361 |  |  |  |
 | 15 | -437 | 215 | 368 | 506 | 368 | 409 | 409 |  |  |  |
 | 16 | -412 | 248 |  |  |  |  |  |  |  |  |
 | 17 | -380 | 278 |  |  |  |  |  |  |  |  |
@@ -351,7 +354,7 @@ An unconfirmed entry (†) is one where a neighbouring value fits as well or sli
 | 20 | -227 | 354 |  |  |  |  |  |  |  |  |
 | 21 | -158 | 374 |  |  |  |  |  |  |  |  |
 | 22 | -81 | 392 |  |  |  |  |  |  |  |  |
-| 23 | -1 † | 408 |  |  |  |  |  |  |  |  |
+| 23 | -1 | 408 |  |  |  |  |  |  |  |  |
 | 24 | 80 | 422 |  |  |  |  |  |  |  |  |
 | 25 | 157 | 435 |  |  |  |  |  |  |  |  |
 | 26 | 226 | 445 |  |  |  |  |  |  |  |  |
@@ -809,6 +812,44 @@ The noise register is not part of this loop: it steps once per slot, 20 times pe
 
 **Not known for this path.** The power-up state: an emulator can start with every index, register and flag at 0 and the filter at its idle state. What a Reset written during speech does to the output: the model treats it as the end of speech (step 3 from then on). Neither has been measured.
 
+### 8.10 Parameter ROM output: `PROM OUT` (New)
+
+**Status: drafted (2026-10-09).** Measured on chip 1 with the PicoScope's logic input D0 on pin 10 (test point TP10) [`captures/promout/chip1/`].
+
+The original lists pin 10 only as "Testing use only". It is the serial output of the parameter output register. One parameter at a time, it carries the parameter ROM's value for the chip's stored coded index: the target that the interpolator works towards (§8.7, target(i) in §8.9). US 4,335,277 shows this in Fig. 8f, though its text never mentions the pin. In that figure, the 2720-bit parameter ROM (202, Fig. 8e) loads the parameter output register (201). The register's serial output goes both to the interpolator ("PROM OUT to Fig. 9a") and, through an output transistor, to the `PROM OUT` pad. The pin was used to read the TMS5110's and TMS5220's LPC tables before die photographs were available (MAME, `tms5110r.hxx`), and §8.1's tables were read through it.
+
+**Electrical.** `PROM OUT` is an open-drain output. It pulls up towards `VSS` and otherwise does not drive. On the logic input (about 200 kΩ to 0 V), the released level settles between +0.5 V and +1.5 V, the same as the inputs left open beside it. The driven level is above +3 V, and nearly always below +4.5 V. A +3 V threshold reads it cleanly. The edges fall 0.6–3 µs into the slot, after the `T11` rising edge (falling edges are slower, with nothing pulling the pin down), so read each bit late in its slot, at 75 %. The patent draws a load to `VDD` on the pad; a pull-down resistor to `VDD` or to 0 V would sharpen the falling edges, but none was needed.
+
+**Format.** One bit per slot, high = 1, running continuously whether the chip is talking or idle. The stream repeats every 25 sample periods (500 slots): one cycle of the parameter counter, PC 0–11 with an A and a B cycle each, and PC 12 with an A cycle only (§8.9). Each of the 12 parameters is a 10-bit value, LSB first, followed by copies of its top bit until the next parameter begins. Each field starts one slot earlier in its sample period than the one before it:
+
+| Parameter | Sample period (from energy's) | First slot | Value |
+|---|---|---|---|
+| Energy | 0 | 0 | Table 8-4, two's complement |
+| Pitch | 2 | 0 | Table 8-5 × 4, unsigned (the value in bits 2–9) |
+| K1 | 3 | 19 | Table 8-6, two's complement |
+| K2 | 5 | 18 | 〃 |
+| K3 | 7 | 17 | 〃 |
+| K4 | 9 | 16 | 〃 |
+| K5 | 11 | 15 | 〃 |
+| K6 | 13 | 14 | 〃 |
+| K7 | 15 | 13 | 〃 |
+| K8 | 17 | 12 | 〃 |
+| K9 | 19 | 11 | 〃 |
+| K10 | 21 | 10 | 〃 |
+
+*Table 8-8. Where each parameter appears on `PROM OUT`, within one 25-sample-period cycle. Sample periods 22–24 carry only K10's sign.*
+
+The order is the parameter counter's, energy first (PC 0), as in the patent. Which sample period is PC 0 A was not measured against the frame read (§8.5), so the cycle is identified from its contents: a capture's alignment is the one at which every field holds a table value.
+
+**What it shows.** The table value at the stored index, not the value in use:
+- **Not interpolated.** The patent's register 201 holds the target. The runs here held each setting for 25 frames, so they show the target but do not test how the field changes from one frame to the next.
+- **No zeroing.** Silence and the K5–K10 zeroing of unvoiced frames (§8.7) do not appear. In an unvoiced frame, K5–K10 show the values at their stored indices, which are the last voiced frame's, even from an earlier utterance. This is the stored state that §12.2 warns about. Both kinds of zeroing are applied after the ROM, as target(i) in §8.9 describes.
+- **Between utterances**, the last frame's indices, with energy 0 for the stop code (index 15).
+
+**Reading the tables.** `tools/promout.py dump` speaks 64 runs through Speak External, each of 25 identical frames. Run *i* uses energy index *i* mod 14 + 1, pitch index *i*, and every K at index *i* modulo its table's size; run 0 is unvoiced. It reads the fields in mid-speech, then reads energy index 0 from a silence frame and index 15 while idle after the stop code. Every one of the 248 entries (energy 16, pitch 64, K 168) equals Tables 8-4 to 8-6, in two complete dumps. The chirp ROM (Table 8-7, ROM 409 in the patent) is a separate ROM and does not appear on `PROM OUT`. `tools/promout.py idle` decodes the stream at any moment, which shows the chip's stored indices directly.
+
+**Relation to TI's bit-time names (inference).** With §8.4's mapping (slot 0 is T11), energy and pitch start in T11, and K1 to K10 start in T10 down to T1. The patent's load signal LDP is also staggered from one parameter to the next, by a different pattern. That pattern is given in its own bit-time numbering, which does not match the pin name's (§8.4), so neither mapping is confirmed.
+
 ## 9. Electrical characteristics
 
 The original's ratings and DC characteristics (§9.1–§9.4) are not repeated here.
@@ -838,7 +879,7 @@ All three outputs swing from near `VSS` down to well below 0 V. Their falls are 
 | 7 | `T11` | Sync | High for slot 0 of each sample period. It frames the `I/O` data and runs continuously (§8.4) |
 | 8 | `SPEAKER` | Audio output | DAC current output into a load to 0 V. About 4.5 µA per code, with a step of about 26 µA between codes −1 and 0. The current depends on the load. It changes at the start of slot 1 (§8.2, §8.3) |
 | 9 | `I/O` | Serial data out | The 10-bit output sample before clipping, LSB first, in slots 2–11. It runs continuously, and sends −1 when idle (§8.4) |
-| 10 | `PROM OUT` | Testing use only | An output that drives strongly. It was left unconnected for all measurements. Function unknown |
+| 10 | `PROM OUT` | Testing use only | The parameter ROM's output: for each parameter in turn, the table value at its stored coded index, 10 bits LSB first, one bit per slot. It runs continuously and repeats every 25 sample periods. Open drain: it pulls up towards `VSS` and otherwise floats. Unconnected for every measurement before §8.10's (§8.10) |
 | 20 | `TEST` | Testing use only | Not explored (plan §11) |
 | 1, 12–14, 19, 22, 24, 26 | D0–D7 | Data bus | TI numbers D0 as the most significant bit. Commands and FIFO data are written on it; status and Read Byte data are read from it. A byte from Read Byte arrives bit-reversed (§6) |
 | 27, 28 | `WS`, `RS` | Write and read strobes | Active low. A write or status read completes 12–24 µs after the strobe, when READY goes active (§3) |
@@ -1114,3 +1155,4 @@ Additions and corrections relative to the original, with their evidence.
 | 2026-10-09 | §8.6, §8.9 | Correction (to this datasheet): the pitch counter's hold at an inhibited change lasts three samples of IP 0, not two, so a voiced frame after silence that followed voiced speech starts its chirp one sample later. It cut the model's error power on the PROM words by up to 13 times, and made no PROM or vector set worse | vectors `onset`; corpus, every PROM |
 | 2026-10-09 | §7, §8.8 | Upsets characterised: single ±1 starts at a few fixed samples per word, each with a fixed chance; towards the nearer output step; on the same coefficients (*d*₁ < 0) as the lowest-order error. Chip 4 against chip 1 on PROM words | corpus, every PROM; `captures/phase10/repeat/`; chip 4, `starwars_speech`, `vm61003_words` |
 | 2026-10-09 | §12, §8.9 | New: the authoring guide (bit budget, frame timing for authors, levels, the excitation's spectrum, the K sign convention, an encoding method, VSM images, word tables, Speak External streams, how the original data was encoded). §8.9 clarified where an encoder written from it found it ambiguous. New speech data, encoded from this datasheet alone, plays on the chip as the emulator predicted | `captures/phase11/` |
+| 2026-10-09 | §8.10, §8.1, §11.2 | New: `PROM OUT` (pin 10) is the parameter ROM's serial output (US 4,335,277 Fig. 8f): each parameter's table value at its stored index, 10 bits LSB first, repeating every 25 sample periods; open drain. All 248 energy, pitch and K entries read from chip 1 equal Tables 8-4 to 8-6, which confirms the 26 K entries the fit had left unconfirmed. In an unvoiced frame it shows K5–K10 at their stored indices, as §12.2 describes | `captures/promout/chip1/` |

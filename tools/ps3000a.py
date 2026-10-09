@@ -28,6 +28,9 @@ PICO_OK = 0
 # Open statuses that only mean "running from USB power" or "not on USB 3"
 POWER_STATUSES = (0x119, 0x11A, 0x11E)
 INFO_VARIANT, INFO_SERIAL = 3, 4
+# MSO digital ports (enum PS3000A_CHANNEL): port 0 is D0-D7, port 1 D8-D15
+DIGITAL_PORT0, DIGITAL_PORT1 = 0x80, 0x81
+DIGITAL_FULL_SCALE_V = 5.0     # the logic level's int16 range spans +/-5 V
 
 
 def _find_library():
@@ -69,6 +72,7 @@ class Scope:
         check(lib.ps3000aMaximumValue(self.handle, C.byref(maxAdc)), "MaximumValue")
         self.maxAdc = maxAdc.value
         self.channels = {}  # channel -> (range V, offset V)
+        self.ports = {}     # digital port -> logic threshold V
 
     def __enter__(self):
         return self
@@ -92,6 +96,19 @@ class Scope:
             self.channels[channel] = (rangeV, offsetV)
         else:
             self.channels.pop(channel, None)
+
+    def setDigitalPort(self, port, thresholdV=0.0, enabled=True):
+        """Enable an MSO digital port. Its bits switch at thresholdV; the
+        inputs take +/-20 V, so the TMS5220's -5 V to +5 V pins connect
+        directly. Bit n of each sample is channel Dn of port 0 (D(8 + n) of
+        port 1)."""
+        level = int(round(thresholdV / DIGITAL_FULL_SCALE_V * 32767))
+        check(lib.ps3000aSetDigitalPort(self.handle, port, int(enabled), level),
+              f"SetDigitalPort 0x{port:X}")
+        if enabled:
+            self.ports[port] = thresholdV
+        else:
+            self.ports.pop(port, None)
 
     def timebase(self, timebase, samples):
         """Returns (sample interval in seconds, maximum samples)."""
@@ -132,7 +149,7 @@ class Scope:
             time.sleep(0.01)
 
         raw = {}
-        for channel in self.channels:
+        for channel in list(self.channels) + list(self.ports):
             buf = np.zeros(samples, dtype=np.int16)
             check(lib.ps3000aSetDataBuffer(self.handle, channel,
                                            buf.ctypes.data_as(C.POINTER(C.c_int16)),

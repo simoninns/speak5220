@@ -16,6 +16,7 @@ Python tools for driving the TMS5220 through the Pico 2 and capturing its output
 | B | TP3 | `T11` | ×10 |
 | C | TP4 | `I/O` | ×10 |
 | D | TP5 | `SCOPE_TRIG` | ×10 |
+| Logic D0 | TP10 | `PROM OUT` | Direct, threshold +3 V (`promout.py` only) |
 
 For a clock-alignment capture, move probe D to TP1 (ROMCLK) and pass `--d-signal romclk`. The capture then triggers on `T11`.
 
@@ -319,6 +320,15 @@ With `--speak` or `--speakext`, `capture.py` does the following:
 - `word<N>_samples.wav`: the decoded `I/O` samples as 16-bit PCM at 8 kHz. Each 10-bit code (−512 to 511) is left-justified (× 64), so the chip's full scale is the WAV's full scale. It is lossless: the code is the sample shifted right by 6.
 - `word<N>_samples.csv`: the sample index, the code, the mean DAC voltage and the `T11` time.
 
+## The parameter ROM through PROM OUT
+
+```
+python tools/promout.py idle     # the stored indices' table values, from the stream as it is now
+python tools/promout.py dump     # every energy, pitch and K entry, against the datasheet (about 4 min)
+```
+
+`PROM OUT` (pin 10) is the parameter ROM's serial output (datasheet §8.10). It goes directly to the PicoScope's logic input D0 at TP10: an open-drain output, read at a +3 V threshold. `dump` speaks 64 runs through Speak External, each of 25 identical frames that set every parameter to a known index. It reads the fields in mid-speech, plus energy indices 0 and 15. First it records D0's levels against threshold and where its edges fall within the slot. It writes `captures/promout/chip<N>/promout.json` (every run's 500-slot cycle and decoded fields) and `rom.csv` (each entry read against the datasheet's value). The chip number comes from `bench.json`. It exits non-zero if any entry differs.
+
 ## Die image
 
 `die.py` reads the TMS5220NL die photograph (`docs-tech/die_analysis/`). The image goes in `local/die_image/` (git-ignored), along with everything made from it. All positions are full-resolution pixels, origin top left.
@@ -348,7 +358,8 @@ The viewer draws every record of `docs-tech/die_analysis/cells.json` and shows t
 - `regress.py`, `variance.py`: the Phase 9 regression harness for the reference emulator in `emulator/`, and the measured agreement between chips and the model (see above).
 - `ttsgen.py`, `prompts.csv`, `recimport.py`: the Phase 11 encoder test speech and recordings (see above).
 - `promstats.py`, `phase11.py`, `asrcheck.py`: Phase 11's PROM statistics, new speech data, predictions, comparison and intelligibility check (see above). The encoder itself is in `encoder/`.
-- `ps3000a.py`: ctypes wrapper for the ps3000a driver.
+- `promout.py`: reads the parameter ROM through `PROM OUT` (see above).
+- `ps3000a.py`: ctypes wrapper for the ps3000a driver, including the MSO's digital ports.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
 - `capture.py`, `decode.py`: single captures outside a PROM, and decoding of multi-word captures (Phases 1–3). `run.py` uses `capture.py`'s scope functions.
 - `dac_transfer.py`: the static DAC transfer function from one or more captures. It writes a per-code table of TP2 voltage and current (`dac_table.csv`), fits one weight per DAC input bit, and reports linearity, the step from −1 to 0, and whether the output depends on earlier samples (`dac_transfer.json`, `dac_transfer.png`). `--zero` subtracts the scope's zero offset, measured from a capture taken with probe A's tip grounded.

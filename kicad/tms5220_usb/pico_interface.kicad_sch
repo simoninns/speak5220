@@ -4218,6 +4218,12 @@
 		(uuid "82f0b101-f359-4cee-b40b-a9d7a3095d07")
 	)
 	(junction
+		(at 234.95 104.14)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "872ade99-d579-4800-a416-6b76adeed29b")
+	)
+	(junction
 		(at 77.47 52.07)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5873,6 +5879,16 @@
 	)
 	(wire
 		(pts
+			(xy 234.95 104.14) (xy 232.41 104.14)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e554314c-82d4-42a3-bfea-920b4ed8c8e6")
+	)
+	(wire
+		(pts
 			(xy 191.77 111.76) (xy 195.58 111.76)
 		)
 		(stroke
@@ -5961,12 +5977,6 @@
 		)
 		(uuid "fbfad113-d1e9-4232-9565-3cef2c556f71")
 	)
-	(junction
-		(at 234.95 104.14)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "872ade99-d579-4800-a416-6b76adeed29b")
-	)
 	(wire
 		(pts
 			(xy 237.49 104.14) (xy 234.95 104.14)
@@ -5976,16 +5986,6 @@
 			(type default)
 		)
 		(uuid "fc9800d0-a292-4ee1-9d12-5c4b8667e053")
-	)
-	(wire
-		(pts
-			(xy 234.95 104.14) (xy 232.41 104.14)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "e554314c-82d4-42a3-bfea-920b4ed8c8e6")
 	)
 	(label "OSC_PICO_3V3"
 		(at 195.58 114.3 0)
@@ -7161,164 +7161,6 @@
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
 					(reference "R21")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 234.95 107.95 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "d7fe0b6c-f503-45f8-86a8-7e52eb35fe65")
-		(property "Reference" "R27"
-			(at 232.41 106.68 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "10K"
-			(at 232.41 109.22 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Footprint" ""
-			(at 234.95 107.95 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 234.95 107.95 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Resistor"
-			(at 234.95 107.95 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "95e5ff2b-a4a8-4109-b446-ca2c143facc4")
-		)
-		(pin "2"
-			(uuid "d94590ef-a401-4783-afb7-cacdbfe9a5f4")
-		)
-		(instances
-			(project "tms5220_usb"
-				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "R27")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 234.95 111.76 0)
-		(unit 1)
-		(body_style 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(in_pos_files yes)
-		(dnp no)
-		(uuid "cd120b60-da62-4a0c-9e42-7aaa12f1db49")
-		(property "Reference" "#PWR099"
-			(at 234.95 109.22 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "GND"
-			(at 234.95 115.57000000000001 0)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 234.95 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Datasheet" ""
-			(at 234.95 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 234.95 111.76 0)
-			(hide yes)
-			(show_name no)
-			(do_not_autoplace no)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "44f645e9-086c-429f-92d4-7dd2aab72144")
-		)
-		(instances
-			(project "tms5220_usb"
-				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
-					(reference "#PWR099")
 					(unit 1)
 				)
 			)
@@ -9937,6 +9779,83 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 234.95 111.76 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "cd120b60-da62-4a0c-9e42-7aaa12f1db49")
+		(property "Reference" "#PWR099"
+			(at 234.95 109.22 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "GND"
+			(at 234.95 115.57 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 234.95 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 234.95 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 234.95 111.76 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "44f645e9-086c-429f-92d4-7dd2aab72144")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
+					(reference "#PWR099")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 85.09 149.86 0)
 		(unit 1)
@@ -10012,6 +9931,87 @@
 			(project "tms5220_usb"
 				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
 					(reference "R18")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 234.95 107.95 0)
+		(unit 1)
+		(body_style 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(in_pos_files yes)
+		(dnp no)
+		(uuid "d7fe0b6c-f503-45f8-86a8-7e52eb35fe65")
+		(property "Reference" "R27"
+			(at 232.41 106.68 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "10K"
+			(at 232.41 109.22 0)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" ""
+			(at 234.95 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Datasheet" ""
+			(at 234.95 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Description" "Resistor"
+			(at 234.95 107.95 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(pin "1"
+			(uuid "95e5ff2b-a4a8-4109-b446-ca2c143facc4")
+		)
+		(pin "2"
+			(uuid "d94590ef-a401-4783-afb7-cacdbfe9a5f4")
+		)
+		(instances
+			(project "tms5220_usb"
+				(path "/9c31612b-8325-458b-91d0-655d6dbf06eb/1ecdf88d-de05-4c5f-b67d-124b44dbc726"
+					(reference "R27")
 					(unit 1)
 				)
 			)

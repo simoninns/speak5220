@@ -49,13 +49,19 @@ Each target is an unknown named in the reference datasheet. The order is by the 
 | T2 | **The adder's low end and the summer multiplexer** | §8.8 | Adder bit 0 and 1, the carry-in, the precharged-zero input (patent gate 420), the truncation logic (425), the Y latch's width | Medium |
 | T3 | **Word lengths** | §8.8 "Word length and overflow" | Bit rows in A and B; the delay stack's depth and width. Confirms the 14-bit wrap and shows whether any register is wider or narrower | Easy |
 | T4 | **The chip-specific departures and upsets** | §8.8 "A second error"; §7 upsets | The dynamic and precharged nodes on the T1/T2 paths, and any ratioed gate there: transistor W/L, node size, which clock phase precharges it | Hard. Needs sizes, not just connections |
-| T5 | **The parameter and chirp tables, read optically** | §8.1, §8.6 | The ROM bits in C (and E) | Easy but tedious. Done mainly to validate the reading method (Phase 2) |
+| T5 | **The chirp table** | §8.1 Table 8-7, §8.6 | The chirp ROM (patent ROM 409): all 52 words, their bit weights and sign, and the address decoding, including the clamp that makes any count above 51 read location 51. The ROM's location is not yet known: E is the candidate. The parameter ROM in C is read first, as a check of the method (Phase 2) | Easy once found, but tedious. **The die is the only direct source** (below) |
 | T6 | **The DAC** | §8.2: the 26 µA step between codes −1 and 0, the 7 % scale step after a power cycle | Whether the DAC is sign-magnitude, offset binary or two's complement, its weighting, and its bias source | Medium |
 | T7 | **`PROM OUT` and `TEST`** | §11.2 | The nets behind pins 10 and 20 | Easy to find; meaning depends on F |
 | T8 | **The Speak External two-sample offset** | §8.5 "Speak External" | Where the Speak External path enters the frame timing in F | Hard. Control logic |
 | T9 | **Host interface timing details** | §3 "Not measured yet" | The READY, INT and FIFO-full logic in F and D | Hard, and also measurable on the bench, which is easier |
 
-T1 and T2 are the reason for doing this. T3 and T5 are cheap, and they check the method. T4 and T6 explain effects that the model has to tolerate rather than reproduce. T7 to T9 can wait.
+T1 and T2 are the reason for doing this. T3 is cheap, and it checks the method. T5 is the one table the chip cannot report itself:
+
+- **The chirp is not on `PROM OUT`.** The energy, pitch and K tables have all been read from the chip through `PROM OUT` (datasheet §8.10). The chirp ROM is a separate ROM, so it does not appear there.
+- **Half of it is unconfirmed.** The vector fit confirms only 26 of the chirp's 52 entries (datasheet §8.1). At the other 26, marked † in Table 8-7, a neighbouring value fits as well or better. That happens because the model is not yet exact for voiced frames.
+- **The listed values are MAME's.** MAME says they match a decapped TMS5220, but it does not publish the bits.
+
+So reading the chirp from the die settles Table 8-7 independently of both MAME and the model. It also helps T1: once the chirp is fixed, the voiced error can no longer be absorbed by refitting it (datasheet §8.8 tried that). T4 and T6 explain effects that the model has to tolerate rather than reproduce. T7 to T9 can wait.
 
 ## 4. Phases
 
@@ -83,17 +89,21 @@ T1 and T2 are the reason for doing this. T3 and T5 are cheap, and they check the
 
 **Exit:** an annotated floorplan that replaces `fig_floorplan.jpg`, with the bit order of A and B and the datapath's word lengths. If the rows are not 14, update datasheet §8.8 straight away.
 
-### Phase 2: calibration (reading what is already known)
+### Phase 2: calibration and the chirp (T5)
 
 Before trusting a reading of the unknown cells, read some known ones.
 
-MAME has already checked the 5220's LPC and chirp tables against this decap, so this phase tests our method rather than the tables.
+MAME has already checked the 5220's LPC and chirp tables against this decap. The parameter tables have since been read from the chip itself through `PROM OUT` (datasheet §8.10), so reading C tests our method rather than the tables. The chirp is different: nothing but the die can confirm it (T5).
 
 1. **The parameter ROM (C).** Decode its bits and compare them with the tables of datasheet §8.1, which are the values *as the chip uses them*, from the sweeps. Each bit cell is a transistor that is present or absent, which shows as a contact or a gate over diffusion. Work out the row and column decoding from the address lines in F.
-2. **The chirp ROM** (E, if that is what it is), against §8.6.
+2. **The chirp ROM (T5).** This step is a result, not just a check.
+   - **Find the ROM.** E is the candidate. Confirm it by following the pitch counter's address lines into it.
+   - **Read all 52 words,** including the 31 that should be zero, together with the bit weights and the sign bit.
+   - **Read the address decoder.** Check that any count above 51 reads location 51, and that locations 21–51 are really zero. If those locations are not stored at all, write down how the decoder produces the zero instead.
+   - **Compare with Table 8-7.** If every entry agrees, the 26 † entries become confirmed. If an entry differs, try the die's value in `tools/regress.py` before changing the datasheet or the model.
 3. **One complete multiplier cell** in the middle of the array (bit 7 of stage 2, say). Draw its transistors, reduce them to logic, and check the logic against the patent's cell (FIG. 10c) and against the multiplier form in §8.8, which is right for ordinary operands (ideas §1, constraint 1).
 
-**Exit:** the ROM agrees bit for bit with the measured tables, and the middle cell agrees with the patent. A disagreement is a finding in itself, but until it is explained, the method is not trusted for T1.
+**Exit:** the parameter ROM agrees bit for bit with the tables read through `PROM OUT`, and the middle cell agrees with the patent. The chirp has been read in full, and Table 8-7 is either confirmed or corrected. A disagreement is a finding in itself, but until it is explained, the method is not trusted for T1.
 
 ### Phase 3: the multiplier's low end (T1)
 
@@ -157,11 +167,11 @@ This phase is open-ended, and much of it can also be measured on the bench, so i
 |---|---|---|
 | 0 Preparation | done (`phase0.md`); pin map moved to Phase 1 | — |
 | 1 Floorplan | 1–2 evenings; in progress (`phase1.md`) | 0 |
-| 2 Calibration | 2–3 evenings (the ROM is most of it) | 1 |
+| 2 Calibration and chirp | 2–3 evenings (the two ROMs are most of it) | 1 |
 | 3 Multiplier low end | 3–5 evenings | 2 |
 | 4 Adder and stack | 2–3 evenings | 1; scored together with 3 |
 | 5 Marginal nodes | 2–4 evenings, if needed | 3, 4 |
 | 6 DAC | 2 evenings | 0 |
 | 7 Control | open-ended | 1 |
 
-If time is short, Phase 2 can be cut down to step 3 (the one middle multiplier cell) so that Phases 3 and 4 start sooner. The ROM readout is good evidence for the method, but the measured tables already give the values. Phase 6 does not depend on the datapath and can be done at any time.
+If time is short, Phase 2 can be cut down to steps 2 and 3 (the chirp and the one middle multiplier cell), so that Phases 3 and 4 start sooner. Reading the parameter ROM is good evidence for the method, but `PROM OUT` already gives its values. The chirp cannot be cut: the die is its only direct source. Phase 6 does not depend on the datapath and can be done at any time.
