@@ -1,0 +1,205 @@
+word,name,input,text,voice,part,start_sample,end_sample,input_samples_sha256,seconds
+1,w01_alba,captures/phase11/inputs/tts/w01_alba.flac,whisper,alba,0,0,5388,e8187a8efb165d740cbe6fbc263eb3ea2e7fe7cfadd89fef8b3b524bdb10e5cd,0.525
+2,w02_cori,captures/phase11/inputs/tts/w02_cori.flac,zebra,cori,0,0,6223,f6cbc77c7913a8072fca6ac03df81cce7d99850fffe039a73e396911718c5868,0.600
+3,w03_nem,captures/phase11/inputs/tts/w03_nem.flac,rhythm,nem,0,0,3623,29d29da109dbad3ba23d8dc62cd512fe24a1d8ff868d633bf14634fb07d77852,0.375
+4,w04_sef,captures/phase11/inputs/tts/w04_sef.flac,lantern,sef,0,0,5760,cbd60781647999e17ca534bb04c5680161918e4a34fb255db18ec7cb4cc74f6f,0.575
+5,w05_vctk_lo,captures/phase11/inputs/tts/w05_vctk_lo.flac,marmalade,vctk_lo,0,0,8638,5d14d8136ff0d54c4ab8dbfb471e6bcae053ef67a21ede77148a2ef5dedc5f35,0.900
+6,w06_vctk_hi,captures/phase11/inputs/tts/w06_vctk_hi.flac,thistle,vctk_hi,0,0,5573,73ee4e0059c9069ed32df01642b0506377000cebc780c7cba8e54516fc0d3b8a,0.525
+7,w07_joe,captures/phase11/inputs/tts/w07_joe.flac,violin,joe,0,0,5202,c3b26c5ab6260c0acbd4028b2d7b736250dca4fbf9e5cc105878f221ff3f4114,0.500
+8,w08_kristin,captures/phase11/inputs/tts/w08_kristin.flac,jigsaw,kristin,0,0,6966,1a89ddd613bd7d5a878aff8e5d070e71f87aa818f6c59e3f37ea703ff4c8663d,0.675
+9,w09_norman,captures/phase11/inputs/tts/w09_norman.flac,orchard,norman,0,0,5945,0723ce283998cfb6afc7b3b1bda74a97a8eb884f11683669dd9ac0413be094ea,0.575
+10,w10_alba,captures/phase11/inputs/tts/w10_alba.flac,puzzle,alba,0,0,4923,cf767a591b70695983569146855eeeee902648c9f929fc128cf809e0600a466c,0.425
+11,w11_cori,captures/phase11/inputs/tts/w11_cori.flac,shimmer,cori,0,0,4552,a33c614e49705fb15f56005e295de48f8e87222ab284b7d82b33caa40f326dcd,0.500
+12,w12_nem,captures/phase11/inputs/tts/w12_nem.flac,kettle,nem,0,0,4087,fbde30f6448825e0ee8825b1634849f44306b9e60cbbf5c1e6452838a9acb7cb,0.500
+13,w13_sef,captures/phase11/inputs/tts/w13_sef.flac,umbrella,sef,0,0,6400,54890b747f85fae08ea382363d1f42f7f2f34aac5f5579763197b9fdc576a2ba,0.550
+14,w14_vctk_lo,captures/phase11/inputs/tts/w14_vctk_lo.flac,vision,vctk_lo,0,0,5295,ba43d9f40c5136716b0af0f14862184503215c96288f8b375759fc9d10c44502,0.450
+15,w15_vctk_hi,captures/phase11/inputs/tts/w15_vctk_hi.flac,judge,vctk_hi,0,0,5480,ce4260a904a7459cf57094b764bf8127d8b2608696aff32c672cbf12b9276370,0.500
+16,w16_joe,captures/phase11/inputs/tts/w16_joe.flac,church,joe,0,0,4180,e48a3b65aa185768be5d13cd30ba1a8d093bb2b0ad42a4d28a16351def6ac8f3,0.425
+17,w17_kristin,captures/phase11/inputs/tts/w17_kristin.flac,yacht,kristin,0,0,6316,a49aa8d0bb3d1ccdec0f08f8bfb8715dc9fa8402dad76635fc1e2ae9038bd72b,0.525
+18,w18_norman,captures/phase11/inputs/tts/w18_norman.flac,elephant,norman,0,0,6223,ed9331b72627eccd9b31a905e19f24a930d43322a6486768f6069a872cc3b06b,0.700
+19,w19_alba,captures/phase11/inputs/tts/w19_alba.flac,noodle,alba,0,0,5295,61de07852b0893eecbd3faf050540dfc4b16e5997250b8bcff0981b32be16f0f,0.500
+20,w20_cori,captures/phase11/inputs/tts/w20_cori.flac,galaxy,cori,0,0,6874,5e55fd92953b6a71fee2b5217369d9671bdfa3e9e0cde41f86996892047a6104,0.625
+21,w21_nem,captures/phase11/inputs/tts/w21_nem.flac,quiver,nem,0,0,4459,a57a0e115ea7e53e6bc0a8c712b86538fcad019cba03007df0dc7970e33c496c,0.450
+22,w22_sef,captures/phase11/inputs/tts/w22_sef.flac,pebble,sef,0,0,5888,6004ef419c20e356e9acb7189707c54af295c3afcd8c883bbebd83bcb86c8085,0.500
+23,w23_vctk_lo,captures/phase11/inputs/tts/w23_vctk_lo.flac,pyramid,vctk_lo,0,0,6038,48c3edd1d37b8f1225e95e03997cc012610a387f84f0c0ce672cdb9fda5e1031,0.500
+24,w24_vctk_hi,captures/phase11/inputs/tts/w24_vctk_hi.flac,biscuit,vctk_hi,0,0,6131,4418deb9652f97bbd533f30784be3763b56c19b3f33138be0a732164c9633235,0.550
+25,w25_joe,captures/phase11/inputs/tts/w25_joe.flac,voyage,joe,0,0,4923,3efa481b9cfe487aecbb9b1c51ed6a47fbd28affdd4219b67874d33ec0a9a5c9,0.475
+26,w26_kristin,captures/phase11/inputs/tts/w26_kristin.flac,harmony,kristin,0,0,5945,97ac916a1a3242533f12f5bc6335fe7c60321b8101ae64400657d0feaba468a8,0.625
+27,w27_norman,captures/phase11/inputs/tts/w27_norman.flac,squirrel,norman,0,0,11889,0aa5737e7fa97f5c7f2a2979a67fde680084c29fcef540cf706ea87f2a1f5441,0.775
+28,w28_alba,captures/phase11/inputs/tts/w28_alba.flac,thunder,alba,0,0,5388,9879d284c2092fabef79f58133bc0794c523b314b4e7b0e3b5f353a6300e3cfa,0.475
+29,w29_cori,captures/phase11/inputs/tts/w29_cori.flac,breathe,cori,0,0,3437,5287006c4ee77a8a58575c3a2fda6c1391d784360c07e79c4fab95d1cff12d81,0.325
+30,w30_nem,captures/phase11/inputs/tts/w30_nem.flac,seesaw,nem,0,0,5109,31db2facb472dfd721f28ea082d30afc7e5c8e562e11e8cce5f3e964600ee0de,0.500
+31,w31_sef,captures/phase11/inputs/tts/w31_sef.flac,fizz,sef,0,0,6144,91940235371ba417ccdb15d949ad0443640574a9b67694b27a2e400020a3e31a,0.500
+32,w32_vctk_lo,captures/phase11/inputs/tts/w32_vctk_lo.flac,hush,vctk_lo,0,0,5016,ea23941d3d866489b0b71f27b4795b440c5145114d0684db371736ec1dc05b14,0.500
+33,w33_vctk_hi,captures/phase11/inputs/tts/w33_vctk_hi.flac,oasis,vctk_hi,0,0,7524,67dcdc4c97820ef4421be9d4f118837f34786f5a84a6d6b9ad5d6aba45a6b4b6,0.700
+34,w34_joe,captures/phase11/inputs/tts/w34_joe.flac,nightingale,joe,0,0,6595,447cfd7eac6ebe4174a1913e55f81176c607c74dfda5606029b732cdc0467fea,0.625
+35,w35_kristin,captures/phase11/inputs/tts/w35_kristin.flac,bamboo,kristin,0,0,4923,2a8570ae55c47160a927a6b1fbc3783e58b8aa0c4b010363db01921a78575927,0.450
+36,w36_norman,captures/phase11/inputs/tts/w36_norman.flac,giraffe,norman,0,0,5480,23dd9012c27027a7c6aaf8803fa34dfdf90d8e81618301fd331612c010c740bb,0.500
+37,w37_alba,captures/phase11/inputs/tts/w37_alba.flac,vanilla,alba,0,0,4644,09c4c34fce5fd449ff7f586d563279a79e2e48938acfdc01c9c7f29472febd38,0.500
+38,w38_cori,captures/phase11/inputs/tts/w38_cori.flac,treasure,cori,0,0,5759,5ef5e35370a64eae609327a560fa24fad167b8c0c2e1803c193d489823295d27,0.600
+39,w39_nem,captures/phase11/inputs/tts/w39_nem.flac,kayak,nem,0,0,3530,ef8684560237f1a3967158e380514776d675375330c8aa7127c38f9205a4e2ed,0.300
+40,w40_sef,captures/phase11/inputs/tts/w40_sef.flac,chimney,sef,0,0,4480,65988ac5161da73dea7387595b373cc7f14535fafef49cec2807139417ec564e,0.400
+41,n01_alba,captures/phase11/inputs/tts/n01_alba.flac,Three hundred and forty two.,alba,0,0,16719,d4384aa2d567e49bb4e633d1876dcb6af3c328e9741caba15af380a1e64238ea,1.925
+42,n01_cori,captures/phase11/inputs/tts/n01_cori.flac,Three hundred and forty two.,cori,0,0,16069,dd3b8e89f168be1f4e8027a714fb46e4aaa320bd39d0a0f9e9da23a8b87768bc,1.825
+43,n01_nem,captures/phase11/inputs/tts/n01_nem.flac,Three hundred and forty two.,nem,0,0,16533,8481592a2e35cfc38ab271d372cb25cb0054be890dd036bed7a7c9bfe9155d75,1.500
+44,n01_sef,captures/phase11/inputs/tts/n01_sef.flac,Three hundred and forty two.,sef,0,0,14720,8e1fa5e179cf4b71f2c64e4ca3b3a355db8dd98ed799f11c958fe835379f2e28,1.475
+45,n01_vctk_lo,captures/phase11/inputs/tts/n01_vctk_lo.flac,Three hundred and forty two.,vctk_lo,0,0,14397,0eacd50cc299811d2d931b5721e26fe3720815a255757e5f32b906e1e5c73c9c,1.650
+46,n01_vctk_hi,captures/phase11/inputs/tts/n01_vctk_hi.flac,Three hundred and forty two.,vctk_hi,0,0,13189,012bbc374621f23f1a517560e3166346f28cca8e747eddc390ea46f8a08c4c7d,1.425
+47,n01_joe,captures/phase11/inputs/tts/n01_joe.flac,Three hundred and forty two.,joe,0,0,13932,8982a0f9aab97d6abb6fd009d2a957f5c4c833ce21db459ae0340dd395f3daaf,1.575
+48,n01_kristin,captures/phase11/inputs/tts/n01_kristin.flac,Three hundred and forty two.,kristin,0,0,14954,414474c17d0794d2d6249da3f5e4a6c79e90561ecd8f66622d45000b0725851a,1.800
+49,n01_norman,captures/phase11/inputs/tts/n01_norman.flac,Three hundred and forty two.,norman,0,0,11703,aeee40b1cd1238d4602a16be27d62000292ae016fd752bf16cc446360c58a49e,1.275
+50,n02_alba,captures/phase11/inputs/tts/n02_alba.flac,Seventeen point five nine.,alba,0,0,14768,712977570e253a0647d9c3eaef487e390bab331a0cb22c2c2e33ed8586b3a6cb,1.725
+51,n03_cori,captures/phase11/inputs/tts/n03_cori.flac,Nineteen eighty one.,cori,0,0,9474,063d1f9dddb126aabb8671683a02e6a4d0d39f6a053b5420622e48895b325e40,1.050
+52,n04_nem,captures/phase11/inputs/tts/n04_nem.flac,Minus twelve degrees.,nem,0,0,10682,85953af9bfe76f45a1087dc41292693f50b667de2453a10ee9376f5749e2d927,1.175
+53,n05_sef,captures/phase11/inputs/tts/n05_sef.flac,"One, two, three, four, five, six, seven, eight, nine, ten.",sef,0,0,28800,f2391bc2cf6b2fc683814da98583ee1f607ace400fac3e07b20d60edf811cffd,3.200
+54,n06_vctk_lo,captures/phase11/inputs/tts/n06_vctk_lo.flac,"Ninety nine thousand, nine hundred and ninety nine.",vctk_lo,0,0,30837,5a6d16316e81f96db12de59d1d1bbc3c514ae4420260273625fb17323a558778,3.625
+55,n07_vctk_hi,captures/phase11/inputs/tts/n07_vctk_hi.flac,Half past seven on the twenty third of June.,vctk_hi,0,0,20248,05d8a7f6810829ab76ac4257d01cf2ec761bebac2b64cc2d79bc3abf5ee37b28,2.375
+56,n08_joe,captures/phase11/inputs/tts/n08_joe.flac,Six point zero two times ten to the twenty three.,joe,0,0,23778,5d850d83bc564e06e12ff09e18b559f47f74fc2d91fc3badb670d94d8e5dc4dd,2.875
+57,h01_alba,captures/phase11/inputs/tts/h01_alba.flac,The birch canoe slid on the smooth planks.,alba,0,0,18669,9f00b2896c334e25fb6d280cfaee5e4489156095fb2e16b3a4ddac76cf96fb6d,2.150
+58,h01_cori,captures/phase11/inputs/tts/h01_cori.flac,The birch canoe slid on the smooth planks.,cori,0,0,20434,453c7cab40f065e519b17d1cb926c9f395d5d2c136338194936f26ac4b5041a8,2.325
+59,h01_nem,captures/phase11/inputs/tts/h01_nem.flac,The birch canoe slid on the smooth planks.,nem,0,0,17183,3b3a2657996be43208afb08d6f86f0c4061b0d75b8c9558d5765ef862ecefba3,2.025
+60,h01_sef,captures/phase11/inputs/tts/h01_sef.flac,The birch canoe slid on the smooth planks.,sef,0,0,17152,9d73d5491529b6e55536efd338255a4edc8fb9cf1d961dc3289cf179e1ba0d6c,1.950
+61,h01_vctk_lo,captures/phase11/inputs/tts/h01_vctk_lo.flac,The birch canoe slid on the smooth planks.,vctk_lo,0,0,21270,eaf2e86fc118582eece79280ad90cbba6a9233499c698c46cebf9d49f58ada17,2.500
+62,h01_vctk_hi,captures/phase11/inputs/tts/h01_vctk_hi.flac,The birch canoe slid on the smooth planks.,vctk_hi,0,0,20155,8fee594fce4ccc376539508b917f55c7cfbcc964d23417fff33501b9f4060602,2.275
+63,h01_joe,captures/phase11/inputs/tts/h01_joe.flac,The birch canoe slid on the smooth planks.,joe,0,0,18576,de67c96e7f0b670d29b08931a8279e9f57384c8c8886dca5e2788489c18df057,2.200
+64,h01_kristin,captures/phase11/inputs/tts/h01_kristin.flac,The birch canoe slid on the smooth planks.,kristin,0,0,18948,6912e5f75691b852d2324767079f6f4434597c9f1be7a73ca96d3f214caef7c3,2.225
+65,h01_norman,captures/phase11/inputs/tts/h01_norman.flac,The birch canoe slid on the smooth planks.,norman,0,0,18669,4d8b42f7ba24970ffeaf802c816ce14cf0983ea4b3159bb7d2dcf402d9e2d508,2.150
+66,h02_alba,captures/phase11/inputs/tts/h02_alba.flac,Glue the sheet to the dark blue background.,alba,0,0,21920,a37d4a0d3f26875d9904e868870c45763556a795164ecffea442f616a3bc47bd,2.050
+67,h03_cori,captures/phase11/inputs/tts/h03_cori.flac,It's easy to tell the depth of a well.,cori,0,0,16533,f3c1c4ac7e2ea536a77855b1d5072015e0dc16f4fbcc917d9593af4e70d1a132,1.950
+68,h04_nem,captures/phase11/inputs/tts/h04_nem.flac,These days a chicken leg is a rare dish.,nem,0,0,15047,ad2bf8c1ee2a170afde68d4e1e15398fe7bd85eb340fb43c6fbf71a95f1e4405,1.700
+69,h05_sef,captures/phase11/inputs/tts/h05_sef.flac,Rice is often served in round bowls.,sef,0,0,16128,003404689aa95317293c8c5e153b3564909807e515d0962b6ec6b08397bf6f5a,1.900
+70,h06_alba,captures/phase11/inputs/tts/h06_alba.flac,The juice of lemons makes fine punch.,alba,0,0,17555,9c299a11f1b5231704091525f176c4190f4c07de0287c8e536281f6d39266750,2.050
+71,h06_cori,captures/phase11/inputs/tts/h06_cori.flac,The juice of lemons makes fine punch.,cori,0,0,21084,027bb5496c8d1836de6f9a27195e924c02d6cdfd4231a85cdb33391feffd1796,2.475
+72,h06_nem,captures/phase11/inputs/tts/h06_nem.flac,The juice of lemons makes fine punch.,nem,0,0,18762,a725e0e7a865706f9ccb5809dc199f630b7199fc49bcee6dbf41832d85e161ab,2.200
+73,h06_sef,captures/phase11/inputs/tts/h06_sef.flac,The juice of lemons makes fine punch.,sef,0,0,16128,8483c5e7ea9f42d05cb8126fbdc092094c3bafec81091b4679c962780c211e0d,1.850
+74,h06_vctk_lo,captures/phase11/inputs/tts/h06_vctk_lo.flac,The juice of lemons makes fine punch.,vctk_lo,0,0,18855,a68cbc7824d6421086de231b4b5fb3ec070e8ac7041f74e551ff0cb684250ef8,2.175
+75,h06_vctk_hi,captures/phase11/inputs/tts/h06_vctk_hi.flac,The juice of lemons makes fine punch.,vctk_hi,0,0,17833,51b5dc670e432f985d7fad01d3ae0618e0ca1bdcd4de9f631d5e3f6f08e07af5,2.025
+76,h06_joe,captures/phase11/inputs/tts/h06_joe.flac,The juice of lemons makes fine punch.,joe,0,0,17462,9a8c0cb4144461d93d3596d94e47e965911c6e5727bd40d980ff2f76a50b569e,2.075
+77,h06_kristin,captures/phase11/inputs/tts/h06_kristin.flac,The juice of lemons makes fine punch.,kristin,0,0,19320,8b106fd250acfc0c855a92da15f76ab31911801c7bb751a9fe5648a955fd9345,2.300
+78,h06_norman,captures/phase11/inputs/tts/h06_norman.flac,The juice of lemons makes fine punch.,norman,0,0,14861,7487d4934f24f33ecf3674e2641a6aef4f446d35568489b932db51b6ef87f792,1.675
+79,h07_vctk_lo,captures/phase11/inputs/tts/h07_vctk_lo.flac,The box was thrown beside the parked truck.,vctk_lo,0,0,20434,ccdf3a5c138669b9c6cc6d965c60db4c2026c3f07101a17b61207f8b0e73281d,2.400
+80,h08_vctk_hi,captures/phase11/inputs/tts/h08_vctk_hi.flac,The hogs were fed chopped corn and garbage.,vctk_hi,0,0,19691,d1b65c4392cc70449f9bcb2058e776104ae7d705fd30ef1bb8e412358721d730,2.200
+81,h09_joe,captures/phase11/inputs/tts/h09_joe.flac,Four hours of steady work faced us.,joe,0,0,17090,ef2f48714425b05e0c5731164b69499eea09fcba3e57e40f4cb07651fbb77adc,1.950
+82,h10_kristin,captures/phase11/inputs/tts/h10_kristin.flac,A large size in stockings is hard to sell.,kristin,0,0,25914,4239290609d9e5890f71a83eeb5e5f298f544653fa1bff2ef4580dd3a4e5801a,3.075
+83,h11_norman,captures/phase11/inputs/tts/h11_norman.flac,The boy was there when the sun rose.,norman,0,0,14397,9cd7c0fe255e4b57f9961bd97800068ef5711058909f23b1b4bdaa0b0567e3f9,1.600
+84,h12_alba,captures/phase11/inputs/tts/h12_alba.flac,A rod is used to catch pink salmon.,alba,0,0,19598,38c68bc2b213e1c5175a4f17998694a46bcf857c3fc52042ba5b658c1245e65f,2.250
+85,h13_cori,captures/phase11/inputs/tts/h13_cori.flac,The source of the huge river is the clear spring.,cori,0,0,21549,ca77ea58176d2b5df4e368f2ce653ba1bf9013c769c42008aa003f01e73b5cae,2.500
+86,h14_nem,captures/phase11/inputs/tts/h14_nem.flac,Kick the ball straight and follow through.,nem,0,0,19691,0c9137d9757c0cdbecc879bb74875b8b61fa17afe66ae19ab83826b2979d71b2,1.825
+87,h15_sef,captures/phase11/inputs/tts/h15_sef.flac,Help the woman get back to her feet.,sef,0,0,16000,e4e8d89485e2582253c4536f2b417f57bbccddf24efd4ade62a3ff8abf5d4e40,1.625
+88,h16_vctk_lo,captures/phase11/inputs/tts/h16_vctk_lo.flac,A pot of tea helps to pass the evening.,vctk_lo,0,0,19227,0ab084026d958a72ce88615d77913a2c49d35f6637e29121a71d40f5fb25702d,2.200
+89,h17_vctk_hi,captures/phase11/inputs/tts/h17_vctk_hi.flac,Smoky fires lack flame and heat.,vctk_hi,0,0,17369,f3a66ce63f25c1558d9acb5a1124836c54cd1038cc063c0f641bce2a10dae2ba,2.050
+90,h18_joe,captures/phase11/inputs/tts/h18_joe.flac,The soft cushion broke the man's fall.,joe,0,0,17276,cac91ec1423194f6d7887b3ec3b79570610862ab1a43c1a92e6695c600542b70,2.000
+91,h19_kristin,captures/phase11/inputs/tts/h19_kristin.flac,The salt breeze came across from the sea.,kristin,0,0,20898,d92dc10dff0652103a1a344a91a72422b68f74daf27aa744ad7e5bfa6bfc8533,2.500
+92,h20_norman,captures/phase11/inputs/tts/h20_norman.flac,The girl at the booth sold fifty bonds.,norman,0,0,16719,a5376f3c4eebbec7cda041a4a076bd8ab74617aeca84a4d105a8ca177c1a7e11,1.900
+93,h21_alba,captures/phase11/inputs/tts/h21_alba.flac,The small pup gnawed a hole in the sock.,alba,0,0,17926,9a661e02a3496137f690b3eb12d2dd26fe541a1ca690edd40ca3c20b82fb519d,2.150
+94,h22_cori,captures/phase11/inputs/tts/h22_cori.flac,The fish twisted and turned on the bent hook.,cori,0,0,22385,ddd8c591578b656af179f2f6462551cec4e183cbafb39a143dca39e218e3ff2a,2.700
+95,h23_nem,captures/phase11/inputs/tts/h23_nem.flac,Press the pants and sew a button on the vest.,nem,0,0,16998,72e19f8532d0c0cee4659f1be6bba691b301aae53b1ed5630ee726a111d6f4ce,1.950
+96,h24_sef,captures/phase11/inputs/tts/h24_sef.flac,The swan dive was far short of perfect.,sef,0,0,20480,d5750cf5e14b32b0d529e5623bcf216855049a5b879e132bdaa40f71c6bdd089,2.425
+97,h25_vctk_lo,captures/phase11/inputs/tts/h25_vctk_lo.flac,The beauty of the view stunned the young boy.,vctk_lo,0,0,19970,60561d823d8947aeafa706bd5c9d46096eaf4a7476279e70766eefef203d9abf,2.225
+98,h26_vctk_hi,captures/phase11/inputs/tts/h26_vctk_hi.flac,Two blue fish swam in the tank.,vctk_hi,0,0,14861,3ce96afb86a2242a05cace320988d07807ea24e43eced78c3d6c4c992bc0c91c,1.750
+99,h27_joe,captures/phase11/inputs/tts/h27_joe.flac,Her purse was full of useless trash.,joe,0,0,17369,6c0b8952c1b0041f8a9f4471b6484eaf1b1e8640ccd3470392d882235992439e,2.000
+100,h28_kristin,captures/phase11/inputs/tts/h28_kristin.flac,The colt reared and threw the tall rider.,kristin,0,0,20991,d6737bcbabc19ca49f9259fe45dc54cd07be4a47b6a8dbe4076f6958f6fa7c82,2.450
+101,h29_norman,captures/phase11/inputs/tts/h29_norman.flac,"It snowed, rained, and hailed the same morning.",norman,0,0,20341,dd318c458369dd093440d1877767ad8e86a07f8374947cb751c95259382c452a,2.325
+102,h30_alba,captures/phase11/inputs/tts/h30_alba.flac,Read verse out loud for pleasure.,alba,0,0,17926,0839ccb0408070e99c31a21b6ebe0d2f31ab526345bb05db2647a933943eb9c6,1.850
+103,s01_alba,captures/phase11/inputs/tts/s01_alba.flac,She sells sea shells by the sea shore.,alba,0,0,15419,21045d7a9f448ac3d9a7d0526630e2153bf210a3088105c676adc13e06d9c272,1.800
+104,s01_cori,captures/phase11/inputs/tts/s01_cori.flac,She sells sea shells by the sea shore.,cori,0,0,17741,833baf6e9a2e875e5f293b891f78b1797a6c12e5dd36634b7b1e2c5bb3d41c5b,2.100
+105,s01_nem,captures/phase11/inputs/tts/s01_nem.flac,She sells sea shells by the sea shore.,nem,0,0,13654,05b3d32b0bb72a4ab730764ed04064dfc1f1e7cfb24af47d8f4f135a89dcadff,1.575
+106,s01_sef,captures/phase11/inputs/tts/s01_sef.flac,She sells sea shells by the sea shore.,sef,0,0,17280,691845665338fb5d4a657d95c317bdaea29ddaf144d5f57fdc37f9cb3754190e,2.075
+107,s01_vctk_lo,captures/phase11/inputs/tts/s01_vctk_lo.flac,She sells sea shells by the sea shore.,vctk_lo,0,0,19505,fbffd431487b80edfa263e1194b5453c13cd4221b28da9f923b3565123121dea,2.225
+108,s01_vctk_hi,captures/phase11/inputs/tts/s01_vctk_hi.flac,She sells sea shells by the sea shore.,vctk_hi,0,0,17276,51737061957105f851e53a1635561a2f9904ca0a9199bc91feadeebeaacc1353,2.000
+109,s01_joe,captures/phase11/inputs/tts/s01_joe.flac,She sells sea shells by the sea shore.,joe,0,0,16905,cc197b33dd9302678c2f90c9e42b5bc94fd87c062acdaa43749d677f3c8821cd,1.950
+110,s01_kristin,captures/phase11/inputs/tts/s01_kristin.flac,She sells sea shells by the sea shore.,kristin,0,0,19970,9a9990f204dca197a25ea99a1a8b27eb69df3989fcba7fab7dea762117faeec1,2.350
+111,s01_norman,captures/phase11/inputs/tts/s01_norman.flac,She sells sea shells by the sea shore.,norman,0,0,19412,6e48b9b3366d4ef9854f2ee4a312e95b3dc1ad90eb8604137bbfe6dbaf45336f,2.275
+112,s02_alba,captures/phase11/inputs/tts/s02_alba.flac,Six slim saplings swayed in the soft breeze.,alba,0,0,21084,2a25313f3f3efc40e9094d9638780802a6a71552daf9c17f4a2bd2d5bf53530d,2.500
+113,s03_cori,captures/phase11/inputs/tts/s03_cori.flac,The chef's special sauce is surprisingly sharp.,cori,0,0,21084,59f3aee07945200530503dfa31042ff9e775f8a3ed273461ed31392d0476f004,2.425
+114,s04_alba,captures/phase11/inputs/tts/s04_alba.flac,Five fine violins were found in the vault.,alba,0,0,18948,07f67141ac7164ea90b51663bc4a022f4302d5f71ea5c756785ce6e2569b1e97,2.275
+115,s05_cori,captures/phase11/inputs/tts/s05_cori.flac,Thin thieves thought through the theft.,cori,0,0,14954,013fd1dd1de782f398921632c2d828b6801ca92f53742c5fbbe4d9dab19104f2,1.775
+116,s06_nem,captures/phase11/inputs/tts/s06_nem.flac,The usual leisure of a measured treasure hunt.,nem,0,0,18205,f9ef4ef543be45a1ea634d4f02c60e6daa9e8492f30c74f0593b3f9a824ac9a0,2.100
+117,s07_alba,captures/phase11/inputs/tts/s07_alba.flac,Peter Piper picked a peck of pickled peppers.,alba,0,0,21734,7cc277e2b8eeb6cd48ec00fd4553cd294e8d73cd76a25b938065d596a5434507,2.500
+118,s07_cori,captures/phase11/inputs/tts/s07_cori.flac,Peter Piper picked a peck of pickled peppers.,cori,0,0,19877,f66eabe8823f4bef679a22a12d5351646d128605f1a8c49a7af8226e6f4e1e7d,2.300
+119,s07_nem,captures/phase11/inputs/tts/s07_nem.flac,Peter Piper picked a peck of pickled peppers.,nem,0,0,18669,4b41165bc47a71bbdc0831c2979c61a528edc0885d4c056eb7ce4935b221bf52,2.100
+120,s07_sef,captures/phase11/inputs/tts/s07_sef.flac,Peter Piper picked a peck of pickled peppers.,sef,0,0,18944,97e92a92552967c1967565e391d70cb0a33cac9e11875306732b2c0d24840c87,2.250
+121,s07_vctk_lo,captures/phase11/inputs/tts/s07_vctk_lo.flac,Peter Piper picked a peck of pickled peppers.,vctk_lo,0,0,22570,fb635eb8dc1916671cc4ab9478d42a8acbb0cdae3a0d433a5271b37f16c38ff5,2.650
+122,s07_vctk_hi,captures/phase11/inputs/tts/s07_vctk_hi.flac,Peter Piper picked a peck of pickled peppers.,vctk_hi,0,0,22570,04d4dfd33b5a1ba5c667fb88d8047712e6416ce292a6b6d7d139c5d8cffc4f76,2.575
+123,s07_joe,captures/phase11/inputs/tts/s07_joe.flac,Peter Piper picked a peck of pickled peppers.,joe,0,0,19134,5ff2224752310125e8d0a3e03b76411ef9f8a76611ee807d8cb4a68300d08ad0,2.250
+124,s07_kristin,captures/phase11/inputs/tts/s07_kristin.flac,Peter Piper picked a peck of pickled peppers.,kristin,0,0,17833,9fe6a1aaa47ed5c632903826e46ecb22b77053aa3f30c165e8611187ec452d4d,2.050
+125,s07_norman,captures/phase11/inputs/tts/s07_norman.flac,Peter Piper picked a peck of pickled peppers.,norman,0,0,20620,cd8b4540384ef9bae6bbfa1a1db9a513471f850a5ed1f3ada4ec027b661902e6,2.375
+126,s08_alba,captures/phase11/inputs/tts/s08_alba.flac,Big black bugs bit the bold brown bear.,alba,0,0,20806,8bde02ef088daee52ef911afe750229fd972b49d788dacaac4a95a1b59f658aa,2.450
+127,s09_cori,captures/phase11/inputs/tts/s09_cori.flac,Ten tired turtles trotted to the top.,cori,0,0,15604,67b8a40bc0974edaccb32eaf1cf55714e945a04be64abdffce9f72866d63092f,1.875
+128,s10_nem,captures/phase11/inputs/tts/s10_nem.flac,Good cooks keep a big pot of goulash ready.,nem,0,0,20527,33e00ce1816596a01e50e6b1402f9238e7ac02bfb47f15c3b862f73af3a16ec3,2.300
+129,s11_alba,captures/phase11/inputs/tts/s11_alba.flac,Many men in the moonlight make no noise.,alba,0,0,20991,4f26be8356af755bef1a2235576ca3196f51ac446d59f65bfd02528d65b3c343,2.375
+130,s11_cori,captures/phase11/inputs/tts/s11_cori.flac,Many men in the moonlight make no noise.,cori,0,0,21177,c2a25bbe6ad25ec4625df2eb59e5ce8833861e2e8ef6ef3107aba40f881fd076,2.400
+131,s11_nem,captures/phase11/inputs/tts/s11_nem.flac,Many men in the moonlight make no noise.,nem,0,0,16812,c10cb40bd9e52af82855bda2fa5fbd625c566658f32a3ebfb4a60cb2b2abc852,1.900
+132,s11_sef,captures/phase11/inputs/tts/s11_sef.flac,Many men in the moonlight make no noise.,sef,0,0,17024,af440f1694ad878abb0c38326d2c30bbe66957ad25150a3ebcc8085de534207a,1.950
+133,s11_vctk_lo,captures/phase11/inputs/tts/s11_vctk_lo.flac,Many men in the moonlight make no noise.,vctk_lo,0,0,20806,cacb29a925075e1a2a4640c769600362a3b36b6a657ede81ae107c2a0e29df20,2.425
+134,s11_vctk_hi,captures/phase11/inputs/tts/s11_vctk_hi.flac,Many men in the moonlight make no noise.,vctk_hi,0,0,19691,b9b9c3dd785ad8b6024c86cea46bd22980c85ca34c261ac56390ee1ccc35873f,2.250
+135,s11_joe,captures/phase11/inputs/tts/s11_joe.flac,Many men in the moonlight make no noise.,joe,0,0,17926,00370eb3cb70f9cedf0283d5851892d89531a69fc45fde57af1bcd1ac3446b50,2.100
+136,s11_kristin,captures/phase11/inputs/tts/s11_kristin.flac,Many men in the moonlight make no noise.,kristin,0,0,21641,41a69387d91594596c5d5073261369227e7d25b591062fd23916dde81d9eb0a8,2.550
+137,s11_norman,captures/phase11/inputs/tts/s11_norman.flac,Many men in the moonlight make no noise.,norman,0,0,17833,cdcc8b7263331045602e4be4184e38458ccbe63444c2c9a7218fc9acb4b5411a,2.050
+138,s12_alba,captures/phase11/inputs/tts/s12_alba.flac,Mummy made a mango and lemon jam.,alba,0,0,17369,107e33b1f47f14f3507b694d839b0855ea10ae5917ede2dc5c9ce4f44b7bab37,1.975
+139,s13_alba,captures/phase11/inputs/tts/s13_alba.flac,Red lorries and yellow lorries roll along the lane.,alba,0,0,28050,f32e20933dfa7aad2606d0f91c9b4f2943a1155ce16b79652cad94a790d8e2a4,2.975
+140,s14_cori,captures/phase11/inputs/tts/s14_cori.flac,Lovely weather while we walk along the river.,cori,0,0,18669,b16a0a9fe7a7e8a4a1ecd0446a426ca4fa5c4c7fc48c2ad925340f5672d168cc,2.150
+141,s15_alba,captures/phase11/inputs/tts/s15_alba.flac,"Ah, ee, oo, oh, ay, eye, ow.",alba,0,0,16254,7e1feb15fcde7b46a20a9c482988edcf1c7565e32b7df28b7a14cb1fe376ab53,1.825
+142,s15_cori,captures/phase11/inputs/tts/s15_cori.flac,"Ah, ee, oo, oh, ay, eye, ow.",cori,0,0,38917,deedb534fe969e5d0863ba7acf546b8c677327005821c3d3acadaf2d14b2af91,4.700
+143,s15_nem,captures/phase11/inputs/tts/s15_nem.flac,"Ah, ee, oo, oh, ay, eye, ow.",nem,0,0,11239,936343b45b33d4779fa66f4c4cb39331c7955f481c4dc4c66536d20bb3a3d8bd,1.250
+144,s15_sef,captures/phase11/inputs/tts/s15_sef.flac,"Ah, ee, oo, oh, ay, eye, ow.",sef,0,0,14464,6438068cc07cd84b5f2df3a314e13e34d8e340550ce4fa3d699625e795d43604,1.650
+145,s15_vctk_lo,captures/phase11/inputs/tts/s15_vctk_lo.flac,"Ah, ee, oo, oh, ay, eye, ow.",vctk_lo,0,0,17741,3622051c4b62ae0e7f3e163083221383d8758e244e60b427105598bb3ca040c1,1.975
+146,s15_vctk_hi,captures/phase11/inputs/tts/s15_vctk_hi.flac,"Ah, ee, oo, oh, ay, eye, ow.",vctk_hi,0,0,13468,8020f055885a9bba1e8430dddae0846f41b111ff2f09538b4bbc86bdec93b2f5,1.425
+147,s15_joe,captures/phase11/inputs/tts/s15_joe.flac,"Ah, ee, oo, oh, ay, eye, ow.",joe,0,0,20155,84e8b65c9120767f8ff1d98dfe2f165b09eb1d3ddb547739d0d0b237d8bb33cc,2.300
+148,s15_kristin,captures/phase11/inputs/tts/s15_kristin.flac,"Ah, ee, oo, oh, ay, eye, ow.",kristin,0,0,25542,71d53df527b2557b0cb0395d347f650a41337610121bec8faa907f84d3e74606,3.075
+149,s15_norman,captures/phase11/inputs/tts/s15_norman.flac,"Ah, ee, oo, oh, ay, eye, ow.",norman,0,0,16069,08cbaf9e4b9e0c80d09a616c2d8e90aae332eab810301017abbecd43f3de8cf9,1.825
+150,s16_alba,captures/phase11/inputs/tts/s16_alba.flac,Who knew the blue moon would loom so soon?,alba,0,0,17462,3465031ec987fc7421dcb305bff09b7c283df04f97be503eafbad21821f617a6,2.000
+151,s17_cori,captures/phase11/inputs/tts/s17_cori.flac,All the tall dogs saw the ball fall.,cori,0,0,18762,06ebb2e3eeb80fa3a813c83fa450d7f27ac864573f36691de664abfc54b8f002,2.250
+152,s18_alba,captures/phase11/inputs/tts/s18_alba.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",alba,0,0,27029,11a2a3b5e8432f7038de85bb6293b50bf9d07fa38bc15760b921d2e15af24255,2.950
+153,s18_cori,captures/phase11/inputs/tts/s18_cori.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",cori,0,0,46162,0282ec63d5e83b3d6285b0fb58c92a20f2cf5d06e03c17d8532f58d00f5dab61,5.575
+154,s18_nem,captures/phase11/inputs/tts/s18_nem.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",nem,0,0,20248,fa9e32bfff41d54fb21ec3cb132c4ce11df61a7961af2b02cda8ee4de2b588f2,2.425
+155,s18_sef,captures/phase11/inputs/tts/s18_sef.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",sef,0,0,25472,7289e53eeb633691c8a07b14a7920c676a6c2245e2a0247886a3a437e9d1048d,2.950
+156,s18_vctk_lo,captures/phase11/inputs/tts/s18_vctk_lo.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",vctk_lo,0,0,33902,0efcfecdade362b2e06bb756aa996885265ac29333d4114c5688f6f224542aa7,4.050
+157,s18_vctk_hi,captures/phase11/inputs/tts/s18_vctk_hi.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",vctk_hi,0,0,24614,b14c1991f77a44addbe7b816f0a85f33c43a68e8e3afe59a1797114fd858edfc,2.900
+158,s18_joe,captures/phase11/inputs/tts/s18_joe.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",joe,0,0,36224,0894c57ed205774a7083316e75aa482896a74765ae961a78e8b9dfdef45f53fb,4.325
+159,s18_kristin,captures/phase11/inputs/tts/s18_kristin.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",kristin,0,0,35109,5c2e697d8a346bfad007595475d6fceafbcfaf6ab2cd65ca18875aaba8274f4d,4.300
+160,s18_norman,captures/phase11/inputs/tts/s18_norman.flac,"Fast, vast, sip, zip, sue, zoo, fan, van.",norman,0,0,41611,c60bc2374c04c00d253fbcd0b2e45ec5774300ba931992a9e1aba1f8197ec407,5.050
+161,s19_alba,captures/phase11/inputs/tts/s19_alba.flac,"Pat, bat, tick, dick, cap, gap, chin, gin.",alba,0,0,29815,0f83d6917da12e38b50823dc2fcff77466400ac240c54a81b30d87a5cd922fd6,3.200
+162,s20_cori,captures/phase11/inputs/tts/s20_cori.flac,"Ship, chip, sheep, cheap, shoe, chew.",cori,0,0,27957,74c99405084e6631a901dfe353d2bc90154e1b5a374027951e351f31f76611f2,3.300
+163,s21_alba,captures/phase11/inputs/tts/s21_alba.flac,Are you really going to eat all of that?,alba,0,0,14211,022a696e23ff2e8c479d11b556f5552525ef0e09c6bc3906a80ccdf172f9d2ba,1.525
+164,s21_cori,captures/phase11/inputs/tts/s21_cori.flac,Are you really going to eat all of that?,cori,0,0,16905,9a1138d37ec8d5a69668957ddba2fffab6c8d6790740ea2937e59f0eb74d3e17,1.925
+165,s21_nem,captures/phase11/inputs/tts/s21_nem.flac,Are you really going to eat all of that?,nem,0,0,15976,dc356afe56b9aa77318fde5122321ea5935109aec9da71bb8ef1740341ae0152,1.725
+166,s21_sef,captures/phase11/inputs/tts/s21_sef.flac,Are you really going to eat all of that?,sef,0,0,14976,93d2557723b999c27d55994d7083fd240c5fd21f00405eff25108e51d06714e7,1.575
+167,s21_vctk_lo,captures/phase11/inputs/tts/s21_vctk_lo.flac,Are you really going to eat all of that?,vctk_lo,0,0,16254,6e446af50467ceaa58ff23d4ffa2fc4c095a7e8968341d92eba0d12e4b6d6f27,1.700
+168,s21_vctk_hi,captures/phase11/inputs/tts/s21_vctk_hi.flac,Are you really going to eat all of that?,vctk_hi,0,0,14583,64d6f87136b006351da1dd115d1b7936b42ecdbf7b0553b73398413853558276,1.600
+169,s21_joe,captures/phase11/inputs/tts/s21_joe.flac,Are you really going to eat all of that?,joe,0,0,16347,3893c32f57899ab816d769bde644bbd6bb7f0311867976b3613a70038db0df9f,1.900
+170,s21_kristin,captures/phase11/inputs/tts/s21_kristin.flac,Are you really going to eat all of that?,kristin,0,0,17926,7fafda43f8597ef7ce6ae71a4a41368222f70251e60785553fbf2c161e0e490a,2.075
+171,s21_norman,captures/phase11/inputs/tts/s21_norman.flac,Are you really going to eat all of that?,norman,0,0,14676,b0f5f87c5e10e0cad2c1fc5f0c2fe78ae7191195921242b26c34d9829e86b118,1.600
+172,s22_alba,captures/phase11/inputs/tts/s22_alba.flac,Stop! Don't touch that!,alba,0,0,16332,dc7406a486aa39a01739bcfd9df66f914683a9bbdd3692eb71af397097f6e985,1.900
+173,s23_cori,captures/phase11/inputs/tts/s23_cori.flac,"Is it raining? No, it is snowing.",cori,0,0,21998,5463ae18fd8f036a1d1e39fc45f10c1ded3c53d971f45e7ba482517ec448a4c9,2.550
+174,s24_nem,captures/phase11/inputs/tts/s24_nem.flac,"Well, well, well. What do we have here?",nem,0,0,20605,9f4a970f625d589829daf9fc7b2a581288e571e0836d6232d3f14eaaa3e27f8c,2.450
+175,s25_sef,captures/phase11/inputs/tts/s25_sef.flac,Hooray! We won the cup!,sef,0,0,17120,f999595840c1d519c732300a152543336418bb56f74c315be83c82b4adfa727e,1.950
+176,s26_vctk_lo,captures/phase11/inputs/tts/s26_vctk_lo.flac,Hmm. I'm not quite sure about that.,vctk_lo,0,0,21441,ab269c243bad81511b3f6656d2be4354a1418522bb301b260702c6c329349f48,2.575
+177,s27_alba,captures/phase11/inputs/tts/s27_alba.flac,"Shh, the baby is sleeping.",alba,0,0,18948,9888c05d26ce662d94ecd24c65c71506e5c9ce7da68697eccd253618ac361f89,2.175
+178,s28_alba,captures/phase11/inputs/tts/s28_alba.flac,Mmmmmmmmm.,alba,0,0,8731,ba2ae48e76346f723ca3358b7cc323d04ea428ff21aff1badabfca98e1f89cd7,0.925
+179,s29_cori,captures/phase11/inputs/tts/s29_cori.flac,Ssssssssss.,cori,0,0,15326,f2c6a4b3bcdbecbe01fe7f5b2aeb50faafb1f241f64598184c5e1ae9df960b34,1.825
+180,s30_nem,captures/phase11/inputs/tts/s30_nem.flac,Aaaaaaaaah.,nem,0,0,6316,25deb5a317bc254e468077bb5c114839b8beba56f9a0e74fe67491f6163291a1,0.575
+181,r01_alba,captures/phase11/inputs/tts/r01_alba.flac,Welcome to the speech synthesiser.,alba,0,0,20898,c012e6d45a8e92d4aec7dc61a2ebc7910d393d044cefc40871e3c45572a777fb,1.950
+182,r01_cori,captures/phase11/inputs/tts/r01_cori.flac,Welcome to the speech synthesiser.,cori,0,0,16905,66d48a6317546f6668c6a641901de09b153e6ee04d0379762dc0a615e99c3663,1.925
+183,r01_nem,captures/phase11/inputs/tts/r01_nem.flac,Welcome to the speech synthesiser.,nem,0,0,18205,6d85fbbeddf7692e7f8e8c6798eed43aad86d11e0b4187e8ca7308f0bcdbcd10,1.675
+184,r01_sef,captures/phase11/inputs/tts/r01_sef.flac,Welcome to the speech synthesiser.,sef,0,0,18688,4883da96d88bc0e03faf79c09611548bf5cd391dd4ddf2f12c234e6ec7821f53,1.600
+185,r01_vctk_lo,captures/phase11/inputs/tts/r01_vctk_lo.flac,Welcome to the speech synthesiser.,vctk_lo,0,0,17833,f7c3c48676a6142451a769a5b43c9a277d6dd770ec8fa55faec1af9b267344b1,1.950
+186,r01_vctk_hi,captures/phase11/inputs/tts/r01_vctk_hi.flac,Welcome to the speech synthesiser.,vctk_hi,0,0,17741,3bbcecda15f2e8252ceb94b0ccbfb6a754ab3c1f2c6cf5060db2ffc861f5a8ed,1.975
+187,r01_joe,captures/phase11/inputs/tts/r01_joe.flac,Welcome to the speech synthesiser.,joe,0,0,16069,8bfe1a552b46a30f56a86c1bfec685af4b2b6346d5be2e05ca6167468dfe5e91,1.775
+188,r01_kristin,captures/phase11/inputs/tts/r01_kristin.flac,Welcome to the speech synthesiser.,kristin,0,0,17926,17f05613960bafa6a9db60a7e908557a6a06a04818bc0c89c88d901f9b4e5e4b,2.100
+189,r01_norman,captures/phase11/inputs/tts/r01_norman.flac,Welcome to the speech synthesiser.,norman,0,0,16440,40b2ef019c66ab402cbcf06f1bf5542243ffc006de6ca93315048167cb8ae7fd,1.850
+190,r02_alba,captures/phase11/inputs/tts/r02_alba.flac,"Loading, please wait.",alba,0,0,14861,0fbde611e72818a4b8c9a50f5972cec3f1d49b3d6d9d31e27e027375ab19c949,1.500
+191,r03_cori,captures/phase11/inputs/tts/r03_cori.flac,Please insert the next disc.,cori,0,0,16719,585194d8ef92b26ff865a2bb340da96ccc6aff2cd41383008d1f519a14aafa1a,2.075
+192,r04_nem,captures/phase11/inputs/tts/r04_nem.flac,Press the space bar to continue.,nem,0,0,14768,3c760508263a63267d2919fc217b811d94c9580b19f8e998c1a114851ca9de35,1.675
+193,r05_sef,captures/phase11/inputs/tts/r05_sef.flac,Memory full.,sef,0,0,8320,e907363f7940b3fcb252c2321c2f8ed7068d82878fa6f3c1d94f536eac7947fb,0.850
+194,r06_vctk_lo,captures/phase11/inputs/tts/r06_vctk_lo.flac,Bad program at line forty.,vctk_lo,0,0,16905,3cb7a593b402d3232382402fa3fa4638512546ee40528d3596ab1e8c92569690,1.825
+195,r07_vctk_hi,captures/phase11/inputs/tts/r07_vctk_hi.flac,You have been eaten by a grue.,vctk_hi,0,0,12446,d23b9c92a8b58cb649fa8947b6348a97212d37d51b1b9a364eef0a52f4c15d15,1.325
+196,r08_joe,captures/phase11/inputs/tts/r08_joe.flac,The robot is now ready for orders.,joe,0,0,16254,7445995d2134270b436d5b2b982ee77c8edf66ebed4b2416c685cb25d5d5e707,1.925
+197,r09_kristin,captures/phase11/inputs/tts/r09_kristin.flac,Your score is one thousand and twelve.,kristin,0,0,20620,92bd74ef449798fb0991d2190b75e8a0441e8921b7460c22875a1fa320657102,2.450
+198,r10_norman,captures/phase11/inputs/tts/r10_norman.flac,Insert coin to play again.,norman,0,0,13840,ae9fef67413743d259b6ffd5c05607b69490f94ef2d915bebed4a4aa02a887b1,1.600
+199,p01_alba_1,captures/phase11/inputs/tts/p01_alba.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",alba,1,0,63960,a8b3bee7dcc76f2a43f04d9b792f1839e583337d916ffd7cf38ca8c08559568c,7.500
+200,p01_alba_2,captures/phase11/inputs/tts/p01_alba.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",alba,2,63960,119879,a8b3bee7dcc76f2a43f04d9b792f1839e583337d916ffd7cf38ca8c08559568c,6.625
+201,p01_cori_1,captures/phase11/inputs/tts/p01_cori.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",cori,1,0,61960,6db73329dcb6e633eb0f0c87778889bd7b8a1e20ed29b091a6c71500d120ab67,7.550
+202,p01_cori_2,captures/phase11/inputs/tts/p01_cori.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",cori,2,61960,118393,6db73329dcb6e633eb0f0c87778889bd7b8a1e20ed29b091a6c71500d120ab67,6.925
+203,p01_nem_1,captures/phase11/inputs/tts/p01_nem.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",nem,1,0,52920,cec6ef62a252a20f0cfe8bc572b96cbfdf9a57ea6d816531581571b448090afb,6.550
+204,p01_nem_2,captures/phase11/inputs/tts/p01_nem.flac,"The speech chip reads a stream of frames from memory. Each frame sets the energy, the pitch and ten reflection coefficients, and the chip moves smoothly from one frame to the next. A frame of silence stops the sound, and a special code ends the word.",nem,2,52920,108919,cec6ef62a252a20f0cfe8bc572b96cbfdf9a57ea6d816531581571b448090afb,6.850

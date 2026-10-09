@@ -765,7 +765,8 @@ Where the model differs from the chip in voiced speech-like data, it is by one c
         idx[1] = pitch index
         if repeat:  U = (pitch index is 0) or lastU
         else:       U = (pitch index is 0);  lastU = U
-                    idx[2...] = the frame's K indices (K1–K4, or K1–K10 if voiced)
+                    idx[2..5] = the frame's K1–K4;  if voiced: idx[6..11] = its K5–K10
+                    (an unvoiced frame leaves idx[6..11] as they were; U zeroes them in use)
     inhibit = (oldU ≠ unvoiced(idx)) or (oldS and not silence(idx)) or (oldU and silence(idx))
 
 *Each sample period n:*
@@ -784,8 +785,8 @@ Where the model differs from the chip in voiced speech-like data, it is by one c
           queue (n + d(i), i, value)
 
    3. In the A sample of PC 1 of IP 0, clear hold.
-   4. The excitation's voicing is oldU *as it was in sample n − 1*. Unvoiced: −64 if bit 0 of noise is 1, else +64. Voiced: the chirp at address min(count, 51) (Table 8-7).
-3. **If not talking:** in the A sample of PC *p* (0–11), write 0 to seen[*p*] at n + d(*p*) − 1, that is in this sample for a K, one sample later for the energy and two for the pitch; cur and idx are kept. The excitation's voicing is oldU as it is now.
+   4. The excitation's voicing is oldU *as it was during sample n − 1*, before that sample's step 6. Unvoiced: −64 if bit 0 of noise is 1, else +64. Voiced: the chirp at address min(count, 51) (Table 8-7).
+3. **If not talking:** in the A sample of PC *p* (0–11), write 0 to seen[*p*] at n + d(*p*) − 1, that is in this sample for a K (applied before step 4, although step 1 has already run), one sample later for the energy and two for the pitch; cur and idx are kept. The excitation's voicing is oldU as it is now.
 4. **Filter.** With E = seen[0], K*j* = seen[*j* + 1] and x the excitation:
 
        u11 = wrap14(booth(E, 64·x))
@@ -801,7 +802,7 @@ Where the model differs from the chip in voiced speech-like data, it is by one c
        oldS = silence(idx);  oldU = unvoiced(idx)
        talking = requested;  a Speak latched in time starts here (above)
 
-   Then, if talking: count = count + 1, and count = 0 if count ≥ seen[1] + 1 or hold is set.
+   Then, in every sample period (not only frame-read samples), if talking: count = count + 1, and count = 0 if count ≥ seen[1] + 1 or hold is set.
 
 The noise register is not part of this loop: it steps once per slot, 20 times per sample period, talking or not, from its release after the command until the next Reset (§7). Step 2.4 reads it at slot 0 of the sample period.
 
@@ -844,6 +845,185 @@ All three outputs swing from near `VSS` down to well below 0 V. Their falls are 
 | 17 | `INT` | Interrupt | Active low. Set by Talk Status clearing and Buffer Low setting, not by Buffer Empty; released by a status read (§3) |
 | 15, 16 | M0, M1 | VSM control | One Load Address, Read, Dummy Read or Read and Branch function per command or frame bit (§4) |
 | 2, 21, 23, 25 | ADD1, ADD8, ADD4, ADD2 | VSM address and data | Carry Load Address nibbles out; ADD8 carries the data bits in, read about 10 µs after M0 rises (§4) |
+
+## 12. Authoring speech data (New)
+
+**Status: drafted (Phase 11).** The original has no authoring guide: TI encoded speech for its customers. This section gives what someone needs to write new speech data that the chip plays as intended, using only this datasheet. §12.1 to §12.5 say what the chip does with the data and what follows from it for an author. §12.6 gives an encoding method. §12.7 to §12.9 cover packaging: VSM images, word tables and Speak External streams. §12.10 describes how the original data was encoded, from every word of the eight PROMs in the data set (`tools/promstats.py`, `captures/phase11/promstats/`).
+
+### 12.1 The bit budget
+
+A frame lasts 25 ms (200 samples at 8 kHz; §2), whatever its kind. Its length in bits depends on its kind (§8.1):
+
+| Frame | Bits | Bit rate if every frame were this kind | Carries |
+|---|---|---|---|
+| Voiced | 50 | 2000 bit/s | energy, pitch, K1–K10 |
+| Unvoiced | 29 | 1160 bit/s | energy, pitch 0, K1–K4 (K5–K10 are set to zero, §8.7) |
+| Repeat | 11 | 440 bit/s | energy and pitch; the K indices stay as they were |
+| Silence | 4 | 160 bit/s | energy 0; pitch and K indices stay as they were |
+| Stop | 4 | — | the end of the utterance |
+
+The original PROMs average 1372 bit/s (1054–1695 per PROM; §12.10). A 16 KB VSM bank holds about 95 seconds at that rate, less its word table.
+
+A frame's bits are packed with no gaps: the next frame starts at the bit after the previous one ends. Each field is written most significant bit first, and the bit stream is packed into bytes least significant bit first (§8.1, §6). After the stop code, the rest of its byte is padding, which the chip never reads (§4). In the Acorn and TI images every word's padding is all 1s, as if more stop codes followed (`captures/phase11/roundtrip/`); 0s work as well. An utterance therefore starts on a byte boundary, so that a VSM address or a Speak External stream can point at it.
+
+### 12.2 When a frame is heard
+
+The output is not a sequence of fixed frames: each parameter moves from one frame's value to the next during the frame (§8.7). Counting from the sample period in which a frame is read (sample 0, §8.5):
+- The frame becomes the interpolation target at sample 25.
+- Its parameters move towards it over the next seven interpolation periods. By the end of each one they have moved 0.125, 0.234, 0.33, 0.498, 0.623, 0.812 and 0.906 of the way. These follow from the shifts of §8.7: 3, 3, 3, 2, 2, 1, 1.
+- They reach it in IP 0, samples 201–225 (each parameter in its own PC).
+
+So each frame is the *end point* of a 25 ms glide, reached about 200 samples after it is read. The first frame of an utterance is the exception: after the start of speech, interpolation is inhibited, so its values arrive at once in IP 0 (§8.7). An encoder should measure each frame at the time its values are reached. Counted from the sample period of the first frame read (§8.5), frame *j* (from 0) reaches its values at about sample 225 + 200·*j*, and the sound starts at about sample 206. So frame *j* describes the sound about 25·*j* ms after the start of the sound, where the sound starts with frame 0's values. A level or spectrum measured over a window always mixes in the glide from the frame before.
+
+These cases are inhibited: no glide, and the change happens at once in IP 0 of the next frame (§8.7):
+- voiced to unvoiced, and back;
+- silence to sound;
+- unvoiced to silence or stop.
+
+A voicing change therefore takes effect in one step, where the frame's values are reached. At an inhibited change to voiced, the chirp starts from its beginning (§8.6), so a voiced frame after silence always starts with a fresh pitch pulse.
+
+**The start and end of an utterance.**
+- **Start with a voiced or unvoiced frame.** Repeat and silence frames load only some indices. The rest come from whatever the chip spoke last, even another program's utterance and even after a Reset (§7). A first frame that is silence also has an approximate start rule (§7). All but 39 of the 1148 original words start with a voiced or unvoiced frame. Those 39 start with silence, and their start depends on what was spoken before them.
+- **Ending on a voiced or silence frame fades out.** The stop frame sets the energy target to 0, and the energy glides down over the following frame.
+- **Ending on an unvoiced frame does not fade.** An unvoiced frame followed by a stop frame (or by silence) is inhibited: the noise keeps its full level to the end, then stops in one step (§8.5, §8.7). To end a hiss quietly, step its energy down over a few unvoiced repeat frames first.
+- **After the stop frame, the chip is talking for one more frame.** Talk Status clears 24.87 ms after the stop frame is read (§4), so an utterance of *n* frames, the stop frame included, takes *n* × 25 ms from its first read.
+
+**K5–K10 after an unvoiced frame.** An unvoiced frame zeroes K5–K10, and a voiced *repeat* frame that follows keeps them at zero (§8.1, §8.7). The first voiced frame after an unvoiced one must therefore be a full voiced frame, not a repeat.
+
+**K5–K10 before the first voiced frame.** An unvoiced frame writes only K1–K4; it zeroes K5–K10 in use but leaves their stored indices alone (§8.9). Until the utterance's first full voiced frame, those indices are the previous utterance's. A silence frame ends the zeroing (§8.7), so an utterance that starts unvoiced and then has a silence frame before any voiced frame filters its decay, and whatever follows, with the previous utterance's K5–K10. Its output then depends on what was spoken before it. To avoid this, put no silence frame between an opening unvoiced sound and the first voiced frame (use an unvoiced repeat frame at a low energy instead, which keeps the zeroing), or drop a faint opening sound.
+
+### 12.3 Levels: energy, excitation and the filter
+
+**The output code.** The excitation *x* (§8.6) is multiplied by the energy value *E* (Table 8-4) and filtered by the lattice (§8.8). The output code is *u*₁ shifted right by 4. Over the speech range the multiplier is very nearly exact: *product* ≈ *K* × *M* / 512. So:
+
+    code ≈ E × (x × 64 / 512) × h / 16  =  E × x × h / 128
+
+Here *x* is in units of 1/128 and *h* is the filter's response. The excitation is one of two kinds:
+- **Unvoiced:** *x* = ±64 at random. Its power is the same at every frequency, and its RMS is 64.
+- **Voiced:** the chirp of Table 8-7, once per pitch period of *P* samples, with zero for the rest of the period. The chirp's energy is Σ*c*² = 65,546 per period, so its RMS is √(65,546 / *P*): 64.0 at *P* = 16, 25.6 at *P* = 100 and 20.2 at *P* = 160. At the same energy index, a low voice is therefore quieter than a high one.
+
+The chirp's spectrum is not flat. It is a single pulse whose samples are all positive, so most of its energy is at low frequencies: relative to 250 Hz it is +3.9 dB at 100 Hz, −8.8 dB at 500 Hz, −11.7 dB at 1 kHz, −17.6 dB at 2 kHz and about −20 dB at 3–4 kHz. Voiced output has this tilt as well as the filter's spectrum. A voiced frame's filter should describe the speech spectrum *divided by* this tilt. An encoder can approximate that by analysing voiced speech after first-order pre-emphasis (about *y*(*n*) = *s*(*n*) − 0.9·*s*(*n*−1)). Unvoiced excitation is flat, so unvoiced frames are analysed without pre-emphasis. The chip applies no de-emphasis of its own.
+
+**The filter's gain.** The lattice of §8.8 realises the all-pole filter 1 / *A*(*z*), with *k*ᵢ = *K*ᵢ / 512. *A*(*z*) = 1 + *a*₁*z*⁻¹ + … + *a*₁₀*z*⁻¹⁰ is built from the *k*ᵢ by the step-up recursion:
+
+    A_0(z) = 1
+    A_i(z) = A_(i−1)(z) + k_i · z^(−i) · A_(i−1)(1/z)        i = 1 … 10
+
+That is, *a*ᵢ⁽ⁱ⁾ = *k*ᵢ and *a*ⱼ⁽ⁱ⁾ = *a*ⱼ⁽ⁱ⁻¹⁾ + *k*ᵢ·*a*ᵢ₋ⱼ⁽ⁱ⁻¹⁾. Check the sign with one stage, *u*₁ = *u*₂ − *K*₁·*b*₁, where *b*₁ is the previous output: it gives *y*(*n*) = *x*(*n*) − *k*₁·*y*(*n*−1), which is 1 / (1 + *k*₁*z*⁻¹). A strong low-frequency resonance therefore needs a large *negative* K1, which is why half of K1's table (indices 0–15) lies between −501 and −437. These are the reflection coefficients that the Levinson–Durbin recursion gives from the autocorrelation of the signal, in the convention where the prediction error is *e*(*n*) = *s*(*n*) + Σ *a*ⱼ·*s*(*n*−*j*). The filter is stable for any |*k*ᵢ| < 1, and every table entry is inside that range.
+
+The filter's power gain can be large: with K2 = 506 (*k* = 0.988) a resonance gains about 40 dB. The level a frame produces is best found by running the frame through the reference algorithm (§8.9) and measuring it. The formula above is only an estimate for a first choice of energy index.
+
+**How loud.** The DAC takes the code clipped to −128…+127 (§8.2), and the filter's 14-bit values wrap at ±8192, which is ±512 codes (§8.8). A wrap turns a loud sound into a burst of full-scale noise, and must never happen. For clean output, keep the peaks within ±127. Where that conflicts with an RMS target, the peak limit wins: speech scaled to peaks of ±120 has an RMS of about 15–20 codes. A resonant filter can make even energy index 1 too loud, so check the level of each frame by synthesis. The original data has an RMS of about 19–20 codes over its speech (the Acorn and VM PROMs) and 31 codes (Star Wars); the TI-99 data runs louder, into the DAC's clipping (§8.2).
+
+**The energy steps.** The energy table (Table 8-4) is roughly logarithmic: about 3 dB per index from index 7 to 14. The steps are coarser at the bottom: index 1 to 2 is 6 dB, and 5 to 6 is 2.5 dB. Index 1 is 41 dB below index 14. A frame quieter than that is silence (energy 0).
+
+### 12.4 Pitch
+
+The pitch period is the pitch value plus one sample (Table 8-5): from 16 samples (500 Hz) at index 1 to 160 samples (50 Hz) at index 63. Indices 1–28 step one sample at a time (6 % to 2.4 %, at 16–42 samples). Above that the steps grow to about 3–4 %. Choose the index whose period is nearest the measured period in samples.
+
+The pitch counter keeps running across voiced frames, so a change of pitch shortens or lengthens the current period only; it does not restart the chirp. Pitch glides between frames like every other parameter, except at an inhibited change (§12.2).
+
+### 12.5 Choosing the kind of each frame
+
+- **Voiced** for periodic sound, **unvoiced** for noise (fricatives, aspiration, the bursts of plosives). The chip has no mixed excitation. Voiced fricatives (/v/, /z/) are coded as voiced, with the noise left out, or as unvoiced, with the voicing left out. The original data chose voiced for most.
+- **Repeat** when the K indices would be the same as, or close to, the previous frame's. A repeat frame keeps the stored K indices and changes only energy and pitch, and it saves 39 bits (voiced) or 18 bits (unvoiced). The original data uses repeats for 21 % of its frames, in runs of mostly 1–3, and as much as 45 % in VM61002. A repeat frame can change voicing: an unvoiced repeat frame zeroes K5–K10, but a voiced repeat frame after an unvoiced frame does not restore them (§12.2).
+- **Silence** (energy 0) for pauses inside an utterance. Its pitch and K indices stay stored, so the frame after it may be a repeat frame. Silence to sound is an inhibited change: the sound arrives at full level in one step, and a voiced sound with a fresh pitch pulse.
+- **Stop** (energy 15) once, at the end.
+
+### 12.6 An encoding method
+
+This is one method that follows from §12.1 to §12.5. It is not TI's, which is not published. `encoder/` in this project implements it (§12.11).
+
+1. **Resample** the speech to the chip's sample rate: `fosc` / 80, 8000 Hz at 640 kHz. Band-limit it to below 4 kHz.
+2. **Choose the frame times.** Frame *n* describes the sound at 25·*n* ms (§12.2). Drop leading and trailing quiet; the first frame should be the first frame with sound.
+3. **Analyse each frame** over a window of 25–40 ms centred on its time (a Hamming window, for example):
+   - **Voicing and pitch.** Decide whether the frame is periodic, and if so its period, from 16 to 160 samples.
+   - **The spectrum.** Compute the autocorrelation of the windowed signal: of the pre-emphasised signal for a voiced frame, of the plain signal for an unvoiced one (§12.3). Find *k*₁–*k*₁₀ by the Levinson–Durbin recursion (order 4 is enough for an unvoiced frame).
+   - **The level:** the RMS of the frame's unemphasised signal over its window.
+4. **Quantise.** Map each *k*ᵢ to the nearest table entry (Table 8-6). Near ±1, where the filter is sensitive, compare the entries in a warped measure such as the log-area ratio, log((1 − *k*)/(1 + *k*)), rather than in *k* itself. Map the period to the nearest pitch index.
+5. **Set the energy.** Pick the energy index that gives the frame's target RMS in codes, with the quantised K and pitch. Either run the frame through the reference algorithm (§8.9) and measure, or use the estimate of §12.3. Scale the whole utterance once, so that its loudest frame peaks within the DAC's ±127 (§12.3).
+6. **Choose the frame kinds** (§12.5). Below a level threshold, a frame is silence. Make a frame a repeat where its K indices hardly differ from those stored. Make the first frame a full frame, and put a full voiced frame after every unvoiced one. End with a stop frame, after fading the energy where the last sound is unvoiced (§12.2).
+7. **Pack** the frames into bits and bytes (§12.1).
+8. **Check by synthesis.** Run the bytes through the reference algorithm (§8.9), or through an emulator built from it, and compare with the input: the level frame by frame, and by listening. The chip's output differs from the reference algorithm by about one code at a few samples (§8.8), which is inaudible.
+
+### 12.7 VSM images
+
+A TMS6100 VSM, or an emulation of one, holds the data the chip reads by address (§4).
+- **Byte order.** The chip reads each byte least significant bit first, so a VSM byte holds the bits of the stream in that order: the same bytes as the Speak External stream (§12.9).
+- **Words start on byte boundaries,** at any address. The chip reads exactly to the end of the stop code and no further (§4), so no padding is needed after a word. TI's own images leave one spare byte after the byte holding each stop code (`proms/README.md`), and a VSM image may do the same. The chip does not need it.
+- **Speaking a word by its address.** Load Address with five nibbles, least significant first, then Speak (§4, §6).
+- **Speaking a word by its number, through a pointer table.** Load the address of the word's pointer, then Read and Branch (§4). The VSM replaces the low 14 bits of its address with the two bytes there, low byte first, and keeps the bits above. Then Speak. So a pointer can reach only its own 16 KB bank, and the bytes of a pointer are stored as the value itself, not bit-reversed. A word's data may run on past the end of the bank; how a VSM continues there is its own behaviour (§4).
+- **Reading data bytes from the host.** Read Byte returns each VSM byte bit-reversed (§6). Any header or text meant for the host, such as names and counts, is therefore stored bit-reversed, so that the host reads it the right way round.
+
+### 12.8 Word tables
+
+Each of the following formats is used by original PROMs in the data set (`proms/README.md`). The chip itself knows none of them: only the host does.
+
+**Acorn PHROM** (the BBC Micro's speech system; the Acorn PHROM A, CM62024). One 16 KB bank:
+
+| Bytes | Contents (as the host reads them through Read Byte, so stored bit-reversed) |
+|---|---|
+| 0, 1 | 0x00, 0xFF |
+| 2–55 | Null-terminated ASCII strings, then zeros. The Acorn PHROM A has `(C)1982 Acorn`, `Word PHROM A` and `1.00` |
+| 56, 57 | The number of "ASCII associated" entries (little-endian; 95 in the Acorn PHROM A) |
+| 58, 59 | The number of pointers, the ASCII entries included (little-endian; 260 = 95 + 165 words) |
+| 60–63 | 0x00, 0x02, 0x00, 0x02 in the Acorn PHROM A. Their use is not known; a new image should copy them |
+
+- **The pointer table** starts at byte 64. Word number *N* (from 32) has its pointer at byte 2*N*, as 14-bit offsets in the bank, low byte first and not bit-reversed (they are read by Read and Branch). One byte, 0xFF, follows the last pointer.
+- **"ASCII associated" entries.** The first entries, numbers 32 to 126, give a word for each printable ASCII character: 'A' (65) points to the word "A", and so on. In the Acorn PHROM A, the words proper are numbered from 127, and every one of the 95 ASCII entries points to one of them (space to the first word). Every header byte is stored bit-reversed, the counts included.
+- **Each word's name** is stored in the bytes just before its data, between the end of the previous word (or of the pointer table) and the word. It is stored backwards, its first character next to the data, one byte per character: the character code shifted left by one, then bit-reversed. These bytes are never spoken.
+- **Speaking word *N*** from bank *B*: Load Address *B*·0x4000 + 2*N*, Read and Branch, Speak.
+
+Whether a BBC Micro reads a new image in this format has not been tested.
+
+**TI indexed** (VM61002, VM71003A). Byte 0 is 0, byte 1 is the number of words *n* (stored as is, not bit-reversed), and word *i* (1 to *n*) has its pointer at byte 2*i*, low byte first. Every word ends with one spare byte after the byte that holds its stop code.
+
+**Unindexed** (VM61004). The first word at byte 0, and each word one spare byte after the byte holding the previous word's stop code. The host must know where each word starts.
+
+**TI-99/4A** (the CD2325A and CD2326A VSMs). A binary search tree of names, read by the host through Read Byte; see `proms/README.md`.
+
+### 12.9 Speak External streams
+
+The same bytes as the VSM image, from the utterance's first byte to the byte that holds its stop code, are written to the FIFO after a Speak External command (§5, §6). They are not bit-reversed.
+- **At least 9 bytes.** Speech starts only when the FIFO holds 9 bytes (§5). A shorter utterance never starts, and its bytes stay in the FIFO, where they turn the next reset sequence into data. Lengthen it with silence frames before the stop code, 4 bits each.
+- **Keep the FIFO fed.** Write 16 bytes, then 8 more each time Buffer Low sets (INT). A frame that cannot be read in full ends the speech, like a stop frame (§5).
+- **Send nothing after the stop code's byte.** Every byte written while Speak External is in progress is data, even 0xFF and Reset (§5).
+- **The start.** Speech starts on the frame boundary after the 9th byte, and runs 2 samples ahead of a VSM Speak (§8.5).
+
+### 12.10 How the original data was encoded
+
+Every word of the eight PROMs in the data set, 1148 words, parsed with the frame format of §8.1 [`captures/phase11/promstats/`]:
+
+| PROM | Words | Voiced | Unvoiced | Repeat | Silence | Stop | Bit rate (mean) |
+|---|---|---|---|---|---|---|---|
+| Acorn PHROM A | 165 | 62.9 % | 14.2 % | 12.1 % | 5.7 % | 5.1 % | 1493 bit/s |
+| VM61002 | 206 | 36.5 % | 9.7 % | 44.7 % | 4.7 % | 4.4 % | 1054 bit/s |
+| VM61004 | 148 | 67.0 % | 16.5 % | 8.0 % | 3.7 % | 4.7 % | 1581 bit/s |
+| VM71003A | 35 | 68.7 % | 17.6 % | 2.6 % | 6.6 % | 4.6 % | 1607 bit/s |
+| VM61003 (words) | 116 | 67.4 % | 19.9 % | 4.9 % | 3.6 % | 4.2 % | 1613 bit/s |
+| VM61005 (words) | 116 | 72.0 % | 16.7 % | 3.4 % | 4.0 % | 3.8 % | 1662 bit/s |
+| TI-99/4A | 339 | 41.7 % | 12.5 % | 35.0 % | 6.3 % | 4.5 % | 1149 bit/s |
+| Star Wars | 23 | 68.1 % | 28.0 % | 0.7 % | 1.3 % | 2.0 % | 1695 bit/s |
+| **All** | **1148** | **54.6 %** | **14.8 %** | **21.4 %** | **4.9 %** | **4.4 %** | **1372 bit/s** |
+
+*Shares of frames.*
+
+- **Length.** A word is 16 to 31 frames (10th to 90th percentile), 0.4 to 0.8 s; the median is 22 frames.
+- **Start and end.**
+  - 1109 words start with no silence frame. The other 39 start with one or more, and depend on what was spoken before them (§12.2).
+  - Before the stop frame, words end on a voiced frame (501), a repeat frame (290), an unvoiced frame (276) or silence (81).
+  - 80 words have trailing silence frames, and 4.1 % of all frames are silence inside words.
+- **Repeat frames** come in runs of 1 (1727 runs), 2 (711), 3 (318) and 4 or more (305).
+- **Energy.**
+  - Voiced frames cluster at indices 9–14, with a peak at 13.
+  - Unvoiced frames sit lower, at indices 1–8 with a peak at 5–6; only 26 unvoiced frames are above index 9.
+  - No original frame uses index 15 except as the stop code.
+- **Pitch.** Indices 29 to 59 (5th to 95th percentile), a median of 44: periods of 45 to 138 samples (178 to 58 Hz), with a median of 79 samples (101 Hz). These are male voices apart from VM71003A.
+- **K indices.** Voiced frames use the full range of every K except K1, which never uses index 0.
+
+### 12.11 The project's encoder (Phase 11)
+
+`encoder/` holds an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its round trip and its output on the chip are described in the capture plan (Phase 11).
 
 ## Appendix A: System clock
 

@@ -1,0 +1,47 @@
+{
+ "acorn_phrom_a": {
+  "words": 165,
+  "bits_identical": 165,
+  "bytes_identical": 26
+ },
+ "vm61002": {
+  "words": 206,
+  "bits_identical": 206,
+  "bytes_identical": 21
+ },
+ "vm61004": {
+  "words": 148,
+  "bits_identical": 148,
+  "bytes_identical": 14
+ },
+ "vm71003a": {
+  "words": 35,
+  "bits_identical": 35,
+  "bytes_identical": 4
+ },
+ "vm61003_words": {
+  "words": 116,
+  "bits_identical": 116,
+  "bytes_identical": 13
+ },
+ "vm61005_words": {
+  "words": 116,
+  "bits_identical": 116,
+  "bytes_identical": 14
+ },
+ "ti99_speech": {
+  "words": 339,
+  "bits_identical": 339,
+  "bytes_identical": 339
+ },
+ "starwars_speech": {
+  "words": 23,
+  "bits_identical": 23,
+  "bytes_identical": 23
+ },
+ "all": {
+  "words": 1148,
+  "bits_identical": 1148,
+  "bytes_identical": 454
+ }
+}

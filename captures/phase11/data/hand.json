@@ -1,0 +1,227 @@
+{
+ "name": "phase11_hand",
+ "title": "Phase 11 hand-designed frame sequences",
+ "target_chip": "TMS5220",
+ "image": {
+  "source": "captures/phase11/data/hand.bin",
+  "kind": "synthetic",
+  "size": 1768,
+  "sha256": "7e31a859d4323ef3e7f207d1d64f5e9aca34ca7ab1b68de19f351ca12dddfffe",
+  "crc32": "0bf276e7"
+ },
+ "bank": 0,
+ "format": "phase11",
+ "provenance": "tools/phase11.py handSet(): every frame kind and transition of datasheet sections 8.1, 8.7 and 12.2, at speech levels, built by hand",
+ "words": [
+  {
+   "number": 1,
+   "address": "0x00000",
+   "name": "kinds",
+   "frames": 19,
+   "bytes": 63
+  },
+  {
+   "number": 2,
+   "address": "0x0003F",
+   "name": "energy_ramp_v",
+   "frames": 28,
+   "bytes": 170
+  },
+  {
+   "number": 3,
+   "address": "0x000E9",
+   "name": "energy_ramp_u",
+   "frames": 28,
+   "bytes": 99
+  },
+  {
+   "number": 4,
+   "address": "0x0014C",
+   "name": "pitch_glide",
+   "frames": 38,
+   "bytes": 232
+  },
+  {
+   "number": 5,
+   "address": "0x00234",
+   "name": "pitch_jumps",
+   "frames": 11,
+   "bytes": 54
+  },
+  {
+   "number": 6,
+   "address": "0x0026A",
+   "name": "k1_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 7,
+   "address": "0x00290",
+   "name": "k2_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 8,
+   "address": "0x002B6",
+   "name": "k3_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 9,
+   "address": "0x002DC",
+   "name": "k4_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 10,
+   "address": "0x00302",
+   "name": "k5_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 11,
+   "address": "0x00328",
+   "name": "k6_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 12,
+   "address": "0x0034E",
+   "name": "k7_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 13,
+   "address": "0x00374",
+   "name": "k8_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 14,
+   "address": "0x0039A",
+   "name": "k9_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 15,
+   "address": "0x003C0",
+   "name": "k10_jump",
+   "frames": 7,
+   "bytes": 38
+  },
+  {
+   "number": 16,
+   "address": "0x003E6",
+   "name": "vowel_jumps",
+   "frames": 11,
+   "bytes": 63
+  },
+  {
+   "number": 17,
+   "address": "0x00425",
+   "name": "v_u_alternate",
+   "frames": 10,
+   "bytes": 47
+  },
+  {
+   "number": 18,
+   "address": "0x00454",
+   "name": "v_sil_v",
+   "frames": 11,
+   "bytes": 40
+  },
+  {
+   "number": 19,
+   "address": "0x0047C",
+   "name": "u_sil_u",
+   "frames": 10,
+   "bytes": 24
+  },
+  {
+   "number": 20,
+   "address": "0x00494",
+   "name": "sil_repeat",
+   "frames": 10,
+   "bytes": 20
+  },
+  {
+   "number": 21,
+   "address": "0x004A8",
+   "name": "u_then_vrepeat",
+   "frames": 9,
+   "bytes": 34
+  },
+  {
+   "number": 22,
+   "address": "0x004CA",
+   "name": "end_unvoiced",
+   "frames": 6,
+   "bytes": 24
+  },
+  {
+   "number": 23,
+   "address": "0x004E2",
+   "name": "end_unvoiced_faded",
+   "frames": 7,
+   "bytes": 21
+  },
+  {
+   "number": 24,
+   "address": "0x004F7",
+   "name": "end_voiced_sil",
+   "frames": 6,
+   "bytes": 21
+  },
+  {
+   "number": 25,
+   "address": "0x0050C",
+   "name": "held_vowel",
+   "frames": 41,
+   "bytes": 251
+  },
+  {
+   "number": 26,
+   "address": "0x00607",
+   "name": "held_noise",
+   "frames": 41,
+   "bytes": 146
+  },
+  {
+   "number": 27,
+   "address": "0x00699",
+   "name": "k_all_min",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 28,
+   "address": "0x006B3",
+   "name": "k_all_max",
+   "frames": 5,
+   "bytes": 26
+  },
+  {
+   "number": 29,
+   "address": "0x006CD",
+   "name": "short_padded",
+   "frames": 5,
+   "bytes": 9
+  },
+  {
+   "number": 30,
+   "address": "0x006D6",
+   "name": "first_repeat",
+   "frames": 6,
+   "bytes": 18
+  }
+ ]
+}
