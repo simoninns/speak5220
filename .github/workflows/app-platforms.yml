@@ -42,11 +42,15 @@ jobs:
       - name: MSVC developer environment
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+      # aqtinstall 3.3.0, the latest release, cannot find Qt 6.11 for Windows
+      # (its packages moved to per-compiler directories); its master branch
+      # can (aqtinstall #1000). Pinned to a commit until a release has it.
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           cache: true
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
       - name: Install vcpkg
         uses: lukka/run-vcpkg@v11
         with:

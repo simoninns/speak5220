@@ -24,9 +24,6 @@ namespace {
 
 using std::int64_t;
 
-constexpr int kSlotsPerSample = Tms5220::kSlotsPerSample;
-constexpr int kSamplesPerFrame = Tms5220::kSamplesPerFrame;
-
 // Energy indices with a special meaning (§8.1).
 constexpr int kSilenceEnergy = 0;
 constexpr int kStopEnergy = 15;

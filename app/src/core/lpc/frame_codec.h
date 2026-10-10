@@ -53,11 +53,11 @@ class FrameCodec {
 // before it goes to Speak External. Re-implements tms5220enc.py
 // bitReverse().
 constexpr std::uint8_t BitReverse(std::uint8_t byte) {
-  std::uint8_t out = 0;
-  for (int i = 0; i < 8; ++i) {
-    out = static_cast<std::uint8_t>((out << 1) | ((byte >> i) & 1U));
+  unsigned out = 0;
+  for (unsigned i = 0; i < 8; ++i) {
+    out = (out << 1U) | ((static_cast<unsigned>(byte) >> i) & 1U);
   }
-  return out;
+  return static_cast<std::uint8_t>(out);
 }
 
 }  // namespace speak5220::core::lpc
