@@ -1,0 +1,14 @@
+# The reset sequence, a Speak at the standard boundary, then a Load Address
+# written during speech and held until Talk Status clears
+# (docs/technical/emulator/command-line.md)
+phase 50
+load phrase.bin 1000
+wait 1000
+writes FF FF FF FF FF FF FF FF FF 70
+writes 40 40 40 41 40
+boundary 1961
+mark speak
+write 50
+wait 400
+write 43
+until_idle

@@ -1,0 +1,8 @@
+frame,kind,energy,repeat,pitch,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10
+0,unvoiced,10,0,0,6,0,8,6,,,,,,
+1,unvoiced,10,0,0,6,0,8,6,,,,,,
+2,unvoiced,10,0,0,6,0,8,6,,,,,,
+3,unvoiced,10,0,0,6,0,8,6,,,,,,
+4,unvoiced,10,0,0,6,0,8,6,,,,,,
+5,unvoiced,10,0,0,6,0,8,6,,,,,,
+6,stop,15,,,,,,,,,,,,

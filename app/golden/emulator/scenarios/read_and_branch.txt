@@ -1,0 +1,11 @@
+# READY after Read and Branch, then a Read Byte of the target
+# (test_tms5220.c test_branch_ready)
+load branch_pointer.bin 3C140
+load branch_target.bin 3CBB6
+wait 5
+writes 40 44 41 4C 43
+write 30
+wait 30
+write 10
+read
+wait 100

@@ -1,0 +1,6 @@
+# Power-up idle output and status, then Reset (test_tms5220.c test_idle)
+wait 80000
+status
+write 70
+status
+wait 4000

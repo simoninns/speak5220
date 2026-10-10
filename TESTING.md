@@ -3,8 +3,10 @@
 This document covers the Speak5220 application in `app/`, and sets the
 testing rules it is built to, following the plan in
 [docs-tech/application-plan.md](docs-tech/application-plan.md). The test
-tree, its lanes and the CI jobs below exist; the interfaces, fixtures,
-reference data and scripts are added by the plan's later phases.
+tree, its lanes, the CI jobs, the emulator's interfaces and the emulator and
+packaging reference data below exist; the other interfaces, the fixture
+projects, the encoder's reference data and the scripts are added by the
+plan's later phases.
 
 The research code in `investigation/` (the Python encoder, the C emulator and
 the capture tools) has its own self-tests and is not covered here.
@@ -209,11 +211,12 @@ way its callers can be unit tested.
 
 | Interface | Real implementation | Mocked when testing |
 |---|---|---|
-| `IVsmBus` | `Tms6100` | `Tms5220` (Load Address, Read, Branch sequences) |
-| `ISampleSink` | `Synth`'s sample buffer | `Tms5220` output |
-| `IWavReader`, `IWavWriter` | libsndfile adapters | The import pipeline, the WAV export |
-| `IResampler` | libsamplerate adapter | The import pipeline |
-| `IFft` | pocketfft adapter | Encoder stages, PESQ stages |
+| `IVsmBus` | `Tms6100` | `Tms5220`, `Synth` (Load Address, Read, Branch sequences) |
+| `ISampleSink` | `Synth`'s recorder, `ChipDriver` | `Tms5220` output |
+| `ITms5220Observer` | `Synth`'s recorder, the test runner's event log | `Tms5220` events (VSM functions, host cycles, flags) |
+| `IWavReader`, `IWavWriter` | `SndfileWavReader`, `SndfileWavWriter` (libsndfile) | The import pipeline, the WAV export |
+| `IResampler` | `SincResampler` (libsamplerate) | The import pipeline |
+| `IFft` | `PocketFft` (pocketfft) | Encoder stages, PESQ stages |
 | `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | The encoder stages | `Encoder` (orchestration only) |
 | `IEncoder` | `Encoder` | `Optimiser`, the project's re-encode logic |
 | `ISynth` | `Synth` | `Optimiser`, `Player` |
@@ -278,7 +281,9 @@ lands in any of these trees.
 ```
 app/tests/
 ├── CMakeLists.txt        Owns every test target
-├── support/              Shared helpers: fixture paths, golden-file readers, gMock mocks
+├── .clang-tidy           The app's clang-tidy settings, plus one test exception
+├── support/              Shared helpers: golden-file readers, frame builders,
+│                         the reference emulator's run modes, gMock mocks
 ├── unit/                 → speak5220_unit_tests,           ctest label "unit"
 ├── functional/           → speak5220_functional_tests,     label "functional"
 └── gui/
@@ -313,7 +318,9 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
 | `app/projects/phrom/` | Multi-PHROM fixtures: a project that fills exactly one PHROM, one that spills into a second, and one at the 64-PHROM budget |
 | `app/projects/bbc/` | Fixtures for the DFS disc export |
 | `app/projects/benchmark/` | Fixed-size projects for `app/scripts/benchmark.sh` |
-| `app/golden/` | Committed reference data (plan §1.4): emulator runs, encoder frames and intermediates, packed bytes, PHROM images, PESQ scores |
+| `app/golden/emulator/` | The C emulator's runs (plan §1.4): codes and event logs for its self-test scenarios, synthetic vectors and encoder output, through both paths |
+| `app/golden/packaging/` | The Python encoder's Acorn PHROM and TI indexed images and Speak External streams |
+| `app/golden/` (later) | The encoder's frames and intermediates, PESQ scores |
 
 - **Fixture projects are stored unpacked**, as a directory with the same
   layout as a `.s5proj` ZIP (`project.yaml`, `phrases/<uuid>/…`). That way
@@ -327,7 +334,11 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
   `soundfile`. Without it the build still succeeds, and only the corpus
   check (below) is unavailable.
 - **The reference data** was produced from the retired Python encoder and C
-  emulator (plan §1.4, decision D5). It is a fixed regression baseline:
+  emulator (plan §1.4, decision D5) by
+  `app/scripts/golden/generate_golden.py`, run by hand in the default Nix
+  shell (`nix develop --command python3 app/scripts/golden/generate_golden.py`).
+  `--check` regenerates it into a temporary directory and compares it with
+  the committed files. It is a fixed regression baseline:
   - **Emulator data never changes**, unless the datasheet does.
   - **Encoder data is regenerated only for an intended improvement.** It is
     regenerated from the C++ itself, in its own commit that records the
@@ -344,6 +355,9 @@ read the file system, so they are functional.
 Everything writes through an output directory chosen by the caller (the
 CLI's `--output DIR`), never into `app/projects/`, `app/golden/` or
 `app/tests/`.
+The one exception is `app/scripts/golden/generate_golden.py`, which writes
+`app/golden/` itself; it is run by hand, and only to create or, by
+agreement, regenerate the reference data (AGENTS.md §3.1).
 
 - `app/scripts/run-projects.sh [general|phrom|bbc]` runs a fixture suite end to
   end through `speak5220-cli`. It encodes each fixture and runs its export

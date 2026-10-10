@@ -6,4 +6,4 @@ line_length: 80
 indent: 4
 # Where the project's own CMake functions are defined, so they are formatted
 # like built-in commands.
-definitions: [tests/CMakeLists.txt]
+definitions: [tests/CMakeLists.txt, cmake/Dependencies.cmake]

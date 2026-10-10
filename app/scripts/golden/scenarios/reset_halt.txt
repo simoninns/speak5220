@@ -1,0 +1,13 @@
+# A Speak ignored during speech, then a Reset that halts speech
+load phrase.bin 0
+wait 500
+writes 40 40 40 40 40
+boundary 1961
+mark speak
+write 50
+wait 3000
+write 50
+wait 3000
+write 70
+status
+until_idle

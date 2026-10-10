@@ -43,8 +43,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
 include(CompilerWarnings)
 include(QualityTargets)
-
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+include(Dependencies)
 
 add_subdirectory(src)
 

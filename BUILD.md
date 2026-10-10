@@ -36,15 +36,17 @@ The application is in `app/`, built with CMake and Ninja. Build directories go o
 cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build build/app
 ctest --test-dir build/app -L unit          # the fast, mocked lane
-ctest --test-dir build/app -L functional    # file system, processes, GUI (offscreen)
+ctest --test-dir build/app -L functional    # file system, processes, reference data, GUI (offscreen)
 ```
+
+The application links Qt 6 (Core, Widgets), spdlog, libsndfile, libsamplerate and pocketfft (header-only), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
 
 This builds:
 
 | Output | What it is |
 |---|---|
 | `build/app/src/gui/speak5220` | The GUI (so far an empty main window) |
-| `build/app/src/cli/speak5220-cli` | The command-line tool (so far prints its version) |
+| `build/app/src/cli/speak5220-cli` | The command-line tool (so far prints its version, and takes the logging options `--log-level`, `--log-file` and `--no-console-log`) |
 | `build/app/tests/...` | The test binaries; the `speak5220_tests` target builds them all |
 
 CMake options:
@@ -54,7 +56,20 @@ CMake options:
 | `SPEAK5220_BUILD_TESTS` | `ON` | Builds the Google Test suites (needs Google Test) |
 | `SPEAK5220_SANITIZE` | `OFF` | Builds with AddressSanitizer and UBSan (GCC or Clang); use with `-DCMAKE_BUILD_TYPE=Debug` in a separate build directory |
 
+Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`).
+
 The testing rules are in [`TESTING.md`](TESTING.md).
+
+### Reference data
+
+`app/golden/` holds the output of the retired reference emulator and encoder, which the functional tests compare against. It is written by a script run by hand in the default dev shell (it needs Python with NumPy, SciPy and soundfile, and a C compiler):
+
+```bash
+nix develop --command python3 app/scripts/golden/generate_golden.py --check   # regenerate in a temporary directory and compare
+nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/
+```
+
+The emulator's reference data is never rewritten unless the reference datasheet changes; see [`TESTING.md`](TESTING.md).
 
 ### Format and lint
 
@@ -67,7 +82,7 @@ cmake --build build/app --target format   # clang-format, ruff format, nixfmt, g
 cmake --build build/app --target lint     # every read-only check, clang-tidy included
 ```
 
-The style rules are in the plan's §1.3 and in [`AGENTS.md`](AGENTS.md) §4. Their configuration is in `app/.clang-format`, `app/.clang-tidy`, `app/CPPLINT.cfg` and `app/.gersemirc`.
+The style rules are in the plan's §1.3 and in [`AGENTS.md`](AGENTS.md) §4. Their configuration is in `app/.clang-format`, `app/.clang-tidy` (with `app/tests/.clang-tidy` for the tests), `app/CPPLINT.cfg` and `app/.gersemirc`.
 
 ### Nix package
 

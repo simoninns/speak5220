@@ -1,0 +1,13 @@
+# A Read Byte held during speech (test_tms5220.c test_read_byte_held)
+phase 120
+load held.bin 800
+wait 500
+writes 40 40 48 40 40
+write 50
+wait 400
+status
+write 10
+read
+read
+until_idle
+read

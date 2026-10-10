@@ -15,6 +15,16 @@ else()
     )
 endif()
 
+# Range-checks operator[] on standard containers in Debug and sanitizer
+# builds (libstdc++), in place of clang-tidy's static index rule.
+if(NOT MSVC)
+    target_compile_definitions(
+        speak5220_compile_options
+        INTERFACE
+            $<$<OR:$<CONFIG:Debug>,$<BOOL:${SPEAK5220_SANITIZE}>>:_GLIBCXX_ASSERTIONS>
+    )
+endif()
+
 if(SPEAK5220_SANITIZE)
     if(MSVC)
         message(

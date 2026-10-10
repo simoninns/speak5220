@@ -1,0 +1,14 @@
+# Speak External FIFO thresholds: 8 bytes, the 9th, then 16 bytes of a
+# 20-byte stream, so speech runs out of data (test_tms5220.c
+# test_speak_external)
+wait 100
+write 60
+status
+writes C5 2B CA 23 22 92 14 AF
+status
+wait 20000
+status
+write 28
+status
+writes 8F 88 48 52 BC A2 3C
+until_idle

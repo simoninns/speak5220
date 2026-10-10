@@ -62,6 +62,12 @@ validation:
 
 nav:
   - Home: index.md
+  - Application:
+      - application/index.md
+      - User manual:
+          - Command-line tool: application/user-manual/cli.md
+      - Reference:
+          - Command-line options: application/reference/cli-options.md
   - Technical:
       - technical/index.md
       - Reference datasheet:

@@ -1,0 +1,9 @@
+# A voiced, repeat, unvoiced, silence and stop frame, read at power-up
+# phase 148, with data after the stop code (test_tms5220.c
+# test_frame_lengths)
+phase 148
+load frames.bin 1234
+wait 1000
+writes 44 43 42 41 40
+write 50
+until_idle

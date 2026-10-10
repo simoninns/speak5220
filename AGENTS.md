@@ -71,7 +71,7 @@
   - **Never** change the emulator's reference data, unless the reference datasheet changes.
   - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after.
   - Ask the user before changing any reference data (§12).
-- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`.
+- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The one exception is `app/scripts/golden/generate_golden.py`, run by hand to create the reference data (TESTING.md).
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
 ### 3.2 Logging

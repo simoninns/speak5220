@@ -1,0 +1,13 @@
+# Four Read Bytes after Load Address (test_tms5220.c test_read_byte)
+load read_byte.bin 3C140
+wait 7
+writes 40 44 41 4C 43
+write 10
+read
+write 10
+read
+write 10
+read
+write 10
+read
+wait 100

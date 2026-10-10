@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# clang-tidy settings for the tests: app/.clang-tidy, with one more check
+# disabled, with its reason.
+---
+InheritParentConfig: true
+Checks: >
+  -cppcoreguidelines-non-private-member-variables-in-classes
+
+# Why:
+#   cppcoreguidelines-non-private-member-variables-in-classes
+#       Google style allows a test fixture's data members to be protected,
+#       and the test harnesses expose what they recorded for the tests to
+#       check.
