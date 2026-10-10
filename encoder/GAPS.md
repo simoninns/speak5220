@@ -31,14 +31,14 @@ My `synthesize()` follows §8.9 step by step. It gives the reference emulator's 
 
 ## Frame kinds (§12.2, §12.5)
 
-13. **"Close" K indices for a repeat (§12.5).** This is not quantified. *Chose:* a repeat frame is used when the stored K, applied to this frame's autocorrelation, give a prediction error at most 0.8 dB above that of the frame's own quantised K. This is a likelihood-ratio (Itakura) measure. Repeats only follow a full frame of the same voicing.
+13. **"Close" K indices for a repeat (§12.5).** This is not quantified. *Chose:* repeats are chosen by a rate-distortion search within each run of one voicing: bits + `repeatLambda` (70) × the rise in each frame's prediction error, in dB, under the repeated K. This is a likelihood-ratio (Itakura) measure. Repeats only follow a full frame of the same voicing. (Before: a greedy rule, a repeat when the stored K cost at most 0.8 dB; see README.)
 14. **Unvoiced repeat after a voiced frame.** §12.5 says this is allowed (K1–K4 kept, K5–K10 zeroed), but it never says when it is useful. *Chose:* never, apart from the fades below.
 15. **How to fade a hiss (§12.2).** "Step its energy down over a few unvoiced repeat frames first" leaves the rate open. *Chose:* each fade frame has a third of the previous energy value, until the value is 2 or less (for example 33 → 11 → 4 → 1). Inside an utterance, fade frames replace the silence frames after the hiss. At the end, they are added before the stop.
 16. **Leading silence.** §12.2 says to start with a voiced or unvoiced frame. *Chose:* after level setting, the encoder drops any leading silence frames, so the first frame always loads every index.
 
 ## Analysis (§12.3, §12.6)
 
-17. **Pre-emphasis 0.9 (§12.3).** I checked the stated chirp spectrum (+3.9, −8.8, −11.7, −17.6 dB at 100, 500, 1000 and 2000 Hz relative to 250 Hz). It is right to 0.1 dB, and 1 − 0.9 z⁻¹ inverts it well. Trying 0.8 and 0.95 changed my spectral distance by less than 0.05 dB, so I kept 0.9.
+17. **Pre-emphasis 0.9 (§12.3).** I checked the stated chirp spectrum (+3.9, −8.8, −11.7, −17.6 dB at 100, 500, 1000 and 2000 Hz relative to 250 Hz). It is right to 0.1 dB, and 1 − 0.9 z⁻¹ inverts it well. Trying 0.8 and 0.95 changed my spectral distance by less than 0.05 dB, so I kept 0.9. *Later:* the order-4 LPC inverse of the chirp table replaced it, because it also matches the chirp's shape from 300 to 2000 Hz and halves the output's tilt error (README, Pre-emphasis).
 18. **Window (§12.6 step 3: 25–40 ms).** *Chose:* 30 ms Hamming. For frame 0, whose centre is at the onset, the spectral window is moved to start near the onset, so it does not analyse mostly silence.
 19. **Quantisation (§12.6 step 4).** The text says nearest in LAR. *Chose:* nearest in LAR, then a coordinate search over ±2 indices of each K that minimises the prediction error of the quantised filter on the frame's autocorrelation.
 20. **Voicing and pitch (§12.6 step 3).** The datasheet gives no method and no warning about octave errors. That is encoder craft, not a gap in the chip's description. My choices are in README.md.

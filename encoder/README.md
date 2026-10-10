@@ -15,11 +15,18 @@ It was written from the reference datasheet alone (`docs-tech/tms5220_reference_
 
     nix develop -c python3 encoder/tms5220enc.py encode IN.flac OUT.bin [--csv OUT.csv] [--wav OUT.wav]
                                                  [--rms CODES] [--peak CODES] [--no-repeat]
+                                                 [--repeat-lambda L] [--pre-emphasis chirp|MU]
+                                                 [--voicing-evidence W] [--voicing-threshold T]
 
 - `OUT.bin` holds the packed bytes: frames to the stop code, then zero padding to the end of its byte (§12.1).
 - `--csv` writes one row per frame: `frame,kind,energy,repeat,pitch,k1,...,k10`, with blanks where a field is absent. `kind` is `voiced`, `unvoiced`, `repeat`, `silence` or `stop`.
 - `--wav` writes the reference-algorithm synthesis: codes × 64, 16-bit, 8 kHz. It starts at the sample period of the first frame read, so it holds about 25 ms of idle (code −1) before the sound.
 - `--rms` sets the level target (default 20 codes). `--peak` normalises the loudest peak instead. `--no-repeat` disables repeat frames.
+- The other switches set the options of the same names (see the table under API), with the same defaults:
+  - `--repeat-lambda` (`repeatLambda`, 70): lower gives fewer bits, higher better quality;
+  - `--pre-emphasis` (`preEmphasis`, `chirp`): `chirp`, or a coefficient such as `0.9` for the older first-order filter;
+  - `--voicing-evidence` (`voicingEvidence`, 4): `0` decides voicing on periodicity alone;
+  - `--voicing-threshold` (`voicingThreshold`, 0.3): higher gives more voiced frames.
 
 Input of any sample rate is resampled to 8 kHz; stereo is mixed to mono.
 
@@ -55,12 +62,13 @@ Input of any sample rate is resampled to 8 kHz; stereo is mixed to mono.
 | `targetPeak` | None | If set, scale so that the loudest output peak is this many codes, instead of an RMS |
 | `peakLimit` | 120 | No output code beyond ±this. Frames that would exceed it are turned down |
 | `repeats` | True | Use repeat frames |
-| `repeatThreshold` | 0.8 | dB of extra prediction error a repeat may cost (below) |
+| `repeatLambda` | 70 | Bits a run of repeats may trade per dB of extra prediction error (below). Lower gives fewer bits |
 | `gateDb` | 45 | Frames this far below the loudest frame are silence |
-| `preEmphasis` | 0.9 | Pre-emphasis for voiced analysis (§12.3) |
+| `preEmphasis` | `"chirp"` | Pre-emphasis for voiced analysis: `"chirp"` (the chirp's inverse, below), or μ for 1 − μz⁻¹ (§12.3) |
 | `window` | 240 | Analysis window, in samples (30 ms) |
 | `lagWindowHz` | 60 | Gaussian lag-window bandwidth |
 | `voicingThreshold` | 0.3 | Base CMNDF level at which voiced and unvoiced cost the same |
+| `voicingEvidence` | 4 | Weight of spectral tilt and zero crossings in the voicing threshold (0: off) |
 | `iterations` | 5 | Closed-loop level passes |
 | `fadeUnvoiced` | True | Fade a hiss before silence and before the stop |
 
@@ -78,7 +86,7 @@ The method is §12.6, with these choices.
 
 ### Pre-emphasis
 
-Voiced frames are analysed after `y(n) = s(n) − 0.9·s(n−1)`, as §12.3 suggests. The chirp's spectrum falls by about 20 dB from 250 Hz to 3–4 kHz, and this first-order filter is close to its inverse, so the filter describes the speech spectrum divided by the chirp's. I checked the datasheet's chirp figures (they are right). Trying 0.8 and 0.95 changed the spectral distance below by less than 0.05 dB. Unvoiced frames, whose excitation is flat, are analysed without pre-emphasis.
+Voiced frames are analysed after the inverse of the chirp's spectrum, so that the filter describes the speech spectrum divided by the chirp's. The pre-filter is the order-4 LPC inverse of the chirp table (`chirpInverse()`): [1, −0.938, 0.152, −0.104, −0.006]. Its first-order fit, 1 − 0.888z⁻¹, is close to §12.3's `s(n) − 0.9·s(n−1)`, which was used before. The order-4 filter also follows the chirp's shape between 300 and 2000 Hz, where the first-order one leaves it about 1 dB weak below 800 Hz and 1 dB strong above. Over the 243 test inputs it halves the output's spectral tilt error (below 800 Hz −1.05 → −0.68 dB, 800–2000 Hz +0.74 → +0.42 dB) and improves the MCD by 0.03 dB, for no extra bits (`docs-tech/third_party_encoders.md` §6). Order 8 was no better. `preEmphasis=0.9` restores the first-order filter. Unvoiced frames, whose excitation is flat, are analysed without pre-emphasis.
 
 ### Voicing and pitch
 
@@ -90,6 +98,7 @@ Voiced frames are analysed after `y(n) = s(n) − 0.9·s(n−1)`, as §12.3 sugg
   - a prior towards the utterance's median period: 5 per octave beyond ±0.6 octave. The median is taken from confident hops, by YIN's first-dip rule;
   - a subharmonic penalty, 4, when a clearly periodic candidate (CMNDF below 0.15) at half or a third of the lag is at least as good.
 - **The unvoiced cost** is 10 × a threshold that adapts to the sound. The base is 0.3. It rises by up to 0.35 for loud frames whose energy lies mostly below 1 kHz (vowels, nasals, creaky voice), and falls by up to 0.15 when most of the energy is above 1 kHz (fricatives). Frames more than 34 dB below the loud level get a further bias towards unvoiced.
+- **Tilt and zero crossings.** The threshold also moves with two features over a centred 30 ms window: a tilt score from r1/r0 of the signal pre-emphasised by 0.99 (−2 to +4), and the zero crossings per 10 ms. It changes by `voicingEvidence` × (tilt − (crossings − 30)/10) / 66.7, so at the default weight of 4 a steep low-pass frame is about 0.24 easier to voice, and a fricative at 80 crossings per 10 ms 0.3 harder. The features and their scale come from Quadravox's QBox encoder (`docs-tech/third_party_encoders.md` §4.4). They lower the voicing disagreement by about 0.4 points and help most in sentences and vowels. The weight was tuned on the test inputs, which are mostly synthetic voices.
 - **Per frame.** A frame is voiced if most of the three hops nearest its centre are voiced, and its period is their median. A final check halves or doubles a period that is about 2× off the median of its voiced neighbours. The period is mapped to the pitch index whose period (value + 1, Table 8-5) is nearest in log terms.
 
 Octave errors were the main thing tuned here. The prior alone either let octave errors through or forced true high excursions (a 200 Hz stress peak from a 110 Hz voice) down to the subharmonic. The subharmonic rule and the gap memory fixed the cases found. Voiced fricatives come out voiced, the choice §12.5 says the original data made most often.
@@ -112,7 +121,7 @@ Octave errors were the main thing tuned here. The prior alone either let octave 
 ### Repeat and silence decisions
 
 - **Silence.** A frame is silence if its level is more than `gateDb` (45 dB) below the loudest frame, or below twice the noise floor (the 5th percentile of 10 ms levels).
-- **Repeat.** A frame becomes a repeat when the stored K, those of the last full frame and of the same voicing, applied to this frame's autocorrelation, give a prediction error at most 0.8 dB above that of the frame's own quantised K. This is an Itakura-style likelihood ratio, measured against the stored K rather than the previous frame's, so repeats cannot drift.
+- **Repeat.** Within each run of sounding frames of one voicing, the encoder splits the run into segments of up to 8 frames, each a full frame followed by repeats, by dynamic programming. A segment costs its bits (50 for a full voiced frame, 29 for a full unvoiced one, 11 per repeat) plus `repeatLambda` × its distortion. A frame's distortion is how much its prediction error rises, in dB, under the segment's K instead of its own quantised K: an Itakura-style likelihood ratio. The segment's K is either its first frame's or the K quantised from the segment's pooled normalised autocorrelation, whichever costs less. At equal bit rate this beats the earlier greedy rule (a repeat when the stored K cost at most 0.8 dB) by 0.01–0.06 PESQ, or saves about 100 bit/s at equal quality (`docs-tech/third_party_encoders.md` §6). A repeat never crosses silence or a change of voicing.
 - **Voicing rules.** A voiced repeat never follows an unvoiced frame, and the first voiced frame after unvoiced speech is always full (§12.2). Unvoiced repeats are used only after unvoiced frames, apart from the fades.
 - **Keeping repeats valid.** After level setting, frames turned to silence change what the chip holds. Packing tracks the chip's stored K, and sends a repeat whose K are not the stored ones as a full frame.
 
@@ -136,7 +145,8 @@ Octave errors were the main thing tuned here. The prior alone either let octave 
 - **Synthesis:** the start of speech (unvoiced energy at sample 203, voiced output within 205–209) and its end; a lone stop gives no output; and, if `emulator/tms5220emu` is built, three random speech-like frame lists give the emulator's codes sample for sample.
 - **Packaging:** the ≥9-byte rule (padding only when needed, silence before the stop); the PHROM layout read back (header through bit reversal, counts, pointers, the 0xFF, names backwards before the data, ASCII aliases, the null word, overflow); the TI indexed layout read back, with its spare bytes and overflow.
 - **Predecessor:** the §12.2 pattern (unvoiced, silence, before any voiced frame) depends on the stored indices, and the encoder's guard removes the dependence.
-- **`encode()`** on `w05_vctk_lo.flac` ("marmalade"): a valid frame list that round-trips, a single stop at the end, a full first frame, no voiced repeat after unvoiced, no wraps, peaks within ±127, a sensible level, independence from the predecessor, determinism, and no repeats when they are disabled.
+- **`encode()`** on `w05_vctk_lo.flac` ("marmalade"): a valid frame list that round-trips, a single stop at the end, a full first frame, no voiced repeat after unvoiced, no wraps, peaks within ±127, a sensible level, independence from the predecessor, determinism, no repeats when they are disabled, and fewer bits at a lower `repeatLambda`.
+- **Pre-emphasis and repeats:** the chirp inverse filter (its coefficients, and that it flattens the chirp), and the repeat search merging identical frames and splitting at a change.
 
 ## Quality
 
@@ -194,5 +204,5 @@ Observations:
 - **Level:** the error is within the energy table's own resolution (±1.5 dB at 3 dB steps). The p90 includes onsets and offsets, where the glide smears the level over a frame.
 - **Limiting:** the RMS target of 20 needs the limiter on about 7 % of sounding frames to keep peaks at 120. Normalising to the peak instead (`targetPeak=120`) avoids limiting, but gives a median RMS of 15.9 codes against 18.6 (40 files).
 - **Energy indices** are lower than the originals': voiced frames centre on 9, against 13 (§12.10), at a similar RMS. So my filters have higher gain than TI's. The likely cause is sharper resonances or a different pre-emphasis. The lower indices mean coarser energy steps on quiet voiced frames.
-- **Bit rate** is about 1340 bit/s, close to the originals' 1372 bit/s. About 19 % of frames are repeats. The share of silence is higher than in the PROM words, because the test inputs are sentences with pauses.
+- **Bit rate** is about 1330 bit/s, close to the originals' 1372 bit/s. About 20 % of frames are repeats. The share of silence is higher than in the PROM words, because the test inputs are sentences with pauses.
 - **Speed:** 260 s of computing for 673 s of input (about 0.4 s per second of speech), almost all of it in the pure-Python synthesis of the closed loop.

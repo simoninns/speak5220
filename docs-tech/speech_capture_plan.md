@@ -395,7 +395,7 @@ Each phase lists its goal, tasks, deliverables, completion criteria and status (
 | 8. Synthetic vectors and the core datasheet | 4, 5 | Done |
 | 9. Reference emulator | 8 (runs alongside it) | In progress: emulator and harness done; not yet bit-exact |
 | 10. Remaining PROM corpora | 6, 7 | Done (within the tolerance of §1.5 on every PROM) |
-| 11. Authoring, and confirmation with new speech data | 8, 9 | Done: tests 2 and 3 pass on the new speech; the hand-designed set needs a second chip |
+| 11. Authoring, and confirmation with new speech data | 8, 9 | Done (closed 2026-10-10): tests 2 and 3 pass on the new speech; the hand-designed set needs a second chip |
 | 12. Publish | All | Not started |
 
 ### Phase 1: Bench bring-up and signal identification
@@ -959,6 +959,7 @@ This phase starts as soon as the Phase 8 drafts exist, and runs alongside it.
 - **Found on the way:**
   - **An utterance can depend on the previous one in a way the guide did not warn of.** An unvoiced frame leaves the stored K5–K10 indices alone, and a silence frame ends their zeroing. So an utterance that opens unvoiced, then has silence before its first voiced frame, uses the previous utterance's K5–K10. The emulator's predictions showed it in about 20 of the first encoding's utterances. Datasheet §12.2 now says so, and the encoder avoids it.
   - **§8.9 ambiguities** found by the encoder's own copy of the algorithm: which indices an unvoiced frame writes, that the pitch counter steps every sample, and the order of two writes within a sample. All four were clarified.
+- **Status:** done (closed 2026-10-10). Acceptance tests 2 and 3 pass on all the new speech: the PHROM, the TTS and the recordings. The hand-designed set stays outside the tolerance against chip 1's own takes. That is explained by the emulator's known one-code voiced error on very quiet items, not by a gap in the authoring guide, and it is left to a second chip, as §1.5 provides. Two things are left open and do not hold the phase: listening, which is left to the project's author, and the optional check of the new PHROM image on a BBC Micro. The encoder has changed since (repeat search, pre-emphasis, voicing evidence; `encoder/README.md`). The data, predictions and captures above were made with the encoder of commit 01b7fff and stay as they are.
 
 ### Phase 12: Publish
 

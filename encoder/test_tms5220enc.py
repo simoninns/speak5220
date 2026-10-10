@@ -255,6 +255,19 @@ class Synthesis(unittest.TestCase):
                 self.assertTrue(np.array_equal(e[200:200 + len(c)], c))
 
 
+class PreEmphasis(unittest.TestCase):
+    def testChirpInverse(self):
+        a = enc.chirpInverse(4)
+        self.assertTrue(np.allclose(a, [1, -0.938, 0.152, -0.104, -0.006], atol=0.001))
+        # It flattens the chirp: less spectral spread than the chirp itself
+        c = np.array(enc.CHIRP[:21], dtype=float)
+        def spread(y):
+            m = np.abs(np.fft.rfft(y, 256))[3:100]
+            return float(np.std(20 * np.log10(m)))
+        self.assertLess(spread(np.convolve(c, a)), spread(c) / 2)
+        self.assertTrue(np.allclose(enc.preEmphasisFilter(0.9), [1, -0.9]))
+
+
 class Packaging(unittest.TestCase):
     def words(self):
         rng = random.Random(7)
@@ -411,6 +424,26 @@ class Encode(unittest.TestCase):
         self.assertTrue(np.array_equal(lo, hi))
         # No repeats when they are switched off
         self.assertNotIn("repeat", [enc.frameKind(f) for f in enc.encode(x, rate, repeats=False)])
+        # A lower repeatLambda trades distortion for fewer bits
+        def bits(fs):
+            return sum(enc.frameBits(f) for f in fs)
+        self.assertLess(bits(enc.encode(x, rate, repeatLambda=10.0)), bits(frames))
+        self.assertGreater(bits(enc.encode(x, rate, repeatLambda=500.0)), bits(frames))
+        # The first-order pre-emphasis and the plain voicing threshold still work
+        self.assertEqual(enc.encode(x, rate, preEmphasis=0.9, voicingEvidence=0.0)[-1], {"energy": 15})
+
+    def testRepeatRun(self):
+        # Identical frames merge into one segment; a frame that does not fit splits it
+        r1 = np.array([1.0, 0.9, 0.7, 0.5, 0.3])
+        r2 = np.array([1.0, -0.8, 0.5, -0.3, 0.1])
+        run = []
+        for r in (r1, r1, r1, r2, r2):
+            k, err = enc.quantiseK(enc.levinson(r, 4), r)
+            run.append({"voiced": False, "r": r, "order": 4, "k": k, "err": err,
+                        "R": enc._toeplitz(r), "pitch": 0})
+        kinds = [p["kind"] for p in enc._repeatRun(run, 70.0, 8)]
+        self.assertEqual(kinds, ["unvoiced", "repeat", "repeat", "unvoiced", "repeat"])
+        self.assertEqual([p["kind"] for p in enc._repeatRun(run, 70.0, 1)], ["unvoiced"] * 5)
 
 
 if __name__ == "__main__":

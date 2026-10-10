@@ -621,7 +621,9 @@ def trackPitch(x, opts):
     Costs: the CMNDF value of a candidate, an unvoiced cost at the voicing
     threshold, a log-period jump cost between hops (an octave jump costs a
     lot), a voicing switch cost, and a mild prior towards the utterance's
-    median period. Returns (centres, period or 0 per hop).
+    median period. The voicing threshold also takes the hop's spectral
+    tilt and zero-crossing rate into account (_tiltAndCrossings), weighted by
+    voicingEvidence. Returns (centres, period or 0 per hop).
     """
     xl = _sosfiltfilt(_butter("lowpass", 1000.0), x)
     centres, dn, _ = _yin(xl)
@@ -648,6 +650,8 @@ def trackPitch(x, opts):
     # octave beyond 0.6 octave from the median, subharmonic penalty
     alpha, jump, switch, prior, free, subh = 10.0, 12.0, 4.0, 5.0, 0.6, 4.0
     nh = len(centres)
+    tilt, zc = _tiltAndCrossings(x, centres)
+    ev = opts["voicingEvidence"]
     # States per hop: candidates then unvoiced (lag 0)
     states = []
     costs = []
@@ -659,6 +663,9 @@ def trackPitch(x, opts):
         levDb = 20 * math.log10(max(lev, 1e-6))
         th = (thr + 0.35 * min(1.0, max(0.0, (lfr - 0.6) / 0.3)) * min(1.0, max(0.0, (levDb + 30) / 20))
               - 0.15 * min(1.0, max(0.0, (0.5 - lfr) / 0.3)))
+        # Tilt and zero crossings: about +0.06 for a steep low-pass frame,
+        # -0.075 for a fricative at 80 crossings per 10 ms, at weight 1
+        th += ev * (tilt[h] - (zc[h] - 30.0) / 10.0) / 66.7
         st = [lag for lag, _ in cands[h]] + [0.0]
         cst = []
         for lag, val in cands[h]:
@@ -720,6 +727,28 @@ def trackPitch(x, opts):
     return centres, periods
 
 
+def _tiltAndCrossings(x, centres, win=240):
+    """Voicing evidence besides periodicity, over a centred Hamming window
+    at each hop: a tilt score from r1/r0 of the signal pre-emphasised by
+    0.99 (-2 for r1/r0 <= -0.5, -1 below 0.25, 1 below 0.5, 2 below 0.75,
+    else 4), and the zero crossings of the signal per 10 ms."""
+    xp = np.concatenate([x[:1], x[1:] - 0.99 * x[:-1]])
+    padp = np.concatenate([np.zeros(win), xp, np.zeros(win)])
+    pad = np.concatenate([np.zeros(win), x, np.zeros(win)])
+    ham = np.hamming(win)
+    tilt = np.zeros(len(centres))
+    zc = np.zeros(len(centres))
+    for h, c in enumerate(centres):
+        a = c + win - win // 2
+        s = padp[a:a + win] * ham
+        r0 = float(s @ s)
+        q = float(s[:-1] @ s[1:]) / r0 if r0 > 0 else 0.0
+        tilt[h] = -2 if q <= -0.5 else -1 if q < 0.25 else 1 if q < 0.5 else 2 if q < 0.75 else 4
+        sg = np.sign(pad[a:a + win])
+        zc[h] = np.sum(sg[:-1] * sg[1:] < 0) * 80.0 / win
+    return tilt, zc
+
+
 def _sosfiltfilt(sos, x):
     from scipy.signal import sosfiltfilt
     if len(x) < 64:
@@ -735,12 +764,13 @@ DEFAULTS = {
     "targetPeak": None,      # if set, scale so the loudest output peak is this instead
     "peakLimit": 120,        # no output code beyond this (DAC range is +-127)
     "repeats": True,         # use repeat frames
-    "repeatThreshold": 0.8,  # dB of extra prediction error a repeat may cost
+    "repeatLambda": 70.0,    # bits a repeat run may trade per dB of prediction error
     "gateDb": 45.0,          # frames this far below the loudest are silence
-    "preEmphasis": 0.9,      # voiced analysis pre-emphasis (§12.3)
+    "preEmphasis": "chirp",  # voiced analysis pre-emphasis: "chirp" or a coefficient (§12.3)
     "window": 240,           # analysis window, samples (30 ms)
     "lagWindowHz": 60.0,     # Gaussian lag window bandwidth
     "voicingThreshold": 0.3, # CMNDF level at which voiced and unvoiced cost the same
+    "voicingEvidence": 4.0,  # weight of tilt and zero crossings in the voicing threshold
     "iterations": 5,         # closed-loop energy passes
     "fadeUnvoiced": True,    # fade hiss before a stop or silence (§12.2)
 }
@@ -797,6 +827,20 @@ def _energyIndex(value):
     return bi
 
 
+def chirpInverse(order=4):
+    """The FIR that whitens the chirp: the order-`order` LPC inverse of CHIRP."""
+    c = np.array(CHIRP[:21], dtype=float)
+    r = np.array([np.dot(c[:len(c) - i], c[i:]) for i in range(order + 1)])
+    return stepUp(levinson(r, order))
+
+
+def preEmphasisFilter(pe):
+    """FIR coefficients for the preEmphasis option: "chirp", or μ for 1 - μz^-1."""
+    if pe == "chirp":
+        return chirpInverse(4)
+    return np.array([1.0, -float(pe)])
+
+
 def analyse(samples, rate=8000, **options):
     """Analysis without level setting: per-frame features (for encode and tests)."""
     opts = dict(DEFAULTS)
@@ -826,8 +870,8 @@ def analyse(samples, rate=8000, **options):
     ham = np.hamming(win)
     lagw = np.exp(-0.5 * (2 * math.pi * opts["lagWindowHz"] * np.arange(11) / RATE) ** 2)
     pad = np.concatenate([np.zeros(win), x, np.zeros(win + FRAME)])
-    pe = opts["preEmphasis"]
-    xp = np.concatenate([[x[0] if n else 0.0], x[1:] - pe * x[:-1]]) if n > 1 else x.copy()
+    from scipy.signal import lfilter
+    xp = lfilter(preEmphasisFilter(opts["preEmphasis"]), [1.0], x)
     padp = np.concatenate([np.zeros(win), xp, np.zeros(win + FRAME)])
 
     feats = []
@@ -867,39 +911,90 @@ def analyse(samples, rate=8000, **options):
             "loud": loud, "onset": onset, "offset": offset, "c0": c0}
 
 
+BITS_FULL = {True: 50, False: 29}     # full voiced and unvoiced frames
+BITS_REPEAT = 11
+MAX_RUN = 8                           # frames per full frame and its repeats
+
+
 def _kindsAndK(feats, opts):
-    """Quantise K, pick voicing, silence and repeats, before level setting."""
-    plan = []
-    stored = None          # (kidx, voiced) of the last full frame
-    for j, f in enumerate(feats):
+    """Quantise K, pick voicing, silence and repeats, before level setting.
+
+    Repeats are chosen within each run of sounding frames of one voicing, by
+    dynamic programming over segments (a full frame and its repeats) on
+    bits + repeatLambda x distortion (_segment)."""
+    info = []
+    for f in feats:
         if f["gated"]:
-            plan.append({"kind": "silence"})
+            info.append(None)
             continue
-        if f["voiced"]:
-            r = f["rv"]
-            ks = levinson(r, 10)
-            kidx, err = quantiseK(ks, r)
-            p = max(16.0, min(160.0, f["period"]))
-            pidx = pitchIndex(p)
-        else:
-            r = f["ru"]
-            ks = levinson(r, 4)
-            kidx, err = quantiseK(ks, r)
-            pidx = 0
-        full = {"kind": "voiced" if f["voiced"] else "unvoiced", "k": kidx, "pitch": pidx}
-        if (opts["repeats"] and stored is not None and stored[1] == f["voiced"]
-                and len(plan) > 0):
-            R = _toeplitz(np.asarray(r[:len(kidx) + 1], dtype=float))
-            es = _predErr(stored[0], R)
-            if 10 * math.log10(es / err) < opts["repeatThreshold"]:
-                plan.append({"kind": "repeat", "k": stored[0], "pitch": pidx})
-                continue
-        plan.append(full)
-        stored = (kidx, f["voiced"])
+        voiced = f["voiced"]
+        r = np.asarray(f["rv"] if voiced else f["ru"], dtype=float)
+        order = 10 if voiced else 4
+        kidx, err = quantiseK(levinson(r, order), r)
+        pidx = pitchIndex(max(16.0, min(160.0, f["period"]))) if voiced else 0
+        info.append({"voiced": voiced, "r": r, "order": order, "k": kidx, "err": err,
+                     "R": _toeplitz(r[:order + 1]), "pitch": pidx})
+    maxRun = MAX_RUN if opts["repeats"] else 1
+    plan = []
+    j = 0
+    while j < len(info):
+        if info[j] is None:
+            plan.append({"kind": "silence"})
+            j += 1
+            continue
+        a = j
+        while j < len(info) and info[j] is not None and info[j]["voiced"] == info[a]["voiced"]:
+            j += 1
+        plan += _repeatRun(info[a:j], opts["repeatLambda"], maxRun)
     # Trim trailing silence
     while plan and plan[-1]["kind"] == "silence":
         plan.pop()
     return plan
+
+
+def _segment(run, a, b, lam):
+    """(cost, K) of frames a..b-1 of a run sent as one full frame and repeats.
+
+    A frame's distortion is how much its prediction error rises, in dB, under
+    the segment's K instead of its own. The segment's K is its first frame's,
+    or those quantised from the segment's pooled normalised autocorrelation,
+    whichever costs less."""
+    cands = [run[a]["k"]]
+    if b - a > 1:
+        pooled = sum(run[i]["r"] / run[i]["r"][0] for i in range(a, b))
+        pooled[0] *= 1.0001
+        cands.append(quantiseK(levinson(pooled, run[a]["order"]), pooled)[0])
+    best = None
+    for k in cands:
+        d = sum(10 * math.log10(max(_predErr(k, run[i]["R"]), 1e-30) / max(run[i]["err"], 1e-30))
+                for i in range(a, b))
+        c = BITS_FULL[run[a]["voiced"]] + BITS_REPEAT * (b - a - 1) + lam * d
+        if best is None or c < best[0]:
+            best = (c, k)
+    return best
+
+
+def _repeatRun(run, lam, maxRun):
+    """Plan entries for one run of same-voicing frames: the cheapest split
+    into segments of at most maxRun frames."""
+    n = len(run)
+    cost = [0.0] + [math.inf] * n
+    back = [0] * (n + 1)
+    kOf = [None] * (n + 1)
+    for e in range(1, n + 1):
+        for st in range(max(0, e - maxRun), e):
+            c, k = _segment(run, st, e, lam)
+            if cost[st] + c < cost[e]:
+                cost[e], back[e], kOf[e] = cost[st] + c, st, k
+    out = [None] * n
+    e = n
+    while e > 0:
+        st = back[e]
+        for i in range(st, e):
+            kind = ("voiced" if run[i]["voiced"] else "unvoiced") if i == st else "repeat"
+            out[i] = {"kind": kind, "k": list(kOf[e]), "pitch": run[i]["pitch"]}
+        e = st
+    return out
 
 
 def _effectiveK(plan):
@@ -1163,8 +1258,8 @@ def encode(samples, rate=8000, **options):
     """Encode speech (float samples in -1..1) into a list of frames ending in a stop.
 
     Options (defaults in DEFAULTS): targetRms, targetPeak, peakLimit, repeats,
-    repeatThreshold, gateDb, preEmphasis, window, lagWindowHz,
-    voicingThreshold, iterations, fadeUnvoiced.
+    repeatLambda, gateDb, preEmphasis, window, lagWindowHz, voicingThreshold,
+    voicingEvidence, iterations, fadeUnvoiced.
     """
     return encodeDetailed(samples, rate, **options)[0]
 
@@ -1325,11 +1420,31 @@ def main(argv=None):
     e.add_argument("--peak", type=float, default=None,
                    help="scale to this output peak instead of an RMS")
     e.add_argument("--no-repeat", action="store_true", help="no repeat frames")
+    e.add_argument("--repeat-lambda", type=float, default=DEFAULTS["repeatLambda"],
+                   help="bits a repeat run may trade per dB of prediction error; "
+                        "lower gives fewer bits (default %(default)s)")
+    e.add_argument("--pre-emphasis", default=DEFAULTS["preEmphasis"],
+                   help='voiced analysis pre-emphasis: "chirp" or a coefficient '
+                        "such as 0.9 (default %(default)s)")
+    e.add_argument("--voicing-evidence", type=float, default=DEFAULTS["voicingEvidence"],
+                   help="weight of tilt and zero crossings in the voicing decision, "
+                        "0 for periodicity alone (default %(default)s)")
+    e.add_argument("--voicing-threshold", type=float, default=DEFAULTS["voicingThreshold"],
+                   help="CMNDF level at which voiced and unvoiced cost the same; "
+                        "higher gives more voiced frames (default %(default)s)")
     args = ap.parse_args(argv)
+    pe = args.pre_emphasis
+    if pe != "chirp":
+        try:
+            pe = float(pe)
+        except ValueError:
+            ap.error('--pre-emphasis must be "chirp" or a number')
     x, rate = sf.read(args.input, dtype="float64", always_2d=True)
     x = x.mean(axis=1)
     frames = encode(x, rate, targetRms=args.rms, targetPeak=args.peak,
-                    repeats=not args.no_repeat)
+                    repeats=not args.no_repeat, repeatLambda=args.repeat_lambda,
+                    preEmphasis=pe, voicingEvidence=args.voicing_evidence,
+                    voicingThreshold=args.voicing_threshold)
     data = pack(frames)
     with open(args.output, "wb") as fh:
         fh.write(data)

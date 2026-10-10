@@ -407,3 +407,112 @@ Not worth testing, and why:
 - **The wizards' late window:** our frame placement already accounts for the interpolation (`REACHED`).
 - **Rabiner centre-clip pitch with first-peak picking, and QBox's file-level pitch smoothing:** our YIN with a Viterbi path and octave check covers the same ground.
 - **Loud output:** already measured; it lowers PESQ.
+
+## 6. The ideas measured
+
+Each idea was run over all 243 Phase 11 inputs with `speechqual.py`'s measure, on 2026-10-10. The encoder file was not changed. A script in `local/experiments/ideas.py` (not in the repository) patches copies of the encoder's functions in memory, one variant per process.
+
+The baseline reproduces `ti_encoder_clues.md` §4: PESQ 2.00, MCD 2.29, 1342 bits/s.
+
+- **ΔPESQ** is the mean of the per-file changes from the baseline, with a bootstrap 95 % interval.
+- The other columns are medians.
+- **tts/rec** splits ΔPESQ between the 210 synthetic inputs and the 33 recordings.
+
+| Variant | ΔPESQ (95 %) | tts / rec | MCD | lo / mid (dB) | vuv % | bits/s |
+|---|---|---|---|---|---|---|
+| Baseline | | | 2.29 | −1.05 / +0.74 | 11.7 | 1342 |
+| **1. Inverse-chirp pre-emphasis** | | | | | | |
+| order 2 | −0.002 (−0.015, +0.009) | −0.001 / −0.008 | 2.29 | −1.08 / +0.65 | 11.9 | 1345 |
+| order 4 | +0.010 (−0.003, +0.021) | +0.010 / +0.011 | 2.25 | −0.68 / +0.42 | 11.6 | 1348 |
+| order 8 | +0.013 (−0.002, +0.026) | +0.014 / +0.005 | 2.25 | −0.72 / +0.40 | 11.9 | 1349 |
+| **2. QBox voicing evidence**, weight w | | | | | | |
+| w = 1 | +0.006 (+0.001, +0.012) | +0.008 / −0.003 | 2.28 | | 11.7 | 1350 |
+| w = 2 | +0.015 (+0.007, +0.023) | +0.017 / +0.002 | 2.27 | | 11.4 | 1354 |
+| w = 4 | +0.025 (+0.013, +0.036) | +0.030 / −0.007 | 2.26 | | 11.3 | 1368 |
+| w = 8 | +0.030 (+0.017, +0.042) | +0.033 / +0.009 | 2.25 | | 11.4 | 1377 |
+| w = 2, tilt only | +0.005 (−0.002, +0.011) | | 2.28 | | 11.7 | 1346 |
+| w = 2, zero crossings only | +0.011 (+0.005, +0.018) | | 2.28 | | 11.7 | 1353 |
+| **3. Unvoiced energy offset** | | | | | | |
+| −1 dB | −0.006 (−0.013, −0.000) | −0.005 / −0.015 | 2.29 | | 12.2 | 1342 |
+| −3 dB | −0.029 (−0.041, −0.019) | −0.024 / −0.059 | 2.29 | | 13.8 | 1335 |
+| −6 dB | −0.079 (−0.096, −0.062) | −0.068 / −0.151 | 2.31 | | 15.5 | 1325 |
+| **4. Repeats**, greedy threshold (now 0.8 dB) | | | | | | |
+| 0 dB | +0.029 (+0.015, +0.042) | | 2.26 | | 11.8 | 1588 |
+| 0.4 dB | +0.028 (+0.016, +0.041) | | 2.27 | | 11.8 | 1467 |
+| 1.5 dB | −0.046 (−0.060, −0.032) | | 2.36 | | 11.8 | 1157 |
+| 3 dB | −0.167 (−0.184, −0.151) | | 2.52 | | 11.4 | 943 |
+| **4. Repeats** by rate-distortion search, λ bits/dB | | | | | | |
+| λ = 10 | −0.175 (−0.190, −0.159) | | 2.47 | | 11.1 | 842 |
+| λ = 25 | −0.057 (−0.070, −0.044) | | 2.34 | | 11.4 | 1024 |
+| λ = 50 | −0.004 (−0.018, +0.010) | | 2.29 | | 11.6 | 1216 |
+| λ = 70 | +0.013 (−0.001, +0.026) | +0.014 / +0.006 | 2.27 | | 11.8 | 1314 |
+| λ = 100 | +0.021 (+0.008, +0.033) | | 2.27 | | 11.8 | 1392 |
+| λ = 150 | +0.028 (+0.017, +0.038) | | 2.26 | | 12.2 | 1472 |
+| **5. Windows**, voiced / unvoiced (now 240 / 240) | | | | | | |
+| 300 / 400 | −0.002 (−0.018, +0.013) | | 2.29 | −0.95 / +0.74 | 11.7 | 1319 |
+| 300 / 240 | +0.005 (−0.009, +0.019) | | 2.28 | | 12.0 | 1330 |
+| 240 / 400 | −0.009 (−0.020, +0.000) | | 2.29 | | 11.9 | 1336 |
+| **Combined** | | | | | | |
+| order 4 + w = 4 | +0.027 (+0.012, +0.041) | +0.029 / +0.014 | 2.22 | −0.69 / +0.42 | 11.2 | 1366 |
+| order 4 + w = 4 + λ = 70 | +0.029 (+0.015, +0.042) | +0.029 / +0.024 | 2.23 | −0.71 / +0.40 | 11.2 | 1326 |
+| order 4 + w = 4 + λ = 100 | +0.044 (+0.029, +0.058) | +0.045 / +0.038 | 2.21 | −0.71 / +0.41 | 11.2 | 1428 |
+
+### How each variant was built
+
+1. **Inverse chirp.** Voiced frames are pre-filtered by the order-p LPC inverse of `CHIRP`, from its autocorrelation, in place of 1 − 0.9z⁻¹. Order 4 is [1, −0.938, 0.152, −0.104, −0.006]. The order-1 fit is 1 − 0.888z⁻¹, so the present 0.9 is already a first-order inverse chirp.
+2. **Voicing evidence.** QBox's tilt and zero-crossing terms are added to the voicing threshold `th` in `trackPitch` at each 5 ms hop. They are measured over a centred 240-sample window:
+   - **T:** the tilt term from QBox's table, on r1/r0 of the 0.99 pre-emphasised signal.
+   - **zc:** zero crossings of the raw signal per 10 ms.
+
+   The threshold becomes
+
+       th += w · (T − (zc − 30)/10) / 66.7
+
+   The 66.7 is QBox's scale for the strength of the pitch peak. It converts QBox's score into CMNDF units, taking CMNDF ≈ 1 − ρ. A positive term makes voicing easier.
+3. **Unvoiced offset.** In `_setLevels`, the target level of unvoiced frames (full and repeat) is lowered before the closed loop.
+4. **Rate-distortion repeats.** These replace `_kindsAndK`'s greedy rule.
+   - **Runs:** each run of sounding frames with the same voicing is split into segments of up to 8 frames, by dynamic programming. Each segment is one full frame followed by repeats.
+   - **Cost:** bits (50 for a full voiced frame, 29 for a full unvoiced frame, 11 for a repeat) plus λ × the sum of each frame's distortion. A frame's distortion is 10 log10 of its prediction error under the segment's K, divided by its error under its own quantised K.
+   - **The segment's K:** whichever costs less of two candidates. One is the first frame's own K. The other is the K quantised from the segment's pooled, normalised autocorrelation.
+
+   Pitch stays per frame. The closed loop then sets the energies as before. A repeat never crosses silence or a change of voicing.
+5. **Windows.** Separate centred Hamming windows for the voiced and unvoiced autocorrelations.
+
+### What the measurements show
+
+1. **Unvoiced offset: rejected.** It makes things worse at every size, and worst on the recordings: −0.15 at 6 dB, with voicing disagreement up 4 points. The closed loop matching the input's level is right. QBox's ×0.5 and TMS-Express's 0.8 compensate for their open-loop gain; they are not perceptual gains.
+2. **Windows: rejected.** Nothing outside the noise. The longer unvoiced window slightly helps the low-band tilt but slightly raises gross pitch errors (3.2 → 3.5 %).
+3. **Inverse chirp, order 4: worth taking.**
+   - **Tilt:** it halves the tilt error, lo −1.05 → −0.68 dB and mid +0.74 → +0.42 dB.
+   - **MCD:** it improves by 0.03.
+   - **Cost:** none in bits.
+   - **PESQ:** barely moves, +0.01, with an interval that just includes 0.
+
+   Order 8 is no better, and order 2 does nothing, because it is close to 1 − 0.9z⁻¹. This is a change of one constant array in the analysis.
+4. **Voicing evidence: worth taking, at w ≈ 4, with the inverse chirp.**
+   - **Alone:** its gain is almost all on the synthetic voices. At w = 4 the recordings lose 0.007.
+   - **By category** (w = 4): Harvard sentences +0.07, vowels +0.07, pitch prompts +0.08; sibilants −0.01, sustained −0.02. Voicing disagreement falls in every category except sustained and retro.
+   - **Which term:** the zero-crossing term carries most of it; tilt alone is within the noise.
+   - **With the inverse chirp:** the recordings gain too (+0.014), and the pair beats either alone. That is plausible, because the tilt term reads r1/r0 and the chirp filter changes what a voiced frame's K must model.
+   - **Weight:** w = 8 gains a little more but adds bits. w = 4 is the safer setting.
+5. **Rate-distortion repeats: worth taking, as a better bits-for-quality curve.** At the same bit rate the search is better than the greedy rule:
+
+   | bits/s | Greedy ΔPESQ (interpolated) | Search ΔPESQ |
+   |---|---|---|
+   | 1024 | −0.12 | −0.06 |
+   | 1216 | −0.03 | −0.00 |
+   | 1392 | +0.01 | +0.02 |
+
+   Equivalently, it saves about 100 to 130 bits/s at equal quality, about 9 % at the present quality (λ = 50: 1216 bits/s, ΔPESQ −0.004). λ is a single, understandable rate control (bits per dB of prediction error), which `repeatThreshold` is not.
+
+### Recommendation for the encoder
+
+Together, the three kept ideas give about +0.03 PESQ, −0.06 MCD, half the tilt error and −0.5 points of voicing disagreement, at the same bit rate. The configuration is order-4 inverse chirp, voicing evidence at w = 4, and rate-distortion repeats at λ = 70, at 1326 bits/s against 1342. λ = 100 gives +0.044 for 6 % more bits. The gain is about a tenth of what the format costs (`ti_encoder_clues.md` §5), consistent with that section's finding that the analysis is near what the format allows. But the gain is consistent in both sets, the intervals exclude zero, and it costs no bits.
+
+In order of value for effort:
+
+1. **The order-4 inverse-chirp pre-filter for voiced frames.** It replaces the `preEmphasis` scalar with a filter derived from `CHIRP`, which the encoder already holds from the datasheet.
+2. **Rate-distortion repeats,** with λ as the option in place of `repeatThreshold`.
+3. **The tilt and zero-crossing terms in the voicing threshold.** These are the least certain: their weight was tuned on these inputs, mostly synthetic. Check them on new recordings before relying on them.
+
+None of these was checked by listening.
