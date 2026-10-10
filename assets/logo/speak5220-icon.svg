@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Speak5220</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23314f"/>
+      <stop offset="1" stop-color="#151d33"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+  <!-- LPC frames: one bar per frame, height from the quantised energy -->
+  <g fill="#5cff9d" transform="translate(256 256) scale(1.2) translate(-244 -232)">
+    <rect x="98"  y="214" width="28" height="36"  rx="14"/>
+    <rect x="142" y="172" width="28" height="120" rx="14"/>
+    <rect x="186" y="132" width="28" height="200" rx="14"/>
+    <rect x="230" y="160" width="28" height="144" rx="14"/>
+    <rect x="274" y="118" width="28" height="228" rx="14"/>
+    <rect x="318" y="182" width="28" height="100" rx="14"/>
+    <rect x="362" y="206" width="28" height="52"  rx="14"/>
+  </g>
+</svg>
