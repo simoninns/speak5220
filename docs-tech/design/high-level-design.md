@@ -127,6 +127,10 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   version (6.11.2); the other libraries from vcpkg in manifest mode
   (`app/vcpkg.json`, pinned by `builtin-baseline`; libsndfile without its
   compressed-format features), through vcpkg's CMake toolchain file.
+- The root `.gitattributes` stops git converting line endings in the
+  reference data: `.bin`, `.wav`, `.flac` and `.ssd` files are binary, and
+  the text files in `app/golden/` keep LF. Without it, a Windows checkout
+  (`core.autocrlf=true`) turns LF bytes in small binaries into CR LF.
 
 **Nix** (`flake.nix`):
 
