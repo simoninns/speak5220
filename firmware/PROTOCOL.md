@@ -118,6 +118,8 @@ Core 1 runs the VSM emulation in a polling loop. The same loop records every VSM
 
 The TMS5220 has no clock of its own. `OSC` stops whenever the Pico resets or is reflashed, and whenever `CLOCK 0` is sent. On 2026-10-06, reflashing the Pico while the old demo loop was speaking left the chip unable to complete a write: `READY` went high on `WS` and never returned low. Status reads still worked and returned `0x7F`. The chip had not run its power-up clear either, because the trace showed no VSM accesses. Restarting the clock did not help. Only cycling the TMS5220's power did. A later reflash while the chip was idle did no harm.
 
+The same symptom followed the `TEST` trials of 2026-10-10. Writes hung on READY while status reads returned `0x7F`. It happened after a 1 kΩ from `TEST` (pin 20) to +5 V was fitted while the chip was running, and again after one power cycle by hand. A power cycle that switched both rails together cleared it. With `TEST` held high from power-up, writes work but a Speak never reads a frame, so the host times out waiting for Talk Status to clear (datasheet §11.2).
+
 Phase 5 found that stops while the chip is idle are safe (datasheet §7):
 - **Up to 1 s:** the chip's state freezes, and it carries on where it stopped.
 - **After 10 s:** the chip still worked, but its frame clock had moved.

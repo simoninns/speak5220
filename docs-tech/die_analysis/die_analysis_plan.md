@@ -54,7 +54,7 @@ Each target is an unknown named in the reference datasheet. The order is by the 
 | T4 | **The chip-specific departures and upsets** | §8.8 "A second error"; §7 upsets | The dynamic and precharged nodes on the T1/T2 paths, and any ratioed gate there: transistor W/L, node size, which clock phase precharges it | Hard. Needs sizes, not just connections |
 | T5 | **The chirp table** | §8.1 Table 8-7, §8.6 | The chirp ROM (patent ROM 409): all 52 words, their bit weights and sign, and the address decoding, including the clamp that makes any count above 51 read location 51. Found as block I. The parameter ROM in C is read first, as a check of the method (Phase 2) | **Done** (`phase2.md` §3): all 52 words equal Table 8-7. The clamp above 51 is not read |
 | T6 | **The DAC** | §8.2: the 26 µA step between codes −1 and 0, the 7 % scale step after a power cycle | Whether the DAC is sign-magnitude, offset binary or two's complement, its weighting, and its bias source | Medium |
-| T7 | **`PROM OUT` and `TEST`** | §11.2 | The nets behind pins 10 and 20 | Easy to find; meaning depends on F |
+| T7 | **`PROM OUT` and `TEST`** | §11.2 | The nets behind pins 10 and 20 | **`TEST` answered without the die (2026-10-10).** The patent's Figs. 7a, 8g, 11c and 11d and a bench trial gave its function (datasheet §11.2). The die trace stops one contact into F (Phase 7 below). `PROM OUT` was answered on the bench (datasheet §8.10) |
 | T8 | **The Speak External two-sample offset** | §8.5 "Speak External" | Where the Speak External path enters the frame timing in F | Hard. Control logic |
 | T9 | **Host interface timing details** | §3 "Not measured yet" | The READY, INT and FIFO-full logic in F and D | Hard, and also measurable on the bench, which is easier |
 
@@ -192,7 +192,7 @@ Only if Phases 3 and 4 leave the *d*₁ < 0 sensitivity or the chip-specific dep
 
 This phase is open-ended, and much of it can also be measured on the bench, so it is done last and only as far as it is useful.
 
-1. Trace pads 10 (`PROM OUT`) and 20 (`TEST`) to their sources (T7).
+1. Trace pads 10 (`PROM OUT`) and 20 (`TEST`) to their sources (T7). **`TEST` traced as far as the image allows (2026-10-10).** From P25 a diffusion strap (the input resistor) passes through a small metal piece with a long window beside the pad (x 10,568–10,723, y 462–797; probably the protection diode's contact), runs on to the contact at (10,035, 1,680), and joins a metal line along y 1,667–1,685 from x 10,055 to 10,637. That line has one stub down to a contact at (10,412, 1,709). Below it the signal continues in diffusion, through a small metal jumper (x 10,369–10,451, y 1,821–1,848), into the logic of F. Past that, the diffusion cannot be followed in either image, so the first gate was not found. No pull device was seen, though the patent and the bench show one. The function came from the patent's drawings (Fig. 8g: the pad, its load to `VDD`, and two NANDs with C4 and C5 making TEST1 and TEST2) and a bench trial (datasheet §11.2). C4 and C5 have no source in the drawings: finding them is what is left for the die, and needs a delayered image.
 2. Find the PC and timing PLA in F, and read its terms. A PLA is a grid of gates like the ROMs, so it can be read with the method of `phase2.md`. With that, find where Speak External enters the frame timing (T8).
 3. Trace the FIFO control and the READY/INT logic only where a bench test cannot answer an item on the §3 "Not measured yet" list (T9).
 
