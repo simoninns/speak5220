@@ -1,6 +1,6 @@
 # The lowest-order arithmetic: test ideas
 
-**Status: working notes, 2026-10-08.** The one thing between Phase 9 and acceptance test 1 is the TMS5220's lowest-order arithmetic: the model's voiced output is one code off at a few samples per pitch period, and no form of the multiplier or adder tried so far removes it (datasheet §8.8, "Not known yet"). This document collects what any answer has to explain, two observations made while writing it, and the tests and analyses that could settle it, roughly in the order they are worth doing. Nothing here is a result; where a number is given it comes from the Phase 9 regression (`captures/phase9/regress/`) or from a quick check noted as such.
+**Status: working notes, 2026-10-08; §2.4 (the fit at scale, no rule found) added 2026-10-09.** The one thing between Phase 9 and acceptance test 1 is the TMS5220's lowest-order arithmetic: the model's voiced output is one code off at a few samples per pitch period, and no form of the multiplier or adder tried so far removes it (datasheet §8.8, "Not known yet"). This document collects what any answer has to explain, two observations made while writing it, and the tests and analyses that could settle it, roughly in the order they are worth doing. Nothing here is a result; where a number is given it comes from the Phase 9 regression (`captures/phase9/regress/`) or from a quick check noted as such.
 
 Conventions as in the datasheet: *K* is a 10-bit two's-complement coefficient, *M* the 14-bit multiplicand, *d*₀–*d*₄ its radix-4 Booth digits (−2…+2, *d*₀ least significant), *u*ᵢ and *b*ᵢ the lattice values, and a "product" is one of the 20 multiplications in a sample period (energy, the ten *u* products, the nine *b* products).
 
@@ -75,6 +75,45 @@ Sections 3.1–3.3 and 4.2 were tried, and chip 1's unvoiced sweeps were capture
 - §4.5 is now the decisive test: the unvoiced sweeps hot and cold, and at the `VDD` limits. If the *d*₁ < 0 departures move with temperature or supply and the voiced tails do not, there are two mechanisms, and only the second can be modelled exactly.
 - The unvoiced sweeps on chip 4 (§4.1).
 - A search with features from the operations before K1 × *b*₁ in the chip's time order, to look for the "previous contents" dependence.
+
+### 2.4 The fit at scale (2026-10-09)
+
+The die analysis was deferred after its Phase 4 (§5), and the §3.1 search was run on everything captured. Two tools were written for it:
+- **`tools/fitsearch.py`** records each take's filter inputs once from `model.py`. The energy, the excitation and the coefficients do not depend on the filter's state, so from then on only the filter is replayed. The products come from a table of the multiplier for every *K* and *M*, and each departure's 320 candidate corrections (20 products, ±1 and ±2, in the departure's sample and the 3 before it) are replayed together as one numpy batch. The replay equals `model.py` on all 1,069 takes of the K set. The whole data set runs in under 6 minutes on 16 cores.
+- **`tools/tablefit.py`** asks whether the error is a fixed function of the operands. It changes single entries of the product table, picked from the corrections tied at each run's first departure, and scores each one by replaying every run that uses that entry. It fits the vector sets and holds the PROM words out.
+
+Results (`local/fitsearch/`, kept local):
+
+| Source | Runs | Departures searched | Explained by one correction | Products tied (median) | Tied on one product only |
+|---|---|---|---|---|---|
+| Vectors (chips 1 and 4, and chip 1's repeat) | 4,338 takes | 18,903 | 15,077 | 11 | 504 |
+| PROM words (the takes' majority) | 2,271 words | 5,635 | 3,365 | 12 | 254 |
+
+- **Single corrections still cannot place the error.** A departure is almost always explained by ±1 or ±2 on one product. But a median of 11–12 products tie, as §2.3 found on the K1 sweep. Most of the 758 departures that point at one product come from the tails of three voiced vectors: `energy` v_e13, `pitch` p19 and `ring` n_e13, repeated each period, on both paths and both chips. There, K1 × *b*₁ with *K* = −1 and *M* = 1 needs +1 where the model gives −1. The same operands occur about 9,500 times elsewhere, and there the chip gives −1. The label follows the run and the state, not the operands.
+- **One table entry stands out.** Changing *K* = 10, *M* = −2 from −1 to +1 is the only large single change. *K* = 10 is K6's neutral value (index 6), which constraint 8 pointed at. On its own, over all 6,609 runs:
+  - exact runs rise from 323 to 377;
+  - samples differing fall by 5.4 %;
+  - the sum of first-departure indices rises by 26 %.
+  
+  On the PROM words it changes almost nothing (first departures +0.1 %), because there K6 is rarely 10 while the filter is near zero.
+- **That entry depends on the chip and the chain.** Over chip 1's vector takes it fits best in both chains: exact takes rise from 259 to 313. Over chip 4's it fits best in the *u* chain only (K6 × *b*₆): 64 to 102 exact. In the *b* chain (K6 × *u*₆) it makes chip 4 worse. A design rule would be the same on both chips. The other entries near it in *M* fit worse: *M* = −1 and −3 make no difference, and −4 → +1 is much worse.
+- **More entries overfit.** Fifteen rounds of four entries each added 55 entries:
+  - exact vector takes rose from 323 to 396;
+  - on the held-out PROM words, the first-departure sum fell 1.1 % and samples differing rose 0.2 %;
+  - after the first round the entries are scattered over *K* and *M*, and some make a product even, which the forced 1 forbids.
+
+  The fit is learning the vectors' limit cycles, not a rule.
+- **Ruled out.** Each was scored by replaying every run, and each fits worse than the present form. The present form has 323 exact runs. The conditioned +1s come closest, at 289–319, and lose on every other measure. Rounding and the carry-save array fall to 30–70:
+  - the +1 of stage 1 dropped when *d*₀ = 0, when *d*₀ ≤ 0, or when *d*₀ < 0;
+  - stage 0's +1 restored when *d*₁ < 0 or when *d*₁ ≥ 0, alone or with the stage 1 drop;
+  - rounding (adding half the shifted-out weight) at the shift into stage 3, at every shift, or only where the next digit is 0;
+  - a carry-save array, with sum and carry words shifted separately, with and without stage 0's +1, and with the final shift before or after the carry-propagate add;
+  - *K* = −1, *M* = 1 → +1 for every product, and *K* = −1, 0 < *M* < 512 → +1.
+
+**Reading.** The vectors cannot be fitted by any function of a product's own operands that also holds on the PROM words. The one entry that helps a lot behaves differently on the two chips and in the two chains. This agrees with §2.3: the error belongs to the design (the chips leave the model at the same samples), but which way an operation goes depends on the state and on the part, as a level effect would. Option 2 as it was defined, a rule read from the departures, has gone as far as these data allow. What could still move it:
+- §4.5, the temperature and supply test, to show whether the departures move with temperature or supply;
+- a delayered die image (die plan §5);
+- vectors that hold the filter in one tail state for a long time and vary only one product's operands, so that the chip itself labels an operation.
 
 ## 3. Analysis: no bench time needed
 
@@ -181,6 +220,8 @@ The Phase 5 bench changes (heating or cooling the chip, `VDD` at the rails' limi
 **Done in part (2026-10-09, `docs-tech/die_analysis/phase3.md`).** The array is found, and step 2 below is done as far as a top-metal image allows. Bits 1 and 2 of every stage are the ordinary cell. Bit 0's inputs from below are tied off, and no reading of the ties improves the model. Stage 0 has no adder, which explains its missing +1. Stages 1–3 are one cell, so the *d*₁ < 0 signature points at stage 1's input from stage 0 (Phase 5 of the die plan). Steps 3 and 4 are done as far as the image allows (`phase4.md`):
 - **The summer side is one cell per bit.** The adder, the summer multiplexer and the Y latch are the same at bit 0 as in the middle, and the Y latch is 14 bits wide.
 - **The traced multiplier input fits the model only with a constant 0 below its lowest bit.** That bit comes from a separate cell, which makes it a second Phase 5 candidate.
+
+**Deferred after step 4 (2026-10-09).** The remaining candidates need levels and timing, which a top-metal image cannot show; the die work waits for a delayered image (die plan §6). The effort moves to the fit from the vectors (§3.1).
 
 The text below is the plan as first written.
 
