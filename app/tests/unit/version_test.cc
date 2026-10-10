@@ -9,19 +9,19 @@
 
 #include "core/util/version.h"
 
+#include <regex>
 #include <string>
 
-#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace speak5220::core {
 namespace {
 
-using ::testing::MatchesRegex;
-
+// std::regex rather than gMock's MatchesRegex: on Windows Google Test uses
+// its own simple regular expressions, which have no character classes.
 TEST(VersionTest, ReportsMajorMinorPatch) {
-  EXPECT_THAT(std::string(Version()),
-              MatchesRegex(R"([0-9]+\.[0-9]+\.[0-9]+)"));
+  const std::regex pattern(R"([0-9]+\.[0-9]+\.[0-9]+)");
+  EXPECT_TRUE(std::regex_match(std::string(Version()), pattern)) << Version();
 }
 
 }  // namespace
