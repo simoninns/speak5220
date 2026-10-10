@@ -43,6 +43,24 @@
     scores on the same input, so the gap to it is what quantisation, the
     chip's excitation and the encoder's choices cost together.
 
+    --ladder scores the steps from that anchor to the chip, one change at
+    a time, to show where the quality goes (LADDER):
+
+      anchor   the vocoder above
+      q        + the chip's K, pitch and energy tables (K1-K4 if unvoiced)
+      qc       + the chip's excitation: the chirp, pre-emphasis for voiced
+               frames only and none undone, energy set from the input's RMS
+      qci      the same frames through the reference model's timing,
+               interpolation and excitation (tools/model.py) with a
+               floating-point lattice
+      enc      the encoder's frames through that floating-point model
+      chip     the encoder's frames on the emulator (the main result)
+
+    and, as a breakdown of q, the anchor with only the K (qk), pitch (qp)
+    or energy (qe) table. q to qci use the anchor's analysis, not the
+    encoder's, so qci to enc is what the encoder's own choices are worth
+    against it, and enc to chip is the chip's integer arithmetic.
+
       python tools/speechqual.py IN.wav [IN2.flac ...]
       python tools/speechqual.py IN.wav --bin OUT.bin    # score existing frames
       python tools/speechqual.py --set tts --anchor --csv q.csv
@@ -73,6 +91,7 @@ import soundfile
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.join(ROOT, "encoder"))
 import tms5220enc as enc  # noqa: E402
+import model  # noqa: E402  (tools/model.py: the chip's tables and timing for the ladder)
 
 EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "emulator", "tms5220emu"))
 INPUTS = os.path.join(ROOT, "captures", "phase11", "inputs")
@@ -296,65 +315,229 @@ def compare(ref, deg):
 
 # ---- the anchor: a floating-point LPC-10 vocoder -----------------------
 
-def lpcVocoder(x, seed=1):
-    pre = 0.9375
-    order, hop, win, steps = 10, 200, 240, 8
-    y = scipy.signal.lfilter([1, -pre], [1], x)
+PRE = 0.9375
+LPC_ORDER, LPC_HOP, LPC_WIN, LPC_STEPS = 10, 200, 240, 8
+
+
+def polyOf(k):
+    """A(z) from reflection coefficients (k1 = -R1/R0, the chip's sign)."""
+    a = np.array([1.0])
+    for ki in k:
+        a = np.concatenate([a, [0]]) + ki * np.concatenate([[0], a[::-1]])
+    return a
+
+
+def lpcAnalysis(x, chip=False, preFilter=(1, -PRE)):
+    """Per 25 ms frame: K, residual gain, period (0 = unvoiced) and the
+    input's RMS. chip=False pre-emphasises every frame (the anchor);
+    chip=True follows the chip's format: pre-emphasis for voiced frames
+    only, unvoiced frames from the plain signal and K1-K4 only. preFilter
+    is the FIR pre-emphasis."""
+    order, hop, win = LPC_ORDER, LPC_HOP, LPC_WIN
     w = np.hamming(win)
+    y = scipy.signal.lfilter(preFilter, [1], x)
+    padY = np.concatenate([np.zeros(win), y, np.zeros(win)])
+    padX = np.concatenate([np.zeros(win), x, np.zeros(win)])
+    lagw = np.exp(-0.5 * (2 * np.pi * 60 * np.arange(1, order + 1) / RATE) ** 2)
     f0, voiced = pitch(x)
     level = levelDb(x)
-    nfr = len(x) // hop + 1
-    ks, gains, periods = [], [], []
-    for j in range(nfr):
+    out = []
+    for j in range(len(x) // hop + 1):
         c = hop * j + hop // 2
-        seg = np.concatenate([np.zeros(win), y, np.zeros(win)])[c + win // 2:c + win // 2 + win] * w
+        h = [n for n in range(c // HOP - 1, c // HOP + 2) if 0 <= n < len(f0)]
+        v = [f0[n] for n in h if voiced[n] and level[n] > level.max() - SPEECH_DB]
+        period = RATE / np.median(v) if len(v) >= 2 else 0
+        plain = padX[c + win // 2:c + win // 2 + win] * w
+        seg = plain if (chip and not period) else padY[c + win // 2:c + win // 2 + win] * w
+        n = 4 if (chip and not period) else order
         r = np.array([np.dot(seg[:win - i], seg[i:]) for i in range(order + 1)])
         r[0] = r[0] * 1.0001 + 1e-12
-        r[1:] *= np.exp(-0.5 * (2 * np.pi * 60 * np.arange(1, order + 1) / RATE) ** 2)
+        r[1:] *= lagw
         k, e = np.zeros(order), r[0]
         a = np.zeros(order + 1)
         a[0] = 1
-        for i in range(1, order + 1):
+        for i in range(1, n + 1):
             ki = -np.dot(a[:i], r[i:0:-1]) / e
             a[:i + 1] = a[:i + 1] + ki * a[i::-1]
             k[i - 1] = ki
             e *= 1 - ki * ki
-        h = [n for n in range(c // HOP - 1, c // HOP + 2) if 0 <= n < len(f0)]
-        v = [f0[n] for n in h if voiced[n] and level[n] > level.max() - SPEECH_DB]
-        periods.append(RATE / np.median(v) if len(v) >= 2 else 0)
-        ks.append(k)
-        gains.append(math.sqrt(e / np.sum(w * w)))
+        out.append({"k": k, "gain": math.sqrt(e / np.sum(w * w)), "period": period,
+                    "rms": math.sqrt(np.sum(plain ** 2) / np.sum(w * w))})
+    return out
+
+
+def _lar(k):
+    k = np.clip(k, -0.999, 0.999)
+    return np.log((1 + k) / (1 - k))
+
+
+def quantise(fr, key, parts="kpe"):
+    """The chip's tables applied to analysed frames: K to the nearest entry
+    in log-area ratio (K1-K4 only if unvoiced), the period to the nearest
+    value + 1, and the gain in `key` to the energy table, scaled so the
+    loudest frame is 100 (between entries 13 and 14); below half of entry 1
+    is silence. Adds the indices; parts says which values are replaced."""
+    loud = max(f[key] for f in fr) or 1.0
+    scale = 100.0 / loud
+    ktab = [np.array(row, dtype=float) / 512 for row in model.K]
+    periods = np.array(model.PITCH[1:], dtype=float) + 1
+    energies = np.array(model.ENERGY[1:15], dtype=float)
+    out = []
+    for f in fr:
+        g = dict(f)
+        n = 10 if f["period"] else 4
+        g["kIdx"] = [int(np.argmin(np.abs(_lar(ktab[i]) - _lar(f["k"][i])))) for i in range(n)]
+        if "k" in parts:
+            g["k"] = np.array([ktab[i][g["kIdx"][i]] for i in range(n)] + [0.0] * (10 - n))
+        if f["period"]:
+            g["pIdx"] = 1 + int(np.argmin(np.abs(np.log(periods) - math.log(f["period"]))))
+            if "p" in parts:
+                g["period"] = float(periods[g["pIdx"] - 1])
+        else:
+            g["pIdx"] = 0
+        e = f[key] * scale
+        if e < energies[0] / 2:
+            g["eIdx"] = 0
+            if "e" in parts:
+                g[key] = 0.0
+        else:
+            g["eIdx"] = 1 + int(np.argmin(np.abs(np.log(energies) - math.log(e))))
+            if "e" in parts:
+                g[key] = float(energies[g["eIdx"] - 1]) / scale
+        out.append(g)
+    return out
+
+
+CHIRP = np.array([v - 256 if v >= 128 else v for v in model.CHIRP], dtype=float)
+
+
+def unitRms(k, period, nfft=4096):
+    """Output RMS of the chip's filter for energy 1: the chirp (truncated at
+    the period) once per period if voiced, else +-64; each times E/8."""
+    H = 1.0 / np.abs(np.fft.fft(polyOf(k), nfft)) ** 2
+    if not period:
+        return 8.0 * math.sqrt(float(np.mean(H)))
+    c = CHIRP[:min(int(period), len(CHIRP))]
+    C = np.abs(np.fft.fft(c, nfft)) ** 2
+    return math.sqrt(float(np.mean(C * H)) / period) / 8.0
+
+
+def chipEnergy(fr):
+    """The energy that gives each frame the input's RMS through the chip's
+    excitation (fr from lpcAnalysis(chip=True))."""
+    return [dict(f, energy=f["rms"] / max(1e-12, unitRms(f["k"], f["period"]))) for f in fr]
+
+
+def synthLinear(fr, n, key="gain", excitation="pulse", deemph=True, seed=1):
+    """A float LPC synthesiser: K and gain interpolated linearly over 8
+    steps a frame. excitation "pulse" is an impulse of energy p per period
+    and unit noise; "chip" is the chirp and +-8 noise as the chip scales them."""
+    hop, steps = LPC_HOP, LPC_STEPS
     rng = np.random.default_rng(seed)
-    out = np.zeros(nfr * hop)
-    state = np.zeros(order)
-    nextPulse = 0.0
+    out = np.zeros(len(fr) * hop)
+    state = np.zeros(LPC_ORDER)
+    nextPulse, since = 0.0, len(CHIRP)
     sub = hop // steps
-    for j in range(nfr):
-        k0 = ks[j - 1] if j else ks[0]
-        g0 = gains[j - 1] if j else 0.0
+    for j, f in enumerate(fr):
+        k0 = fr[j - 1]["k"] if j else f["k"]
+        g0 = fr[j - 1][key] if j else 0.0
+        p = f["period"]
         for s in range(steps):
             t = (s + 1) / steps
-            k = k0 + (ks[j] - k0) * t
-            g = g0 + (gains[j] - g0) * t
-            a = np.array([1.0])
-            for ki in k:
-                a = np.concatenate([a, [0]]) + ki * np.concatenate([[0], a[::-1]])
+            k = k0 + (f["k"] - k0) * t
+            g = g0 + (f[key] - g0) * t
             n0 = j * hop + s * sub
             ex = np.zeros(sub)
-            p = periods[j]
-            if p:
-                while nextPulse < n0 + sub:
-                    if nextPulse >= n0:
-                        ex[int(nextPulse) - n0] = math.sqrt(p)
-                    nextPulse += p
-            else:
-                ex = rng.standard_normal(sub)
-                nextPulse = n0 + sub
-            seg, state = scipy.signal.lfilter([g], a, ex, zi=state)
+            for i in range(sub):
+                if p:
+                    if n0 + i >= nextPulse:
+                        if excitation == "pulse":
+                            ex[i] = math.sqrt(p)
+                        since = 0
+                        nextPulse += p
+                    if excitation == "chip" and since < len(CHIRP):
+                        ex[i] = CHIRP[since] / 8.0
+                    since += 1
+                else:
+                    ex[i] = rng.standard_normal() if excitation == "pulse" else rng.choice((-8.0, 8.0))
+                    nextPulse = n0 + i + 1
+            seg, state = scipy.signal.lfilter([g], polyOf(k), ex, zi=state)
             out[n0:n0 + sub] = seg
+    if deemph:
+        out = scipy.signal.lfilter([1], [1, -PRE], out)
     # the frame's values are reached at its centre: undo the half-frame lag
-    out = scipy.signal.lfilter([1], [1, -pre], out)
-    return np.concatenate([out[hop // 2:], np.zeros(hop // 2)])[:len(x)]
+    return np.concatenate([out[hop // 2:], np.zeros(hop // 2)])[:n]
+
+
+def lpcVocoder(x, seed=1):
+    return synthLinear(lpcAnalysis(x), len(x), seed=seed)
+
+
+class FloatChip(model.Model):
+    """The reference model's timing, interpolation and excitation with a
+    floating-point lattice: no rounding, no wrap, no output clipping."""
+
+    def reset(self):
+        super().reset()
+        self.uf, self.xf, self.outF = [0.0] * 11, [0.0] * 10, []
+
+    def lattice(self, excitation):
+        k, kx, u, x = self.view[2:12], self.view[14:24], self.uf, self.xf
+        u[10] = self.view[0] * excitation / 8.0
+        for i in range(9, -1, -1):
+            u[i] = u[i + 1] - k[i] * x[i] / 512.0
+        for i in range(9, 0, -1):
+            x[i] = x[i - 1] + kx[i - 1] * u[i - 1] / 512.0
+        x[0] = u[0]
+        self.outF.append(u[0])
+        return int(max(-16384, min(16383, round(u[0]))))
+
+
+def floatChip(frs):
+    """Frames (encoder dicts) spoken by FloatChip from a reset."""
+    m = FloatChip()
+    m.speak(list(frs) + [{"energy": 15}], lead=0, tail=200)
+    return np.array(m.outF)
+
+
+def toFrames(fr):
+    """Quantised analysis frames as chip frames, ending with a stop."""
+    out = []
+    for f in fr:
+        if f["eIdx"] == 0:
+            out.append({"energy": 0})
+        else:
+            out.append({"energy": f["eIdx"], "repeat": 0, "pitch": f["pIdx"], "k": f["kIdx"]})
+    while out and out[0]["energy"] == 0:
+        out.pop(0)
+    return out
+
+
+LADDER = [("anchor", "float LPC-10 vocoder"),
+          ("q", "+ the chip's tables (K, pitch, energy; 4 K unvoiced)"),
+          ("qc", "+ the chip's excitation (chirp; pre-emphasis voiced only, none undone)"),
+          ("qci", "+ the chip's interpolation and timing (float model)"),
+          ("enc", "the encoder's frames (float model)"),
+          ("chip", "the encoder's frames on the emulator")]
+# Not steps: the anchor with one of q's three tables at a time
+PARTS = [("qk", "anchor + K table only"), ("qp", "anchor + pitch table only"),
+         ("qe", "anchor + energy table only")]
+
+
+def ladder(ref, frs):
+    """Each step's output, from the anchor to the chip's own (chip itself
+    is scored in measure)."""
+    n = len(ref)
+    a = lpcAnalysis(ref)
+    c = quantise(chipEnergy(lpcAnalysis(ref, chip=True)), "energy")
+    return {"anchor": synthLinear(a, n),
+            "qk": synthLinear(quantise(a, "gain", "k"), n),
+            "qp": synthLinear(quantise(a, "gain", "p"), n),
+            "qe": synthLinear(quantise(a, "gain", "e"), n),
+            "q": synthLinear(quantise(a, "gain"), n),
+            "qc": synthLinear(c, n, key="energy", excitation="chip", deemph=False),
+            "qci": floatChip(toFrames(c)),
+            "enc": floatChip(frs)}
 
 
 # ---- one input ----------------------------------------------------------
@@ -368,7 +551,7 @@ def matchLevel(ref, deg):
 
 
 def measure(job):
-    path, binPath, opts, anchor, wavDir, framesCsv = job
+    path, binPath, opts, anchor, steps, wavDir, framesCsv = job
     x = readAudio(path)
     ref = scipy.signal.sosfiltfilt(scipy.signal.butter(2, 60, "highpass", fs=RATE, output="sos"), x)
     if binPath:
@@ -396,6 +579,14 @@ def measure(job):
         row.update({"anchor_" + k: v for k, v in am.items() if k != "speechFrames"})
         if wavDir:
             soundfile.write(os.path.join(wavDir, name + "_lpc.wav"), scaled(voc, ref), RATE, subtype="PCM_16")
+    if steps:
+        for step, y in ladder(ref, frs).items():
+            out = matchLevel(ref, placed(y, refine(ref, y, align(ref, y)), len(ref)))
+            sm, _ = compare(ref, out)
+            row.update({f"{step}_{k}": v for k, v in sm.items() if k != "speechFrames"})
+            if wavDir:
+                soundfile.write(os.path.join(wavDir, f"{name}_{step}.wav"), scaled(out, ref), RATE, subtype="PCM_16")
+        row.update({"chip_" + k: v for k, v in m.items() if k != "speechFrames"})
     if wavDir:
         soundfile.write(os.path.join(wavDir, name + "_input.wav"), scaled(ref, ref), RATE, subtype="PCM_16")
         soundfile.write(os.path.join(wavDir, name + "_chip.wav"), scaled(deg, ref), RATE, subtype="PCM_16")
@@ -443,6 +634,37 @@ def summary(name, rows, anchor):
     return s
 
 
+LADDER_COLUMNS = [("pesq", "PESQ", "%4.2f"), ("mcd", "MCD", "%5.2f"), ("tiltLow", "lo", "%+5.1f"),
+                  ("tiltMid", "mid", "%+5.1f"), ("tiltHigh", "hi", "%+5.1f"), ("levelErr", "lvl", "%4.1f"),
+                  ("vuv", "vuv%", "%5.1f"), ("gpe", "gpe%", "%5.1f"), ("f0Cents", "f0c", "%5.0f")]
+
+
+def ladderLine(r):
+    return "%-26s" % r["file"][:26] + "".join(" %6s" % ("%4.2f" % r[s + "_pesq"]) for s, _ in LADDER)
+
+
+def ladderSummary(rows):
+    """Medians per step, and each step's change from the one before."""
+    head = "%-8s" % "step" + "".join(" %*s" % (max(5, len(fmt % 0)), t) for _, t, fmt in LADDER_COLUMNS)
+    lines = [head]
+    prev = None
+    for s, what in LADDER:
+        med = {k: float(np.nanmedian([r[f"{s}_{k}"] for r in rows])) for k, _, _ in LADDER_COLUMNS}
+        lines.append("%-8s" % s + "".join(" %*s" % (max(5, len(fmt % 0)), fmt % med[k])
+                                          for k, _, fmt in LADDER_COLUMNS) + "   " + what)
+        if prev is not None:
+            d = float(np.nanmedian([r[f"{s}_pesq"] - r[f"{prev}_pesq"] for r in rows]))
+            lines[-1] += "  (PESQ %+.2f)" % d
+        prev = s
+    lines.append("")
+    for s, what in PARTS:
+        med = {k: float(np.nanmedian([r[f"{s}_{k}"] for r in rows])) for k, _, _ in LADDER_COLUMNS}
+        d = float(np.nanmedian([r[f"{s}_pesq"] - r["anchor_pesq"] for r in rows]))
+        lines.append("%-8s" % s + "".join(" %*s" % (max(5, len(fmt % 0)), fmt % med[k])
+                                          for k, _, fmt in LADDER_COLUMNS) + "   " + what + "  (PESQ %+.2f)" % d)
+    return "\n".join(lines)
+
+
 def phase11Inputs(which, match, limit):
     out = []
     for sub in (["tts", "recordings"] if which == "all" else [which]):
@@ -474,6 +696,8 @@ def main():
     ap.add_argument("--bin", help="packed frames to score instead of encoding (one input only)")
     ap.add_argument("--opt", action="append", default=[], help="name=value encode() option")
     ap.add_argument("--anchor", action="store_true", help="also score a floating-point LPC-10 vocoder")
+    ap.add_argument("--ladder", action="store_true",
+                    help="also score each step from the anchor to the chip (see LADDER)")
     ap.add_argument("--wav", metavar="DIR", help="write the input, the aligned chip output (and the anchor)")
     ap.add_argument("--frames-csv", metavar="FILE", help="per-10 ms measures (one input only)")
     ap.add_argument("--csv", metavar="FILE", help="one row per input")
@@ -492,16 +716,28 @@ def main():
     if args.wav:
         os.makedirs(args.wav, exist_ok=True)
     opts = dict(parseOpt(o) for o in args.opt)
-    jobs = [(p, args.bin, opts, args.anchor, args.wav, args.frames_csv) for _, p in items]
+    jobs = [(p, args.bin, opts, args.anchor, args.ladder, args.wav, args.frames_csv) for _, p in items]
 
-    print(header(args.anchor))
+    if args.ladder:
+        print("%-26s" % "file PESQ:" + "".join(" %6s" % s for s, _ in LADDER))
+    else:
+        print(header(args.anchor))
     rows = []
     with multiprocessing.Pool(max(1, min(args.jobs, len(jobs)))) as pool:
         for (group, _), r in zip(items, pool.imap(measure, jobs)):
             r["set"] = group
             rows.append(r)
-            print(line(r, args.anchor), flush=True)
-    if len(rows) > 1:
+            print(ladderLine(r) if args.ladder else line(r, args.anchor), flush=True)
+    if args.ladder:
+        print()
+        for g in sorted({r["set"] for r in rows}):
+            if g and len(rows) > 1:
+                print(f"{g} (n={sum(r['set'] == g for r in rows)})")
+                print(ladderSummary([r for r in rows if r["set"] == g]))
+                print()
+        print(f"all (n={len(rows)})")
+        print(ladderSummary(rows))
+    elif len(rows) > 1:
         print()
         for g in sorted({r["set"] for r in rows}):
             if g:

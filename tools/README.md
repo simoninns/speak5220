@@ -300,6 +300,7 @@ python tools/speechqual.py IN.wav --bin OUT.bin      # score frames encoded else
 python tools/speechqual.py IN.wav --wav DIR --anchor # also write input, chip and anchor audio, aligned
 python tools/speechqual.py --set all --anchor --csv q.csv        # the Phase 11 inputs (243 files, about 2.5 min)
 python tools/speechqual.py --set all --opt repeats=False         # an encode() option changed
+python tools/speechqual.py --set all --ladder                    # where the quality goes, step by step (about 15 min)
 ```
 
 `speechqual.py` gives the encoder an objective score. It encodes each input with `encoder/tms5220enc.py`, or takes packed frames from `--bin`. It speaks the frames with `emulator/tms5220emu` (VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
@@ -318,7 +319,26 @@ Speech frames are those within 35 dB of the input's loudest 10 ms frame. The ali
 
 **The anchor.** `--anchor` also scores a plain floating-point LPC vocoder of the same input. It uses order 10, 25 ms frames, the K interpolated in 8 steps as on the chip, pulse or noise excitation, and no quantisation. It is independent of the encoder. The gap between the anchor and the chip is what the chip's tables and excitation and the encoder's choices cost together.
 
-`--frames-csv` writes the per-frame measures of one input, to find where an encoding goes wrong. `--wav DIR` writes `<name>_input.wav`, `<name>_chip.wav` and (with `--anchor`) `<name>_lpc.wav`, aligned and at the same level, for listening.
+**The ladder.** `--ladder` scores the steps from the anchor to the chip, one change at a time, and prints each step's median and its change from the step before. It shows where the quality is lost.
+
+| Step | What changes |
+|---|---|
+| `anchor` | The vocoder above |
+| `q` | The chip's K, pitch and energy tables (nearest K in log-area ratio, K1–K4 if unvoiced, the period as value + 1) |
+| `qc` | The chip's excitation: the chirp, pre-emphasis for voiced frames only and not undone, and energy set from the input's RMS |
+| `qci` | Those frames through `tools/model.py`'s timing, interpolation and excitation, with a floating-point lattice |
+| `enc` | The encoder's frames through that floating-point model |
+| `chip` | The encoder's frames on the emulator (the main result) |
+
+`qk`, `qp` and `qe` break `q` down: each is the anchor with only the K, pitch or energy table applied.
+
+Steps `q` to `qci` use the anchor's simple analysis, not the encoder's. So the change from `qci` to `enc` is what the encoder's own analysis is worth against it, and the change from `enc` to `chip` is the chip's integer arithmetic. The reference model runs in Python, so a ladder run takes about six times as long as a plain run (about 15 min for the 243 inputs).
+
+`--frames-csv` writes the per-frame measures of one input, to find where an encoding goes wrong. `--wav DIR` writes audio aligned and at the same level, for listening:
+
+- `<name>_input.wav` and `<name>_chip.wav`;
+- `<name>_lpc.wav` with `--anchor`;
+- `<name>_<step>.wav` for each step with `--ladder`.
 
 ## Single captures and analysis
 
