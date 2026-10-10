@@ -1,0 +1,173 @@
+site_name: speak5220
+site_description: The Texas Instruments TMS5220 voice synthesis processor, measured on real hardware
+site_url: https://simoninns.github.io/speak5220/
+repo_url: https://github.com/simoninns/speak5220
+repo_name: simoninns/speak5220
+edit_uri: edit/main/docs/
+copyright: Copyright &copy; Simon Inns
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.highlight
+    - content.code.copy
+    - content.action.view
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Light mode
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+nav:
+  - Home: index.md
+  - Technical:
+      - technical/index.md
+      - Reference datasheet:
+          - technical/datasheet/index.md
+          - System clock: technical/datasheet/clock.md
+          - CPU interface: technical/datasheet/cpu-interface.md
+          - VSM interface: technical/datasheet/vsm-interface.md
+          - I/O structure: technical/datasheet/io-structure.md
+          - Commands: technical/datasheet/commands.md
+          - Power-up and between utterances: technical/datasheet/power-up.md
+          - Coded speech parameters: technical/datasheet/coded-parameters.md
+          - DAC and audio output: technical/datasheet/dac-and-audio.md
+          - Serial sample output: technical/datasheet/serial-output.md
+          - Frame timing: technical/datasheet/frame-timing.md
+          - Excitation and interpolation: technical/datasheet/excitation-interpolation.md
+          - Lattice filter: technical/datasheet/lattice-filter.md
+          - Reference algorithm: technical/datasheet/reference-algorithm.md
+          - PROM OUT: technical/datasheet/prom-out.md
+          - Electrical characteristics: technical/datasheet/electrical.md
+          - Pin functions: technical/datasheet/pins.md
+          - Authoring speech data: technical/datasheet/authoring.md
+          - Known gaps: technical/datasheet/gaps.md
+          - Evidence:
+              - technical/datasheet/evidence.md
+              - Output signals and clock timing: technical/datasheet/evidence/output-signals.md
+              - DAC transfer and the rails: technical/datasheet/evidence/dac.md
+              - VSM reads and the input paths: technical/datasheet/evidence/speech-paths.md
+              - Start timing, noise and repeats: technical/datasheet/evidence/start-and-noise.md
+              - Acorn PHROM A reference set: technical/datasheet/evidence/acorn-reference-set.md
+              - Synthetic vectors: technical/datasheet/evidence/vectors.md
+              - Host interface tests: technical/datasheet/evidence/host-interface.md
+      - Emulator:
+          - technical/emulator/index.md
+          - API: technical/emulator/api.md
+          - Command line: technical/emulator/command-line.md
+          - Implementation choices: technical/emulator/choices.md
+      - Encoder:
+          - technical/encoder/index.md
+          - Usage: technical/encoder/usage.md
+          - How it works: technical/encoder/how-it-works.md
+          - Quality: technical/encoder/quality.md
+          - Implementation choices: technical/encoder/choices.md
+          - How TI encoded speech: technical/encoder/ti-encoder.md
+      - Capture method:
+          - technical/capture/index.md
+          - Observables and capture layers: technical/capture/observables.md
+          - Using the PicoScope: technical/capture/oscilloscope.md
+          - Bench hardware: technical/capture/bench-hardware.md
+          - Data layout: technical/capture/data-layout.md
+          - Automation: technical/capture/automation.md
+          - PROM corpus: technical/capture/prom-corpus.md
+          - PROM inventory: technical/capture/prom-inventory.md
+          - Controlled stimulus: technical/capture/stimulus.md
+          - From captures to the datasheet: technical/capture/analysis.md
+          - Open questions: technical/capture/open-questions.md
+          - Measurement work:
+              - technical/capture/work/index.md
+              - Bench bring-up: technical/capture/work/bench-bring-up.md
+              - Measurement hardware: technical/capture/work/measurement-hardware.md
+              - Firmware instrumentation: technical/capture/work/firmware-instrumentation.md
+              - Host tooling: technical/capture/work/host-tooling.md
+              - Repeatability: technical/capture/work/repeatability.md
+              - Acorn PHROM A reference set: technical/capture/work/acorn-phrom-a.md
+              - Synthetic vectors: technical/capture/work/synthetic-vectors.md
+              - Reference emulator validation: technical/capture/work/reference-emulator.md
+              - Remaining PROM corpora: technical/capture/work/prom-corpora.md
+              - New speech data: technical/capture/work/new-speech-data.md
+      - Hardware:
+          - technical/hardware/index.md
+          - Audio output stage: technical/hardware/audio-output-stage.md
+          - Firmware protocol: technical/hardware/firmware-protocol.md
+      - Tools:
+          - technical/tools/index.md
+          - Pico control: technical/tools/pico.md
+          - Capturing PROM words: technical/tools/capture.md
+          - Readable files and checks: technical/tools/checks.md
+          - Synthetic vectors and the model: technical/tools/vectors-and-model.md
+          - Emulator regression: technical/tools/emulator-regression.md
+          - Encoder test speech and quality: technical/tools/encoder-speech.md
+          - Single captures and analysis: technical/tools/single-captures.md
+          - PROM OUT: technical/tools/prom-out.md
+          - Die image: technical/tools/die-image.md
+          - File list: technical/tools/files.md
+      - Die analysis:
+          - technical/die-analysis/index.md
+          - Preparation: technical/die-analysis/preparation.md
+          - Floorplan and bit slices: technical/die-analysis/floorplan.md
+          - Parameter and chirp ROMs: technical/die-analysis/roms.md
+          - Reference cell: technical/die-analysis/reference-cell.md
+          - Multiplier low end: technical/die-analysis/multiplier-low-end.md
+          - Adder, multiplexers and delay stack: technical/die-analysis/adder-and-delay-stack.md
+          - Lowest-order arithmetic: technical/die-analysis/lowest-order-arithmetic.md
+      - Original documents:
+          - technical/sources/index.md
+          - TMS 5220 data manual:
+              - technical/sources/tms5220-data-manual/index.md
+              - Introduction, interface and commands: technical/sources/tms5220-data-manual/introduction-and-commands.md
+              - Speech synthesis: technical/sources/tms5220-data-manual/speech-synthesis.md
+              - Electrical and mechanical data: technical/sources/tms5220-data-manual/electrical-and-mechanical.md
+              - Appendices: technical/sources/tms5220-data-manual/appendices.md
+              - Coding table: technical/sources/tms5220-data-manual/coding-table.md
+          - TMS 6100 data manual: technical/sources/tms6100-data-manual/index.md
+          - US patent 4,335,277:
+              - technical/sources/patent-us4335277/index.md
+              - Drawings: technical/sources/patent-us4335277/drawings.md
+              - Description: technical/sources/patent-us4335277/description.md
+              - Synthesizer logic diagrams: technical/sources/patent-us4335277/logic-diagrams.md
+              - Alternative embodiments: technical/sources/patent-us4335277/alternative-embodiments.md
+              - Claims: technical/sources/patent-us4335277/claims.md

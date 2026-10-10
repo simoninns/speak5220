@@ -16,14 +16,17 @@
           # Pico SDK with its submodules (TinyUSB is needed for USB stdio)
           pico-sdk = pkgs.pico-sdk.override { withSubmodules = true; };
 
-          # Capture and analysis tools (tools/)
+          # Capture and analysis tools (investigation/tools/)
           python = pkgs.python3.withPackages (p: [
             p.numpy
             p.scipy
             p.matplotlib
             p.pyserial
             p.soundfile
-            p.pesq # ITU-T P.862 speech quality (tools/speechqual.py)
+            p.pesq # ITU-T P.862 speech quality (investigation/tools/speechqual.py)
+            # The documentation site (mkdocs.yml, docs/)
+            p.mkdocs
+            p.mkdocs-material
           ]);
         in
         {
@@ -34,9 +37,9 @@
               python
               git
 
-              # Text to speech for the encoder's test inputs (tools/ttsgen.py)
+              # Text to speech for the encoder's test inputs (investigation/tools/ttsgen.py)
               piper-tts
-              # Speech recognition, for the intelligibility check (tools/asrcheck.py)
+              # Speech recognition, for the intelligibility check (investigation/tools/asrcheck.py)
               whisper-cpp
 
               # Raspberry Pi Pico 2 (RP2350) firmware
@@ -52,11 +55,11 @@
             picotool_DIR = "${pkgs.picotool}/lib/cmake/picotool";
 
             # Runtime dependencies of PicoScope 7's libps3000a.so, preloaded by
-            # tools/ps3000a.py (the driver itself comes from the PicoScope install)
+            # investigation/tools/ps3000a.py (the driver itself comes from the PicoScope install)
             PICO_DRIVER_DEPS = "${pkgs.libusb1}/lib/libusb-1.0.so.0:${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6";
 
             shellHook = ''
-              if [ ! -e kicad/libraries/ki-lime-pi-pico/MCU_Module_RaspberryPi_Pico.kicad_sym ]; then
+              if [ ! -e investigation/kicad/libraries/ki-lime-pi-pico/MCU_Module_RaspberryPi_Pico.kicad_sym ]; then
                 echo "Note: ki-lime-pi-pico submodule missing; run: git submodule update --init"
               fi
             '';

@@ -33,69 +33,72 @@ production/
 Thumbs.db
 
 # Firmware build output
-firmware/build/
+investigation/firmware/build/
 
-# Captures (docs-tech/speech_capture_plan.md, section 6): evidence captures
+# Captures (docs/technical/capture/data-layout.md): evidence captures
 # commit their raw data only as raw/scope_raw.npz.zip; PROM corpus captures
 # are kept local for now, apart from each PROM's index and take lists
-captures/corpus/*
-!captures/corpus/*/
-captures/corpus/*/*
-!captures/corpus/*/index.md
-!captures/corpus/*/prom.json
-!captures/corpus/*/takes.csv
-!captures/corpus/*/sweep.csv
-# Phase 8 vector captures (tools/vectors.py) are kept local in the same
-# way; their sets' definitions are in captures/phase8/vectors/
-captures/vectors/*
-!captures/vectors/*/
-captures/vectors/*/*
-!captures/vectors/*/index.md
-!captures/vectors/*/takes.csv
-captures/vectors/experiments/
+investigation/captures/corpus/*
+!investigation/captures/corpus/*/
+investigation/captures/corpus/*/*
+!investigation/captures/corpus/*/index.md
+!investigation/captures/corpus/*/prom.json
+!investigation/captures/corpus/*/takes.csv
+!investigation/captures/corpus/*/sweep.csv
+# The synthetic vector captures (investigation/tools/vectors.py) are kept local in the same
+# way; their sets' definitions are in investigation/captures/phase8/vectors/
+investigation/captures/vectors/*
+!investigation/captures/vectors/*/
+investigation/captures/vectors/*/*
+!investigation/captures/vectors/*/index.md
+!investigation/captures/vectors/*/takes.csv
+investigation/captures/vectors/experiments/
 # The same vector sets captured on chip 4 (datasheet section 8.8)
-captures/vectors_chip4/*
-!captures/vectors_chip4/*/
-captures/vectors_chip4/*/*
-!captures/vectors_chip4/*/index.md
-!captures/vectors_chip4/*/takes.csv
+investigation/captures/vectors_chip4/*
+!investigation/captures/vectors_chip4/*/
+investigation/captures/vectors_chip4/*/*
+!investigation/captures/vectors_chip4/*/index.md
+!investigation/captures/vectors_chip4/*/takes.csv
 # Chip 1's unvoiced K sweeps captured again two days later (datasheet section 8.8)
-captures/vectors_chip1_repeat/*
-!captures/vectors_chip1_repeat/*/
-captures/vectors_chip1_repeat/*/*
-!captures/vectors_chip1_repeat/*/index.md
-!captures/vectors_chip1_repeat/*/takes.csv
-captures/**/raw/*.npz
-captures/**/dac_step_response.npy
+investigation/captures/vectors_chip1_repeat/*
+!investigation/captures/vectors_chip1_repeat/*/
+investigation/captures/vectors_chip1_repeat/*/*
+!investigation/captures/vectors_chip1_repeat/*/index.md
+!investigation/captures/vectors_chip1_repeat/*/takes.csv
+investigation/captures/**/raw/*.npz
+investigation/captures/**/dac_step_response.npy
 
-# PROM images that may not be redistributed (plan section 11); their
+# PROM images that may not be redistributed (docs/technical/capture/open-questions.md); their
 # manifests in proms/ record the hashes
-proms/images/
+investigation/proms/images/
 
 # Python bytecode
 __pycache__/
 
 # Local, not for the repository: third-party code built for comparison
-# (MAME's TMS5220, local/mame5220/) and its outputs
-local/
-# Phase 10's repeat test (50 takes of a few words) is kept local in the same way
-captures/phase10/repeat/*
-!captures/phase10/repeat/*/
-captures/phase10/repeat/*/*
-!captures/phase10/repeat/*/index.md
-!captures/phase10/repeat/*/takes.csv
-# PROM words captured on chip 4 (Phase 10), kept local in the same way
-captures/corpus_chip4/*
-!captures/corpus_chip4/*/
-captures/corpus_chip4/*/*
-!captures/corpus_chip4/*/index.md
-!captures/corpus_chip4/*/takes.csv
-# tools/departures.py: the labelled samples are large; words.csv and summary.json are committed
-captures/phase10/departures/*/events.csv
-# Phase 11's captures of the new speech data, kept local in the same way
-captures/phase11/takes/*
-!captures/phase11/takes/*/
-captures/phase11/takes/*/*
-!captures/phase11/takes/*/index.md
-!captures/phase11/takes/*/prom.json
-!captures/phase11/takes/*/takes.csv
+# (MAME's TMS5220, investigation/local/mame5220/) and its outputs
+investigation/local/
+# The PROM words' repeat test (50 takes of a few words) is kept local in the same way
+investigation/captures/phase10/repeat/*
+!investigation/captures/phase10/repeat/*/
+investigation/captures/phase10/repeat/*/*
+!investigation/captures/phase10/repeat/*/index.md
+!investigation/captures/phase10/repeat/*/takes.csv
+# PROM words captured on chip 4, kept local in the same way
+investigation/captures/corpus_chip4/*
+!investigation/captures/corpus_chip4/*/
+investigation/captures/corpus_chip4/*/*
+!investigation/captures/corpus_chip4/*/index.md
+!investigation/captures/corpus_chip4/*/takes.csv
+# investigation/tools/departures.py: the labelled samples are large; words.csv and summary.json are committed
+investigation/captures/phase10/departures/*/events.csv
+# The captures of the new speech data, kept local in the same way
+investigation/captures/phase11/takes/*
+!investigation/captures/phase11/takes/*/
+investigation/captures/phase11/takes/*/*
+!investigation/captures/phase11/takes/*/index.md
+!investigation/captures/phase11/takes/*/prom.json
+!investigation/captures/phase11/takes/*/takes.csv
+
+# MkDocs build output (mkdocs.yml)
+site/

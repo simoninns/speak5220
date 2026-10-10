@@ -1,0 +1,4 @@
+/* Body text at the same size as the navigation (Material's nav is 0.7rem) */
+.md-typeset {
+  font-size: 0.7rem;
+}

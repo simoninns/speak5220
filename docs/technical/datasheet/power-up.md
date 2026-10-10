@@ -1,0 +1,87 @@
+# 7. Power-up clear, and the state between utterances
+
+Measured on one chip at 640 kHz.
+
+The original's §7 lists what the power-up clear does, and says that it resembles Reset. It does not say what the chip keeps from one utterance to the next. Three things are kept: the phase of a frame clock, the state of the noise generator, and the coded parameters of the last frames loaded. The first two explain why repeats of a word are not identical unless the start is controlled ([what can be observed](../capture/observables.md)); the third explains how the previous utterance changes the start of the next. A smaller effect, the upsets, is described below; its cause is not known ([Appendix B](gaps.md#upsets-and-chip-specific-departures)).
+
+**Power-up (New).** After a power cycle with `OSC` running, the chip spoke at once, without a Reset, so the power-up clear worked [p5-16].
+
+**The frame clock (New).** The chip has a frame clock that runs whenever `OSC` runs, whether the chip is speaking or idle. Its boundaries are 16000 `OSC` cycles apart: 200 samples, 25 ms at 640 kHz.
+
+- **It runs between words.** In 34 Speaks spread over 23 s, with idle gaps of 0.02–0.6 s, every first frame read fell on one 25 ms grid, to within ±0.08 µs [p5-09].
+- **Neither Speak nor Reset moves it.** Half of those 34 Speaks came after the reset sequence (nine `0xFF`, then Reset) [p5-09].
+- **Power-up starts it at an arbitrary phase.** After a power cycle the grid had moved by 262 µs [p5-16]. The original's power-up list says the "T State Counter" is reset. In [US 4,335,277](../sources/patent-us4335277/index.md) that is the counter that generates the 20 bit times of a sample period (T1–T20); the parameter and interpolation counters that make up the frame clock are separate. So the power-up list does not say that the frame clock is reset.
+- **When a Speak starts.** A Speak starts on the first frame boundary at least about 320 µs after it is written. Written 323 µs or more before a boundary, it started on that boundary; written 317 µs or less before, on the next one [p5-10]. So the first frame is read anywhere from about 0.3 ms to 25.3 ms after the Speak (measured: 2.1–24.7 ms [p5-09]). This is the start delay that varies between captures whose Speak is not timed to the frame clock ([what can be observed](../capture/observables.md)). From the first read onwards, a word's timing does not vary ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)).
+- **When the output starts.** The first sample that differs from idle comes 207 samples (ACORN) or 206 samples (B) after the sample period of the first frame read [p5-01]. That agrees with the original's "audio output begins on the following frame boundary", with a few samples for the energy to rise from zero.
+- **Stopping the clock freezes it.** With the chip idle, `OSC` was stopped for 1 ms to 1 s. Afterwards the frame grid had moved by the stopped time, to within 6 µs, and the chip spoke normally without a Reset. After 10 s stopped, the chip still spoke normally, but the grid had moved 4.3 ms further than the stopped time, so some internal state is lost over that time [p5-17]. That fits the patent's design, whose counters and registers are dynamic shift registers that hold their state only as charge. Stopping `OSC` is therefore not a reset. Stopping it during speech has left the chip unable to complete a write until it was power-cycled ([firmware protocol](../hardware/firmware-protocol.md)); that was not repeated.
+
+**The noise generator (New).** The noise that excites unvoiced frames comes from a 13-bit shift register whose state carries over from one utterance to the next. [§8.6](excitation-interpolation.md#86-excitation) gives the register itself.
+
+- **It runs freely, with a period of 8191 frames.** Takes of ACORN that started 8191 frames apart (204.8 s) differed by at most 3 codes. Takes at the other spacings, from 600 to 9391 frames, differed by 33–40 codes [p5-11]. The register steps once per slot, 4000 times a frame; 8191 is its period, and it is prime to 4000.
+- **It affects voiced frames too.** Between takes whose noise differed, the output first differed in a voiced frame, 946 samples after speech started, by ±1–2 codes. The large differences start with the first unvoiced frame [p5-11]. The voiced difference is carried by the filter's state from the earlier unvoiced frames.
+- **Reset holds it, and the next Speak restarts it.** After the reset sequence, takes of ACORN on frames 800 apart all matched (to 3 codes), although their frames differed. A take with another Speak between the Reset and the take differed by up to 32 codes [p5-12]. So after a Reset, the register stays in a fixed state until the next Speak, and runs freely from that Speak onwards.
+- **It steps once per slot from the command.** Speaks accepted 1, 2 and 3 slots (6.25 µs) earlier or later than the standard time left the register exactly 1, 2 or 3 steps further on or back at the first sample of speech. Every take of the loud unvoiced vector matched the model bit for bit with that state, through both paths [p8-13 to p8-16].
+- **Its state at the start of speech.** A command is *latched* in the slot in which READY goes active ([§3](cpu-interface.md#3-cpu-interface)). With the standard procedure the Speak is latched 12256.1 µs, 1961 slots, before the slot in which the first frame's first bit is read (slot 17 of sample 0, [§8.5](frame-timing.md#85-timing-of-a-frame)). Reset holds the register at 0x1FFF. A Speak releases it so that it makes its first step 6 slots after the latch, and one step per slot from then on; Speak External releases it 1 slot after the latch. The excitation of each sample period takes bit 0 of the register as it stands at slot 0 of that period ([§8.6](excitation-interpolation.md#86-excitation)). So at slot 0 of sample 1, 1964 slots after the latch, the register has made 1958 steps from 0x1FFF (state 0x00EB) for Speak. Speak External runs its synthesis 2 samples earlier ([§8.5](frame-timing.md#85-timing-of-a-frame)): its sample 1 starts 1924 slots after the latch, when the register has made 1923 steps (state 0x00AF). These captures cannot tell this apart from another held state with another delay. With these states, the model matches every take of the unvoiced vectors of the energy set and of the noise set (two of 1.1 s and one of 4.1 s: 32,699 samples, 78 periods of the register), through both paths, bit for bit. The exceptions are a single sample, one code off, where the speech ends, in 4 of these 68 takes [p8-01 to p8-03, vectors `energy`, vectors `noise`].
+- **The restart counts from the Speak, in slots.** After a Reset, Speaks at random times within a frame gave different noise [p5-13]. Speaks accepted in the same slot before the frame boundary gave the same noise, even in different clock sessions [p5-14].
+- **The state after Reset is fixed.** After a power cycle, the same Reset-then-Speak timing gave the same output as before it [p5-16].
+- **Confirmed across the Acorn PHROM A.** Ten word takes were accepted one slot (about 6 µs) away from the target. Each differed from its word's other takes by 12–63 codes [p7-09, p7-10, corpus `acorn_phrom_a`].
+
+**Speak External (New).** Accepted at the same time before the frame boundary as a VSM Speak, Speak External starts its output 2 samples earlier, and its noise differs [p5-01, p5-05]. Its takes repeat among themselves as well as VSM takes do.
+
+**The previous utterance (New).** What the chip spoke last changes the start of what it speaks next, even with the reset sequence in between. A sweep start whose data begins with a repeat frame, then loud voiced frames, was spoken repeatedly. Before some takes, a different address was spoken first [p7-01 to p7-06]:
+
+- **Same predecessor, same start.** Takes spoken after the same thing matched from the start of speech. After the same loud address, the first difference was 258 samples in. After the word B, it was 6802 samples in. After a take of the same address, it was 4473 samples in.
+- **Different predecessor, different start.** Takes spoken after different things differed from the first or third sample of speech. They then diverged to the full 10-bit range, because this data drives the filter far outside the range of speech.
+- **The same in the sweep.** In the repeat sample (every 64th sweep start, 5 takes each), takes spoken after a different address differed from the others within 20 samples of the start in 46–51 % of cases. Takes spoken after the same address did so in 1–2 % [corpus `acorn_phrom_a`].
+- **Not in words.** No such early difference appeared between the takes of any word, of 1660 takes.
+
+**What is carried over: the coded parameters.** The chip holds each frame's coded indices (energy, pitch, K1–K10) in a parameter RAM, as US 4,335,277 describes, and the interpolator takes its targets from the tables at those indices ([§8.7](excitation-interpolation.md#87-interpolation)). A frame loads only the indices it carries ([§8.1](coded-parameters.md#81-coded-speech-parameters)). Nothing clears this RAM: not a Speak, not the end of speech, not Reset. The interpolator's own registers, by contrast, are cleared at the start of every utterance: while a Speak's zeroing is in force, every target is 0 and the filter sees 0, and IP 0 (shift 0) takes every register to 0 before the first frame becomes the target ([§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model)). So:
+
+- **A first frame that is voiced or unvoiced** replaces every index the filter uses (energy, pitch, K1–K4, and K5–K10 or zero), and the previous utterance has no effect. This is why words, which start that way, did not show it. A loud vector that starts voiced gave the same output after four different predecessors [p8-17, p8-18].
+- **A first frame that is a repeat frame** loads energy and pitch only. K1–K10 come from the indices of the last frame of the previous utterance that set them. The address-sweep target above starts with a repeat frame [p7-01 to p7-06]. A vector that starts with three repeat frames matched the model to within one code when the model first spoke the vector's predecessor, and differed by up to 520 codes when it did not [p8-09].
+- **A first frame that is silence** keeps the zeroing in force for that frame only ([§8.5](frame-timing.md#85-timing-of-a-frame)). From the second frame, the targets from the old indices reach the filter, with zero energy, until a frame with energy arrives. This rule is approximate ([Appendix B](gaps.md#a-first-frame-of-silence)): with it, the model differs from that vector at 431 of 1899 samples, by up to 34 codes [p8-08].
+
+The model with these rules reproduces the start of the address-sweep target above only when it is given the take's true predecessor; it then matches up to a first difference at sample 277–281 [p7-01, p7-03]. **For emulator writers:** keep the coded indices, the voicing and silence flags ([§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model)) and the filter's state between utterances, and start from the state the previous utterance left.
+
+**Upsets (New).** With the start delay and the noise fixed, repeats of a word match to within a few codes. They are often not identical:
+
+- In a sequence of takes, some pairs are bit-identical. For example, three of six takes, and two others, matched exactly [p5-15]; two takes from different clock sessions matched exactly [p5-14]. In other runs, no two takes matched [p5-01 to p5-04].
+- Where takes differ, the difference starts with a single ±1 at one sample. It then appears as scattered ±1 differences, now and then ±2 or ±3, for the rest of the word, as if a small difference had entered the filter's internal state.
+- Each word has a few points where these departures start, and they recur from take to take. For ACORN they are about 2490, 2880 and 3280 samples after speech starts [p5-01 to p5-04, p5-12, p5-15].
+- They are not caused by the start timing, which was the same in every take to within 1 µs.
+- Each of these changes left them in place:
+    - clocking the chip at 600 or 800 kHz;
+    - stopping the host's status reads during speech;
+    - delaying the VSM data by up to 8 µs;
+    - speaking another word first;
+    - a power cycle.
+
+[p5-12 to p5-16]
+
+**Upsets across a whole PROM.** Every word of the Acorn PHROM A was taken five times through each path, with the standard procedure: 1660 takes that passed every check [corpus `acorn_phrom_a`].
+
+- **Exact matches are the exception.** Only 27 of the 330 groups (word and path) were bit-identical across all their takes. 420 takes (25 %) matched their group's per-sample majority exactly, and 93 % were within 2 codes of it. The largest departure was 7 codes (D, VSM). 141 groups have samples with no majority.
+- **Recurring onsets.** Most departing takes have one upset onset (978 takes), some two to four. Onsets recur at the same sample from take to take. NEW's VSM takes, for example, depart at sample 717 in two takes.
+- **Across days.** ACORN's majority output in the corpus differs from its majority in the standard-procedure takes of the day before [p5-01 to p5-08] by at most 3 codes, in about 900 of its samples, for each path.
+- **Larger in garbage data.** In the sweep's repeat sample, the effect is much larger. Where a sweep start's data drives the filter far outside the range of speech, a one-code difference grows to the full 10-bit range. Only 8 of 251 such groups were identical across their takes.
+
+**Upsets in the vectors.** Upsets also occur in the synthetic vectors, so they are not a property of PROM data. In 14 standard takes of one loud vector, spoken after four different predecessors, there were five distinct outputs. They first differed from each other at samples 678, 710, 810, 1009 and 1055 from the capture start, and which variant a take gave did not depend on its predecessor [p8-17, p8-18]. The vector sets' repeats were usually identical: in all 62 pairs of takes of the energy and noise vectors through the same path, the two takes matched bit for bit [vectors `energy`, vectors `noise`]. Chip 4 had more take-to-take upsets than chip 1. On chip 4 they became rare when `OSC` was raised to 720 kHz (2 of 94 pairs of takes differed, by one sample each), and they were as common at 480 and 560 kHz as at 640 kHz ([§8.8](lattice-filter.md#88-lattice-filter)). So upsets come from the chip, most likely charge leaking from dynamic nodes, not from the breadboard.
+
+*Hypothesis (not tested).* US 4,335,277 builds the chip from precharged, conditional-discharge (dynamic) logic, clocked in four phases. A node that is marginal only for particular data would fit what is seen: departures that start at the same samples from take to take, but not in every take. If that is the cause, the upset rate should depend strongly on temperature and on `VDD`.
+
+**What upsets look like.** Measured on every PROM word (takes 2 to 5 of each word and path, which follow the same word), and on 49 takes each of six words [corpus, every PROM; `investigation/captures/phase10/repeat/`]:
+
+- **Each starts as a single ±1** (11,299 of 11,327 starts between pairs of takes), which the filter then carries on, typically for 250–700 samples.
+- **They start at a few fixed samples per word,** one to four in most words, and at each such sample a take that is in step leaves it with a fixed chance, from 2 % to about 50 %. Nothing else in the take decides which way it goes: not the position in the frame, the interpolation period or the pitch period, and not the path.
+- **They go towards the nearer output step.** Where the model's value (the 15-bit u₁ before the shift of [§8.4](serial-output.md#84-serial-sample-output-t11-and-io)) lies just below a step, the takes that leave go up a code; just above, down a code. Where the model also differs from the majority of takes there, the takes that leave usually give the model's value (19 of 26).
+- **They follow the same coefficients as the lowest-order error ([§8.8](lattice-filter.md#88-lattice-filter)):** coefficients whose second Booth digit is negative (*d*₁ < 0), K6–K10 most of all and K7 more than for the deterministic error.
+
+So an upset is the lowest-order arithmetic of [§8.8](lattice-filter.md#88-lattice-filter) coming out either way at a sample where it is marginal. A word of short pitch periods (pitch index below about 24) repeats better, because its upsets die away sooner (a median of 77 samples at indices 1–15, against about 500 at 32–47), not because they are rarer.
+
+**For emulator writers.** To reproduce a capture, start from:
+
+1. **The start time.** The Speak starts on the first frame boundary at least about 320 µs after it is written ([§6](commands.md#6-description-of-commands)). In the standard procedure it is latched 1961 slots before the first frame bit is read.
+2. **The noise generator.** Held at 0x1FFF by Reset; released 6 slots (Speak) or 1 slot (Speak External) after the latch; one step per slot from then on, through speech and idle alike, until the next Reset (above).
+3. **The coded parameters and flags.** Those the previous utterance left. They matter only when the first frames are silence or repeat frames. Each capture's predecessor is the take before it, in the order of the `captured` times in `takes.csv`.
+
+`capture.json` records the first two for every capture taken with the standard procedure ([repeatability](../capture/work/repeatability.md)): the frame, and the time the Speak was accepted before it.
