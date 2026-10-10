@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Builds and tests the Speak5220 application (app/) on Windows (MSVC) and
+# macOS (docs-tech/application-plan.md, Phase 2 task 7 and decision D7).
+# During development these jobs do not run on every push: only for a
+# release tag (v*) or when started by hand from the Actions tab.
+# Qt comes from aqtinstall, pinned to the version in the Nix flake; the other
+# libraries come from vcpkg, pinned by the baseline in app/vcpkg.json (risk
+# R6); vcpkg builds them from source on each run. Uses only free services
+# (decision D8): GitHub's hosted runners and the Qt cache in the GitHub
+# Actions cache.
+name: Application (Windows and macOS)
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-platforms-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The Qt version of the Nix flake's nixpkgs (qtbase)
+  QT_VERSION: "6.11.2"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: lukka/get-cmake@latest
+      - name: MSVC developer environment
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+      - name: Install vcpkg
+        uses: lukka/run-vcpkg@v11
+        with:
+          vcpkgJsonGlob: app/vcpkg.json
+      - name: Configure
+        shell: bash
+        run: >
+          cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_MANIFEST_DIR="$GITHUB_WORKSPACE/app"
+          -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR"
+      - name: Build
+        run: cmake --build build/app
+      - name: Unit tests
+        run: ctest --test-dir build/app -L unit --output-on-failure
+      # The GUI tests choose the offscreen platform themselves
+      - name: Functional tests
+        run: ctest --test-dir build/app -L functional --output-on-failure

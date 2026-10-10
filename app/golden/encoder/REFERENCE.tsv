@@ -1,0 +1,4 @@
+reference_commit	6abe9edacdc7de29f3b8964f2e0bd7561ff33a71
+sha256	bcd0fdb0b62ad5c77cdfa006e29a464e2c43a0fa4af739cab55216a5c0686077	investigation/encoder/tms5220enc.py
+numpy	2.4.4
+scipy	1.17.1

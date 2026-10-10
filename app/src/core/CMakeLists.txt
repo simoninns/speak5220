@@ -7,13 +7,26 @@ add_library(
     s5core
     STATIC
     audio/sndfile_wav_io.cc
+    dsp/array_math.cc
     dsp/fft.cc
+    dsp/iir_filter.cc
+    dsp/lpc_analysis.cc
     dsp/resampler.cc
     emulator/chip_arithmetic.cc
     emulator/chip_driver.cc
     emulator/tms5220.cc
     emulator/tms5220_config.cc
     emulator/tms6100.cc
+    encoder/encoder.cc
+    encoder/encoder_filters.cc
+    encoder/encoder_options.cc
+    encoder/frame_analyser.cc
+    encoder/frame_endings.cc
+    encoder/level_setter.cc
+    encoder/pitch_tracker.cc
+    encoder/quantiser.cc
+    encoder/repeat_search.cc
+    encoder/voicing_classifier.cc
     lpc/frame.cc
     lpc/frame_codec.cc
     packaging/acorn_phrom.cc

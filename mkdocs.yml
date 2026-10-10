@@ -68,6 +68,7 @@ nav:
           - Command-line tool: application/user-manual/cli.md
       - Reference:
           - Command-line options: application/reference/cli-options.md
+          - Encoder options: application/reference/encoder-options.md
   - Technical:
       - technical/index.md
       - Reference datasheet:

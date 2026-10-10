@@ -10,6 +10,9 @@ So far the application has:
 - a command-line tool, `speak5220-cli`, that reports its version;
 - logging options shared by both, described in the
   [command-line tool](user-manual/cli.md) page and the
-  [command-line options](reference/cli-options.md) reference.
+  [command-line options](reference/cli-options.md) reference;
+- an encoder that turns 8 kHz speech into TMS5220 frames, not yet reachable
+  from either front end; its options are in the
+  [encoder options](reference/encoder-options.md) reference.
 
 Building it is described in `BUILD.md` in the repository.

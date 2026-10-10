@@ -1,15 +1,20 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# clang-tidy settings for the tests: app/.clang-tidy, with one more check
-# disabled, with its reason.
+# clang-tidy settings for the tests: app/.clang-tidy, with two more checks
+# disabled, each with its reason.
 ---
 InheritParentConfig: true
 Checks: >
-  -cppcoreguidelines-non-private-member-variables-in-classes
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -bugprone-unchecked-optional-access
 
 # Why:
 #   cppcoreguidelines-non-private-member-variables-in-classes
 #       Google style allows a test fixture's data members to be protected,
 #       and the test harnesses expose what they recorded for the tests to
 #       check.
+#   bugprone-unchecked-optional-access
+#       Tests check an optional with ASSERT_TRUE(x.has_value()), which
+#       returns from the test when it fails; the check cannot see that, so
+#       it flags every access after it. Source code keeps the check.

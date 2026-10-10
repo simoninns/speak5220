@@ -25,7 +25,8 @@ Run by hand, in the project's default Nix shell, from the repository root:
 
 --check regenerates everything into a temporary directory and compares it
 with the committed files. The emulator's reference data never changes unless
-the reference datasheet does (AGENTS.md §3.1): ask before rewriting it.
+the reference datasheet does (AGENTS.md §3.1): ask before rewriting it. The
+encoder's reference data (app/golden/encoder/) is written by encoder.py.
 """
 
 import argparse
@@ -368,8 +369,13 @@ def main():
     if args.check:
         with tempfile.TemporaryDirectory() as tmp:
             mismatches = generate(Path(tmp))
-            diff = compare(Path(tmp), GOLDEN)
-            diff = [d for d in diff if d != "README.md"]
+            # Only the directories this script writes; app/scripts/golden/
+            # encoder.py checks app/golden/encoder/.
+            diff = [
+                sub + "/" + d
+                for sub in ("emulator", "packaging")
+                for d in compare(Path(tmp) / sub, GOLDEN / sub)
+            ]
             if diff:
                 print("differs from app/golden/:\n  " + "\n  ".join(diff))
                 return 1

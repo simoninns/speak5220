@@ -71,7 +71,8 @@
   - **Never** change the emulator's reference data, unless the reference datasheet changes.
   - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after.
   - Ask the user before changing any reference data (§12).
-- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The one exception is `app/scripts/golden/generate_golden.py`, run by hand to create the reference data (TESTING.md).
+- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`), run by hand to create the reference data (TESTING.md).
+- By-hand checks (the full-corpus check, the benchmark) are functional tests with the `DISABLED_` prefix, run only by their scripts (`corpus-check.sh`, `benchmark.sh`) with `--gtest_also_run_disabled_tests`; CTest never runs them.
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
 ### 3.2 Logging

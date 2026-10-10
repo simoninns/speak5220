@@ -56,20 +56,55 @@ CMake options:
 | `SPEAK5220_BUILD_TESTS` | `ON` | Builds the Google Test suites (needs Google Test) |
 | `SPEAK5220_SANITIZE` | `OFF` | Builds with AddressSanitizer and UBSan (GCC or Clang); use with `-DCMAKE_BUILD_TYPE=Debug` in a separate build directory |
 
-Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`).
+Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`). Every build compiles with `-ffp-contract=off` (GCC, Clang), so the encoder's floating point gives the same frames on every platform.
+
+### Windows and macOS
+
+Outside Nix, Qt comes from the Qt installer or [aqtinstall](https://github.com/miurahr/aqtinstall), at the flake's version (6.11.2), and the other libraries from [vcpkg](https://vcpkg.io) in manifest mode: `app/vcpkg.json` lists them and pins vcpkg's baseline. On Windows, run these from a Visual Studio developer prompt (MSVC):
+
+```bash
+cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+  -DVCPKG_MANIFEST_DIR="$PWD/app" -DCMAKE_PREFIX_PATH="<Qt directory>"
+cmake --build build/app
+ctest --test-dir build/app -L unit
+ctest --test-dir build/app -L functional
+```
+
+`.github/workflows/app-platforms.yml` does the same on GitHub's Windows and macOS runners.
 
 The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Reference data
 
-`app/golden/` holds the output of the retired reference emulator and encoder, which the functional tests compare against. It is written by a script run by hand in the default dev shell (it needs Python with NumPy, SciPy and soundfile, and a C compiler):
+`app/golden/` holds the output of the retired reference emulator and encoder, which the functional tests compare against. It is written by two scripts run by hand in the default dev shell (they need Python with NumPy, SciPy and soundfile, and a C compiler):
 
 ```bash
-nix develop --command python3 app/scripts/golden/generate_golden.py --check   # regenerate in a temporary directory and compare
-nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/
+nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator and packaging: regenerate in a temporary directory and compare
+nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/ and packaging/
+nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (a few minutes, on every core)
+nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
 ```
 
-The emulator's reference data is never rewritten unless the reference datasheet changes; see [`TESTING.md`](TESTING.md).
+The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's only for an intended improvement; see [`TESTING.md`](TESTING.md).
+
+The encoder's two fixed Butterworth filters are constants in `app/src/core/dsp/filter_constants.h`, designed by SciPy:
+
+```bash
+nix develop --command python3 app/scripts/generate_filter_constants.py --check   # compare with a fresh design
+nix develop --command python3 app/scripts/generate_filter_constants.py           # rewrite the header (then clang-format it)
+```
+
+### Corpus check and benchmark
+
+Two scripts check the encoder by hand, from the repository root, after building the functional tests:
+
+```bash
+nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames (plan §3.2)
+nix develop .#app --command app/scripts/benchmark.sh   # encoding speed on one core
+```
+
+`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its report goes to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`.
 
 ### Format and lint
 
@@ -96,6 +131,8 @@ Nix builds from the files git tracks, so `git add` new files before running thes
 ### CI
 
 `.github/workflows/app.yml` runs on every push and pull request, on GitHub's hosted `ubuntu-latest` runner with Nix: `nix flake check` (every hook except `clang-tidy`, on every file), the build with both test lanes and `clang-tidy`, both lanes again under ASan and UBSan, and `nix build .#speak5220`.
+
+`.github/workflows/app-platforms.yml` builds and runs both lanes on Windows (MSVC) and macOS. It runs only for a release tag (`v*`) or when started by hand from the repository's Actions tab, not on every push.
 
 ## Hardware (KiCad)
 

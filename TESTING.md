@@ -3,10 +3,10 @@
 This document covers the Speak5220 application in `app/`, and sets the
 testing rules it is built to, following the plan in
 [docs-tech/application-plan.md](docs-tech/application-plan.md). The test
-tree, its lanes, the CI jobs, the emulator's interfaces and the emulator and
-packaging reference data below exist; the other interfaces, the fixture
-projects, the encoder's reference data and the scripts are added by the
-plan's later phases.
+tree, its lanes, the CI jobs, the emulator's and encoder's interfaces, the
+reference data, `corpus-check.sh` and the encoder part of `benchmark.sh`
+below exist; the other interfaces, the fixture projects and the other
+scripts are added by the plan's later phases.
 
 The research code in `investigation/` (the Python encoder, the C emulator and
 the capture tools) has its own self-tests and is not covered here.
@@ -217,7 +217,7 @@ way its callers can be unit tested.
 | `IWavReader`, `IWavWriter` | `SndfileWavReader`, `SndfileWavWriter` (libsndfile) | The import pipeline, the WAV export |
 | `IResampler` | `SincResampler` (libsamplerate) | The import pipeline |
 | `IFft` | `PocketFft` (pocketfft) | Encoder stages, PESQ stages |
-| `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | The encoder stages | `Encoder` (orchestration only) |
+| `IFrameAnalyser`, `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | `FrameAnalyser`, `YinPitchTracker`, `VoicingClassifier`, `RepeatSearch`, `LevelSetter` | `Encoder` (orchestration only) |
 | `IEncoder` | `Encoder` | `Optimiser`, the project's re-encode logic |
 | `ISynth` | `Synth` | `Optimiser`, `Player` |
 | `IQualityMetric` | PESQ, cheap measures | `Optimiser` |
@@ -320,7 +320,8 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
 | `app/projects/benchmark/` | Fixed-size projects for `app/scripts/benchmark.sh` |
 | `app/golden/emulator/` | The C emulator's runs (plan §1.4): codes and event logs for its self-test scenarios, synthetic vectors and encoder output, through both paths |
 | `app/golden/packaging/` | The Python encoder's Acorn PHROM and TI indexed images and Speak External streams |
-| `app/golden/` (later) | The encoder's frames and intermediates, PESQ scores |
+| `app/golden/encoder/` | The Python encoder's frames for the whole corpus with four option sets, with each file's near-tie frames; `encodeDetailed()` intermediates and WAV inputs for a corpus subset |
+| `app/golden/` (later) | PESQ scores |
 
 - **Fixture projects are stored unpacked**, as a directory with the same
   layout as a `.s5proj` ZIP (`project.yaml`, `phrases/<uuid>/…`). That way
@@ -335,10 +336,11 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
   check (below) is unavailable.
 - **The reference data** was produced from the retired Python encoder and C
   emulator (plan §1.4, decision D5) by
-  `app/scripts/golden/generate_golden.py`, run by hand in the default Nix
-  shell (`nix develop --command python3 app/scripts/golden/generate_golden.py`).
-  `--check` regenerates it into a temporary directory and compares it with
-  the committed files. It is a fixed regression baseline:
+  `app/scripts/golden/generate_golden.py` (emulator and packaging) and
+  `app/scripts/golden/encoder.py` (encoder), run by hand in the default Nix
+  shell (`nix develop --command python3 app/scripts/golden/encoder.py`).
+  `--check` regenerates the data into a temporary directory and compares it
+  with the committed files. It is a fixed regression baseline:
   - **Emulator data never changes**, unless the datasheet does.
   - **Encoder data is regenerated only for an intended improvement.** It is
     regenerated from the C++ itself, in its own commit that records the
@@ -355,9 +357,10 @@ read the file system, so they are functional.
 Everything writes through an output directory chosen by the caller (the
 CLI's `--output DIR`), never into `app/projects/`, `app/golden/` or
 `app/tests/`.
-The one exception is `app/scripts/golden/generate_golden.py`, which writes
-`app/golden/` itself; it is run by hand, and only to create or, by
-agreement, regenerate the reference data (AGENTS.md §3.1).
+The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`
+and `encoder.py`), which write `app/golden/` themselves; they are run by
+hand, and only to create or, by agreement, regenerate the reference data
+(AGENTS.md §3.1).
 
 - `app/scripts/run-projects.sh [general|phrom|bbc]` runs a fixture suite end to
   end through `speak5220-cli`. It encodes each fixture and runs its export
@@ -366,12 +369,26 @@ agreement, regenerate the reference data (AGENTS.md §3.1).
   manifests of every export (PHROM images, C headers, `.ssd` images, WAV)
   against a recorded baseline (`--record` to record one). This is how a
   change is shown to leave the output byte-identical.
-- `app/scripts/corpus-check.sh` runs the encoder and PESQ over the full
-  generated corpus and checks the plan's acceptance criteria (§3.2, §3.3).
-  It is slow, so it is run by hand, not by CTest.
-- `app/scripts/benchmark.sh` times encoding, PESQ and Optimise on
-  `app/projects/benchmark/` for each thread configuration, writing into
-  `build/app/project-output/benchmark/`.
+- `app/scripts/corpus-check.sh` runs the encoder over the full generated
+  corpus with every option set and checks the plan's acceptance criteria
+  (§3.2): at least 99% of encodings identical to the reference, the rest
+  differing only at the reference's near-tie frames and within 0.02 of its
+  PESQ (`corpus_pesq.py`, which uses the retired `speechqual.py` until the
+  application's PESQ exists). It writes a report to
+  `build/app/corpus-check/`. It is slow, so it is run by hand in the default
+  Nix shell, not by CTest. Phase 3 adds the PESQ criteria of §3.3.
+- `app/scripts/benchmark.sh` times encoding on one core, against the target
+  of 0.05 s per second of speech, writing per-file timings into
+  `build/app/project-output/benchmark/`. It takes the corpus subset by
+  default, or any directory of WAV files. Later phases add PESQ, Optimise
+  for each thread configuration, and `app/projects/benchmark/`.
+- **By-hand tests.** The full-corpus check and the timing are functional
+  tests with Google Test's `DISABLED_` prefix: CTest lists them as disabled
+  and never runs them. The scripts run them with
+  `--gtest_also_run_disabled_tests`, passing their inputs and report files
+  in environment variables (`SPEAK5220_CORPUS_DIR`,
+  `SPEAK5220_CORPUS_REPORT`, `SPEAK5220_BENCHMARK_DIR`,
+  `SPEAK5220_BENCHMARK_REPORT`).
 - The functional suites point their output at a `QTemporaryDir`, so
   `ctest -L functional` never writes into the source tree.
 

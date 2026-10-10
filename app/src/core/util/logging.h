@@ -53,6 +53,7 @@ inline constexpr std::string_view kLogModuleGui = "gui";
 inline constexpr std::string_view kLogModuleEmulator = "emulator";
 inline constexpr std::string_view kLogModuleSynth = "synth";
 inline constexpr std::string_view kLogModuleAudio = "audio";
+inline constexpr std::string_view kLogModuleEncoder = "encoder";
 
 // Replaces the logging set-up with a console sink, a file sink, or both.
 // File output goes through spdlog's asynchronous logger, so trace output

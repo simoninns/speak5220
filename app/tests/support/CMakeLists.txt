@@ -8,6 +8,7 @@ add_library(
     speak5220_test_support
     STATIC
     emulator_run.cc
+    encoder_golden.cc
     frame_builder.cc
     golden_data.cc
 )
@@ -17,6 +18,11 @@ target_include_directories(
 )
 target_link_libraries(
     speak5220_test_support
-    PUBLIC s5core GTest::gmock
+    PUBLIC s5core Qt6::Core GTest::gmock
     PRIVATE speak5220_compile_options
+)
+# The encoder's reference readers default to the committed data.
+target_compile_definitions(
+    speak5220_test_support
+    PRIVATE SPEAK5220_GOLDEN_DIR="${PROJECT_SOURCE_DIR}/golden"
 )

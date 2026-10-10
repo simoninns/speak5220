@@ -21,14 +21,16 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
-| `s5core`: `audio/`, `dsp/` (WAV, resampler, FFT adapters) | Implemented |
-| Reference data in `app/golden/` (emulator and packaging) | Implemented |
+| `s5core`: `audio/`, `dsp/` (WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
+| `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
+| Reference data in `app/golden/` (emulator, packaging, encoder) | Implemented |
 | `speak5220` GUI | Implemented as a skeleton: an empty `MainWindow`, logging options |
 | `speak5220-cli` | Implemented as a skeleton: version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
-| Format, lint, pre-commit hooks, CI | Implemented |
+| Format, lint, pre-commit hooks, CI on Linux | Implemented |
+| CI on Windows and macOS (release tags and manual runs) | Implemented; not yet run |
 | Nix dev shells and package | Implemented |
-| Encoder, quality, optimiser, project, BBC export, the GUI's views | Planned |
+| Quality, optimiser, project, BBC export, the GUI's views | Planned |
 
 ---
 
@@ -38,14 +40,18 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 app/
   CMakeLists.txt                top level: in-source guard, C++20, options
   .clang-format  .clang-tidy  CPPLINT.cfg  .gersemirc
+  vcpkg.json                    the libraries for Windows and macOS (§3)
   cmake/                        CompilerWarnings.cmake, Dependencies.cmake,
                                 QualityTargets.cmake
   scripts/                      check-spdx.sh, check-header-guards.sh,
                                 clang-format-check.sh, clang-tidy.sh,
-                                format.sh, lint.sh
-    golden/                     generate_golden.py and its scenario scripts
-                                (offline, run by hand: §11)
-  golden/                       reference data from the retired references (§11)
+                                format.sh, lint.sh; corpus-check.sh,
+                                corpus_pesq.py, benchmark.sh,
+                                generate_corpus.py,
+                                generate_filter_constants.py (§8)
+    golden/                     generate_golden.py and its scenario scripts,
+                                encoder.py (offline, run by hand: §12)
+  golden/                       reference data from the retired references (§12)
   src/
     core/                       library "s5core" (QtCore at most)
       util/                     Status/StatusOr, logging, logging options, version
@@ -54,7 +60,10 @@ app/
       synth/                    Synth, ReferenceSynthesizer
       packaging/                AcornPhrom, TiIndexed, SpeakExternalStream
       audio/                    WAV interfaces and the libsndfile adapters
-      dsp/                      resampler and FFT interfaces and adapters
+      dsp/                      resampler and FFT interfaces and adapters;
+                                SOS/FIR filters and their constants,
+                                NumPy-ordered sums and windows, LPC analysis
+      encoder/                  Encoder and its stages, EncoderOptions (§8)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow
     cli/                        the "speak5220-cli" executable
@@ -68,13 +77,12 @@ app/
 
 Planned additions, each created with its first code (plan §2.1):
 
-- `src/core/`: `encoder/`, `quality/`, `bbc/`, `project/`;
+- `src/core/`: `quality/`, `bbc/`, `project/`;
 - `src/gui/`: `phrase_list/`, `phrase_editor/`, `waveform/`,
   `encoder_panel/`, `export/`, `undo/`;
 - `app/projects/` (fixture projects), `app/resources/` (icons, `.desktop`,
   metainfo), `app/packaging/` (Flatpak, WiX/CPack, macOS);
-- more scripts in `app/scripts/`: `run-projects.sh`, `output-hashes.sh`,
-  `corpus-check.sh`, `benchmark.sh`, `generate_corpus.py`.
+- more scripts in `app/scripts/`: `run-projects.sh`, `output-hashes.sh`.
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
 the shared command-line options). All DSP, emulation, encoding, packaging and
@@ -93,14 +101,18 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   same reason.
 - C++20 without extensions. Every target links the interface library
   `speak5220_compile_options`, which carries `-Wall -Wextra -Wpedantic
-  -Wconversion -Wshadow -Werror` (GCC/Clang) or `/W4 /WX` (MSVC), and,
-  with `SPEAK5220_SANITIZE=ON`, `-fsanitize=address,undefined`. Debug and
+  -Wconversion -Wshadow -Werror -ffp-contract=off` (GCC/Clang) or `/W4 /WX
+  /utf-8 /permissive- /external:W0` with `_CRT_SECURE_NO_WARNINGS` (MSVC),
+  and, with `SPEAK5220_SANITIZE=ON`, `-fsanitize=address,undefined`.
+  `-ffp-contract=off` stops fused multiply-add contraction (Clang's default,
+  and GCC's on targets with FMA), so the encoder rounds as NumPy does on
+  every platform (§8); `-ffast-math` is never used. Debug and
   sanitizer builds also define `_GLIBCXX_ASSERTIONS`, so `operator[]` on
   standard containers is range-checked (§4).
 - The version is set once, in `project(... VERSION ...)`. `s5core` receives
   it as `SPEAK5220_VERSION`, and `flake.nix` reads it for the package.
 - `SPEAK5220_BUILD_TESTS` (default `ON`) adds `app/tests/`.
-- `cmake/Dependencies.cmake` finds the libraries of §8: Qt 6 (Core,
+- `cmake/Dependencies.cmake` finds the libraries of §9: Qt 6 (Core,
   Widgets) and spdlog by their CMake packages; libsndfile and libsamplerate
   by header and library (their pkg-config files name private dependencies a
   shared build does not need); pocketfft by its header, as an interface
@@ -111,6 +123,10 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   `dsp/fft.cc`.
 - `format` and `lint` targets wrap `app/scripts/format.sh` and
   `app/scripts/lint.sh`.
+- **Windows and macOS:** Qt from aqtinstall, pinned to the flake's Qt
+  version (6.11.2); the other libraries from vcpkg in manifest mode
+  (`app/vcpkg.json`, pinned by `builtin-baseline`; libsndfile without its
+  compressed-format features), through vcpkg's CMake toolchain file.
 
 **Nix** (`flake.nix`):
 
@@ -118,7 +134,7 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   linters, and the pre-commit hooks (installed by its `shellHook`). It sets
   `QT_PLUGIN_PATH` so the GUI built in `build/app` runs.
 - `devShells.default`: the research shell (KiCad, Pico SDK, Python), plus
-  everything in `devShells.app`. The golden-data script runs here (§11).
+  everything in `devShells.app`. The golden-data scripts run here (§12).
 - `packages.speak5220` (also `default`): built with `qt6.wrapQtAppsHook`;
   its check phase runs `ctest -L unit`. Its source is `app/` only.
 - `packages.pocketfft`: pocketfft's header-only C++ version, which nixpkgs
@@ -167,6 +183,15 @@ and `clang-tidy`; both lanes under ASan/UBSan (Debug); `nix build
 .#speak5220`. Protecting `main` so that this workflow must pass is a
 repository setting on GitHub.
 
+**Windows and macOS CI** (`.github/workflows/app-platforms.yml`, decision
+D7): `windows-latest` (MSVC, through `ilammy/msvc-dev-cmd`) and
+`macos-latest`, each building with Ninja and running both lanes. They run
+only for a `v*` tag or when started by hand (`workflow_dispatch`), never on
+an ordinary push. Qt comes from `jurplel/install-qt-action` (aqtinstall),
+cached; vcpkg (`lukka/run-vcpkg`) builds the other libraries from source on
+each run. The jobs have not yet been run: plan Phase 2 task 7's acceptance
+is a manually started run that passes.
+
 ---
 
 ## 5. Tests
@@ -188,9 +213,21 @@ repository setting on GitHub.
     naming its path;
   - `emulator_run`: the reference program's scenario-script and bulk modes
     on the C++ emulator, with its event-log format, for the golden
-    comparisons.
+    comparisons;
+  - `encoder_mocks.h`: gMock mocks of `IFft` and the encoder's stage
+    interfaces;
+  - `encoder_golden`: readers for `app/golden/encoder/` (option sets,
+    reference encodings with their near-tie frames, JSON intermediates via
+    `QJsonDocument`, WAV inputs as doubles) and `CompareEncoding()`, which
+    applies the acceptance rule of §8.
 - The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`) and the
   reference data's directory (`SPEAK5220_GOLDEN_DIR`) compiled in.
+- **By-hand tests.** A few functional tests carry Google Test's `DISABLED_`
+  prefix, so CTest lists them as disabled and never runs them. The scripts
+  run them with `--gtest_also_run_disabled_tests`, passing inputs and an
+  output file through environment variables: the full-corpus check
+  (`EncoderCorpusCheck`, `corpus-check.sh`) and the encoder's timing
+  (`EncoderBenchmark`, `benchmark.sh`).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test.
@@ -204,7 +241,7 @@ Plan §2.2, with the names as built.
 | Component | Status and responsibility |
 |---|---|
 | `Status`, `StatusOr<T>` | **Implemented** (`core/util/status`): error values in place of exceptions, modelled on Abseil's |
-| Logging | **Implemented** (`core/util/logging`, `logging_options`): §10 |
+| Logging | **Implemented** (`core/util/logging`, `logging_options`): §11 |
 | `Version()`, `kApplicationName` | **Implemented** (`core/util/version`) |
 | Coding tables | **Implemented** (`core/lpc/coding_tables.h`): datasheet §8.1 Tables 8-4 to 8-7, `constexpr` |
 | `Frame`, `FrameCodec`, `BitReverse()` | **Implemented** (`core/lpc/`): frame kinds and lengths, validation, `Pack()`/`Parse()` with the §8.1/§12.1 bit order |
@@ -215,8 +252,9 @@ Plan §2.2, with the names as built.
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
+| Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `MainWindow` | **Implemented** as an empty window (`gui/main_window`) |
-| `Encoder` | Planned: re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set |
+| `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `Quality` | Planned: PESQ (P.862 narrowband, as P.862.1 MOS-LQO) plus cheap measures |
 | `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
 | Raw `.bin`, C header export | Planned |
@@ -275,13 +313,94 @@ boundary, then run until idle plus one frame):
   caller runs it on a worker thread.
 
 **Acceptance** (met): the C++ emulator reproduces every reference run in
-`app/golden/emulator/` (§11), codes sample for sample and events line for
+`app/golden/emulator/` (§12), codes sample for sample and events line for
 line, and the C self-test cases pass as unit tests with the VSM bus, sample
 sink and observer mocked.
 
 ---
 
-## 8. Third-party libraries
+## 8. The encoder
+
+**Implemented** (plan §3.2, Phase 2). `core/encoder/` re-implements
+`tms5220enc.py`'s `encodeDetailed()` function by function; each C++
+function's comment names its Python original.
+
+**Stages.** `Encoder` (`IEncoder`) composes five injected stages, in the
+order of `encodeDetailed()`. `MakeEncoder()` returns one with the standard
+stages over `PocketFft`.
+
+| Stage (interface → class) | Python | Does |
+|---|---|---|
+| `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
+| `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
+| `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix |
+| `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
+| `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control and compression; open-loop energies, closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the peak limiter and the safety net |
+
+Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`),
+sets the gain (by `targetRms`, or by a first pass with the limit at 511 for
+`targetPeak`), and turns the plan and energies into frames with
+`frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`, from
+`_toFrames()`, `_guardK510()` and `_addFades()`). The quantisers
+(`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
+fixed filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
+`encoder_filters`.
+
+The plan names four stage interfaces. `IFrameAnalyser` is a fifth, so the
+orchestration can be unit tested with every stage mocked.
+
+**Results.** `EncodeResult` holds the frames, which always end in a stop,
+and, unless the input held no sound, `EncodeDetails`: the high-passed input,
+the planned frames' centres, c0, the lead and the dropped opening, the gain,
+the plan, the shaped levels, the energies and the limiter's statistics.
+`Encode()` refuses a rate other than 8000 Hz, a non-finite sample, and
+options outside their ranges (`ValidateEncoderOptions()`).
+
+**Options.** `EncoderOptions` has the 15 options of `tms5220enc.py`
+`DEFAULTS`, with the same defaults. `EncoderOptionInfos()` gives each one's
+key (the Python name), label, help text, type, range and default, for the
+GUI's settings form and for project files. The ranges are the application's
+own; Python had none.
+
+**Matching NumPy and SciPy.** The aim is the same frames, so the C++ follows
+the reference's order of floating-point operations where that is cheap:
+
+- `SosFiltFilt()` is SciPy's `sosfiltfilt()`: odd extension by its default
+  padding length, steady-state initial conditions, and `sosfilt()`'s
+  direct form II transposed. The sections, initial conditions and padding
+  lengths of the two fixed filters are constants in `filter_constants.h`,
+  written by `app/scripts/generate_filter_constants.py` from SciPy (`--check`
+  compares).
+- `FirFilter()` sums in `numpy.convolve()`'s order, which is how
+  `lfilter()` filters with an FIR.
+- `PairwiseSum()` and `Mean()` are NumPy's pairwise summation;
+  `Percentile()` and `Median()` follow NumPy's linear method; the windows
+  use NumPy's formulas; nearest hops round halves to even, as Python's
+  `round()` does.
+- The FFTs are pocketfft, which NumPy uses, with NumPy's normalisation.
+- Dot products and BLAS-backed matrix products are summed in order. They
+  cannot reproduce OpenBLAS's rounding, and do not need to (below).
+
+**Acceptance** (met, plan §3.2):
+
+- On all 243 corpus files with the four option sets in
+  `app/golden/encoder/option_sets.tsv`, the frames are identical to the
+  Python reference's for every encoding (972 of 972), against the
+  criterion of 99%. No near-tie frames are needed: at a relative disturbance
+  of 1e-9 the reference changes no frame on any file (§12).
+- Every intermediate value of the corpus subset agrees with the reference
+  to a relative 1e-9.
+- Encoding takes 0.0104 s per second of speech on one core over the whole
+  corpus (`benchmark.sh`), against the target of 0.05.
+
+**Performance.** `ReferenceSynthesizer` runs the closed loop and the
+limiter, about ten times per phrase. The pitch tracker does two
+1024-point forward FFTs and one inverse per 5 ms hop. Neither has been
+optimised: neither needs it.
+
+---
+
+## 9. Third-party libraries
 
 | Need | Library | Licence | Status |
 |---|---|---|---|
@@ -298,7 +417,7 @@ sink and observer mocked.
 
 ---
 
-## 9. GUI, CLI and the core
+## 10. GUI, CLI and the core
 
 Both executables are thin front ends over `s5core`.
 
@@ -308,7 +427,7 @@ Both executables are thin front ends over `s5core`.
   tests link them; the `speak5220` executable adds only `main()`.
   `MainWindow` sets the title "Speak5220" and an initial size.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
-  `--help`, `--version` and the logging options of §10, and with no
+  `--help`, `--version` and the logging options of §11, and with no
   command prints `speak5220-cli <version>` to stdout.
 - Both executables add the logging options with `AddLoggingOptions()`, read
   them with `LogSettingsFromParser()`, and exit with code 2 and a message on
@@ -323,7 +442,7 @@ and has no undo.
 
 ---
 
-## 10. Logging
+## 11. Logging
 
 **Implemented** (plan §2.6), in `core/util/logging`:
 
@@ -337,7 +456,7 @@ and has no undo.
   dropping when the queue is full. `ConfigureLoggingWithSinks()` installs
   given sinks synchronously (tests use a ringbuffer sink).
 - `Logger(module)` returns the named logger for a module (`cli`, `gui`,
-  `emulator`, `synth`, `audio`, …), created on first use with the current
+  `emulator`, `synth`, `audio`, `encoder`, …), created on first use with the current
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
@@ -345,11 +464,11 @@ and has no undo.
 
 ---
 
-## 11. Reference data
+## 12. Reference data
 
-**Implemented** for the emulator and packaging (plan §1.4). `app/golden/`
-holds what the retired references produced; the build and tests read only
-these files and never run anything in `investigation/`.
+**Implemented** for the emulator, packaging and encoder (plan §1.4).
+`app/golden/` holds what the retired references produced; the build and
+tests read only these files and never run anything in `investigation/`.
 
 - `app/scripts/golden/generate_golden.py`, run by hand in the default Nix
   shell, builds `tms5220emu` from `investigation/emulator/` into a temporary
@@ -369,5 +488,33 @@ these files and never run anything in `investigation/`.
 - `golden/packaging/`: an Acorn PHROM and a TI indexed image of the corpus
   phrases and the "special" vectors, with their word tables and ASCII map,
   and each word's Speak External stream.
-- The emulator's data is never regenerated unless the datasheet changes
+- `golden/encoder/`, written by `app/scripts/golden/encoder.py` from the
+  Python encoder (same rules: refuses local changes, records the commit,
+  the SHA-256 and the NumPy and SciPy versions, `--check` compares):
+  - `inputs/`: WAV copies of an eight-file corpus subset (public-domain and
+    CC0 voices only, one or two per category of prompt);
+  - `intermediates/`: per subset file, `encodeDetailed()`'s intermediates
+    with the default options, as JSON: the filtered signals (every 16th
+    sample), the pitch track with CMNDF rows and candidates for six hops,
+    each frame's analysis and own quantisation, the plan, the faint-opening
+    trim, the shaped levels, the per-frame gains, the gain and the energies;
+  - `frames/SET.tsv`: for each option set, every corpus file's frame count,
+    near-tie frames and packed frames;
+  - `option_sets.tsv`: the default set, and three fixed sets that between
+    them change every option.
+- **Near-tie frames.** A frame is a near tie if its coding changes when the
+  input is disturbed at the level of floating-point noise. The script
+  encodes each file as given and three times disturbed (scaled by 1 + 1e-9;
+  plus white noise at 1e-9 of its RMS, twice with different seeds); a frame
+  that differs in any run is listed, and a file whose frame count changes
+  has every frame listed. Plan §3.2 accepts a difference only at such
+  frames. With the current reference none are listed.
+- The full corpus is not committed: `app/scripts/generate_corpus.py` writes
+  its WAV copies (8 kHz, 16-bit, lossless from the FLAC originals) for
+  `corpus-check.sh`. Where an encoding differs from the reference,
+  `corpus_pesq.py` scores both with `investigation/tools/speechqual.py`
+  (PESQ as P.862.1 MOS-LQO) until the application's own PESQ exists
+  (Phase 3).
+- The emulator's data is never regenerated unless the datasheet changes;
+  the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).

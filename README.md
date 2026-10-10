@@ -19,7 +19,7 @@ So far only its scaffolding exists: the build, an empty main window, a command-l
 
 | Path | Contents |
 |---|---|
-| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), reference data from the retired encoder and emulator (`golden/`), style configuration, check scripts and the golden-data generator (`scripts/`) |
+| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), reference data from the retired encoder and emulator (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`), and check, corpus, benchmark and golden-data scripts (`scripts/`) |
 | [`docs/`](docs/index.md) | The published documentation site: the reference datasheet and the research record |
 | [`docs-tech/`](docs-tech/application-plan.md) | Developer documents that are not part of the site: the application's implementation plan and its high-level design |
 | [`investigation/`](investigation/README.md) | The research: the capture board (`kicad/`), its firmware (`firmware/`), the host tools (`tools/`), the captures (`captures/`), the speech PROM manifests (`proms/`), and the reference emulator (`emulator/`) and encoder (`encoder/`) |
