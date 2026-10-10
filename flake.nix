@@ -23,6 +23,7 @@
             p.matplotlib
             p.pyserial
             p.soundfile
+            p.pesq # ITU-T P.862 speech quality (tools/speechqual.py)
           ]);
         in
         {

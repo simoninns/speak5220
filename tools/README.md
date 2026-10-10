@@ -292,6 +292,34 @@ python tools/asrcheck.py           # word error rates of input, prediction and c
   - **`compare`** judges each set against the tolerance of plan §1.5 and checks the VSM timing. It also compares the chip's VSM output with its Speak External output.
 - **`asrcheck.py`** transcribes each item's input, prediction and chip output with whisper.cpp (`whisper-cli`; the model is kept in `local/whisper/`), and reports the word error rate against the prompt. It is a check that words survive, not a substitute for listening.
 
+## Encoding quality
+
+```
+python tools/speechqual.py IN.wav                    # encode, speak on the emulator, score against the input
+python tools/speechqual.py IN.wav --bin OUT.bin      # score frames encoded elsewhere
+python tools/speechqual.py IN.wav --wav DIR --anchor # also write input, chip and anchor audio, aligned
+python tools/speechqual.py --set all --anchor --csv q.csv        # the Phase 11 inputs (243 files, about 2.5 min)
+python tools/speechqual.py --set all --opt repeats=False         # an encode() option changed
+```
+
+`speechqual.py` gives the encoder an objective score. It encodes each input with `encoder/tms5220enc.py`, or takes packed frames from `--bin`. It speaks the frames with `emulator/tms5220emu` (VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
+
+| Column | Measure |
+|---|---|
+| `PESQ` | ITU-T P.862 narrowband, as P.862.1 MOS-LQO (1.0–4.5), from the `pesq` package. P.862 was not validated for vocoders, so use it to rank encodings, not as a listener's score |
+| `MCD` | Mel-cepstral distortion (dB), coefficients 1–24 of 40 mel bands from 100 to 3800 Hz. It measures the spectral shape, not level or phase. It is computed from a filter bank, not with SPTK's `mcep`, so compare it only with itself |
+| `lo`, `mid`, `hi` | The level-normalised spectrum, output minus input (dB), below 800 Hz, from 800 to 2000 Hz, and above 2000 Hz |
+| `lvl`, `lvlr` | Per 10 ms frame: the mean absolute level error (dB, after removing the file's median offset), and the correlation of the two level envelopes |
+| `drop%` | Speech frames where the output is more than 20 dB below the input |
+| `pause` | In the input's pauses: the output's level minus the input's, each relative to its own loudest frame (median, dB). Positive means the output's pauses are noisier |
+| `vuv%`, `gpe%`, `f0c` | One pitch tracker, run on both signals: the voicing disagreement, the gross pitch errors (more than 20 %), and the RMS f0 error of the remaining frames in cents |
+
+Speech frames are those within 35 dB of the input's loudest 10 ms frame. The alignment is the shift that best correlates the two level envelopes, refined to within ±25 ms by the closest spectra; `lagms` reports it.
+
+**The anchor.** `--anchor` also scores a plain floating-point LPC vocoder of the same input. It uses order 10, 25 ms frames, the K interpolated in 8 steps as on the chip, pulse or noise excitation, and no quantisation. It is independent of the encoder. The gap between the anchor and the chip is what the chip's tables and excitation and the encoder's choices cost together.
+
+`--frames-csv` writes the per-frame measures of one input, to find where an encoding goes wrong. `--wav DIR` writes `<name>_input.wav`, `<name>_chip.wav` and (with `--anchor`) `<name>_lpc.wav`, aligned and at the same level, for listening.
+
 ## Single captures and analysis
 
 ```
@@ -366,6 +394,7 @@ The viewer draws every record of `docs-tech/die_analysis/cells.json` and shows t
 - `regress.py`, `variance.py`: the Phase 9 regression harness for the reference emulator in `emulator/`, and the measured agreement between chips and the model (see above).
 - `ttsgen.py`, `prompts.csv`, `recimport.py`: the Phase 11 encoder test speech and recordings (see above).
 - `promstats.py`, `phase11.py`, `asrcheck.py`: Phase 11's PROM statistics, new speech data, predictions, comparison and intelligibility check (see above). The encoder itself is in `encoder/`.
+- `speechqual.py`: the objective encoding-quality measure (see "Encoding quality").
 - `promout.py`: reads the parameter ROM through `PROM OUT` (see above).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver, including the MSO's digital ports.
 - `tms5220_decode.py`: decodes `I/O` (a 10-bit two's-complement sample, LSB first, in bit slots 2–11 after the `T11` rising edge) and averages the DAC voltage over each settled step.
