@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# gersemi (CMake formatter) settings for app/ (application plan §1.3).
+line_length: 80
+indent: 4
+# Where the project's own CMake functions are defined, so they are formatted
+# like built-in commands.
+definitions: [tests/CMakeLists.txt]

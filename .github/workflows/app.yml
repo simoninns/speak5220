@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Checks, builds and tests the Speak5220 application (app/) on every push and
+# pull request (docs-tech/application-plan.md, Phase 0 task 6 and §8).
+# Uses only free services (decision D8): GitHub's hosted runner, Nix
+# installed by its action, and the public NixOS binary cache.
+name: Application
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Every pre-commit hook on every file, except clang-tidy (run in "build")
+  hooks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix flake check -L
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Configure
+        run: >
+          nix develop .#app --command
+          cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - name: Build
+        run: nix develop .#app --command cmake --build build/app
+      - name: Unit tests
+        run: >
+          nix develop .#app --command
+          ctest --test-dir build/app -L unit --output-on-failure
+      - name: Functional tests
+        run: >
+          nix develop .#app --command
+          ctest --test-dir build/app -L functional --output-on-failure
+      - name: clang-tidy
+        run: nix develop .#app --command app/scripts/clang-tidy.sh -p build/app
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Configure (Debug, ASan and UBSan)
+        run: >
+          nix develop .#app --command
+          cmake -S app -B build/app-asan -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          -DSPEAK5220_SANITIZE=ON
+      - name: Build
+        run: nix develop .#app --command cmake --build build/app-asan
+      - name: Unit tests
+        run: >
+          nix develop .#app --command
+          ctest --test-dir build/app-asan -L unit --output-on-failure
+      - name: Functional tests
+        run: >
+          nix develop .#app --command
+          ctest --test-dir build/app-asan -L functional --output-on-failure
+
+  # The Nix package, whose check phase runs the unit lane
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix build .#speak5220 -L

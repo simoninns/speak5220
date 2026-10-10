@@ -143,10 +143,11 @@ comment):
 | Tool | Files | Configuration |
 |---|---|---|
 | `clang-format` | `.cc`, `.h` | `.clang-format` with `BasedOnStyle: Google`; check mode (`--dry-run -Werror`) in hooks and CI, never auto-fixing in CI |
-| `cpplint` | `.cc`, `.h` | Google's own style checker; `CPPLINT.cfg` at `app/` sets the root (`src`) for header-guard names and disables only the checks that conflict with the agreed exceptions |
+| `cpplint` | `.cc`, `.h` | Google's own style checker; `CPPLINT.cfg` at `app/` disables only the checks that conflict with the agreed rules, each with a comment |
 | `clang-tidy` | `.cc`, `.h` | `.clang-tidy` enabling `google-*`, `readability-identifier-naming` (configured to the table above), `bugprone-*`, `modernize-*`, `performance-*`, `cppcoreguidelines-*` (with a short, commented list of disabled checks), and `clang-analyzer-*`; `WarningsAsErrors: '*'`. It uses `compile_commands.json` from the build directory |
 | Compiler | all C/C++ | `-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror` (GCC/Clang), `/W4 /WX` (MSVC) |
 | `check-spdx.sh` | all source files | §1.1 |
+| `check-header-guards.sh` | `.h` | The `SPEAK5220_…_H_` guards of the table above; cpplint cannot add the prefix, so its own guard check is disabled |
 | `ruff` (lint and format) | `.py` helper scripts | Default rules plus import sorting |
 | `shellcheck` | `.sh` | |
 | `nixfmt` | `.nix` | The formatter the flake already declares |

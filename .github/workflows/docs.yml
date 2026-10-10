@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
 # Builds the MkDocs site in docs/ and publishes it to GitHub Pages.
 # Pull requests build only; pushes to main build and deploy.
 name: Documentation

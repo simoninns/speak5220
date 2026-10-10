@@ -26,6 +26,62 @@ nix develop
 
 The flake requires Nix with flakes enabled (`experimental-features = nix-command flakes`). Every command below is run from the repository root inside this shell, or prefixed with `nix develop -c`.
 
+A smaller shell, `nix develop .#app`, has only the application's tools and libraries (Qt 6, the libraries of the plan's §2.4, Google Test, and the format and lint tools). CI uses it. Both shells install the application's pre-commit hooks into `.git/hooks` when entered.
+
+## The Speak5220 application
+
+The application is in `app/`, built with CMake and Ninja. Build directories go outside `app/` (conventionally `build/app`): configuring inside `app/` is refused.
+
+```bash
+cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build/app
+ctest --test-dir build/app -L unit          # the fast, mocked lane
+ctest --test-dir build/app -L functional    # file system, processes, GUI (offscreen)
+```
+
+This builds:
+
+| Output | What it is |
+|---|---|
+| `build/app/src/gui/speak5220` | The GUI (so far an empty main window) |
+| `build/app/src/cli/speak5220-cli` | The command-line tool (so far prints its version) |
+| `build/app/tests/...` | The test binaries; the `speak5220_tests` target builds them all |
+
+CMake options:
+
+| Option | Default | Effect |
+|---|---|---|
+| `SPEAK5220_BUILD_TESTS` | `ON` | Builds the Google Test suites (needs Google Test) |
+| `SPEAK5220_SANITIZE` | `OFF` | Builds with AddressSanitizer and UBSan (GCC or Clang); use with `-DCMAKE_BUILD_TYPE=Debug` in a separate build directory |
+
+The testing rules are in [`TESTING.md`](TESTING.md).
+
+### Format and lint
+
+Every commit is checked by pre-commit hooks ([git-hooks.nix](https://github.com/cachix/git-hooks.nix), declared in `flake.nix`): `clang-format`, `cpplint`, `clang-tidy`, the SPDX and header-guard checks (`app/scripts/check-spdx.sh`, `app/scripts/check-header-guards.sh`), `ruff`, `shellcheck`, `nixfmt`, `gersemi` and `actionlint`. The formatters run in check mode and print the command that fixes a failure. `clang-tidy` needs a configured and built `build/app` (for `compile_commands.json` and Qt's generated headers); without one, its hook fails and says how to create it. Never commit with `--no-verify`.
+
+Two CMake targets run the same tools by hand:
+
+```bash
+cmake --build build/app --target format   # clang-format, ruff format, nixfmt, gersemi, in place
+cmake --build build/app --target lint     # every read-only check, clang-tidy included
+```
+
+The style rules are in the plan's §1.3 and in [`AGENTS.md`](AGENTS.md) §4. Their configuration is in `app/.clang-format`, `app/.clang-tidy`, `app/CPPLINT.cfg` and `app/.gersemirc`.
+
+### Nix package
+
+```bash
+nix build .#speak5220    # builds the application and runs the unit lane
+nix run .#speak5220      # starts the GUI
+```
+
+Nix builds from the files git tracks, so `git add` new files before running these.
+
+### CI
+
+`.github/workflows/app.yml` runs on every push and pull request, on GitHub's hosted `ubuntu-latest` runner with Nix: `nix flake check` (every hook except `clang-tidy`, on every file), the build with both test lanes and `clang-tidy`, both lanes again under ASan and UBSan, and `nix build .#speak5220`.
+
 ## Hardware (KiCad)
 
 Start KiCad with `kicad`, or use `kicad-cli` for command-line tasks such as ERC:

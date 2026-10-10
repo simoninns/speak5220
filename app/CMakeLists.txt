@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+cmake_minimum_required(VERSION 3.24)
+
+# Out-of-source builds only (application plan §1.2). A build directory
+# anywhere inside app/ is refused, not only app/ itself.
+cmake_path(
+    IS_PREFIX
+    CMAKE_SOURCE_DIR
+    "${CMAKE_BINARY_DIR}"
+    NORMALIZE
+    _in_source
+)
+if(_in_source)
+    message(
+        FATAL_ERROR
+        "In-source builds are not allowed: the build directory "
+        "(${CMAKE_BINARY_DIR}) is inside the source tree "
+        "(${CMAKE_SOURCE_DIR}).\n"
+        "Remove the CMakeCache.txt and CMakeFiles/ just created there, then "
+        "configure from the repository root:\n"
+        "  cmake -S app -B build/app -G Ninja"
+    )
+endif()
+
+project(
+    speak5220
+    VERSION 0.1.0
+    DESCRIPTION "TMS5220 LPC speech data and PHROM editor"
+    LANGUAGES CXX
+)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(SPEAK5220_BUILD_TESTS "Build the Google Test suites" ON)
+option(SPEAK5220_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+include(GNUInstallDirs)
+include(CompilerWarnings)
+include(QualityTargets)
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+
+add_subdirectory(src)
+
+if(SPEAK5220_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()

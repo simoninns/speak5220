@@ -174,7 +174,10 @@
 
 - The project uses **Nix**; the provided development shell is authoritative.
 - Run normal workflows inside the project shell:
-  `nix develop "path:$PWD" --command <command>`
+  `nix develop --command <command>`
+  - For application work, the smaller `nix develop .#app --command <command>` is enough (it is the shell CI uses).
+  - Do **not** use `path:$PWD` (or any `path:` flake reference). It copies the whole working tree into the Nix store, including the tens of gigabytes of gitignored captures under `investigation/`. The default git flake reads only tracked files.
+  - Because of that, `nix build`, `nix run` and `nix flake check` do not see untracked files. Commands run *inside* the shell (CMake, CTest, the scripts) work on the working tree as usual. Before running those three on new files, ask the user to stage them, because agents do not run `git add` (§1.2).
 - Temporary tools (profiling, debugging, one-off analysis):
   - Use ad-hoc shells:
     `nix shell nixpkgs#<tool> --command <tool> <args>`
@@ -254,8 +257,8 @@ Rules:
 - New user-facing feature ⇒ a `user-manual/` page (or section) **and** the
   corresponding `reference/` entries for any new keys or options.
 - Verify the site still builds before finishing:
-  `nix develop "path:$PWD" --command mkdocs build --strict`.
-  Preview with `nix develop "path:$PWD" --command mkdocs serve`.
+  `nix develop --command mkdocs build --strict`.
+  Preview with `nix develop --command mkdocs serve`.
 
 ### 9.3 Keeping Documentation Current
 

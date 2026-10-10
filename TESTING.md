@@ -1,9 +1,10 @@
 # Testing vision and strategy
 
-This document covers the Speak5220 application in `app/`. The application is
-not built yet. This document sets the testing rules it will be built to,
-following the plan in
-[docs-tech/application-plan.md](docs-tech/application-plan.md).
+This document covers the Speak5220 application in `app/`, and sets the
+testing rules it is built to, following the plan in
+[docs-tech/application-plan.md](docs-tech/application-plan.md). The test
+tree, its lanes and the CI jobs below exist; the interfaces, fixtures,
+reference data and scripts are added by the plan's later phases.
 
 The research code in `investigation/` (the Python encoder, the C emulator and
 the capture tools) has its own self-tests and is not covered here.
@@ -289,7 +290,10 @@ app/tests/
 **Classification is the directory, not a list.** A source file under
 `unit/` is built into the unit binary, and every test it declares is
 labelled `unit`. The same holds for `functional/`. Adding a test file is
-enough: there is no pattern list to keep in step. A file whose tests split
+enough: there is no pattern list to keep in step. The CMake function
+`speak5220_add_test_lane()` in `app/tests/CMakeLists.txt` does this: it
+globs each directory and takes the label from the directory's name, so a
+new or moved file is picked up when the build next runs. A file whose tests split
 across both categories must be split into two files, one per tree.
 
 Use `functional` **only** when the objective cannot be met with a unit

@@ -102,3 +102,9 @@ investigation/captures/phase11/takes/*/*
 
 # MkDocs build output (mkdocs.yml)
 site/
+
+# Application build directories (BUILD.md: cmake -S app -B build/app)
+build/
+
+# Written by the dev shell's git-hooks.nix setup (flake.nix); a link into the Nix store
+.pre-commit-config.yaml

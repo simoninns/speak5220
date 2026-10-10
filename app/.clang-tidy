@@ -1,0 +1,89 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# clang-tidy settings for app/ (application plan §1.3). Every disabled check
+# below has a comment saying why; add to this list only with a reason.
+---
+Checks: >
+  -*,
+  google-*,
+  readability-identifier-naming,
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  cppcoreguidelines-*,
+  clang-analyzer-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  -google-readability-todo,
+  -bugprone-easily-swappable-parameters,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-pro-type-vararg,
+  -cppcoreguidelines-avoid-non-const-global-variables
+
+# Why each check above is disabled:
+#   modernize-use-trailing-return-type
+#       Google style writes the return type first.
+#   modernize-use-nodiscard
+#       Google style does not require [[nodiscard]] on every accessor;
+#       Status and StatusOr are marked [[nodiscard]] where they are declared.
+#   google-readability-todo
+#       AGENTS.md §4.3.7 writes "// TODO: <description>" without a user name.
+#   bugprone-easily-swappable-parameters
+#       DSP code naturally takes several numeric parameters of one type.
+#   cppcoreguidelines-avoid-magic-numbers
+#       Named constants are required by AGENTS.md §4.3.5, but this check also
+#       flags every literal in tests and in the datasheet coding tables, where
+#       the literal is the clearest form.
+#   cppcoreguidelines-owning-memory
+#       Plan §1.3 agreed exception: Qt widgets are created with
+#       "new QWidget(parent)" and owned by their parent.
+#   cppcoreguidelines-pro-type-vararg
+#       Qt's and Google Test's macros expand to variadic calls.
+#   cppcoreguidelines-avoid-non-const-global-variables
+#       Google Test's TEST() macros define mutable globals.
+
+WarningsAsErrors: '*'
+HeaderFilterRegex: '.*/app/(src|tests)/.*'
+FormatStyle: file
+
+CheckOptions:
+  # Names, following the table in plan §1.3.
+  - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.UnionCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypeAliasCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypedefCase, value: CamelCase }
+  - { key: readability-identifier-naming.TemplateParameterCase, value: CamelCase }
+  - { key: readability-identifier-naming.ConceptCase, value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase, value: CamelCase }
+  - { key: readability-identifier-naming.MethodCase, value: CamelCase }
+  # Plan §1.3 agreed exception: overrides keep Qt's names (paintEvent(),
+  # rowCount(), data(), ...). Overrides are not checked against this rule;
+  # this list covers Qt-mandated members that are not overrides.
+  - { key: readability-identifier-naming.MethodIgnoredRegexp, value: '^(metaObject|qt_metacast|qt_metacall|qt_static_metacall|tr|trUtf8)$' }
+  # main() and Qt's qt_ functions are allowed.
+  - { key: readability-identifier-naming.FunctionIgnoredRegexp, value: '^(main|qt_.*)$' }
+  - { key: readability-identifier-naming.VariableCase, value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase, value: lower_case }
+  - { key: readability-identifier-naming.MemberCase, value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberSuffix, value: _ }
+  - { key: readability-identifier-naming.ProtectedMemberSuffix, value: _ }
+  # Constants: kName for constexpr, and for const variables of static storage.
+  - { key: readability-identifier-naming.ConstexprVariableCase, value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariablePrefix, value: k }
+  - { key: readability-identifier-naming.GlobalConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.GlobalConstantPrefix, value: k }
+  - { key: readability-identifier-naming.StaticConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.StaticConstantPrefix, value: k }
+  - { key: readability-identifier-naming.ClassConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.ClassConstantPrefix, value: k }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantPrefix, value: k }
+  - { key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE }
+  # Header guards end in "_" (plan §1.3), which UPPER_CASE does not allow;
+  # app/scripts/check-header-guards.sh checks them instead.
+  - { key: readability-identifier-naming.MacroDefinitionIgnoredRegexp, value: '^SPEAK5220_[A-Z0-9_]+_H_$' }

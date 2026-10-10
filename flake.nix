@@ -1,17 +1,321 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
 {
   description = "speak5220 - TMS5220 speech synthesiser hardware";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
+    # Pre-commit hooks for the application (docs-tech/application-plan.md §1.3)
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      git-hooks,
+    }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
+
+      # The Speak5220 application (app/): its dependencies, package, linters
+      # and pre-commit hooks
+      appFor =
+        pkgs:
+        let
+          inherit (pkgs) lib;
+          system = pkgs.stdenv.hostPlatform.system;
+
+          # The version is set once, in app/CMakeLists.txt
+          version = builtins.head (
+            builtins.match ".*project\\([^)]*VERSION ([0-9.]+).*" (builtins.readFile ./app/CMakeLists.txt)
+          );
+
+          # pocketfft's header-only C++ version, which nixpkgs does not package
+          pocketfft = pkgs.stdenvNoCC.mkDerivation {
+            pname = "pocketfft";
+            version = "0-unstable-2026-06-30";
+            src = pkgs.fetchFromGitHub {
+              owner = "mreineck";
+              repo = "pocketfft";
+              rev = "c90e55b3d529f8efa40ed01a20de22405f45fc65";
+              hash = "sha256-K3yvh6i5f9VbAiQPyixgnlDCj4eBWPU8m3BNn+fScdM=";
+            };
+            dontConfigure = true;
+            dontBuild = true;
+            installPhase = ''
+              install -Dm644 pocketfft_hdronly.h $out/include/pocketfft_hdronly.h
+              install -Dm644 LICENSE.md $out/share/licenses/pocketfft/LICENSE.md
+            '';
+            meta = {
+              description = "Header-only C++ FFT library";
+              homepage = "https://github.com/mreineck/pocketfft";
+              license = lib.licenses.bsd3;
+            };
+          };
+
+          # Libraries the application links (plan §2.4)
+          libraries = [
+            pkgs.qt6.qtbase
+            pkgs.qt6.qtmultimedia
+            pkgs.qt6.qtwayland
+            pkgs.libsndfile
+            pkgs.libsamplerate
+            pocketfft
+            pkgs.libzip
+            pkgs.yaml-cpp
+            pkgs.spdlog
+          ];
+
+          # Format and lint tools (plan §1.3)
+          linters = [
+            pkgs.clang-tools
+            pkgs.cpplint
+            pkgs.ruff
+            pkgs.shellcheck
+            pkgs.nixfmt
+            pkgs.gersemi
+            pkgs.actionlint
+          ];
+
+          speak5220 = pkgs.stdenv.mkDerivation (finalAttrs: {
+            pname = "speak5220";
+            inherit version;
+            src = lib.fileset.toSource {
+              root = ./app;
+              fileset = ./app;
+            };
+
+            nativeBuildInputs = [
+              pkgs.cmake
+              pkgs.ninja
+              pkgs.pkg-config
+              pkgs.qt6.wrapQtAppsHook
+            ];
+            buildInputs = libraries;
+            checkInputs = [ pkgs.gtest ];
+
+            # app/CMakeLists.txt refuses a build directory inside the source
+            # tree, so build next to it rather than in source/build
+            cmakeBuildDir = "../build";
+            cmakeDir = "../source";
+
+            cmakeFlags = [ (lib.cmakeBool "SPEAK5220_BUILD_TESTS" finalAttrs.doCheck) ];
+
+            # The packaged build runs the fast, mocked unit lane only (TESTING.md)
+            doCheck = true;
+            checkPhase = ''
+              runHook preCheck
+              # Somewhere writable for the offscreen GUI tests' font cache
+              export HOME=$(mktemp -d)
+              ctest -L unit --output-on-failure
+              runHook postCheck
+            '';
+
+            meta = {
+              description = "Creates TMS5220 LPC speech data and builds PHROMs";
+              homepage = "https://github.com/simoninns/speak5220";
+              license = lib.licenses.gpl3Plus;
+              mainProgram = "speak5220";
+              platforms = lib.platforms.linux;
+            };
+          });
+
+          # A hook that runs a command with its tools on PATH, so the hooks
+          # also work from a git client started outside the dev shell.
+          # Commands are run from the repository root.
+          toolHook =
+            {
+              name,
+              command,
+              files,
+              tools,
+              extra ? { },
+            }:
+            let
+              # Repository scripts run through bash: the flake check's
+              # sandbox has no /usr/bin/env for their shebang lines
+              runner = lib.optionalString (lib.hasPrefix "app/scripts/" command) "${pkgs.bash}/bin/bash ";
+            in
+            {
+              enable = true;
+              inherit name files;
+              entry = toString (
+                pkgs.writeShellScript "hook-${name}" ''
+                  export PATH=${lib.makeBinPath tools}:$PATH
+                  exec ${runner}${command} "$@"
+                ''
+              );
+              extraPackages = tools;
+              # Hooks that share a built-in hook's name (clang-format,
+              # clang-tidy) would otherwise bring the built-in's package, a
+              # second LLVM version, into the dev shell
+              package = lib.mkForce (if tools == [ ] then null else builtins.head tools);
+            }
+            // extra;
+
+          cppFiles = "^app/.*\\.(cc|h)$";
+
+          # The hooks of plan §1.3. clang-tidy needs a configured build
+          # directory, so it runs in the dev shell's hooks and in CI's build
+          # job, but not in the sandboxed `nix flake check`.
+          hooks =
+            { withClangTidy }:
+            {
+              clang-format = toolHook {
+                name = "clang-format";
+                command = "app/scripts/clang-format-check.sh";
+                files = cppFiles;
+                tools = [ pkgs.clang-tools ];
+              };
+              cpplint = toolHook {
+                name = "cpplint";
+                command = "cpplint --quiet";
+                files = cppFiles;
+                tools = [ pkgs.cpplint ];
+              };
+              check-spdx = toolHook {
+                name = "check-spdx";
+                command = "app/scripts/check-spdx.sh";
+                files = "^(app/|flake\\.nix$|\\.github/workflows/)";
+                tools = [ ];
+              };
+              check-header-guards = toolHook {
+                name = "check-header-guards";
+                command = "app/scripts/check-header-guards.sh";
+                files = "^app/.*\\.h$";
+                tools = [ ];
+              };
+              ruff = toolHook {
+                name = "ruff";
+                command = "ruff check";
+                files = "^app/.*\\.py$";
+                tools = [ pkgs.ruff ];
+              };
+              ruff-format = toolHook {
+                name = "ruff-format";
+                command = "ruff format --check";
+                files = "^app/.*\\.py$";
+                tools = [ pkgs.ruff ];
+              };
+              shellcheck = toolHook {
+                name = "shellcheck";
+                command = "shellcheck";
+                files = "^app/.*\\.sh$";
+                tools = [ pkgs.shellcheck ];
+              };
+              nixfmt = toolHook {
+                name = "nixfmt";
+                command = "nixfmt --check";
+                files = "^(flake\\.nix|app/.*\\.nix)$";
+                tools = [ pkgs.nixfmt ];
+              };
+              gersemi = toolHook {
+                name = "gersemi";
+                command = "gersemi --check";
+                files = "^app/(.*/)?(CMakeLists\\.txt|[^/]*\\.cmake)$";
+                tools = [ pkgs.gersemi ];
+              };
+              actionlint = toolHook {
+                name = "actionlint";
+                command = "actionlint";
+                files = "^\\.github/workflows/.*\\.ya?ml$";
+                # actionlint checks the workflows' shell steps with shellcheck
+                tools = [
+                  pkgs.actionlint
+                  pkgs.shellcheck
+                ];
+              };
+            }
+            // lib.optionalAttrs withClangTidy {
+              clang-tidy = toolHook {
+                name = "clang-tidy";
+                command = "app/scripts/clang-tidy.sh";
+                files = cppFiles;
+                tools = [ pkgs.clang-tools ];
+                # The script runs its files in parallel itself
+                extra.require_serial = true;
+              };
+            };
+
+          # The sources the hooks look at, so the check does not copy the
+          # investigation captures into the store
+          hookSrc = lib.fileset.toSource {
+            root = ./.;
+            fileset = lib.fileset.unions [
+              ./app
+              ./flake.nix
+              ./flake.lock
+              ./.github
+            ];
+          };
+
+          shellHooks = git-hooks.lib.${system}.run {
+            src = hookSrc;
+            hooks = hooks { withClangTidy = true; };
+          };
+          checkHooks = git-hooks.lib.${system}.run {
+            src = hookSrc;
+            hooks = hooks { withClangTidy = false; };
+          };
+
+          devShell = pkgs.mkShell {
+            packages = [
+              pkgs.cmake
+              pkgs.ninja
+              pkgs.pkg-config
+              pkgs.gtest
+              pkgs.qt6.qttools
+            ]
+            ++ libraries
+            ++ linters
+            ++ shellHooks.enabledPackages;
+
+            # Lets the GUI built in build/app find its Qt plugins
+            QT_PLUGIN_PATH = lib.makeSearchPath pkgs.qt6.qtbase.qtPluginPrefix [
+              pkgs.qt6.qtbase
+              pkgs.qt6.qtmultimedia
+              pkgs.qt6.qtwayland
+            ];
+
+            # Installs the pre-commit hooks into .git/hooks
+            shellHook = shellHooks.shellHook;
+          };
+        in
+        {
+          inherit
+            speak5220
+            pocketfft
+            checkHooks
+            devShell
+            ;
+        };
     in
     {
-      devShells = forAllSystems (pkgs:
+      packages = forAllSystems (
+        pkgs:
+        let
+          app = appFor pkgs;
+        in
+        {
+          inherit (app) speak5220 pocketfft;
+          default = app.speak5220;
+        }
+      );
+
+      checks = forAllSystems (pkgs: {
+        pre-commit = (appFor pkgs).checkHooks;
+      });
+
+      devShells = forAllSystems (
+        pkgs:
         let
           # Pico SDK with its submodules (TinyUSB is needed for USB stdio)
           pico-sdk = pkgs.pico-sdk.override { withSubmodules = true; };
@@ -28,9 +332,18 @@
             p.mkdocs
             p.mkdocs-material
           ]);
+
+          # The application's tools and libraries alone (used by CI)
+          app = (appFor pkgs).devShell;
         in
         {
+          inherit app;
+
           default = pkgs.mkShell {
+            # Everything in the application's shell, its hooks included
+            inputsFrom = [ app ];
+            inherit (app) QT_PLUGIN_PATH;
+
             packages = with pkgs; [
               # Hardware design
               kicad
@@ -64,8 +377,9 @@
               fi
             '';
           };
-        });
+        }
+      );
 
-      formatter = forAllSystems (pkgs: pkgs.nixfmt-rfc-style);
+      formatter = forAllSystems (pkgs: pkgs.nixfmt);
     };
 }
