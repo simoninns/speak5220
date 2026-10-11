@@ -45,7 +45,7 @@ C++ files use the block template from AGENTS.md §4.2:
 
 ```cpp
 /*
- * File:        frame_codec.cc
+ * File:        frame_codec.cpp
  * Module:      lpc
  * Purpose:     Packs and parses TMS5220 frames in the chip's bit order
  *
@@ -65,7 +65,7 @@ Other source files carry the two SPDX lines in their own comment syntax:
   plan included), images, test audio and golden data carry none.
 - A small script, `app/scripts/check-spdx.sh`, runs in the pre-commit hooks
   and in CI. It fails the build if:
-  - any source file (by extension: `.cc`, `.h`, `.cmake`, `CMakeLists.txt`,
+  - any source file (by extension: `.cpp`, `.h`, `.cmake`, `CMakeLists.txt`,
     `.nix`, `.sh`, `.py`, `.ui`, `.qrc`, workflow `.yml`) under `app/`, or
     `flake.nix`, lacks both SPDX lines;
   - a C++ file's `File:` line does not match its filename exactly.
@@ -111,7 +111,7 @@ Every commit is linted, and a commit that fails any check is rejected.
 
 | Area | Rule |
 |---|---|
-| Files | `.cc`/`.h`, lower case with underscores (`waveform_view.cc`); header guards `SPEAK5220_CORE_LPC_FRAME_CODEC_H_` (path from `app/src/`) |
+| Files | `.cpp`/`.h` (the guide prefers `.cc`; the project uses `.cpp`), lower case with underscores (`waveform_view.cpp`); header guards `SPEAK5220_CORE_LPC_FRAME_CODEC_H_` (path from `app/src/`) |
 | Names | Types and functions `PascalCase` (`FrameCodec::Pack()`); interfaces prefixed `I` (`IVsmBus`); variables `snake_case`; class members end in `_`; constants and enumerators `kName`; namespaces `speak5220::core`, `speak5220::app` |
 | Formatting | 80 columns, 2-space indent, include order as in the guide; enforced by `clang-format` |
 | Exceptions | Not used. Errors are returned as values: a small `Status`/`StatusOr<T>` type in `s5core` (modelled on Abseil's), or `std::optional` where there is nothing to report. Exceptions from third-party code are caught at the boundary. Qt does not use exceptions, so this fits |
@@ -142,9 +142,9 @@ comment):
 
 | Tool | Files | Configuration |
 |---|---|---|
-| `clang-format` | `.cc`, `.h` | `.clang-format` with `BasedOnStyle: Google`; check mode (`--dry-run -Werror`) in hooks and CI, never auto-fixing in CI |
-| `cpplint` | `.cc`, `.h` | Google's own style checker; `CPPLINT.cfg` at `app/` disables only the checks that conflict with the agreed rules, each with a comment |
-| `clang-tidy` | `.cc`, `.h` | `.clang-tidy` enabling `google-*`, `readability-identifier-naming` (configured to the table above), `bugprone-*`, `modernize-*`, `performance-*`, `cppcoreguidelines-*` (with a short, commented list of disabled checks), and `clang-analyzer-*`; `WarningsAsErrors: '*'`. It uses `compile_commands.json` from the build directory |
+| `clang-format` | `.cpp`, `.h` | `.clang-format` with `BasedOnStyle: Google`; check mode (`--dry-run -Werror`) in hooks and CI, never auto-fixing in CI |
+| `cpplint` | `.cpp`, `.h` | Google's own style checker; `CPPLINT.cfg` at `app/` disables only the checks that conflict with the agreed rules, each with a comment |
+| `clang-tidy` | `.cpp`, `.h` | `.clang-tidy` enabling `google-*`, `readability-identifier-naming` (configured to the table above), `bugprone-*`, `modernize-*`, `performance-*`, `cppcoreguidelines-*` (with a short, commented list of disabled checks), and `clang-analyzer-*`; `WarningsAsErrors: '*'`. It uses `compile_commands.json` from the build directory |
 | Compiler | all C/C++ | `-Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror` (GCC/Clang), `/W4 /WX` (MSVC) |
 | `check-spdx.sh` | all source files | §1.1 |
 | `check-header-guards.sh` | `.h` | The `SPEAK5220_…_H_` guards of the table above; cpplint cannot add the prefix, so its own guard check is disabled |
@@ -344,7 +344,7 @@ hash of the packed bytes plus the path).
 | FFT | pocketfft (C++ header-only version) | BSD-3 | The FFT that NumPy itself uses, which helps the C++ encoder match the Python golden data |
 | Project container | libzip | BSD-3 | See §4 |
 | Project metadata | yaml-cpp | MIT | YAML 1.2 (§4) |
-| PESQ | The project's own code (`quality/`) | GPLv3-or-later | Written from scratch from the published ITU-T P.862 and P.862.1 texts (D6) |
+| PESQ | The project's own code (`quality/`) | GPLv3-or-later | Written for the project from the ITU-T P.862 and P.862.1 texts, with the constants and details the text leaves open taken from the ITU reference implementation (D6) |
 | Logging | spdlog | MIT | `info`, `debug` and `trace`, to the console, a file or both (§2.6) |
 | Tests | Google Test with Google Mock | BSD-3 | Run through CTest; layout and lanes in TESTING.md |
 
@@ -500,12 +500,15 @@ banned in `s5core`.
   P.862.1 MOS-LQO, reference = the 8 kHz original, degraded = the emulator
   output with the 25 ms lead aligned.
 - PESQ is the project's own code, licensed GPLv3-or-later (D6). It is
-  written from scratch from the published ITU-T P.862 and P.862.1
-  Recommendation texts:
-  - The ITU's reference C source, and the C code inside the Python `pesq`
-    package, are **not** read or used.
-  - The Python package is used only as a black box, to produce the golden
-    scores the C++ is checked against (§1.4), to within ±0.01 on the corpus.
+  written for the project from the ITU-T P.862 and P.862.1 Recommendation
+  texts, and each stage cites its section of P.862:
+  - The text leaves most numbers and details to the ANSI-C reference
+    implementation, which Annex A makes part of the Recommendation. Those
+    constants and details are taken from the reference implementation (as
+    the Python `pesq` package bundles it).
+  - The Python package produces the golden scores the C++ is checked
+    against (§1.4), to within ±0.01 on the corpus.
+  - The ITU's texts and code are not committed.
 - **Optimise** searches the encoder options in `EncoderOptions`:
   - `targetRms` or `targetPeak`;
   - `repeats` and `repeatLambda`;
@@ -1038,8 +1041,9 @@ Depends on: Phase 2.
    (`speechqual.py --anchor`) and the `evaluate.py` measures for the corpus.
    - **Acceptance:** the data is committed and the script reproduces it.
 2. **PESQ.** P.862 narrowband with the P.862.1 mapping, behind
-   `IQualityMetric` (§3.3). It is written from scratch from the
-   Recommendation texts (D6): level alignment, IRS filtering, time
+   `IQualityMetric` (§3.3). It is written from the Recommendation texts,
+   with the constants and details they leave open taken from the ITU
+   reference implementation (D6): level alignment, IRS filtering, time
    alignment, the auditory transform, disturbance processing and the
    MOS-LQO mapping. Each stage cites its section of the Recommendation
    (AGENTS.md §4.3.6), and is unit tested on synthetic signals.
@@ -1341,7 +1345,7 @@ In short:
 | D3 | How does the BBC disc speak a phrase? | **A 6502 routine from the start**, writing the chip with OSBYTE &9F and refilling on Buffer Low. The MOS `SOUND` queue is not used (§6). |
 | D4 | A size budget for the project? | **64 PHROMs (64 × 16 KB = 1 MB)**, a testing limit. PHROMs are filled automatically in list order. Imports, re-encoding and the optimiser never take the project past the budget. Size is shown in KB and in PHROMs (§4.1). |
 | D5 | What happens to the Python encoder and C emulator? | **Retired once the C++ is accepted.** The golden data becomes a fixed regression baseline, and the C++ becomes the only maintained implementation (§1.4). |
-| D6 | Where does the PESQ implementation come from? | **Written from scratch** from the published ITU-T P.862 and P.862.1 texts, and licensed GPLv3-or-later with the rest of the project. The ITU reference code is not used (§3.3). |
+| D6 | Where does the PESQ implementation come from? | **The project's own code**, licensed GPLv3-or-later with the rest of the project, written from the ITU-T P.862 and P.862.1 texts. The text leaves most constants and details to the ANSI-C reference implementation, which P.862 gives precedence; those are taken from it (§3.3). The ITU's texts and code are not committed. |
 | D7 | When do the Windows and macOS CI jobs run? | **Only for a release** (a `v*` tag) or when started by hand, during development. Linux CI runs on every push (Phase 2, task 7). |
 | D8 | Which CI and distribution services are used? | **Free ones only.** GitHub's hosted runners (`ubuntu-latest` for Linux) with Nix installed by a free action and the public NixOS binary cache. No paid caches, remote builders or Nix CI services, and no paid code signing: the MSI is unsigned and the DMG is not notarised (Phase 11). |
 
@@ -1351,7 +1355,7 @@ In short:
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | **PESQ accuracy.** Our implementation, written from scratch from the P.862 text (D6), may not reproduce the reference scores closely, because the text may not pin down every detail that the ITU reference code does. It is also the largest single item in the plan | Build it stage by stage, with unit tests per stage, and check it against golden scores from the Python package (a black box, never distributed). If the scores cannot be matched to ±0.01, record the remaining difference in the HLD; the optimiser can fall back to the cheap measures while the gap is closed |
+| R1 | **PESQ accuracy.** The P.862 text alone does not pin down every detail that the ITU reference code does, so an implementation from the text may not reproduce the reference scores closely. It is also the largest single item in the plan | Take the constants and details the text leaves open from the reference implementation (D6), build it stage by stage with unit tests per stage, and check it against golden scores from the Python package. If the scores cannot be matched to ±0.01, record the remaining difference in the HLD; the optimiser can fall back to the cheap measures while the gap is closed |
 | R2 | The C++ encoder drifts from Python through floating-point differences in near-tie decisions | Re-implement function by function with intermediate golden data; accept on frames plus PESQ, not bits alone (§3.2) |
 | R2a | The C++ emulator's restructuring (classes, observers) changes timing, for example the slot at which a host write lands or the order of events | Accept only on identical codes **and** events (§2.3); keep the slot-stepped design, and change structure, not order of evaluation |
 | R3 | The optimiser is too slow | A fast C++ encoder (Phase 2 target), parallel candidates, cached analysis shared between candidates where options do not affect it (pitch tracking is independent of the level options) |

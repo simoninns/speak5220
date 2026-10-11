@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-mapfile -t cpp_files < <(find app -type f \( -name '*.cc' -o -name '*.h' \) | sort)
+mapfile -t cpp_files < <(find app -type f \( -name '*.cpp' -o -name '*.h' \) | sort)
 mapfile -t python_files < <(find app -type f -name '*.py' | sort)
 mapfile -t cmake_files < <(find app -type f \( -name CMakeLists.txt -o -name '*.cmake' \) | sort)
 

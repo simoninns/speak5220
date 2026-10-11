@@ -69,9 +69,9 @@
 - Fixtures: fixture projects live in `app/projects/` (stored unpacked), never in `app/tests/`. Mechanically derived data (such as the WAV copies of the corpus) is generated, not committed.
 - Reference data in `app/golden/` is a fixed regression baseline:
   - **Never** change the emulator's reference data, unless the reference datasheet changes.
-  - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after.
+  - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after; the quality data in `app/golden/quality/` is regenerated with it.
   - Ask the user before changing any reference data (§12).
-- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`), run by hand to create the reference data (TESTING.md).
+- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`, `quality.py`), run by hand to create the reference data (TESTING.md).
 - By-hand checks (the full-corpus check, the benchmark) are functional tests with the `DISABLED_` prefix, run only by their scripts (`corpus-check.sh`, `benchmark.sh`) with `--gtest_also_run_disabled_tests`; CTest never runs them.
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
@@ -89,7 +89,7 @@
 ## 4. C++ Coding Standards
 
 ### 4.1 Baseline & Tooling
-- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), with the agreed exceptions in plan §1.3 (Qt override names, Qt macros).
+- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), with the agreed exceptions in plan §1.3 (`.cpp` source files, Qt override names, Qt macros).
 - C++20, no compiler extensions, no exceptions: errors are returned as `Status`/`StatusOr<T>`.
 - **Never** use manual column-alignment (e.g. double-spacing before `=`, aligning continuation lines to opening parentheses) — clang-format will undo these and leave violations.
 - Use static analysers (`clang-tidy`, `cpplint`) and sanitizers where available in the Nix environment. The pre-commit hooks run them; fix failures rather than suppressing them. An exception to the style guide goes in the configuration, with a comment saying why.
@@ -99,7 +99,7 @@
 - Template:
   ```cpp
   /*
-   * File:        frame_codec.cc
+   * File:        frame_codec.cpp
    * Module:      lpc
    * Purpose:     Packs and parses TMS5220 frames in the chip's bit order
    *

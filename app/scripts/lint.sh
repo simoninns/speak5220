@@ -14,7 +14,7 @@ set -uo pipefail
 build_dir=${1:-build/app}
 script_dir=$(dirname "${BASH_SOURCE[0]}")
 
-mapfile -t cpp_files < <(find app -type f \( -name '*.cc' -o -name '*.h' \) | sort)
+mapfile -t cpp_files < <(find app -type f \( -name '*.cpp' -o -name '*.h' \) | sort)
 mapfile -t python_files < <(find app -type f -name '*.py' | sort)
 mapfile -t shell_files < <(find app -type f -name '*.sh' | sort)
 mapfile -t cmake_files < <(find app -type f \( -name CMakeLists.txt -o -name '*.cmake' \) | sort)

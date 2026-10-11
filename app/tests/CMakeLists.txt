@@ -13,7 +13,7 @@ add_custom_target(speak5220_tests)
 
 # speak5220_add_test_lane(<target> <directory> LIBRARIES <lib>...)
 #
-# Builds every .cc under <directory> into <target>, labels its tests with the
+# Builds every .cpp under <directory> into <target>, labels its tests with the
 # directory's name (unit or functional), and adds the target to
 # speak5220_tests.
 function(speak5220_add_test_lane target directory)
@@ -29,10 +29,10 @@ function(speak5220_add_test_lane target directory)
     file(
         GLOB_RECURSE sources
         CONFIGURE_DEPENDS
-        "${CMAKE_CURRENT_SOURCE_DIR}/${directory}/*.cc"
+        "${CMAKE_CURRENT_SOURCE_DIR}/${directory}/*.cpp"
     )
     if(NOT sources)
-        message(FATAL_ERROR "Test directory ${directory} has no .cc files")
+        message(FATAL_ERROR "Test directory ${directory} has no .cpp files")
     endif()
 
     add_executable(${target} ${sources})

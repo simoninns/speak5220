@@ -6,7 +6,7 @@
 # compile_commands.json of a configured build directory.
 #
 # Usage: clang-tidy.sh [-p BUILD_DIR] [FILE...]
-# BUILD_DIR defaults to build/app. With no files, checks every .cc under
+# BUILD_DIR defaults to build/app. With no files, checks every .cpp under
 # app/src and app/tests (headers are checked through the files that include
 # them). Run from the repository root.
 
@@ -33,7 +33,7 @@ MESSAGE
 fi
 
 if [[ $# -eq 0 ]]; then
-  mapfile -t files < <(find app/src app/tests -type f -name '*.cc' | sort)
+  mapfile -t files < <(find app/src app/tests -type f -name '*.cpp' | sort)
 else
   files=("$@")
 fi

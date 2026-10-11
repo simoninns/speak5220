@@ -4,13 +4,16 @@
 #
 # Times the encoder (TESTING.md, plan Phase 2 task 6): the default encoding
 # of each WAV file, on one core, against the target of 0.05 s per second of
-# speech. Later phases add PESQ and Optimise, and the benchmark projects.
+# speech. Then times the quality measures of those encodings (plan Phase 3):
+# PESQ, PESQ with the synthesis and alignment, the anchor and the cheap
+# measures. Later phases add Optimise and the benchmark projects.
 #
 # Usage: benchmark.sh [BUILD_DIR [INPUT_DIR]]
 # BUILD_DIR defaults to build/app (the functional tests must be built);
 # INPUT_DIR, a directory of WAV files, to the corpus subset in
 # app/golden/encoder/inputs/ (generate_corpus.py writes the full corpus).
-# The per-file timings go to BUILD_DIR/project-output/benchmark/. Run from
+# The per-file timings go to BUILD_DIR/project-output/benchmark/
+# (encoder.tsv, quality.tsv). Run from
 # the repository root:
 #
 #   nix develop .#app --command app/scripts/benchmark.sh
@@ -33,4 +36,8 @@ SPEAK5220_BENCHMARK_DIR=$input_dir \
   SPEAK5220_BENCHMARK_REPORT=$output_dir/encoder.tsv \
   "$tests" --gtest_also_run_disabled_tests \
   --gtest_filter='EncoderBenchmark.*'
-echo "benchmark: per-file timings in $output_dir/encoder.tsv"
+SPEAK5220_BENCHMARK_DIR=$input_dir \
+  SPEAK5220_BENCHMARK_REPORT=$output_dir/quality.tsv \
+  "$tests" --gtest_also_run_disabled_tests \
+  --gtest_filter='QualityBenchmark.*'
+echo "benchmark: per-file timings in $output_dir/encoder.tsv and quality.tsv"

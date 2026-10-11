@@ -6,13 +6,13 @@
 # On failure, prints the command that fixes the files.
 #
 # Usage: clang-format-check.sh [FILE...]
-# With no arguments, checks every .cc and .h under app/. Run from the
+# With no arguments, checks every .cpp and .h under app/. Run from the
 # repository root.
 
 set -euo pipefail
 
 if [[ $# -eq 0 ]]; then
-  mapfile -t files < <(find app -type f \( -name '*.cc' -o -name '*.h' \) | sort)
+  mapfile -t files < <(find app -type f \( -name '*.cpp' -o -name '*.h' \) | sort)
 else
   files=("$@")
 fi

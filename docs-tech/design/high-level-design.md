@@ -23,14 +23,15 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
 | `s5core`: `audio/`, `dsp/` (WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
-| Reference data in `app/golden/` (emulator, packaging, encoder) | Implemented |
+| `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`) | Implemented, matching the reference tools' values on the whole corpus |
+| Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
 | `speak5220` GUI | Implemented as a skeleton: an empty `MainWindow`, logging options |
 | `speak5220-cli` | Implemented as a skeleton: version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
-| CI on Windows and macOS (release tags and manual runs) | Implemented; not yet run |
+| CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| Quality, optimiser, project, BBC export, the GUI's views | Planned |
+| Optimiser, project, BBC export, the GUI's views | Planned |
 
 ---
 
@@ -46,12 +47,12 @@ app/
   scripts/                      check-spdx.sh, check-header-guards.sh,
                                 clang-format-check.sh, clang-tidy.sh,
                                 format.sh, lint.sh; corpus-check.sh,
-                                corpus_pesq.py, benchmark.sh,
-                                generate_corpus.py,
+                                benchmark.sh, generate_corpus.py,
                                 generate_filter_constants.py (§8)
     golden/                     generate_golden.py and its scenario scripts,
-                                encoder.py (offline, run by hand: §12)
-  golden/                       reference data from the retired references (§12)
+                                encoder.py, quality.py (offline, run by
+                                hand: §13)
+  golden/                       reference data from the retired references (§13)
   src/
     core/                       library "s5core" (QtCore at most)
       util/                     Status/StatusOr, logging, logging options, version
@@ -64,6 +65,9 @@ app/
                                 SOS/FIR filters and their constants,
                                 NumPy-ordered sums and windows, LPC analysis
       encoder/                  Encoder and its stages, EncoderOptions (§8)
+      quality/                  PESQ, PesqMetric, the output alignment, the
+                                anchor vocoder, the cheap measures,
+                                QualityScale (§9)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow
     cli/                        the "speak5220-cli" executable
@@ -77,7 +81,7 @@ app/
 
 Planned additions, each created with its first code (plan §2.1):
 
-- `src/core/`: `quality/`, `bbc/`, `project/`;
+- `src/core/`: `bbc/`, `project/`;
 - `src/gui/`: `phrase_list/`, `phrase_editor/`, `waveform/`,
   `encoder_panel/`, `export/`, `undo/`;
 - `app/projects/` (fixture projects), `app/resources/` (icons, `.desktop`,
@@ -112,7 +116,7 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
 - The version is set once, in `project(... VERSION ...)`. `s5core` receives
   it as `SPEAK5220_VERSION`, and `flake.nix` reads it for the package.
 - `SPEAK5220_BUILD_TESTS` (default `ON`) adds `app/tests/`.
-- `cmake/Dependencies.cmake` finds the libraries of §9: Qt 6 (Core,
+- `cmake/Dependencies.cmake` finds the libraries of §10: Qt 6 (Core,
   Widgets) and spdlog by their CMake packages; libsndfile and libsamplerate
   by header and library (their pkg-config files name private dependencies a
   shared build does not need); pocketfft by its header, as an interface
@@ -120,7 +124,7 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   `app/tests/`.
 - GCC reports a false `-Wmaybe-uninitialized` inside pocketfft's templates
   at `-O3`; a GCC-only pragma silences it around pocketfft's `#include` in
-  `dsp/fft.cc`.
+  `dsp/fft.cpp`.
 - `format` and `lint` targets wrap `app/scripts/format.sh` and
   `app/scripts/lint.sh`.
 - **Windows and macOS:** Qt from aqtinstall, pinned to the flake's Qt
@@ -138,7 +142,7 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   linters, and the pre-commit hooks (installed by its `shellHook`). It sets
   `QT_PLUGIN_PATH` so the GUI built in `build/app` runs.
 - `devShells.default`: the research shell (KiCad, Pico SDK, Python), plus
-  everything in `devShells.app`. The golden-data scripts run here (§12).
+  everything in `devShells.app`. The golden-data scripts run here (§13).
 - `packages.speak5220` (also `default`): built with `qt6.wrapQtAppsHook`;
   its check phase runs `ctest -L unit`. Its source is `app/` only.
 - `packages.pocketfft`: pocketfft's header-only C++ version, which nixpkgs
@@ -193,8 +197,8 @@ D7): `windows-latest` (MSVC, through `ilammy/msvc-dev-cmd`) and
 only for a `v*` tag or when started by hand (`workflow_dispatch`), never on
 an ordinary push. Qt comes from `jurplel/install-qt-action` (aqtinstall),
 cached; vcpkg (`lukka/run-vcpkg`) builds the other libraries from source on
-each run. The jobs have not yet been run: plan Phase 2 task 7's acceptance
-is a manually started run that passes.
+each run. A manually started run passes both lanes on both platforms (plan
+Phase 2 task 7).
 
 ---
 
@@ -223,15 +227,22 @@ is a manually started run that passes.
   - `encoder_golden`: readers for `app/golden/encoder/` (option sets,
     reference encodings with their near-tie frames, JSON intermediates via
     `QJsonDocument`, WAV inputs as doubles) and `CompareEncoding()`, which
-    applies the acceptance rule of §8.
+    applies the acceptance rule of §8;
+  - `quality_golden`: readers for `app/golden/quality/` (each reference
+    encoding's lag, output length, PESQ and cheap measures; the anchor
+    scores);
+  - `synth_mocks.h`: a gMock mock of `ISynth`;
+  - `synthetic_speech`: a deterministic speech-like signal (two vowels, a
+    fricative, pauses), a delay and white noise, for the quality unit
+    tests.
 - The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`) and the
   reference data's directory (`SPEAK5220_GOLDEN_DIR`) compiled in.
 - **By-hand tests.** A few functional tests carry Google Test's `DISABLED_`
   prefix, so CTest lists them as disabled and never runs them. The scripts
   run them with `--gtest_also_run_disabled_tests`, passing inputs and an
   output file through environment variables: the full-corpus check
-  (`EncoderCorpusCheck`, `corpus-check.sh`) and the encoder's timing
-  (`EncoderBenchmark`, `benchmark.sh`).
+  (`EncoderCorpusCheck` and `QualityCorpusCheck`, `corpus-check.sh`) and
+  the timings (`EncoderBenchmark` and `QualityBenchmark`, `benchmark.sh`).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test.
@@ -245,7 +256,7 @@ Plan §2.2, with the names as built.
 | Component | Status and responsibility |
 |---|---|
 | `Status`, `StatusOr<T>` | **Implemented** (`core/util/status`): error values in place of exceptions, modelled on Abseil's |
-| Logging | **Implemented** (`core/util/logging`, `logging_options`): §11 |
+| Logging | **Implemented** (`core/util/logging`, `logging_options`): §12 |
 | `Version()`, `kApplicationName` | **Implemented** (`core/util/version`) |
 | Coding tables | **Implemented** (`core/lpc/coding_tables.h`): datasheet §8.1 Tables 8-4 to 8-7, `constexpr` |
 | `Frame`, `FrameCodec`, `BitReverse()` | **Implemented** (`core/lpc/`): frame kinds and lengths, validation, `Pack()`/`Parse()` with the §8.1/§12.1 bit order |
@@ -259,7 +270,7 @@ Plan §2.2, with the names as built.
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `MainWindow` | **Implemented** as an empty window (`gui/main_window`) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
-| `Quality` | Planned: PESQ (P.862 narrowband, as P.862.1 MOS-LQO) plus cheap measures |
+| `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
 | `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
 | Raw `.bin`, C header export | Planned |
 | `BbcExport` | Planned: tokenised BBC BASIC program plus data files on an Acorn DFS `.ssd` image |
@@ -317,7 +328,7 @@ boundary, then run until idle plus one frame):
   caller runs it on a worker thread.
 
 **Acceptance** (met): the C++ emulator reproduces every reference run in
-`app/golden/emulator/` (§12), codes sample for sample and events line for
+`app/golden/emulator/` (§13), codes sample for sample and events line for
 line, and the C self-test cases pass as unit tests with the VSM bus, sample
 sink and observer mocked.
 
@@ -391,7 +402,7 @@ the reference's order of floating-point operations where that is cheap:
   `app/golden/encoder/option_sets.tsv`, the frames are identical to the
   Python reference's for every encoding (972 of 972), against the
   criterion of 99%. No near-tie frames are needed: at a relative disturbance
-  of 1e-9 the reference changes no frame on any file (§12).
+  of 1e-9 the reference changes no frame on any file (§13).
 - Every intermediate value of the corpus subset agrees with the reference
   to a relative 1e-9.
 - Encoding takes 0.0104 s per second of speech on one core over the whole
@@ -404,7 +415,116 @@ optimised: neither needs it.
 
 ---
 
-## 9. Third-party libraries
+## 9. Quality measurement
+
+**Implemented** (plan §3.3, Phase 3). `core/quality/` measures how well an
+encoding reproduces its source, as the retired tools did:
+`investigation/tools/speechqual.py` (PESQ and the anchor) and
+`investigation/encoder/evaluate.py` (the cheap measures). Each C++ function
+names its Python original, or the ITU-T section it implements.
+
+| Component | Files | Does |
+|---|---|---|
+| `ScorePesq()` | `pesq`, `pesq_stages.h`, `pesq_alignment`, `pesq_model`, `pesq_fft`, `pesq_tables.h` | ITU-T P.862 narrowband at 8 kHz, mapped to MOS-LQO by P.862.1: level alignment, IRS receive filtering, voice activity, time alignment with utterance splitting, the auditory transform, the disturbance densities, bad-interval realignment and the aggregation |
+| `PesqMetric` (`IQualityMetric`) | `pesq_metric` | Speaks the frames through `ISynth`'s VSM path, cuts the output to its sound (idle at 0), lines it up with the source after the 60 Hz high-pass (`AlignOutput()`), and scores it with `ScorePesq()` |
+| `AlignOutput()` | `output_alignment` | `speechqual.py`'s `align()` (level envelopes in 2.5 ms steps), `refine()` (±25 ms by mel-cepstral distance), `placed()` and `matchLevel()` |
+| `MeasureCheap()`, `LevelErrorMetric`, `SpectralDistanceMetric` | `cheap_measures` | `evaluate.py`'s level error (`lvMeanAbs`, `lvBias`, `lvP90`) and mel spectral distance (`specDist`), comparing each frame's input with `ReferenceSynthesizer`'s output where the frame's values are reached; no alignment search |
+| `AnchorVocoder()`, `AnchorScore()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s `lpcVocoder()` and its pitch tracker, and the PESQ of its output: the ceiling of the quality scale |
+| `QualityScale` | `quality_scale` | A score's position between PESQ's floor and the phrase's anchor, and its band |
+
+`IQualityMetric::Measure(source, encoding)` takes the source as given to
+the encoder and its `EncodeResult`; `Direction()` says whether larger values
+are better (PESQ) or smaller (the cheap measures).
+
+**Where PESQ comes from** (plan decision D6). The Recommendation describes
+each stage but leaves most of its numbers and details to the ANSI-C
+reference implementation, which Annex A makes part of P.862 and gives
+precedence over the text: the Bark bands, the hearing thresholds, the
+filter curves and coefficients, the scaling factors, the thresholds of the
+voice activity detector and the alignment, and the weights of the score.
+The C++ is the project's own code, written to this project's rules and
+licensed GPL-3.0-or-later. Its constants and the details the text leaves
+open are taken from the reference implementation (as the Python `pesq`
+0.0.4 package bundles it: the 2005 code of Amendment 2), and each stage
+cites its section of P.862. The ITU's texts, code and conformance data are
+not in the repository.
+
+**Matching the reference.** A PESQ score is the outcome of many threshold
+decisions, so the C++ keeps the reference's arithmetic:
+
+- its own radix-2 FFT in single precision (`pesq_fft`), the reference's
+  order of operations, rather than pocketfft;
+- single precision wherever the reference uses it, the same promotions to
+  double, and the same order of evaluation;
+- the reference's shared scratch buffer, laid out as it is: in the
+  utterance split, a long utterance's crude alignment overwrites the
+  window of the fine alignment that follows, and the scores depend on it;
+- both inputs divided by their joint peak and rounded to single precision,
+  as the Python package does before calling the C code.
+
+**The anchor.** The anchor vocoder is order 10, 25 ms frames, K and gain
+interpolated over 8 steps, a pulse per pitch period or Gaussian noise, pre-
+and de-emphasis 0.9375, nothing quantised. Its noise must be the
+reference's sample for sample: on corpus files, other noise moves the
+anchor's PESQ by up to 0.07. `NumpyNormal` therefore reproduces NumPy's
+default generator (PCG64, XSL-RR 128/64, from the state of
+`numpy.random.default_rng(1)`) and its ziggurat normal sampler, with
+NumPy's tables, bit for bit.
+
+**The quality scale** (plan §3.3, "Presenting PESQ to the user"). The
+position is (score − 1.0) / (anchor − 1.0), clamped to [0, 1]; an encoding
+at or above its anchor is at the top. The bands, with plain-language labels
+for the GUI:
+
+| Band | Position |
+|---|---|
+| Bad | below 0.40 |
+| Poor | 0.40 to below 0.60 |
+| Fair | 0.60 to below 0.75 |
+| Good | 0.75 to below 0.90 |
+| As good as LPC can achieve | 0.90 and above |
+
+The thresholds were calibrated on the reference encodings of the whole
+corpus (243 files; anchors from 1.83 to 3.60, median 2.29):
+
+| Option set | Median PESQ | Median position | Bad | Poor | Fair | Good | As good as LPC |
+|---|---|---|---|---|---|---|---|
+| default | 2.03 | 0.78 | 0% | 11% | 28% | 44% | 18% |
+| lean | 1.95 | 0.73 | 1% | 13% | 44% | 33% | 9% |
+| loud | 1.98 | 0.74 | 1% | 16% | 35% | 37% | 12% |
+| plain | 1.97 | 0.73 | 0% | 14% | 43% | 34% | 9% |
+
+With the defaults the typical encoding is *Good*, and 89% are *Fair* or
+better; the other sets, each of which changes several options away from
+their defaults, sit a little lower. The plan asks for the bands to be
+confirmed by listening; that has not been done yet.
+
+**Acceptance** (met, plan Phase 3):
+
+- PESQ: on all 972 reference encodings of the corpus (243 files, four
+  option sets), the same score as the Python package to the last bit of
+  its single-precision result, against ±0.01; the alignment lag and the
+  output length are the same for every encoding.
+- The anchor: the same score on all 243 files, against ±0.02.
+- The cheap measures: within 1e-6 of `evaluate.py`'s on every encoding.
+- The corpus calibration above places the default encodings' median in
+  *Good* (a functional test checks this from the reference data).
+- Beyond the plan: the C++ PESQ, run locally on the ITU's 8 kHz conformance
+  pairs for variable delay (Annex A, test 2(b), 40 pairs), gives the
+  reference's raw score for every pair to the three decimals the ITU
+  lists. The data is the ITU's and is not committed; Supplement 23 (test
+  1(b)) was not available.
+
+**Performance** (`benchmark.sh`, one core, the eight-file corpus subset,
+seconds per second of speech): PESQ alone 0.0076; `PesqMetric` (synthesis,
+alignment and PESQ) 0.047; the anchor score 0.012; the cheap measures
+0.0013. Most of `PesqMetric`'s time is the output alignment's spectral
+search (81 candidate lags). Nothing has been optimised yet; Optimise
+(Phase 7) will show whether it needs to be.
+
+---
+
+## 10. Third-party libraries
 
 | Need | Library | Licence | Status |
 |---|---|---|---|
@@ -415,13 +535,13 @@ optimised: neither needs it.
 | FFT | pocketfft (C++ header-only) | BSD-3 | Used by `s5core`; packaged in `flake.nix` |
 | Project container | libzip | BSD-3 | In the Nix shell |
 | Project metadata | yaml-cpp | MIT | In the Nix shell |
-| PESQ | The project's own code | GPLv3-or-later | Planned |
+| PESQ | The project's own code (`core/quality/`), its constants and details from the ITU reference implementation (§9) | GPLv3-or-later | Implemented |
 | Logging | spdlog | MIT | Linked by `s5core` |
 | Tests | Google Test with Google Mock | BSD-3 | Linked by the test binaries |
 
 ---
 
-## 10. GUI, CLI and the core
+## 11. GUI, CLI and the core
 
 Both executables are thin front ends over `s5core`.
 
@@ -431,7 +551,7 @@ Both executables are thin front ends over `s5core`.
   tests link them; the `speak5220` executable adds only `main()`.
   `MainWindow` sets the title "Speak5220" and an initial size.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
-  `--help`, `--version` and the logging options of §11, and with no
+  `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
 - Both executables add the logging options with `AddLoggingOptions()`, read
   them with `LogSettingsFromParser()`, and exit with code 2 and a message on
@@ -446,7 +566,7 @@ and has no undo.
 
 ---
 
-## 11. Logging
+## 12. Logging
 
 **Implemented** (plan §2.6), in `core/util/logging`:
 
@@ -460,7 +580,7 @@ and has no undo.
   dropping when the queue is full. `ConfigureLoggingWithSinks()` installs
   given sinks synchronously (tests use a ringbuffer sink).
 - `Logger(module)` returns the named logger for a module (`cli`, `gui`,
-  `emulator`, `synth`, `audio`, `encoder`, …), created on first use with the current
+  `emulator`, `synth`, `audio`, `encoder`, `quality`, …), created on first use with the current
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
@@ -468,9 +588,10 @@ and has no undo.
 
 ---
 
-## 12. Reference data
+## 13. Reference data
 
-**Implemented** for the emulator, packaging and encoder (plan §1.4).
+**Implemented** for the emulator, packaging, encoder and quality measures
+(plan §1.4).
 `app/golden/` holds what the retired references produced; the build and
 tests read only these files and never run anything in `investigation/`.
 
@@ -515,10 +636,18 @@ tests read only these files and never run anything in `investigation/`.
   frames. With the current reference none are listed.
 - The full corpus is not committed: `app/scripts/generate_corpus.py` writes
   its WAV copies (8 kHz, 16-bit, lossless from the FLAC originals) for
-  `corpus-check.sh`. Where an encoding differs from the reference,
-  `corpus_pesq.py` scores both with `investigation/tools/speechqual.py`
-  (PESQ as P.862.1 MOS-LQO) until the application's own PESQ exists
-  (Phase 3).
+  `corpus-check.sh`. Where an encoding differs from the reference, the
+  encoder's corpus check scores both with the application's own PESQ
+  (§9).
+- `golden/quality/`, written by `app/scripts/golden/quality.py` from the
+  retired quality tools (same rules; it also records the `pesq` package's
+  version and the anchor's seed), for the reference encodings of
+  `golden/encoder/frames/`:
+  - `scores/SET.tsv`: for each option set and corpus file, the alignment
+    lag and output length, PESQ as `speechqual.py` measures it, and
+    `evaluate.py`'s level error and spectral distance;
+  - `anchor.tsv`: each corpus file's anchor score (`speechqual.py
+    --anchor`).
 - The emulator's data is never regenerated unless the datasheet changes;
   the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).

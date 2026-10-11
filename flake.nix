@@ -161,7 +161,7 @@
             }
             // extra;
 
-          cppFiles = "^app/.*\\.(cc|h)$";
+          cppFiles = "^app/.*\\.(cpp|h)$";
 
           # The hooks of plan §1.3. clang-tidy needs a configured build
           # directory, so it runs in the dev shell's hooks and in CI's build

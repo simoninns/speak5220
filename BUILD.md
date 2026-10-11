@@ -77,16 +77,21 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Reference data
 
-`app/golden/` holds the output of the retired reference emulator and encoder, which the functional tests compare against. It is written by two scripts run by hand in the default dev shell (they need Python with NumPy, SciPy and soundfile, and a C compiler):
+`app/golden/` holds the output of the retired reference emulator, encoder and quality tools, which the functional tests compare against. It is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile and pesq, and a C compiler):
 
 ```bash
 nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator and packaging: regenerate in a temporary directory and compare
 nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/ and packaging/
 nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (a few minutes, on every core)
 nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
+make -C investigation/emulator                                                # quality.py runs the built reference emulator
+nix develop --command python3 app/scripts/golden/quality.py --check           # quality measures: regenerate and compare (about ten minutes, on every core)
+nix develop --command python3 app/scripts/golden/quality.py                   # rewrite app/golden/quality/
 ```
 
-The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's only for an intended improvement; see [`TESTING.md`](TESTING.md).
+The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's (with the quality data that measures it) only for an intended improvement; see [`TESTING.md`](TESTING.md).
+
+Copies of copyrighted reference texts, such as the ITU-T P.862 Recommendation, can be kept in `local/` at the repository root, which git ignores. They are never committed.
 
 The encoder's two fixed Butterworth filters are constants in `app/src/core/dsp/filter_constants.h`, designed by SciPy:
 
@@ -97,14 +102,14 @@ nix develop --command python3 app/scripts/generate_filter_constants.py          
 
 ### Corpus check and benchmark
 
-Two scripts check the encoder by hand, from the repository root, after building the functional tests:
+Two scripts check the encoder and the quality measures by hand, from the repository root, after building the functional tests:
 
 ```bash
-nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames (plan §3.2)
-nix develop .#app --command app/scripts/benchmark.sh   # encoding speed on one core
+nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames and quality measures (plan §3.2, Phase 3)
+nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core
 ```
 
-`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its report goes to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`.
+`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`.
 
 ### Format and lint
 

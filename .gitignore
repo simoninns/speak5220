@@ -108,3 +108,8 @@ build/
 
 # Written by the dev shell's git-hooks.nix setup (flake.nix); a link into the Nix store
 .pre-commit-config.yaml
+
+# Local copies of copyrighted reference texts and code (for example the
+# ITU-T P.862 Recommendation and its reference implementation), consulted
+# but never committed (plan decision D6).
+local/

@@ -25,7 +25,7 @@ is_source_file() {
   app/*)
     case "$name" in
     # YAML under app/ (projects, golden data) is data, not source.
-    *.cc | *.h | *.cmake | CMakeLists.txt | *.nix | *.sh | *.py | *.ui | *.qrc) return 0 ;;
+    *.cpp | *.h | *.cmake | CMakeLists.txt | *.nix | *.sh | *.py | *.ui | *.qrc) return 0 ;;
     *) return 1 ;;
     esac
     ;;
@@ -66,7 +66,7 @@ for path in "${candidates[@]}"; do
   fi
 
   case "$path" in
-  *.cc | *.h)
+  *.cpp | *.h)
     name=$(basename "$path")
     file_line=$(grep -m1 -E '^ \* File: ' <<<"$head_text" || true)
     declared=$(sed -E 's/^ \* File: +//; s/[[:space:]]+$//' <<<"$file_line")

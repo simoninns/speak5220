@@ -7,10 +7,12 @@
 add_library(
     speak5220_test_support
     STATIC
-    emulator_run.cc
-    encoder_golden.cc
-    frame_builder.cc
-    golden_data.cc
+    emulator_run.cpp
+    encoder_golden.cpp
+    frame_builder.cpp
+    golden_data.cpp
+    quality_golden.cpp
+    synthetic_speech.cpp
 )
 target_include_directories(
     speak5220_test_support
