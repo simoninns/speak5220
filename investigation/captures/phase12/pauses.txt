@@ -1,0 +1,30 @@
+p12-01 (plain.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuu............uuVVVVVrVru.uuuuuVVVVrV..u.urur.........uV..uuuVVrrruuuVVVruuruS
+  frames 59-70: .-2..1 .-2..1 .-2..1 .-2..1 .-2..0 .-2..0 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1, TP2 12.43 mV rms, -23.1 dB re loudest frame
+  frames 94-95: .-1..0 .-1..0, TP2 10.92 mV rms, -24.2 dB re loudest frame
+  frames 102-110: .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0, TP2 12.87 mV rms, -22.8 dB re loudest frame
+  frames 113-114: .0..1 .0..0, TP2 0.59 mV rms, -49.6 dB re loudest frame
+p12-02 (plain.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuu............uuVVVVVrVru.uuuuuVVVVrV..u.urur.........uV..uuuVVrrruuuVVVruuruS
+  frames 59-70: .-3..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1 .-2..1, TP2 11.93 mV rms, -23.5 dB re loudest frame
+  frames 94-95: .-1..0 .-1..0, TP2 12.67 mV rms, -23.0 dB re loudest frame
+  frames 102-110: .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0, TP2 12.64 mV rms, -23.0 dB re loudest frame
+  frames 113-114: .0..1 .0..0, TP2 0.54 mV rms, -50.4 dB re loudest frame
+p12-03 (neutral_first.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuuN...........uuVVVVVrVruNuuuuuVVVVrVN.uNururN........uVN.uuuVVrrruuuVVVruuruS
+  frames 60-70: .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.75 mV rms, -47.5 dB re loudest frame
+  frames 103-110: .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.82 mV rms, -46.6 dB re loudest frame
+p12-04 (neutral_first.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuuN...........uuVVVVVrVruNuuuuuVVVVrVN.uNururN........uVN.uuuVVrrruuuVVVruuruS
+  frames 60-70: .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.73 mV rms, -47.8 dB re loudest frame
+  frames 103-110: .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.82 mV rms, -46.8 dB re loudest frame
+p12-05 (neutral_second.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuu.N..........uuVVVVVrVru.uuuuuVVVVrV..u.urur.N.......uV..uuuVVrrruuuVVVruuruS
+  frames 59-70: .-3..1 N0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.74 mV rms, -47.5 dB re loudest frame
+  frames 94-95: .-1..0 .-1..0, TP2 10.01 mV rms, -24.9 dB re loudest frame
+  frames 102-110: .-1..0 N0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.77 mV rms, -47.2 dB re loudest frame
+  frames 113-114: .0..1 .0..0, TP2 0.54 mV rms, -50.3 dB re loudest frame
+p12-06 (neutral_second.bin): uVrVrrVVuruVrrrVrrVVVVuVVVruVrVVrVVVVuVrVruuuVrVVrVVrVVVVuu.N..........uuVVVVVrVru.uuuuuVVVVrV..u.urur.N.......uV..uuuVVrrruuuVVVruuruS
+  frames 59-70: .-2..1 N0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.72 mV rms, -47.7 dB re loudest frame
+  frames 94-95: .-2..0 .-1..0, TP2 11.06 mV rms, -24.0 dB re loudest frame
+  frames 102-110: .-1..0 N0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.74 mV rms, -47.5 dB re loudest frame
+  frames 113-114: .0..1 .0..0, TP2 0.51 mV rms, -50.7 dB re loudest frame
+p12-07 (a0026_plain.bin): uVVVVVVVuuVVVrVVruuVVVrVVVrrVrVVV.........uVrVVuVVrVVrVVVuuuVVrVuuuuVVVuVVrrVVVVVVuuuuuVrVVVrruuVrVVVVVVrS
+  frames 33-41: .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0 .-1..0, TP2 11.11 mV rms, -23.3 dB re loudest frame
+p12-08 (a0026_quiet.bin): uVVVVVVVuuVVVrVVruuVVVrVVVrrVrVVV.N.......uVrVVuVVrVVrVVVuuuVVrVuuuuVVVuVVrrVVVVVVuuuuuVrVVVrruuVrVVVVVVrS
+  frames 33-41: .-1..0 N-1..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0 .0..0, TP2 0.73 mV rms, -47.0 dB re loudest frame

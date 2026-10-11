@@ -40,7 +40,8 @@ namespace speak5220::app {
 // (encoded audio only), the zero line, the waveform (one line per pixel
 // from the PeakCache, each reaching the last sample of the pixel before so
 // the trace is unbroken; or, closer than 4 samples per pixel, the samples
-// joined), the play-start marker and the playhead.
+// joined), the shaded stretches (dimmed and hatched: what the squelch
+// mutes, on the original audio), the play-start marker and the playhead.
 //
 // A click asks for the marker there (MarkerRequested); Space asks to play
 // or pause; Ctrl+wheel zooms about the pointer, the wheel scrolls; hovering
@@ -64,6 +65,11 @@ class WaveformView : public QWidget {
   bool HasSamples() const { return peaks_.Size() > 0; }
   int SourceOffset() const { return source_offset_; }
   QString Placeholder() const { return placeholder_; }
+
+  // Stretches to shade, in source samples, or none; hovering over one
+  // says it is squelched.
+  void SetShading(std::vector<TimeExtent> spans);
+  const std::vector<TimeExtent>& Shading() const { return shading_; }
 
   // The frames over the samples (the encoded audio), or none.
   void SetFrames(std::vector<core::lpc::Frame> frames);
@@ -96,7 +102,8 @@ class WaveformView : public QWidget {
   double XOfSample(double index) const;
   // The frame under pixel `x`, or none.
   std::optional<int> FrameAtX(double x) const;
-  // The hover text at pixel `x`: the frame's description, or empty.
+  // The hover text at pixel `x`: the frame's description, that the
+  // stretch is squelched, or empty.
   QString ToolTipAt(double x) const;
 
   QSize sizeHint() const override;
@@ -123,12 +130,14 @@ class WaveformView : public QWidget {
   double SampleY(float value) const;
   void PaintFrames(QPainter& painter) const;
   void PaintWave(QPainter& painter) const;
+  void PaintShading(QPainter& painter) const;
   void PaintMarks(QPainter& painter) const;
 
   PeakCache peaks_;
   int source_offset_ = 0;
   QString placeholder_;
   std::vector<core::lpc::Frame> frames_;
+  std::vector<TimeExtent> shading_;
   bool frame_grid_ = true;
   TimeExtent extent_;
   TimeAxis axis_;

@@ -12,6 +12,7 @@
 
 #include <QCoreApplication>
 #include <QEvent>
+#include <QImage>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QObject>
@@ -22,6 +23,7 @@
 #include <vector>
 
 #include "core/lpc/frame.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "gui/waveform/time_axis.h"
 
@@ -80,6 +82,30 @@ TEST_F(WaveformViewTest, FrameUnderThePointerAllowsForTheStartLatency) {
 
 TEST_F(WaveformViewTest, NoFramesNoHoverText) {
   EXPECT_EQ(view_.FrameAtX(200.0), std::nullopt);
+}
+
+TEST_F(WaveformViewTest, ShadedStretchesSayTheyAreSquelched) {
+  // Source samples 500-900.
+  view_.SetShading({{.begin = 500.0, .end = 900.0}});
+  EXPECT_THAT(view_.ToolTipAt(view_.Axis().SampleToX(700.0)).toStdString(),
+              ::testing::StartsWith("Squelched"));
+  EXPECT_TRUE(view_.ToolTipAt(view_.Axis().SampleToX(300.0)).isEmpty());
+  EXPECT_TRUE(view_.ToolTipAt(view_.Axis().SampleToX(950.0)).isEmpty());
+  // It draws, and clearing the view clears it.
+  QImage image(view_.size(), QImage::Format_ARGB32);
+  view_.render(&image);
+  EXPECT_FALSE(image.isNull());
+  view_.Clear(QStringLiteral("None"));
+  EXPECT_TRUE(view_.Shading().empty());
+}
+
+TEST_F(WaveformViewTest, ShadingDimsTheWaveform) {
+  QImage plain(view_.size(), QImage::Format_ARGB32);
+  view_.render(&plain);
+  view_.SetShading({{.begin = -300.0, .end = 1700.0}});
+  QImage shaded(view_.size(), QImage::Format_ARGB32);
+  view_.render(&shaded);
+  EXPECT_NE(plain, shaded);
 }
 
 TEST_F(WaveformViewTest, ZoomInAndFitAgain) {

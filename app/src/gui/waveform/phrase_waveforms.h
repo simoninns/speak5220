@@ -16,6 +16,7 @@
 #include <QWidget>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "core/lpc/frame.h"
@@ -58,6 +59,10 @@ class WaveformView;
 //   (EncodedAudio::level_gain), which the encoded pane's note gives in
 //   dB: the chip's output is about 15 dB quieter than a normalised
 //   recording, which would make the two hard to compare.
+// - With a squelch (SetSquelch()), the stretches it mutes are shaded on
+//   the original audio (encoder::SquelchedSpans()), and the original
+//   pane's note gives its level, so what will be left out of the encoding
+//   and of the quality measure can be seen before encoding.
 // - Each pane has its own play button, which shows pause while that pane
 //   plays (Space in a pane's view does the same); one pane plays at a
 //   time, through the Player, and its view shows the playhead.
@@ -81,6 +86,11 @@ class PhraseWaveforms : public QWidget {
   // beside the encoded pane's title (such as "stale").
   void ShowPhrase(const core::project::Phrase* phrase,
                   const QString& encoded_note = QString());
+
+  // The squelch of the phrase shown, in dB, or none: as the encoder
+  // panel's settings have it, changes not yet applied included.
+  void SetSquelch(std::optional<double> squelch_db);
+  std::optional<double> Squelch() const { return squelch_db_; }
 
   WaveformPane* OriginalPane() const { return original_; }
   WaveformPane* EncodedPane() const { return encoded_; }
@@ -130,6 +140,8 @@ class PhraseWaveforms : public QWidget {
   void ShowEncoded(const Rendered& rendered);
   // The encoded pane's note: the level match, then the given note.
   void UpdateEncodedNote();
+  // The shading of the squelched stretches and the original pane's note.
+  void UpdateShading();
   // Sets both views' extents for new contents (the union of the two) and
   // fits both to it.
   void UpdateExtents();
@@ -173,6 +185,7 @@ class PhraseWaveforms : public QWidget {
   std::vector<std::int16_t> encoded_playback_;
   // The note given with the phrase (such as "stale").
   QString encoded_note_;
+  std::optional<double> squelch_db_;
   bool original_shows_pause_ = false;
   bool encoded_shows_pause_ = false;
   // The latest render of each phrase.

@@ -34,5 +34,6 @@ Two kinds of citation refer to whole sets rather than single captures:
 | p8-01 to p8-18 | 2026-10-07 | Synthetic vectors: the model, the noise state, the latch and the previous utterance | [Synthetic vectors](evidence/vectors.md) |
 | p8-19 to p8-25 | 2026-10-07 | Host interface tests: READY, INT, the FIFO and the VSM functions | [Host interface tests](evidence/host-interface.md) |
 | p9-01, p9-02 | 2026-10-07 | The `ring` vectors: the filter's lowest-order arithmetic | [Synthetic vectors](evidence/vectors.md#the-ring-vectors) |
+| p12-01 to p12-08 | 2026-10-11 | Silence frames inside an utterance: the filter's ringing, and quietening it with a neutral frame | [Silence and pauses](evidence/pauses.md) |
 
 Other measurements are cited by their directory rather than an ID, for example [`investigation/captures/promout/chip1/`] for the `PROM OUT` reads ([§8.10](prom-out.md#810-parameter-rom-output-prom-out)), [`investigation/captures/phase9/variance/`] for the agreement figures of [§8.8](lattice-filter.md#88-lattice-filter), and [`investigation/captures/phase11/`] for the new speech data of [§12](authoring.md#12-authoring-speech-data).

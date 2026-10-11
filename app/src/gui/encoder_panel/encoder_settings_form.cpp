@@ -39,8 +39,8 @@ namespace encoder = core::encoder;
 using encoder::EncoderOptionInfo;
 using encoder::EncoderOptionType;
 
-// Rows per column: the 15 options in two columns.
-constexpr int kRowsPerColumn = 8;
+// Rows per column: the 17 options in two columns.
+constexpr int kRowsPerColumn = 9;
 // Grid columns per option: label, editor, reset.
 constexpr int kColumnsPerOption = 3;
 // The pre-emphasis kinds in their chooser.
@@ -52,10 +52,17 @@ constexpr std::string_view kRatioUnit = ":1";
 // samples is 1 ms).
 constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
-// What the target peak's and the coefficient's sliders show before one is
-// set: a moderate peak, and the coefficient Optimise tries.
+// What the optional options' and the coefficient's sliders show before
+// one is set: a moderate peak, a squelch under most breaths, and the
+// coefficient Optimise tries.
 constexpr double kUnsetPeak = 100.0;
+constexpr double kUnsetSquelch = 30.0;
 constexpr double kUnsetMu = 0.9;
+
+// The slider's value for an optional option that is unset.
+double UnsetValue(std::string_view field) {
+  return field == "squelch_db" ? kUnsetSquelch : kUnsetPeak;
+}
 
 QString ToQString(std::string_view text) {
   return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
@@ -120,7 +127,8 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent) : QWidget(parent) {
         auto* layout = new QHBoxLayout(box);
         layout->setContentsMargins(0, 0, 0, 0);
         row.check = new QCheckBox(box);
-        row.check->setToolTip(QStringLiteral("Use a target peak"));
+        row.check->setToolTip(
+            QStringLiteral("Turn %1 on").arg(ToQString(info.label).toLower()));
         row.slider = make_slider(box);
         layout->addWidget(row.check);
         layout->addWidget(row.slider, 1);
@@ -238,9 +246,11 @@ OptionSlider* EncoderSettingsForm::Slider(std::string_view field) const {
   return row == nullptr ? nullptr : row->slider;
 }
 
-QCheckBox* EncoderSettingsForm::PeakBox() const {
-  const Row* row = FindRow("target_peak");
-  return row == nullptr ? nullptr : row->check;
+QCheckBox* EncoderSettingsForm::OnBox(std::string_view field) const {
+  const Row* row = FindRow(field);
+  return row == nullptr || row->info->type != EncoderOptionType::kOptionalReal
+             ? nullptr
+             : row->check;
 }
 
 QToolButton* EncoderSettingsForm::ResetButton(std::string_view field) const {
@@ -286,7 +296,7 @@ void EncoderSettingsForm::ShowValue(const Row& row) {
       row.slider->SetDefault(base);
       row.check->setChecked(value.has_value());
       row.slider->setEnabled(value.has_value());
-      row.slider->SetValue(value.value_or(base.value_or(kUnsetPeak)));
+      row.slider->SetValue(value.value_or(base.value_or(UnsetValue(field))));
       break;
     }
     case EncoderOptionType::kPreEmphasis: {

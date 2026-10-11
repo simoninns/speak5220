@@ -49,7 +49,7 @@ TEST_F(EncoderSettingsFormTest, HasAnEditorOfTheRightKindForEveryOption) {
         break;
       case EncoderOptionType::kOptionalReal:
         EXPECT_NE(form_.Slider(info.field), nullptr) << info.field;
-        EXPECT_NE(form_.PeakBox(), nullptr);
+        EXPECT_NE(form_.OnBox(info.field), nullptr) << info.field;
         break;
       case EncoderOptionType::kBoolean:
         EXPECT_NE(qobject_cast<QCheckBox*>(editor), nullptr) << info.field;
@@ -145,15 +145,28 @@ TEST_F(EncoderSettingsFormTest, ResetButtonPutsAnOptionBackToTheBaseline) {
 }
 
 TEST_F(EncoderSettingsFormTest, TargetPeakIsTurnedOnByItsCheckBox) {
-  EXPECT_FALSE(form_.PeakBox()->isChecked());
+  EXPECT_FALSE(form_.OnBox("target_peak")->isChecked());
   EXPECT_FALSE(form_.Slider("target_peak")->isEnabled());
-  form_.PeakBox()->setChecked(true);
+  form_.OnBox("target_peak")->setChecked(true);
   ASSERT_TRUE(form_.Options().target_peak.has_value());
   EXPECT_DOUBLE_EQ(*form_.Options().target_peak, 100.0);
   form_.Slider("target_peak")->MoveTo(90.0);
   EXPECT_DOUBLE_EQ(*form_.Options().target_peak, 90.0);
-  form_.PeakBox()->setChecked(false);
+  form_.OnBox("target_peak")->setChecked(false);
   EXPECT_FALSE(form_.Options().target_peak.has_value());
+}
+
+TEST_F(EncoderSettingsFormTest, SquelchIsTurnedOnByItsCheckBox) {
+  EXPECT_FALSE(form_.OnBox("squelch_db")->isChecked());
+  EXPECT_FALSE(form_.Slider("squelch_db")->isEnabled());
+  form_.OnBox("squelch_db")->setChecked(true);
+  ASSERT_TRUE(form_.Options().squelch_db.has_value());
+  EXPECT_DOUBLE_EQ(*form_.Options().squelch_db, 30.0);
+  form_.Slider("squelch_db")->MoveTo(24.0);
+  EXPECT_DOUBLE_EQ(*form_.Options().squelch_db, 24.0);
+  form_.OnBox("squelch_db")->setChecked(false);
+  EXPECT_FALSE(form_.Options().squelch_db.has_value());
+  EXPECT_EQ(form_.OnBox("target_rms"), nullptr);
 }
 
 TEST_F(EncoderSettingsFormTest, PreEmphasisIsChirpOrAFirstOrderCoefficient) {

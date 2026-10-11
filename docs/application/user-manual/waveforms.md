@@ -22,6 +22,18 @@ phrases selected, or none, the panes are empty.
     are still shown, marked **stale** beside the pane's title, until the
     phrase is re-encoded.
 
+## The squelch
+
+When the phrase has a [squelch](encoder.md#the-squelch), the stretches it
+mutes are shaded on the original: the waveform is dimmed and hatched
+there, and the pane's note gives the level, for example *squelch 30 dB:
+shaded stretches are muted* (or that nothing is quiet enough to mute).
+Hovering over a shaded stretch says it is squelched. The shading follows
+the squelch's slider as it moves, before the change is encoded, so the
+level can be set by eye: low enough to cover the breaths, not so low
+that it eats into the words. The original still shows and plays the
+recording as imported.
+
 ## Lining up the two
 
 The chip starts speaking about 25 ms after it reads the first frame, and

@@ -29,6 +29,9 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/squelch.h"
+#include "core/encoder/encoder.h"
+#include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
@@ -199,6 +202,7 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     const QString none = QStringLiteral("Select one phrase to see it");
     original_->View()->Clear(none);
     encoded_->View()->Clear(none);
+    UpdateShading();
     play_original_->setEnabled(false);
     play_encoded_->setEnabled(false);
     reset_->setEnabled(false);
@@ -223,6 +227,7 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
       original_->View()->SetSamples(audio_, 0);
       following_ = false;
     }
+    UpdateShading();
     play_original_->setEnabled(!audio_.empty());
     reset_->setEnabled(!audio_.empty());
     frames_.clear();
@@ -462,6 +467,39 @@ void PhraseWaveforms::UpdateEncodedNote() {
     parts << encoded_note_;
   }
   encoded_->SetNote(parts.join(QStringLiteral(" · ")));
+}
+
+void PhraseWaveforms::SetSquelch(std::optional<double> squelch_db) {
+  if (squelch_db != squelch_db_) {
+    squelch_db_ = squelch_db;
+    UpdateShading();
+  }
+}
+
+void PhraseWaveforms::UpdateShading() {
+  if (audio_.empty() || !squelch_db_.has_value()) {
+    original_->View()->SetShading({});
+    original_->SetNote(QString());
+    return;
+  }
+  core::encoder::EncoderOptions options;
+  options.squelch_db = squelch_db_;
+  const std::vector<double> samples(audio_.begin(), audio_.end());
+  std::vector<TimeExtent> shading;
+  for (const core::dsp::SampleSpan& span :
+       core::encoder::SquelchedSpans(samples, options)) {
+    shading.push_back({.begin = static_cast<double>(span.begin),
+                       .end = static_cast<double>(span.end)});
+  }
+  const QString level = QString::fromStdString(
+      core::encoder::EncoderOptionText(options, "squelch_db"));
+  original_->SetNote(
+      shading.empty()
+          ? QStringLiteral("squelch %1 dB: nothing is quiet enough to mute")
+                .arg(level)
+          : QStringLiteral("squelch %1 dB: shaded stretches are muted")
+                .arg(level));
+  original_->View()->SetShading(std::move(shading));
 }
 
 QToolButton* PhraseWaveforms::PlayButton(PlaybackSource source) const {

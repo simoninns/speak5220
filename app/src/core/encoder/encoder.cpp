@@ -23,6 +23,7 @@
 
 #include "core/dsp/array_math.h"
 #include "core/dsp/fft.h"
+#include "core/dsp/squelch.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_endings.h"
@@ -159,22 +160,34 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   }
   log->debug(
       "encoding {} samples: targetRms {}, targetPeak {}, peakLimit {}, "
-      "repeats {}, repeatLambda {}, gateDb {}, preEmphasis {}, window {}, "
-      "lagWindowHz {}, voicingThreshold {}, voicingEvidence {}, iterations "
-      "{}, fadeUnvoiced {}, levelAgc {}, compression {}",
+      "repeats {}, repeatLambda {}, gateDb {}, squelchDb {}, preEmphasis {}, "
+      "window {}, lagWindowHz {}, voicingThreshold {}, voicingEvidence {}, "
+      "iterations {}, fadeUnvoiced {}, quietPauses {}, levelAgc {}, "
+      "compression {}",
       samples.size(), options.target_rms,
       options.target_peak.has_value() ? std::to_string(*options.target_peak)
                                       : std::string("none"),
       options.peak_limit, options.repeats, options.repeat_lambda,
       options.gate_db,
+      options.squelch_db.has_value() ? std::to_string(*options.squelch_db)
+                                     : std::string("none"),
       options.pre_emphasis.chirp ? std::string("chirp")
                                  : std::to_string(options.pre_emphasis.mu),
       options.window, options.lag_window_hz, options.voicing_threshold,
       options.voicing_evidence, options.iterations, options.fade_unvoiced,
-      options.level_agc, options.compression);
+      options.quiet_pauses, options.level_agc, options.compression);
+
+  // The squelched source, or the samples as given when there is no
+  // squelch (without a copy).
+  std::vector<double> squelched;
+  std::span<const double> source = samples;
+  if (options.squelch_db.has_value()) {
+    squelched = SquelchedSource(samples, options);
+    source = squelched;
+  }
 
   EncodeResult result;
-  std::optional<Segmentation> seg = analyser_->Segment(samples, options);
+  std::optional<Segmentation> seg = analyser_->Segment(source, options);
   if (!seg.has_value()) {
     result.frames = {lpc::Frame::Stop()};
     log->debug("encoder: no sound; a lone stop frame");
@@ -242,6 +255,9 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   std::vector<int> energies =
       level_setter_->SetLevels(plan, levels, gain, opts, &stats);
   result.frames = AddFades(ToFrames(plan, energies), opts.fade_unvoiced);
+  if (opts.quiet_pauses) {
+    result.frames = QuietPauses(result.frames);
+  }
 
   EncodeDetails details;
   details.x = std::move(seg->x);
@@ -260,6 +276,22 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   log->debug("encoder: {} frames, {} bits, gain {:.6g}", result.frames.size(),
              StreamBits(result.frames), gain);
   return result;
+}
+
+std::vector<double> SquelchedSource(std::span<const double> samples,
+                                    const EncoderOptions& options) {
+  if (!options.squelch_db.has_value()) {
+    return {samples.begin(), samples.end()};
+  }
+  return dsp::Squelch(samples, kEncoderSampleRate, *options.squelch_db);
+}
+
+std::vector<dsp::SampleSpan> SquelchedSpans(std::span<const double> samples,
+                                            const EncoderOptions& options) {
+  if (!options.squelch_db.has_value()) {
+    return {};
+  }
+  return dsp::SquelchedSpans(samples, kEncoderSampleRate, *options.squelch_db);
 }
 
 std::unique_ptr<IEncoder> MakeEncoder() {

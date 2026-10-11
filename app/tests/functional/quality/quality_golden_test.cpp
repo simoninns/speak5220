@@ -228,20 +228,20 @@ TEST(QualityGoldenTest, CalibrationPlacesTypicalEncodingsInUpperBands) {
   const auto anchors = ReadAnchorScores(QualityGoldenDir() / "anchor.tsv");
   ASSERT_TRUE(refs.IsOk()) << refs.GetStatus().ToString();
   ASSERT_TRUE(anchors.IsOk()) << anchors.GetStatus().ToString();
-  std::vector<double> positions;
+  std::vector<double> relatives;
   for (const auto& [stem, ref] : *refs) {
-    positions.push_back(
-        QualityScale::Place(ref.pesq, anchors->at(stem)).position);
+    relatives.push_back(
+        QualityScale::Place(ref.pesq, anchors->at(stem)).relative);
   }
-  ASSERT_EQ(positions.size(), anchors->size());
-  const double median = core::dsp::Median(positions);
+  ASSERT_EQ(relatives.size(), anchors->size());
+  const double median = core::dsp::Median(relatives);
   EXPECT_GE(QualityScale::BandOf(median), QualityBand::kGood)
-      << "median position " << median;
+      << "median relative score " << median;
   const auto fair_or_better = std::count_if(
-      positions.begin(), positions.end(),
-      [](double p) { return QualityScale::BandOf(p) >= QualityBand::kFair; });
+      relatives.begin(), relatives.end(),
+      [](double r) { return QualityScale::BandOf(r) >= QualityBand::kFair; });
   EXPECT_GE(static_cast<double>(fair_or_better),
-            0.75 * static_cast<double>(positions.size()));
+            0.75 * static_cast<double>(relatives.size()));
 }
 
 // The full-corpus acceptance of Phase 3, run by app/scripts/corpus-check.sh

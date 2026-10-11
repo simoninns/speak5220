@@ -42,6 +42,7 @@ using testing::LockedPhrase;
 using testing::MockProjectStore;
 using testing::MockWavCodec;
 using ::testing::NiceMock;
+using ::testing::Not;
 using testing::ProjectWith;
 using ::testing::Return;
 using testing::TestId;
@@ -234,6 +235,25 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
   EXPECT_THAT(yaml, HasSubstr("    encoder:\n      target_rms: 18\n"
                               "      repeats: false\n"
                               "      pre_emphasis: \"chirp\"\n"));
+}
+
+// The squelch came after the first project files: unset, it is left out,
+// so a project that does not use it saves as before.
+TEST_F(ProjectSerializerTest, SquelchIsWrittenOnlyWhenSet) {
+  Project project = ProjectWith({AudioPhrase(1, "A")});
+  EXPECT_THAT(ProjectYamlOf(project), Not(HasSubstr("squelch_db")));
+  ProjectSettings settings = project.Settings();
+  settings.default_encoder.squelch_db = 30.0;
+  ASSERT_TRUE(project.SetSettings(settings).IsOk());
+  ASSERT_TRUE(
+      project.SetEncoding(TestId(1), {.overrides = {{"squelch_db", "none"}}})
+          .IsOk());
+  const std::string yaml = ProjectYamlOf(project);
+  EXPECT_THAT(yaml, HasSubstr("    gate_db: 45\n    squelch_db: 30\n"));
+  EXPECT_THAT(yaml, HasSubstr("    encoder:\n      squelch_db: null\n"));
+  const StatusOr<Project> loaded = Load(Save(project));
+  ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
+  EXPECT_EQ(*loaded, project);
 }
 
 TEST_F(ProjectSerializerTest, FramesAreWrittenOnePerLine) {

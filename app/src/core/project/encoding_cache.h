@@ -54,7 +54,9 @@ class EncodingCache {
 
   // The SHA-256 identifying an encoding's inputs: the encoder version,
   // every option's text in EncoderOptionInfos() order, and the audio's
-  // 24-bit codes. Pure.
+  // 24-bit codes. Options added later are left out while at their
+  // default (encoder::IsLeftOutAtDefault()), so adding one leaves the
+  // hashes of encodings that do not use it unchanged. Pure.
   static std::string SettingsHash(std::span<const float> audio,
                                   const encoder::EncoderOptions& options,
                                   std::string_view encoder_version);

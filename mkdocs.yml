@@ -106,6 +106,7 @@ nav:
               - Acorn PHROM A reference set: technical/datasheet/evidence/acorn-reference-set.md
               - Synthetic vectors: technical/datasheet/evidence/vectors.md
               - Host interface tests: technical/datasheet/evidence/host-interface.md
+              - Silence and pauses: technical/datasheet/evidence/pauses.md
       - Emulator:
           - technical/emulator/index.md
           - API: technical/emulator/api.md

@@ -29,7 +29,7 @@ using enum EncoderOptionType;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
+constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
     {.key = "targetRms",
      .field = "target_rms",
      .label = "Target RMS",
@@ -105,6 +105,21 @@ constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
      .typical_minimum = 20.0,
      .typical_maximum = 70.0,
      .step = 0.5},
+    {.key = "squelchDb",
+     .field = "squelch_db",
+     .label = "Squelch",
+     .help = "If set, stretches of the recording this many dB below its "
+             "loudest sound, such as breaths and room noise, are made "
+             "silent before encoding, and the quality is measured against "
+             "the squelched recording.",
+     .type = kOptionalReal,
+     .minimum = 6.0,
+     .maximum = 80.0,
+     .default_text = "",
+     .unit = "dB",
+     .typical_minimum = 12.0,
+     .typical_maximum = 50.0,
+     .step = 1.0},
     {.key = "preEmphasis",
      .field = "pre_emphasis",
      .label = "Pre-emphasis",
@@ -194,6 +209,20 @@ constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
      .typical_minimum = 0.0,
      .typical_maximum = 1.0,
      .step = 1.0},
+    {.key = "quietPauses",
+     .field = "quiet_pauses",
+     .label = "Quiet pauses",
+     .help = "Start each pause of two or more silent frames with one "
+             "quiet frame that settles the chip's filter. Without it the "
+             "chip buzzes faintly through the pause.",
+     .type = kBoolean,
+     .minimum = 0.0,
+     .maximum = 1.0,
+     .default_text = "true",
+     .unit = "",
+     .typical_minimum = 0.0,
+     .typical_maximum = 1.0,
+     .step = 1.0},
     {.key = "levelAgc",
      .field = "level_agc",
      .label = "Slow gain control",
@@ -223,7 +252,7 @@ constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
 }};
 
 // The fields of each type, by name, for SetEncoderOption() and
-// EncoderOptionText(). target_peak and pre_emphasis have types of their own.
+// EncoderOptionText(). pre_emphasis has a type of its own.
 struct RealField {
   std::string_view field;
   double EncoderOptions::* member;
@@ -235,6 +264,10 @@ struct IntegerField {
 struct BooleanField {
   std::string_view field;
   bool EncoderOptions::* member;
+};
+struct OptionalRealField {
+  std::string_view field;
+  std::optional<double> EncoderOptions::* member;
 };
 
 constexpr std::array<RealField, 9> kRealFields = {{
@@ -253,9 +286,14 @@ constexpr std::array<IntegerField, 2> kIntegerFields = {{
     {.field = "window", .member = &EncoderOptions::window},
     {.field = "iterations", .member = &EncoderOptions::iterations},
 }};
-constexpr std::array<BooleanField, 2> kBooleanFields = {{
+constexpr std::array<BooleanField, 3> kBooleanFields = {{
     {.field = "repeats", .member = &EncoderOptions::repeats},
     {.field = "fade_unvoiced", .member = &EncoderOptions::fade_unvoiced},
+    {.field = "quiet_pauses", .member = &EncoderOptions::quiet_pauses},
+}};
+constexpr std::array<OptionalRealField, 2> kOptionalRealFields = {{
+    {.field = "target_peak", .member = &EncoderOptions::target_peak},
+    {.field = "squelch_db", .member = &EncoderOptions::squelch_db},
 }};
 
 template <typename Table>
@@ -315,10 +353,12 @@ Status ValidateEncoderOptions(const EncoderOptions& options) {
       return status;
     }
   }
-  if (options.target_peak.has_value()) {
-    if (Status status = CheckRange("target_peak", *options.target_peak);
-        !status.IsOk()) {
-      return status;
+  for (const OptionalRealField& entry : kOptionalRealFields) {
+    if (const std::optional<double>& value = options.*entry.member;
+        value.has_value()) {
+      if (Status status = CheckRange(entry.field, *value); !status.IsOk()) {
+        return status;
+      }
     }
   }
   if (!options.pre_emphasis.chirp) {
@@ -328,6 +368,11 @@ Status ValidateEncoderOptions(const EncoderOptions& options) {
     }
   }
   return OkStatus();
+}
+
+bool IsLeftOutAtDefault(const EncoderOptions& options, std::string_view field) {
+  return (field == "squelch_db" && !options.squelch_db.has_value()) ||
+         (field == "quiet_pauses" && options.quiet_pauses);
 }
 
 Status SetEncoderOption(EncoderOptions& options, std::string_view field,
@@ -366,9 +411,9 @@ Status SetEncoderOption(EncoderOptions& options, std::string_view field,
       break;
     case kOptionalReal:
       if (text.empty() || text == kUnsetOptionText) {
-        updated.target_peak.reset();
+        (updated.*MemberOf(kOptionalRealFields, field)).reset();
       } else if (const std::optional<double> value = ParseNumber(text)) {
-        updated.target_peak = value;
+        updated.*MemberOf(kOptionalRealFields, field) = value;
       } else {
         return WrongType(field, "a number or none", text);
       }
@@ -403,10 +448,12 @@ std::string EncoderOptionText(const EncoderOptions& options,
       return std::to_string(options.*MemberOf(kIntegerFields, field));
     case kBoolean:
       return options.*MemberOf(kBooleanFields, field) ? "true" : "false";
-    case kOptionalReal:
-      return options.target_peak.has_value()
-                 ? FormatNumber(*options.target_peak)
-                 : std::string(kUnsetOptionText);
+    case kOptionalReal: {
+      const std::optional<double>& value =
+          options.*MemberOf(kOptionalRealFields, field);
+      return value.has_value() ? FormatNumber(*value)
+                               : std::string(kUnsetOptionText);
+    }
     case kPreEmphasis:
       return options.pre_emphasis.chirp ? std::string("chirp")
                                         : FormatNumber(options.pre_emphasis.mu);

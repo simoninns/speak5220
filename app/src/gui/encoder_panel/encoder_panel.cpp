@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -272,32 +273,44 @@ void EncoderPanel::StartEncode(const EncoderOptions& options) {
   latest_job_[id_] = job;
   ++jobs_running_;
   ++encodes_running_[id_];
-  std::optional<double> anchor;
-  if (const auto found = anchors_.find(id_); found != anchors_.end()) {
-    anchor = found->second;
-  }
+  const AnchorKey anchor_key = AnchorKeyOf(id_, options);
+  const std::optional<double> anchor = KnownAnchor(anchor_key);
   // Plan §5: encoded and measured in the background; the result comes back
   // to this thread queued (AGENTS.md §4.3.3).
-  runner_->Post([this, job, id = id_, name = name_, audio = audio_, options,
+  runner_->Post([this, job, anchor_key, name = name_, audio = audio_, options,
                  overrides = project::OverridesFor(defaults_, options), anchor,
                  tools = tools_, synth = synth_]() mutable {
     auto result = std::make_shared<core::StatusOr<MeasuredEncoding>>(
         EncodePhrase(tools, *synth, audio, options, anchor));
     QMetaObject::invokeMethod(
         this,
-        [this, job, id, name, overrides = std::move(overrides),
+        [this, job, anchor_key, name, overrides = std::move(overrides),
          result]() mutable {
-          OnEncoded(job, id, name, std::move(overrides), std::move(*result));
+          OnEncoded(job, anchor_key, name, std::move(overrides),
+                    std::move(*result));
         },
         Qt::QueuedConnection);
   });
   UpdateView();
 }
 
-void EncoderPanel::OnEncoded(int job, const project::PhraseId& id,
+EncoderPanel::AnchorKey EncoderPanel::AnchorKeyOf(
+    const project::PhraseId& id, const EncoderOptions& options) {
+  return {id, core::encoder::EncoderOptionText(options, "squelch_db")};
+}
+
+std::optional<double> EncoderPanel::KnownAnchor(const AnchorKey& key) const {
+  if (const auto found = anchors_.find(key); found != anchors_.end()) {
+    return found->second;
+  }
+  return std::nullopt;
+}
+
+void EncoderPanel::OnEncoded(int job, const AnchorKey& anchor_key,
                              const QString& name,
                              project::EncoderOverrides overrides,
                              core::StatusOr<MeasuredEncoding> result) {
+  const project::PhraseId& id = anchor_key.first;
   --jobs_running_;
   if (--encodes_running_[id] == 0) {
     encodes_running_.erase(id);
@@ -322,7 +335,7 @@ void EncoderPanel::OnEncoded(int job, const project::PhraseId& id,
   const EncodingFacts& facts = result->facts;
   measured_[id] = {.frames = result->encoding.frames, .facts = facts};
   if (facts.anchor.has_value()) {
-    anchors_[id] = *facts.anchor;
+    anchors_[anchor_key] = *facts.anchor;
   }
   const bool unchanged = id == id_ && overrides == overrides_ &&
                          encoding_.has_value() &&
@@ -355,33 +368,46 @@ void EncoderPanel::StartMeasure() {
       running != measuring_.end() && running->second == encoding_->frames) {
     return;
   }
+  // Measured against the source as the phrase's settings squelch it.
+  const core::StatusOr<EncoderOptions> options =
+      project::EffectiveEncoderOptions(defaults_, overrides_);
+  if (!options.IsOk()) {
+    return;
+  }
   measuring_[id_] = encoding_->frames;
   ++jobs_running_;
-  std::optional<double> anchor = encoding_->anchor;
-  if (const auto found = anchors_.find(id_); found != anchors_.end()) {
-    anchor = found->second;
+  const AnchorKey anchor_key = AnchorKeyOf(id_, *options);
+  // The anchor stored with the frames is of their squelch, which is the
+  // settings' only while they are current.
+  std::optional<double> anchor = current_ ? encoding_->anchor : std::nullopt;
+  if (const std::optional<double> known = KnownAnchor(anchor_key)) {
+    anchor = known;
   }
-  runner_->Post([this, id = id_, audio = audio_, frames = encoding_->frames,
-                 anchor, tools = tools_, synth = synth_] {
+  runner_->Post([this, anchor_key, audio = audio_, frames = encoding_->frames,
+                 options = *options, anchor, tools = tools_, synth = synth_] {
     auto facts = std::make_shared<EncodingFacts>(
-        MeasureFrames(tools, *synth, audio, frames, anchor));
+        MeasureFrames(tools, *synth, audio, options, frames, anchor));
     QMetaObject::invokeMethod(
-        this, [this, id, frames, facts] { OnMeasured(id, frames, *facts); },
+        this,
+        [this, anchor_key, frames, facts] {
+          OnMeasured(anchor_key, frames, *facts);
+        },
         Qt::QueuedConnection);
   });
   UpdateView();
 }
 
-void EncoderPanel::OnMeasured(const project::PhraseId& id,
+void EncoderPanel::OnMeasured(const AnchorKey& anchor_key,
                               std::vector<core::lpc::Frame> frames,
                               EncodingFacts facts) {
+  const project::PhraseId& id = anchor_key.first;
   --jobs_running_;
   if (const auto running = measuring_.find(id);
       running != measuring_.end() && running->second == frames) {
     measuring_.erase(running);
   }
   if (facts.anchor.has_value()) {
-    anchors_[id] = *facts.anchor;
+    anchors_[anchor_key] = *facts.anchor;
   }
   measured_[id] = {.frames = std::move(frames), .facts = facts};
   UpdateView();
@@ -413,7 +439,25 @@ void EncoderPanel::LoadForm() {
   }
 }
 
+std::optional<double> EncoderPanel::ShownSquelch() const {
+  if (id_.empty() || locked_ || audio_.empty()) {
+    return std::nullopt;
+  }
+  if (scope_ == Scope::kPhrase) {
+    return form_->Options().squelch_db;
+  }
+  // The form holds the project's defaults; the phrase may set its own.
+  const core::StatusOr<EncoderOptions> options =
+      project::EffectiveEncoderOptions(form_->Options(), overrides_);
+  return options.IsOk() ? options->squelch_db : std::nullopt;
+}
+
 void EncoderPanel::UpdateView() {
+  if (const std::optional<double> squelch = ShownSquelch();
+      squelch != shown_squelch_) {
+    shown_squelch_ = squelch;
+    emit SquelchChanged(squelch);
+  }
   const bool has_phrase = !id_.empty();
   const bool editable = has_phrase && !locked_ && !audio_.empty();
   const bool encoding_shown = encodes_running_.contains(id_);

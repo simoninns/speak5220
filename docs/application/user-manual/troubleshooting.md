@@ -40,6 +40,8 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `No better settings were found within the limits.` (Optimise) | No settings tried scored higher than the current ones while fitting the byte limit and the budget; or none fitted at all. Nothing changes. Raise the byte limit, or leave it off |
 | `Quality not measured` (encoder panel) | PESQ could not be measured: the encoding holds no sound, or the phrase is too short to compare |
 | A message titled **Encode HELLO** | The encoder refused the phrase's audio or settings, for the reason given; the phrase keeps its frames |
+| *Stale: made with other settings* on phrases whose settings did not change | They were encoded by an earlier version of the encoder, whose output differs: for example, before [quiet pauses](encoder.md#quiet-pauses). Their frames still work; re-encode them (**Phrase > Re-encode**) to get the current encoder's |
+| A faint buzz or whine in the pauses of the encoded audio | The window plays the emulator, which is not exact at this level: a pause it plays with a whine can be silent on a real chip, and the other way round (see [quiet pauses](encoder.md#quiet-pauses)). On the chip, a pause buzzes when it is short (two silence frames or fewer, which quiet pauses leaves alone) or quiet pauses is off |
 
 ## Importing audio
 

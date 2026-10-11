@@ -62,18 +62,22 @@ struct MeasuredEncoding {
 };
 
 // Encodes `audio` (8 kHz) with `options`, then measures the frames
-// (MeasureFrames()). Fails if the encoder fails; a failed measurement
-// only leaves its value unknown. On a worker thread.
+// (MeasureFrames()). `anchor`, if given, must be of the source squelched
+// by `options`. Fails if the encoder fails; a failed measurement only
+// leaves its value unknown. On a worker thread.
 core::StatusOr<MeasuredEncoding> EncodePhrase(
     const EncodingTools& tools, core::synth::ISynth& synth,
     std::span<const float> audio, const core::encoder::EncoderOptions& options,
     std::optional<double> anchor);
 
 // Measures `frames` made from `audio`: PESQ, the anchor (unless given),
-// and the peak code. Unknown values stay unset. On a worker thread.
+// and the peak code. PESQ and the anchor are of the source squelched by
+// `options` (encoder::SquelchedSource()), as the encoder squelched it.
+// Unknown values stay unset. On a worker thread.
 EncodingFacts MeasureFrames(const EncodingTools& tools,
                             core::synth::ISynth& synth,
                             std::span<const float> audio,
+                            const core::encoder::EncoderOptions& options,
                             const std::vector<core::lpc::Frame>& frames,
                             std::optional<double> anchor);
 

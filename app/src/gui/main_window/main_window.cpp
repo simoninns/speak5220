@@ -124,6 +124,8 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           &MainWindow::OnSelectionChanged);
   connect(waveforms_, &PhraseWaveforms::Failed, this, &MainWindow::ShowError);
   connect(encoder_panel_, &EncoderPanel::Failed, this, &MainWindow::ShowError);
+  connect(encoder_panel_, &EncoderPanel::SquelchChanged, waveforms_,
+          &PhraseWaveforms::SetSquelch);
   connect(encoder_panel_, &EncoderPanel::OptimiseRequested, this,
           [this](const project::PhraseId& id) { Optimise({id}); });
   connect(optimise_dialog_, &OptimiseDialog::Failed, this,

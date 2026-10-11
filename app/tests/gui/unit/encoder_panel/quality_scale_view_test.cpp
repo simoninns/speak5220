@@ -31,29 +31,33 @@ TEST(QualityScaleViewTest, ShowsTheScoreItsAnchorAndItsBand) {
   QualityScaleView view;
   view.SetScores(2.08, 2.31);
   EXPECT_EQ(view.Text(),
-            QStringLiteral("PESQ 2.08 (LPC best for this phrase 2.31): Good"));
+            QStringLiteral("PESQ 2.08 (LPC reference 2.31): Good"));
   ASSERT_TRUE(view.Placement().has_value());
   EXPECT_EQ(view.Placement()->band, QualityBand::kGood);
   ASSERT_TRUE(view.Bar()->Position().has_value());
-  EXPECT_NEAR(*view.Bar()->Position(), (2.08 - 1.0) / (2.31 - 1.0), 1e-12);
+  EXPECT_NEAR(*view.Bar()->Position(),
+              (2.08 - 1.0) / (2.31 - 1.0) / core::quality::QualityScale::kTop,
+              1e-12);
   EXPECT_EQ(view.toolTip(), QualityToolTip());
 }
 
-TEST(QualityScaleViewTest, ScoreAtOrAboveTheAnchorIsAtTheTop) {
+TEST(QualityScaleViewTest, ScoreBeyondTheAnchorShowsHowFar) {
   QualityScaleView view;
-  view.SetScores(2.5, 2.31);
+  // (2.22 - 1) / (2.05 - 1) = 1.16, short of the end of the bar.
+  view.SetScores(2.22, 2.05);
   ASSERT_TRUE(view.Placement().has_value());
-  EXPECT_EQ(view.Placement()->band, QualityBand::kAsGoodAsLpc);
-  EXPECT_DOUBLE_EQ(*view.Bar()->Position(), 1.0);
-  EXPECT_TRUE(
-      view.Text().endsWith(QStringLiteral("As good as LPC can achieve")));
+  EXPECT_EQ(view.Placement()->band, QualityBand::kLpcOrBetter);
+  EXPECT_GT(*view.Bar()->Position(), 1.0 / core::quality::QualityScale::kTop);
+  EXPECT_LT(*view.Bar()->Position(), 1.0);
+  EXPECT_TRUE(view.Text().endsWith(QStringLiteral("As good as LPC or better")));
 }
 
 TEST(QualityScaleViewTest, MarksAnEarlierScore) {
   QualityScaleView view;
   view.SetScores(2.2, 2.5, 1.9);
   ASSERT_TRUE(view.Bar()->Before().has_value());
-  EXPECT_NEAR(*view.Bar()->Before(), 0.6, 1e-12);
+  EXPECT_NEAR(*view.Bar()->Before(), 0.6 / core::quality::QualityScale::kTop,
+              1e-12);
   EXPECT_TRUE(view.Text().endsWith(QStringLiteral(" · from 1.90")));
 }
 
@@ -87,7 +91,7 @@ TEST(QualityScaleViewTest, BarStaysShortEnoughToReadAtAGlance) {
 }
 
 TEST(QualityScaleViewTest, NamesTheTopBandBestInsideTheBar) {
-  EXPECT_EQ(BandName(QualityBand::kAsGoodAsLpc), "Best");
+  EXPECT_EQ(BandName(QualityBand::kLpcOrBetter), "Best");
   EXPECT_EQ(BandName(QualityBand::kGood), "Good");
 }
 

@@ -36,10 +36,12 @@ namespace project = core::project;
 EncodingFacts MeasureFrames(const EncodingTools& tools,
                             core::synth::ISynth& synth,
                             std::span<const float> audio,
+                            const core::encoder::EncoderOptions& options,
                             const std::vector<core::lpc::Frame>& frames,
                             std::optional<double> anchor) {
   EncodingFacts facts;
-  const std::vector<double> source(audio.begin(), audio.end());
+  const std::vector<double> source = core::encoder::SquelchedSource(
+      std::vector<double>(audio.begin(), audio.end()), options);
   const core::encoder::EncodeResult encoding{.frames = frames,
                                              .details = std::nullopt};
   if (core::StatusOr<double> pesq = tools.quality->Measure(source, encoding);
@@ -85,7 +87,8 @@ core::StatusOr<MeasuredEncoding> EncodePhrase(
     return result.GetStatus();
   }
   MeasuredEncoding measured;
-  measured.facts = MeasureFrames(tools, synth, audio, result->frames, anchor);
+  measured.facts =
+      MeasureFrames(tools, synth, audio, options, result->frames, anchor);
   if (const std::optional<core::encoder::EncodeDetails>& details =
           result->details;
       details.has_value()) {

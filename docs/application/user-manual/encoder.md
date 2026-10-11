@@ -44,31 +44,43 @@ PESQ (ITU-T P.862, as MOS-LQO) compares the encoded speech with the
 original and scores it from 1.0 to 4.5. No TMS5220 encoding comes near
 4.5: a typical encoding scores about 2.0, and an ideal LPC coder with
 nothing quantised only about 2.3. So the score is shown against the
-phrase's own ceiling, the **anchor**: the score of an unquantised LPC-10
-vocoder of the same recording.
+phrase's own reference, the **anchor**: the score of an unquantised
+LPC-10 vocoder of the same recording.
 
-`[ Bad | Poor | Fair | Good ▼| Best ]`
+`[ Bad | Poor | Fair |  Good ▼  | Best ]`
 
-`PESQ 2.08 (LPC best for this phrase 2.31): Good`
+`PESQ 2.08 (LPC reference 2.31): Good`
 
-The mark's place is (score − 1.0) / (anchor − 1.0): at the left for
-PESQ's floor, at the right for an encoding that reaches the anchor or
-beats it. The bar is divided into five bands, each named inside it (the
-top one, a tenth of the bar, as **Best**), and the line under the bar
-gives the band in full, so the scale reads the same without colour. The
-bar is at most 520 pixels wide, so it can be taken in at a glance:
+The score relative to the anchor is (score − 1.0) / (anchor − 1.0): 0
+for PESQ's floor, 1 for an encoding that matches the anchor. The anchor
+is a reference, not a limit: an encoding can score above it, and after
+Optimise about a quarter do. So the bar runs on a quarter
+past the anchor: the **Best** band starts at the anchor, four fifths of
+the way along, and a score beyond it shows how far (1.25 or more is at
+the right end).
 
-| Band | Place on the scale |
+The bar is divided into five bands, each named inside it (the top one as
+**Best**), and the line under the bar gives the band in full, so the
+scale reads the same without colour. The bar is at most 520 pixels
+wide, so it can be taken in at a glance:
+
+| Band | Score relative to the anchor |
 |---|---|
 | Bad | below 0.40 |
 | Poor | 0.40 to below 0.60 |
 | Fair | 0.60 to below 0.75 |
-| Good | 0.75 to below 0.90 |
-| As good as LPC can achieve | 0.90 and above |
+| Good | 0.75 to below 1.00 |
+| As good as LPC or better | 1.00 (the anchor) and above |
 
-With the default settings a typical encoding is *Good*. PESQ was not
+With the default settings a typical encoding is *Good*; Optimise moves
+most encodings up within *Good*, and some past the anchor. PESQ was not
 validated for vocoders, so use the scale to rank encodings of a phrase,
 not to predict what a listener would say; hover over it for a reminder.
+
+PESQ treats breaths and room noise as part of the speech, and gives
+quiet stretches a little more weight than loud ones. If a recording has
+audible breaths, Optimise may favour settings that reproduce them; use
+the [squelch](#the-squelch) to leave them out.
 
 The score and the anchor are measured when a phrase is encoded in the
 window, and saved with its frames. For frames made elsewhere (by
@@ -86,9 +98,9 @@ to see. A slider covers the range where useful values lie (the reference
 gives each one); a value outside it, from the project file or Optimise,
 widens the slider to include it. Click a slider and use the arrow keys
 for single steps, Page Up and Page Down for larger ones. On/off options
-are check boxes; the target peak has a check box that turns it on, and
-the pre-emphasis a choice of chirp or first order, whose coefficient the
-slider beside it sets.
+are check boxes; the target peak and the [squelch](#the-squelch) have a
+check box that turns them on, and the pre-emphasis a choice of chirp or
+first order, whose coefficient the slider beside it sets.
 **Settings for** chooses what the form edits:
 
 - **This phrase**: the phrase's settings. The ticks mark the project's
@@ -113,6 +125,68 @@ waiting.
 A new encoding that would take the project past its 64 PHROMs is not
 stored: a message says so, and the form shows the phrase's settings again
 (see [troubleshooting](troubleshooting.md#the-encoder-and-optimise)).
+
+## The squelch
+
+**Squelch**, off by default, makes the quiet stretches of the recording
+silent before it is encoded: everything more than the set number of dB
+below the recording's loudest sound, such as breaths, lip noise and room
+noise. Tick its check box to turn it on (it starts at `30 dB`). The
+quality scale then compares the encoding with the squelched recording,
+so an encoding that reproduces a breath scores *lower*, and Optimise
+looks for settings that keep it out.
+
+- A lower number squelches more: `20 dB` mutes anything a tenth as loud
+  as the loudest sound; `40 dB` only sounds a hundredth as loud.
+- Sound is kept for 60 ms after it falls below the level and from 10 ms
+  before it rises above it, with a short fade, so word endings and
+  onsets are not clipped. Loudness alone cannot tell a breath from a soft
+  *h* or a trailing *s*, though: if a word loses its ending, raise the
+  number.
+- Changing the squelch changes what the quality is measured against, so
+  scores made with different squelches do not compare, and the anchor is
+  measured again. Optimise keeps the phrase's squelch as it is.
+- The squelch is not the **Silence gate**, which only decides which
+  frames of the encoding are silent (45 dB below the loudest frame by
+  default) and leaves the quality measured against the whole recording.
+
+The stretches the squelch mutes are [shaded on the original
+waveform](waveforms.md#the-squelch), and the shading follows the slider as
+it moves, so the level can be set by eye: breaths are often 25 to 35 dB
+below the loudest sound, so a breath that `30 dB` leaves unshaded may
+need `25 dB` or less. The recording itself is not changed: the waveform
+shows and plays it as imported.
+
+## Quiet pauses
+
+A pause inside a phrase is made of silence frames, which stop the sound
+but leave the chip's filter as the sound before it set it. On a real
+TMS5220 the filter then never quite comes to rest: it keeps flicking a
+code or two either side of zero, and the chip turns that into a faint buzz
+at about the pitch of the voice, roughly 23 dB below the speech, for the
+whole pause (datasheet §12.2, measured on the chip).
+
+**Quiet pauses**, on by default, settles the filter: in every pause of
+three silence frames or more, the second becomes one voiced frame at the
+lowest energy with neutral filter settings, and the rest of the pause is
+then truly silent. The first frame of the pause is left alone, so the
+sound before it fades out as it did. It costs 46 bits a pause, a few
+percent of a phrase with pauses. Shorter pauses are left as they are:
+they ring for at most 50 ms. Optimise leaves the setting as it is.
+
+The [squelch](#the-squelch) makes long pauses common, so leave quiet
+pauses on unless the frames must match another encoder's exactly. Phrases
+encoded before quiet pauses existed are shown as *stale*; re-encode them
+(**Phrase > Re-encode**) to quieten their pauses.
+
+!!! warning "The pauses you hear in the window are not the chip's"
+    The waveforms and **Listen** play the emulator, and at this level, a
+    code or two, the emulator cannot be trusted: how the chip rounds its
+    smallest values is not known (datasheet §8.8). A pause can buzz on the
+    chip and be silent in the window, or the other way round. Measured on
+    a real TMS5220, a pause with quiet pauses on was silent every time, even
+    where the window plays a faint whine in it (datasheet §12.2). Judge
+    the pauses on a real chip, not by ear in the window.
 
 ## Re-encoding several phrases
 
@@ -141,7 +215,9 @@ Before it starts, two limits can be set:
   slightly better one. With 0.1, saving 1 kbit/s is worth 0.1 of PESQ.
 
 Whatever the limits, a result that would take the project past its 64
-PHROMs is never chosen. Each phrase is checked with the earlier phrases'
+PHROMs is never chosen. Optimise does not change the
+[squelch](#the-squelch): each phrase keeps its own, and its encodings are
+scored against its squelched recording. Each phrase is checked with the earlier phrases'
 results in place, so the results fit together.
 
 **Start** begins the search. While it runs, the window shows:

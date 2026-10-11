@@ -11,6 +11,7 @@
 #include "gui/main_window/main_window.h"
 
 #include <QAction>
+#include <QCheckBox>
 #include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
@@ -18,6 +19,8 @@
 #include <QString>
 #include <QStringList>
 #include <QUndoStack>
+#include <algorithm>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -26,11 +29,15 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "gui/encoder_panel/encoder_panel.h"
+#include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/waveform/phrase_waveforms.h"
+#include "gui/waveform/waveform_pane.h"
+#include "gui/waveform/waveform_view.h"
 #include "support/project_builder.h"
 
 namespace speak5220::app {
@@ -105,6 +112,24 @@ TEST_F(MainWindowTest, SelectingAPhraseShowsItsEncoding) {
   EXPECT_TRUE(window_.Encoder()->ReEncodeButton()->isEnabled());
   window_.Panel()->Select({TestId(1), TestId(2)});
   EXPECT_FALSE(window_.Encoder()->ReEncodeButton()->isEnabled());
+}
+
+TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {
+  // Loud, then 60 dB quieter, a tenth of a second each.
+  core::project::Phrase breath = AudioPhrase(1, "BREATH");
+  breath.audio.assign(1600, 0.5F);
+  std::fill(breath.audio.begin() + 800, breath.audio.end(), 0.0005F);
+  AddPhrases({breath, AudioPhrase(2, "TWO")});
+  window_.Panel()->Select({TestId(1)});
+  WaveformView* original = window_.Waveforms()->OriginalPane()->View();
+  EXPECT_TRUE(original->Shading().empty());
+  window_.Encoder()->Form()->OnBox("squelch_db")->setChecked(true);
+  EXPECT_EQ(window_.Waveforms()->Squelch(), 30.0);
+  EXPECT_FALSE(original->Shading().empty());
+  // Selecting several phrases shows none, and so no squelch.
+  window_.Panel()->Select({TestId(1), TestId(2)});
+  EXPECT_EQ(window_.Waveforms()->Squelch(), std::nullopt);
+  EXPECT_TRUE(original->Shading().empty());
 }
 
 TEST_F(MainWindowTest, ReEncodeEncodesTheSelectionAsOneStep) {

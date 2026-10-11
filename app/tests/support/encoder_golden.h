@@ -38,7 +38,12 @@ struct ReferenceEncoding {
   std::set<std::size_t> near_ties;
 };
 
-// The option sets of option_sets.tsv, by name, as EncoderOptions.
+// The reference encoder's defaults: EncoderOptions{} with quiet_pauses
+// off, which the reference does not have.
+core::encoder::EncoderOptions ReferenceEncoderOptions();
+
+// The option sets of option_sets.tsv, by name, as EncoderOptions over
+// ReferenceEncoderOptions().
 core::StatusOr<std::map<std::string, core::encoder::EncoderOptions>>
 ReadOptionSets(const std::filesystem::path& path);
 

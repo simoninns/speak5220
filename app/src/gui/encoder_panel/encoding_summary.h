@@ -33,8 +33,8 @@ QString KindsText(const core::lpc::FrameStatistics& stats);
 QString LevelText(std::optional<int> peak_code,
                   const std::optional<core::encoder::LevelStats>& levels);
 
-// Plan §3.3, "Presenting PESQ to the user": "PESQ 2.08 (LPC best for this
-// phrase 2.31): Good", with the band's label; "PESQ 2.08" with no anchor;
+// Plan §3.3, "Presenting PESQ to the user": "PESQ 2.08 (LPC reference
+// 2.31): Good", with the band's label; "PESQ 2.08" with no anchor;
 // "Quality not measured" with no score. Pure.
 QString QualityText(std::optional<double> pesq, std::optional<double> anchor);
 

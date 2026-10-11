@@ -186,6 +186,9 @@ void EmitSettings(YAML::Emitter& out, const ProjectSettings& settings) {
   out << YAML::EndMap;
   out << YAML::Key << "default_encoder" << YAML::Value << YAML::BeginMap;
   for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+    if (encoder::IsLeftOutAtDefault(settings.default_encoder, info.field)) {
+      continue;
+    }
     out << YAML::Key << std::string(info.field) << YAML::Value;
     EmitOptionValue(
         out, info,

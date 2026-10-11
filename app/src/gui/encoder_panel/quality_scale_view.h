@@ -2,7 +2,7 @@
  * File:        quality_scale_view.h
  * Module:      encoder_panel
  * Purpose:     Shows a PESQ score on its phrase's quality scale, from Bad
- *              to As good as LPC can achieve, with its band in words
+ *              to As good as LPC or better, with its band in words
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -27,9 +27,10 @@ class QPaintEvent;
 namespace speak5220::app {
 
 // The bar of the quality scale: the five bands from Bad to As good as LPC
-// can achieve, each named inside it where it fits (the top band as
-// "Best"), the score's mark, and a dashed mark for an earlier score
-// (Optimise's start). At most 520 pixels wide, so it reads at a glance.
+// or better, each named inside it where it fits (the top band, from the
+// anchor to the end, as "Best"), the score's mark, and a dashed mark for
+// an earlier score (Optimise's start). At most 520 pixels wide, so it
+// reads at a glance.
 // GUI thread only.
 class QualityBar : public QWidget {
   Q_OBJECT
@@ -57,7 +58,7 @@ class QualityBar : public QWidget {
 };
 
 // The band's name as the bar shows it: QualityScale::Label(), but "Best"
-// for kAsGoodAsLpc. Pure.
+// for kLpcOrBetter. Pure.
 std::string_view BandName(core::quality::QualityBand band);
 
 // Plan §3.3, "Presenting PESQ to the user": the scale's bar, and under it

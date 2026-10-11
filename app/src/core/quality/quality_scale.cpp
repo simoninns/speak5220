@@ -2,7 +2,8 @@
  * File:        quality_scale.cpp
  * Module:      quality
  * Purpose:     Places a PESQ score on the phrase's own scale, from PESQ's
- *              floor to its anchor's score, in plain-language bands
+ *              floor to a little past its anchor's score, in
+ *              plain-language bands
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -18,25 +19,30 @@ namespace speak5220::core::quality {
 QualityPlacement QualityScale::Place(double score, double anchor) {
   QualityPlacement p;
   if (anchor <= kFloor) {
-    p.position = score >= anchor ? 1.0 : 0.0;
+    p.relative = score >= anchor ? 1.0 : 0.0;
   } else {
-    p.position = std::clamp((score - kFloor) / (anchor - kFloor), 0.0, 1.0);
+    p.relative = (score - kFloor) / (anchor - kFloor);
   }
-  p.band = BandOf(p.position);
+  p.position = PositionOf(p.relative);
+  p.band = BandOf(p.relative);
   return p;
 }
 
-QualityBand QualityScale::BandOf(double position) {
-  if (position >= kBandStarts[3]) {
-    return QualityBand::kAsGoodAsLpc;
+double QualityScale::PositionOf(double relative) {
+  return std::clamp(relative / kTop, 0.0, 1.0);
+}
+
+QualityBand QualityScale::BandOf(double relative) {
+  if (relative >= kBandStarts[3]) {
+    return QualityBand::kLpcOrBetter;
   }
-  if (position >= kBandStarts[2]) {
+  if (relative >= kBandStarts[2]) {
     return QualityBand::kGood;
   }
-  if (position >= kBandStarts[1]) {
+  if (relative >= kBandStarts[1]) {
     return QualityBand::kFair;
   }
-  if (position >= kBandStarts[0]) {
+  if (relative >= kBandStarts[0]) {
     return QualityBand::kPoor;
   }
   return QualityBand::kBad;
@@ -52,8 +58,8 @@ std::string_view QualityScale::Label(QualityBand band) {
       return "Fair";
     case QualityBand::kGood:
       return "Good";
-    case QualityBand::kAsGoodAsLpc:
-      return "As good as LPC can achieve";
+    case QualityBand::kLpcOrBetter:
+      return "As good as LPC or better";
   }
   return "Bad";
 }

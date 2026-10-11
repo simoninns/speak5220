@@ -12,6 +12,7 @@ add_library(
     dsp/iir_filter.cpp
     dsp/lpc_analysis.cpp
     dsp/resampler.cpp
+    dsp/squelch.cpp
     emulator/chip_arithmetic.cpp
     emulator/chip_driver.cpp
     emulator/tms5220.cpp

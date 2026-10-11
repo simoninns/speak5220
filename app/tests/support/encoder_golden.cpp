@@ -101,6 +101,12 @@ StatusOr<std::vector<std::uint8_t>> FromHex(const std::string& hex) {
 
 }  // namespace
 
+EncoderOptions ReferenceEncoderOptions() {
+  EncoderOptions options;
+  options.quiet_pauses = false;
+  return options;
+}
+
 std::filesystem::path EncoderGoldenDir() {
   return std::filesystem::path(SPEAK5220_GOLDEN_DIR) / "encoder";
 }
@@ -121,7 +127,7 @@ StatusOr<std::map<std::string, EncoderOptions>> ReadOptionSets(
       return core::DataLossError(path.string() + ": bad options for " +
                                  row.at("name"));
     }
-    EncoderOptions options;
+    EncoderOptions options = ReferenceEncoderOptions();
     const QJsonObject object = doc.object();
     for (auto it = object.begin(); it != object.end(); ++it) {
       if (core::Status status = SetOption(options, it.key(), it.value());

@@ -62,17 +62,18 @@ TEST(EncodingSummaryTest, LevelTextGivesWhatIsKnown) {
 
 TEST(EncodingSummaryTest, QualityTextGivesTheScoreTheAnchorAndTheBand) {
   EXPECT_EQ(QualityText(2.08, 2.31),
-            QStringLiteral("PESQ 2.08 (LPC best for this phrase 2.31): Good"));
+            QStringLiteral("PESQ 2.08 (LPC reference 2.31): Good"));
   EXPECT_EQ(QualityText(2.08, std::nullopt), QStringLiteral("PESQ 2.08"));
   EXPECT_EQ(QualityText(std::nullopt, 2.31),
             QStringLiteral("Quality not measured"));
 }
 
-TEST(EncodingSummaryTest, ScoreAtOrAboveTheAnchorIsAsGoodAsLpc) {
+TEST(EncodingSummaryTest, ScoreAtOrAboveTheAnchorIsLpcOrBetter) {
   EXPECT_TRUE(QualityText(2.31, 2.31)
-                  .endsWith(QStringLiteral(": As good as LPC can achieve")));
+                  .endsWith(QStringLiteral(": As good as LPC or better")));
+  EXPECT_TRUE(QualityText(2.30, 2.31).endsWith(QStringLiteral(": Good")));
   EXPECT_TRUE(QualityText(2.6, 2.31).endsWith(
-      QStringLiteral(": As good as LPC can achieve")));
+      QStringLiteral(": As good as LPC or better")));
 }
 
 TEST(EncodingSummaryTest, ToolTipExplainsPesqAndItsLimits) {

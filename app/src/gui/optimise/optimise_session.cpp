@@ -136,7 +136,10 @@ core::Status OptimiseSession::Start(const project::Project& project,
                 Qt::QueuedConnection);
             continue;
           }
-          if (core::StatusOr<double> anchor = tools.anchor->Score(source);
+          // The anchor of the source as the encodings are scored against
+          // it, squelched by the phrase's squelch, which Optimise keeps.
+          if (core::StatusOr<double> anchor = tools.anchor->Score(
+                  core::encoder::SquelchedSource(source, *options));
               anchor.IsOk()) {
             result.anchor = *anchor;
           }

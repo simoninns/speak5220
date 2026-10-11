@@ -14,6 +14,7 @@
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <cstdlib>
 #include <optional>
 #include <span>
 #include <vector>
@@ -52,6 +53,28 @@ lpc::Frame FullFrame(int energy, int pitch, std::span<const int> k) {
 
 int EnergyValue(int index) {
   return lpc::kEnergyTable.at(static_cast<std::size_t>(index));
+}
+
+// QuietPauses(): the parking frame's energy index, the quietest that is
+// not silence (Table 8-4).
+constexpr int kNeutralEnergy = 1;
+// Its pitch when no voiced frame came before.
+constexpr int kNeutralPitch = 1;
+
+// Each K's index whose value is nearest zero (Table 8-6).
+std::array<int, lpc::kKCount> NeutralK() {
+  std::array<int, lpc::kKCount> k{};
+  for (int i = 0; i < lpc::kKCount; ++i) {
+    const std::span<const int> table = lpc::KTable(i);
+    std::size_t best = 0;
+    for (std::size_t j = 1; j < table.size(); ++j) {
+      if (std::abs(table[j]) < std::abs(table[best])) {
+        best = j;
+      }
+    }
+    k.at(static_cast<std::size_t>(i)) = static_cast<int>(best);
+  }
+  return k;
 }
 
 }  // namespace
@@ -145,6 +168,67 @@ std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames,
   }
   out = GuardK510(faded);
   out.push_back(lpc::Frame::Stop());
+  return out;
+}
+
+lpc::Frame NeutralFrame(int pitch) {
+  return lpc::Frame::Voiced(kNeutralEnergy, pitch, NeutralK());
+}
+
+std::vector<lpc::Frame> QuietPauses(std::span<const lpc::Frame> frames) {
+  std::vector<lpc::Frame> out(frames.begin(), frames.end());
+  // The last full frame before each frame, whose K the chip holds, and
+  // the last voiced pitch.
+  std::optional<lpc::Frame> full;
+  int pitch = kNeutralPitch;
+  std::size_t j = 0;
+  while (j < out.size()) {
+    const lpc::FrameType kind = lpc::FrameKind(out[j]);
+    if (kind == lpc::FrameType::kVoiced || kind == lpc::FrameType::kUnvoiced) {
+      full = out[j];
+    }
+    if (out[j].pitch != 0) {
+      pitch = out[j].pitch;
+    }
+    if (kind != lpc::FrameType::kSilence || !full.has_value()) {
+      ++j;
+      continue;
+    }
+    // A pause: silence frames [j, end).
+    std::size_t end = j;
+    while (end < out.size() &&
+           lpc::FrameKind(out[end]) == lpc::FrameType::kSilence) {
+      ++end;
+    }
+    const bool long_enough =
+        end - j >= static_cast<std::size_t>(kMinQuietPause);
+    const bool before_repeat =
+        end < out.size() && lpc::FrameKind(out[end]) == lpc::FrameType::kRepeat;
+    const bool full_unvoiced = full->pitch == 0;
+    // A voiced repeat after an unvoiced frame keeps K5-K10 at zero, which
+    // no full frame can say.
+    const bool exact = !(before_repeat && full_unvoiced && out[end].pitch != 0);
+    if (long_enough && exact) {
+      out[j + kQuietPauseAt] = NeutralFrame(pitch);
+      if (before_repeat) {
+        const lpc::Frame& repeat = out[end];
+        if (full_unvoiced) {
+          out[end] = lpc::Frame::Unvoiced(
+              repeat.energy, {full->k[0], full->k[1], full->k[2], full->k[3]});
+        } else {
+          out[end] = lpc::Frame::Voiced(repeat.energy, repeat.pitch, full->k);
+          if (repeat.pitch == 0) {
+            // An unvoiced repeat of a voiced frame: K1-K4 held, K5-K10
+            // zeroed, which an unvoiced frame says exactly.
+            out[end] = lpc::Frame::Unvoiced(
+                repeat.energy,
+                {full->k[0], full->k[1], full->k[2], full->k[3]});
+          }
+        }
+      }
+    }
+    j = end;
+  }
   return out;
 }
 

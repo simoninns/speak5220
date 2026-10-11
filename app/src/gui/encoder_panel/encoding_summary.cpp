@@ -91,7 +91,7 @@ QString QualityText(std::optional<double> pesq, std::optional<double> anchor) {
   }
   const core::quality::QualityPlacement placement =
       core::quality::QualityScale::Place(*pesq, *anchor);
-  return QStringLiteral("PESQ %1 (LPC best for this phrase %2): %3")
+  return QStringLiteral("PESQ %1 (LPC reference %2): %3")
       .arg(Score(*pesq), Score(*anchor),
            ToQString(core::quality::QualityScale::Label(placement.band)));
 }
@@ -100,10 +100,11 @@ QString QualityToolTip() {
   return QStringLiteral(
       "<p>PESQ (ITU-T P.862, as MOS-LQO) compares the encoded speech with "
       "the original and scores it from 1.0 to 4.5.</p>"
-      "<p>No LPC coding comes near 4.5, so the scale runs from PESQ's floor "
-      "(1.0) to this phrase's own ceiling: the score of an ideal LPC-10 "
-      "vocoder of the same recording, with nothing quantised. An encoding "
-      "that reaches it is as good as LPC can achieve.</p>"
+      "<p>No LPC coding comes near 4.5, so the scale is set by this "
+      "phrase's own LPC reference: the score of an ideal LPC-10 vocoder of "
+      "the same recording, with nothing quantised. The Best band starts "
+      "there; an optimised encoding can beat it, so the bar runs on a "
+      "quarter past it.</p>"
       "<p>PESQ was not validated for vocoders, so use it to rank encodings "
       "of a phrase, not to predict what a listener would say.</p>");
 }

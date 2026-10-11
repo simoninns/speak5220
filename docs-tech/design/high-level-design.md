@@ -21,7 +21,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
-| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
+| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`, the encoded audio for display) | Implemented, matching the reference tools' values on the whole corpus |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
@@ -73,7 +73,8 @@ app/
                                 24-bit grid of project audio
       dsp/                      resampler and FFT interfaces and adapters;
                                 SOS/FIR filters and their constants,
-                                NumPy-ordered sums and windows, LPC analysis
+                                NumPy-ordered sums and windows, LPC analysis,
+                                the squelch
       encoder/                  Encoder and its stages, EncoderOptions (§8)
       quality/                  PESQ, PesqMetric, the output alignment, the
                                 anchor vocoder, the cheap measures,
@@ -326,6 +327,7 @@ Plan §2.2, with the names as built.
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
+| `Squelch()`, `SquelchGain()`, `SquelchedSpans()` | **Implemented** (`core/dsp/squelch`): mutes stretches below a level relative to the loudest, for the `squelch_db` option (§8), and reports them for the waveform's shading (§16) |
 | `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
@@ -348,7 +350,7 @@ Plan §2.2, with the names as built.
 | `InlineTaskRunner`, `ThreadPoolTaskRunner` (`ITaskRunner`) | **Implemented** (`core/util/task_runner`): background jobs (§14) |
 | `RunExport()`, `BuildAcornPhroms()` | **Implemented** (`core/project/project_export`): a project's Acorn PHROM images (§14) |
 | TI, raw `.bin`, C header and WAV export | Planned |
-| `BbcExport` | Planned: tokenised BBC BASIC program plus data files on an Acorn DFS `.ssd` image |
+| `BbcExport` | Planned: a double-sided Acorn DFS `.dsd` image with the fixed player program, and each PHROM's phrase data and index |
 
 Classes depend on `I`-prefixed interfaces, injected through their
 constructors. Everything that does I/O, wraps a third-party library, uses
@@ -432,7 +434,9 @@ Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`),
 sets the gain (by `targetRms`, or by a first pass with the limit at 511 for
 `targetPeak`), and turns the plan and energies into frames with
 `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`, from
-`_toFrames()`, `_guardK510()` and `_addFades()`). The quantisers
+`_toFrames()`, `_guardK510()` and `_addFades()`), and last, with
+`quiet_pauses`, `QuietPauses()` (below), which the reference does not
+have. The quantisers
 (`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
 fixed filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
 `encoder_filters`.
@@ -448,10 +452,65 @@ the plan, the shaped levels, the energies and the limiter's statistics.
 options outside their ranges (`ValidateEncoderOptions()`).
 
 **Options.** `EncoderOptions` has the 15 options of `tms5220enc.py`
-`DEFAULTS`, with the same defaults. `EncoderOptionInfos()` gives each one's
-key (the Python name), label, help text, type, range and default, for the
-GUI's settings form and for project files. The ranges are the application's
-own; Python had none.
+`DEFAULTS`, with the same defaults, and two the reference does not have:
+the squelch (`squelch_db`, off by default) and quiet pauses
+(`quiet_pauses`, on by default). So the defaults encode as the reference
+does with quiet pauses off, which is how the reference data is compared
+(§13). `EncoderOptionInfos()` gives each one's key (the Python name, or
+`squelchDb` and `quietPauses` in its style), label, help text, type,
+range and default, for the GUI's settings form and for project files.
+The ranges are the application's own; Python had none.
+
+**Quiet pauses** (datasheet §12.2, "Silence inside an utterance rings";
+evidence p12-01 to p12-06). A silence frame keeps the K of the sound
+before it, and with no excitation the chip's lattice settles into a limit
+cycle a code or two either side of zero. The DAC's −1 to 0 step makes it a
+buzz about 23 dB below the speech for the whole pause, measured on chip 1.
+The emulator rings too, but not reliably where the chip does: in one
+measured pause it is silent where the chip rings, and rings after the
+neutral frame where the chip is silent (datasheet §8.8, evidence p12-07
+and p12-08). So the chip, not the emulator, decides the design: on the
+chip the neutral frame silenced all three pauses measured. The
+squelch made this common, since squelched pauses become long runs of
+silence frames. `QuietPauses()` replaces the second silence frame of
+every pause of three or more (`kMinQuietPause`, `kQuietPauseAt`) with
+`NeutralFrame()`: voiced, energy 1, the last voiced pitch, every K at its
+Table 8-6 entry nearest zero. The chip then holds neutral K, and the rest
+of the pause is code 0, at the bench's noise floor (47 dB below the
+speech). The second frame, not the first: in the first, the K would glide
+to neutral while the sound before fades (voiced to voiced is interpolated),
+which dulled it and lowered PESQ by 0.02 in the median over the corpus;
+after a silence frame the change is inhibited, so the K jump while the
+energy is 0. A silence frame must follow, or the next sound would glide in
+from the neutral frame. A repeat straight after a quietened pause is sent
+in full with the K it would have had (an unvoiced repeat as an unvoiced
+frame, which zeroes K5–K10 as the repeat would); a pause before a voiced
+repeat of an unvoiced frame, whose K5–K10 zeroing no full frame can give,
+is left alone. Over the 243 corpus files with a 30 dB squelch, 110 have
+such pauses (288 in all); the encodings grow by 1.7% and PESQ is
+unchanged within its noise (median change +0.0003; 53 files higher, 48
+lower). Optimise does not search it.
+
+**The squelch.** PESQ counts any frame louder than near-silence as speech
+and weights the disturbance of quiet frames slightly more (ITU-T P.862
+§10.2.11: each frame's disturbance is divided by its reference power to
+the 0.04), and breaths and room noise 20 to 35 dB down sit above the
+encoder's 45 dB gate. So nothing told the encoder or Optimise that a
+breath is not wanted, and Optimise could favour settings that reproduce
+it. When `squelch_db` is set, `SquelchedSource()` (`dsp::Squelch()`)
+mutes the source's stretches more than that many dB below its loudest
+10 ms block (blocks every 2.5 ms), keeping 60 ms after the sound and
+10 ms before it so word endings and onsets survive, with 5 ms ramps so
+the cut makes no click. The encoder applies it before its first stage,
+and every measurement against the source uses the same squelched source:
+`MeasureFrames()` (PESQ and the anchor), Optimise's anchor, and the
+`Optimiser`'s candidates. Reproducing a muted breath then counts against
+an encoding (PESQ penalises added sound), rather than for it. The squelch
+is not searched by Optimise, since scores against differently squelched
+sources do not compare. PESQ itself is unchanged, so it still matches
+the reference tools. Loudness alone cannot tell a breath from a soft
+"h" or a trailing "s"; the hold keeps word endings, and the user chooses
+the level.
 
 **Matching NumPy and SciPy.** The aim is the same frames, so the C++ follows
 the reference's order of floating-point operations where that is cheap:
@@ -477,7 +536,9 @@ the reference's order of floating-point operations where that is cheap:
 - On all 243 corpus files with the four option sets in
   `app/golden/encoder/option_sets.tsv`, the frames are identical to the
   Python reference's for every encoding (972 of 972), against the
-  criterion of 99%. No near-tie frames are needed: at a relative disturbance
+  criterion of 99%. The option sets are taken over
+  `ReferenceEncoderOptions()` (the defaults with quiet pauses off), since
+  the reference has no quiet pauses. No near-tie frames are needed: at a relative disturbance
   of 1e-9 the reference changes no frame on any file (§13).
 - Every intermediate value of the corpus subset agrees with the reference
   to a relative 1e-9.
@@ -505,8 +566,8 @@ names its Python original, or the ITU-T section it implements.
 | `PesqMetric` (`IQualityMetric`) | `pesq_metric` | Speaks the frames through `ISynth`'s VSM path, cuts the output to its sound (idle at 0), lines it up with the source after the 60 Hz high-pass (`AlignOutput()`), and scores it with `ScorePesq()` |
 | `AlignOutput()` | `output_alignment` | `speechqual.py`'s `align()` (level envelopes in 2.5 ms steps), `refine()` (±25 ms by mel-cepstral distance), `placed()` and `matchLevel()` |
 | `MeasureCheap()`, `LevelErrorMetric`, `SpectralDistanceMetric` | `cheap_measures` | `evaluate.py`'s level error (`lvMeanAbs`, `lvBias`, `lvP90`) and mel spectral distance (`specDist`), comparing each frame's input with `ReferenceSynthesizer`'s output where the frame's values are reached; no alignment search |
-| `AnchorVocoder()`, `AnchorScore()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s `lpcVocoder()` and its pitch tracker, and the PESQ of its output: the ceiling of the quality scale |
-| `QualityScale` | `quality_scale` | A score's position between PESQ's floor and the phrase's anchor, and its band |
+| `AnchorVocoder()`, `AnchorScore()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s `lpcVocoder()` and its pitch tracker, and the PESQ of its output: the reference of the quality scale |
+| `QualityScale` | `quality_scale` | A score relative to the phrase's anchor, its place on the bar and its band |
 
 `IQualityMetric::Measure(source, encoding)` takes the source as given to
 the encoder and its `EncodeResult`; `Direction()` says whether larger values
@@ -548,31 +609,40 @@ default generator (PCG64, XSL-RR 128/64, from the state of
 NumPy's tables, bit for bit.
 
 **The quality scale** (plan §3.3, "Presenting PESQ to the user"). The
-position is (score − 1.0) / (anchor − 1.0), clamped to [0, 1]; an encoding
-at or above its anchor is at the top. The bands, with plain-language labels
+relative score is (score − 1.0) / (anchor − 1.0): 0 at PESQ's floor, 1 at
+the anchor. The anchor is a reference, not a ceiling: after Optimise, 28%
+of the corpus's encodings beat it. So the bar runs from 0 to
+`QualityScale::kTop` (1.25), with the anchor at 80% of its width, and a
+score beyond the anchor shows how far (a position is the relative score
+over 1.25, clamped to [0, 1]). Of the optimised encodings, 95% score at
+most 1.16 and 5 of 243 beyond 1.25. The bands, with plain-language labels
 for the GUI:
 
-| Band | Position |
+| Band | Relative score |
 |---|---|
 | Bad | below 0.40 |
 | Poor | 0.40 to below 0.60 |
 | Fair | 0.60 to below 0.75 |
-| Good | 0.75 to below 0.90 |
-| As good as LPC can achieve | 0.90 and above |
+| Good | 0.75 to below 1.00 |
+| As good as LPC or better | 1.00 (the anchor) and above |
 
 The thresholds were calibrated on the reference encodings of the whole
-corpus (243 files; anchors from 1.83 to 3.60, median 2.29):
+corpus (243 files; anchors from 1.83 to 3.60, median 2.29), and on the
+results of Optimise from the default options
+(`app/scripts/corpus-check.sh`):
 
-| Option set | Median PESQ | Median position | Bad | Poor | Fair | Good | As good as LPC |
+| Option set | Median PESQ | Median relative score | Bad | Poor | Fair | Good | As good as LPC or better |
 |---|---|---|---|---|---|---|---|
-| default | 2.03 | 0.78 | 0% | 11% | 28% | 44% | 18% |
-| lean | 1.95 | 0.73 | 1% | 13% | 44% | 33% | 9% |
-| loud | 1.98 | 0.74 | 1% | 16% | 35% | 37% | 12% |
-| plain | 1.97 | 0.73 | 0% | 14% | 43% | 34% | 9% |
+| default | 2.03 | 0.78 | 0% | 11% | 28% | 55% | 6% |
+| lean | 1.95 | 0.73 | 1% | 13% | 44% | 38% | 3% |
+| loud | 1.98 | 0.74 | 1% | 16% | 35% | 45% | 3% |
+| plain | 1.97 | 0.73 | 0% | 14% | 43% | 39% | 3% |
+| default, optimised | 2.22 | 0.93 | 0% | 0% | 7% | 65% | 28% |
 
 With the defaults the typical encoding is *Good*, and 89% are *Fair* or
 better; the other sets, each of which changes several options away from
-their defaults, sit a little lower. The plan asks for the bands to be
+their defaults, sit a little lower; Optimise moves most encodings up
+within *Good*, and over a quarter past the anchor. The plan asks for the bands to be
 confirmed by listening; that has not been done yet.
 
 **Acceptance** (met, plan Phase 3):
@@ -675,7 +745,7 @@ The GUI's undo/redo wraps the same operations (§15).
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
-- Not yet: the GUI preferences for these options (Phase 10).
+- Not yet: the GUI preferences for these options (Phase 12).
 
 ---
 
@@ -816,15 +886,20 @@ budget then stays inside it whatever is done to it.
 SHA-256 of the encoder version, every option's text in
 `EncoderOptionInfos()` order (the options in effect, so an override equal
 to a new default keeps an encoding current), and the audio's 24-bit codes.
+Options added later are left out while at their default
+(`IsLeftOutAtDefault()`: an unset `squelch_db`, `quiet_pauses` true), so
+adding one does not change the hash of an encoding that does not use it.
 `IsCurrent()` compares it, and the version, with the stored encoding; a
 locked phrase is always current. `ChangeSettings()` encodes with the new
 overrides and stores them through `SetEncoding()`, which refuses a result
 over the budget, leaving the previous settings and encoding (the message
 says so). `Refresh()` encodes every stale phrase in list order, storing
 each as it is made, so the budget is checked phrase by phrase and a failure
-does not stop the rest. `encoder::kEncoderVersion` (now `1.0.0`) changes
-whenever the encoder's output does, in the commit that regenerates its
-reference data.
+does not stop the rest. `encoder::kEncoderVersion` changes whenever the
+same audio and options can give different frames: `1.1.0` added quiet
+pauses, on by default, so encodings made by `1.0.0` are stale. The
+reference data did not change, since it is compared with quiet pauses
+off (§13).
 
 **Audio on the 24-bit grid.** A project stores audio as 24-bit PCM, so the
 importer rounds the 8 kHz samples to codes / 2^23 (`QuantiseToPcm24()`),
@@ -842,7 +917,10 @@ gives the same values as before.
   locale-independent) or `std::to_string`, never through yaml-cpp's stream
   output, which follows the global locale. Booleans are `true`/`false`,
   unset values `null`. Options are written in `EncoderOptionInfos()` order,
-  `default_encoder` in full. Frames are one flow mapping each, with only
+  `default_encoder` in full but for the options added later while at
+  their defaults (`IsLeftOutAtDefault()`: an unset `squelch_db`,
+  `quiet_pauses` true), so a project that does not change them saves
+  exactly as before they existed. Frames are one flow mapping each, with only
   the fields their kind carries.
 - Reading is type-checked: numbers and booleans must be plain scalars,
   numbers are parsed by `ParseNumber()`/`ParseInteger()` (a stream in the
@@ -905,7 +983,7 @@ spaces, and refuses an empty name, more than 16 characters, or a character
 outside A–Z, 0–9, space and `' ( ) , - .`, naming the character.
 `CIdentifiersForNames()` derives the C identifiers for the header exports
 (plan §4), with `_2`, `_3`, … for clashes; nothing uses them until the C
-header export (Phase 8).
+header export (Phase 9).
 
 **Export** (`RunExport()`). Only the `acorn-phrom` format exists so far,
 built from the allocation: one `AcornPhrom::Build()` per PHROM, with the
@@ -914,7 +992,7 @@ that PHROM's own strings), and the ASCII entries whose phrase the PHROM
 holds. Layouts `separate` (`NAME_1.bin`, …) and `concatenated`
 (`NAME.bin`). A phrase with no frames, or too large for a PHROM, fails the
 export; the CLI also refuses stale encodings. The other formats and the
-Export dialog are Phase 8.
+Export dialog are Phase 9.
 
 **Fixtures** (`app/projects/`, unpacked; TESTING.md): `general/one-phrase`,
 `general/many-phrases` (Acorn-style names with punctuation, an ASCII map, an
@@ -1061,7 +1139,7 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player,
   contents, so the model reads a `Project` value (built by the test
   helpers) and sends its edits to the mock through `ProjectEdits`.
 - The plan has no Export menu yet; it comes with the Export dialog
-  (Phase 8), and is left out rather than shown disabled.
+  (Phase 9), and is left out rather than shown disabled.
 - `speak5220 [PROJECT]` opens a project at start-up; the plan does not
   mention it.
 
@@ -1149,6 +1227,21 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   zoom and fit buttons and the scroll bar act on the original's view (the
   encoded view's when there is no original), and the other follows; the
   scroll bar follows either view.
+- **Squelch shading.** `EncoderPanel::ShownSquelch()` is the squelch the
+  phrase shown would be encoded with as the form has it, edits not yet
+  applied included (in the defaults scope, the form's defaults under the
+  phrase's overrides; none for no phrase, a locked one or one without
+  audio). `UpdateView()` emits `SquelchChanged()` when it changes, and the
+  main window passes it to `PhraseWaveforms::SetSquelch()`, so the shading
+  follows the slider at once, before the 600 ms debounce. `PhraseWaveforms`
+  finds the stretches `encoder::SquelchedSpans()` lowers (gain under 1)
+  when the squelch or the phrase changes, gives them to the original's
+  `WaveformView::SetShading()`, and sets the original pane's note
+  ("squelch 30 dB: shaded stretches are muted", or that nothing is quiet
+  enough). The view veils them with the base colour at alpha 170 over the
+  waveform, so it is dimmed, not hidden, and hatches them with the
+  palette's Mid colour, so they read without colour; hovering says they
+  are squelched. The audio shown and played is the recording as imported.
 - **Play start.** A click asks for the marker at that source sample;
   `PhraseWaveforms` rounds and limits it to the audio and applies
   `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
@@ -1272,6 +1365,9 @@ the phrase's options and is in two stages:
    their ranges. Plan §3.3 mentions Nelder–Mead as an alternative for the
    continuous options; plain coordinate steps suffice so far.
 
+The squelch is never varied: every candidate keeps the start's, and is
+scored against the source squelched by it, computed once per search.
+
 At most 400 evaluations and 10 rounds (`SearchPlan`). Options already tried
 are not tried again (keyed by every option's text). Each candidate is
 encoded; its packed size is checked against the per-phrase byte limit
@@ -1307,7 +1403,8 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
 - For a phrase, the change becomes `OverridesFor(defaults, options)` and
   an encoding job on the `ITaskRunner`: `EncodePhrase()` encodes, then
   `MeasureFrames()` measures PESQ (`IQualityMetric`), the anchor (once per
-  phrase, `IAnchorScorer`) and the peak code (the frames spoken through
+  phrase and squelch, `IAnchorScorer`), both against the source as the
+  phrase's squelch leaves it (`SquelchedSource()`), and the peak code (the frames spoken through
   the shared, cached `ISynth`, which the waveforms then reuse). The result
   comes back queued and is stored with `SetEncoding()`, PESQ and the anchor
   in the `CachedEncoding`; a result superseded by a later encoding of the
@@ -1429,8 +1526,11 @@ stale frames, or a change waiting.
   fake clock); Reset restores the project's defaults as one undoable
   step; the defaults scope; a refused change; PESQ and the anchor stored
   with the encoding; the scale's score, band label, tooltip and marks,
-  and an encoding at or above its anchor shown as *As good as LPC can
-  achieve*; the mark's contrast with every band in light and dark;
+  an encoding at or above its anchor shown as *As good as LPC or
+  better*, and one beyond it short of the end of the bar; the squelch
+  turned on by its check box, and a squelched phrase measured against its
+  squelched source, with a new anchor for a new squelch; the squelch
+  reported as the form has it and shaded on the original waveform; the mark's contrast with every band in light and dark;
 - GUI unit tests of Optimise with inline runners: accepting is one
   undoable step, Optimise all runs in list order and leaves out locked
   phrases, the history, the byte limit, and cancelling leaves the

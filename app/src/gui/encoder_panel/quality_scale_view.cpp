@@ -2,7 +2,7 @@
  * File:        quality_scale_view.cpp
  * Module:      encoder_panel
  * Purpose:     Shows a PESQ score on its phrase's quality scale, from Bad
- *              to As good as LPC can achieve, with its band in words
+ *              to As good as LPC or better, with its band in words
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -59,9 +59,9 @@ QString ToQString(std::string_view text) {
 }  // namespace
 
 std::string_view BandName(quality::QualityBand band) {
-  // The top band is a tenth of the bar, too narrow for its full label,
-  // which the text under the bar gives.
-  return band == quality::QualityBand::kAsGoodAsLpc
+  // The top band is too narrow for its full label, which the text under
+  // the bar gives.
+  return band == quality::QualityBand::kLpcOrBetter
              ? "Best"
              : quality::QualityScale::Label(band);
 }
@@ -101,13 +101,18 @@ void QualityBar::paintEvent(QPaintEvent* /*event*/) {
   const QRectF bar(0.5, kMarkHeight + 0.5, width() - 1.0, kBarHeight - 1.0);
   const QFontMetrics metrics = fontMetrics();
 
-  // The bands, each from its start to the next one's.
+  // The bands, each from its start to the next one's; the top one runs
+  // from the anchor to the end of the bar.
+  using quality::QualityScale;
   for (std::size_t band = 0; band < kQualityBandCount; ++band) {
     const double begin =
-        band == 0 ? 0.0 : quality::QualityScale::kBandStarts.at(band - 1);
-    const double end = band + 1 == kQualityBandCount
-                           ? 1.0
-                           : quality::QualityScale::kBandStarts.at(band);
+        band == 0
+            ? 0.0
+            : QualityScale::PositionOf(QualityScale::kBandStarts.at(band - 1));
+    const double end =
+        band + 1 == kQualityBandCount
+            ? 1.0
+            : QualityScale::PositionOf(QualityScale::kBandStarts.at(band));
     const QRectF rect(bar.left() + (begin * bar.width()), bar.top(),
                       (end - begin) * bar.width(), bar.height());
     painter.fillRect(rect, colours_.quality_bands.at(band));

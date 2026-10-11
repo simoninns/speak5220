@@ -36,7 +36,8 @@ struct PreEmphasis {
 };
 
 // Everything that controls an encoding. The defaults are those of
-// tms5220enc.py DEFAULTS; each field's range and help text are in
+// tms5220enc.py DEFAULTS, with quiet_pauses on and no squelch, neither of
+// which the reference has; each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
   // RMS of the output over sounding frames, in codes.
@@ -51,6 +52,10 @@ struct EncoderOptions {
   double repeat_lambda = 70.0;
   // Frames this many dB below the loudest are silence.
   double gate_db = 45.0;
+  // If set, the source is squelched first (dsp::Squelch()): stretches this
+  // many dB below its loudest sound, such as breaths, are made silent
+  // before they are encoded or scored against (SquelchedSource()).
+  std::optional<double> squelch_db;
   // Voiced analysis pre-emphasis.
   PreEmphasis pre_emphasis;
   // Analysis window, in samples (30 ms).
@@ -65,6 +70,10 @@ struct EncoderOptions {
   int iterations = 5;
   // Fade unvoiced sound before a stop or silence (§12.2).
   bool fade_unvoiced = true;
+  // Start each pause of two or more silence frames with a neutral voiced
+  // frame, so the chip's filter does not ring through it (§12.2,
+  // QuietPauses()). Not in the reference encoder.
+  bool quiet_pauses = true;
   // Slow gain control ratio over about 0.75 s (1: off).
   double level_agc = 1.0;
   // Per-frame level compression ratio (1: off).
@@ -79,7 +88,7 @@ enum class EncoderOptionType {
   kReal,
   kInteger,
   kBoolean,
-  // A real value that may also be unset (target_peak).
+  // A real value that may also be unset (target_peak, squelch_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
   kPreEmphasis,
@@ -88,7 +97,8 @@ enum class EncoderOptionType {
 // What the user interface needs to show and check one option.
 struct EncoderOptionInfo {
   // The option's name in the reference encoder, tms5220enc.py (targetRms,
-  // ...), as its documentation and the reference data use it.
+  // ...), as its documentation and the reference data use it; for an
+  // option the reference does not have (squelch_db), a name in its style.
   std::string_view key;
   // The name in project files and on the command line: the EncoderOptions
   // field (target_rms, ...), as plan §4 names YAML keys.
@@ -125,15 +135,22 @@ Status ValidateEncoderOptions(const EncoderOptions& options);
 // nullptr.
 const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
-// The text for unset target_peak.
+// The text for an unset optional option (target_peak, squelch_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
+
+// True for an option added after project files were first made
+// (squelch_db, quiet_pauses) while it has its default (unset, true): it is
+// left out of project files and of the settings hash, so a project that
+// does not change it saves as before.
+bool IsLeftOutAtDefault(const EncoderOptions& options, std::string_view field);
 
 // Sets one option from text, as a user types it or a project file holds
 // it: a number ("18", "0.35"), "true" or "false", "chirp" or a number for
-// pre_emphasis, and a number or "none" for target_peak. Numbers use '.' as
-// the decimal point, whatever the locale. Fails, leaving `options`
-// unchanged, for an unknown field, text of the wrong type, a fractional
-// value for a whole-number option, or a value outside the option's range.
+// pre_emphasis, and a number or "none" for target_peak and squelch_db.
+// Numbers use '.' as the decimal point, whatever the locale. Fails,
+// leaving `options` unchanged, for an unknown field, text of the wrong
+// type, a fractional value for a whole-number option, or a value outside
+// the option's range.
 Status SetEncoderOption(EncoderOptions& options, std::string_view field,
                         std::string_view text);
 

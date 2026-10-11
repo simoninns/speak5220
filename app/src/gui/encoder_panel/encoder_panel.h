@@ -16,6 +16,8 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "core/encoder/encoder_options.h"
@@ -111,6 +113,11 @@ class EncoderPanel : public QWidget {
   QPushButton* OptimiseButton() const { return optimise_; }
   QPushButton* ResetButton() const { return reset_; }
 
+  // The squelch the phrase shown would be encoded with, as the form has
+  // it, changes not yet applied included: for showing what it mutes. None
+  // for no phrase, a locked one or one without audio.
+  std::optional<double> ShownSquelch() const;
+
  signals:
   // The Optimise button: optimise the phrase shown.
   void OptimiseRequested(const core::project::PhraseId& id);
@@ -118,6 +125,8 @@ class EncoderPanel : public QWidget {
   void Failed(const QString& title, const QString& message);
   // An encoding or a measurement finished.
   void JobFinished();
+  // The squelch of the phrase shown changed (ShownSquelch()).
+  void SquelchChanged(std::optional<double> squelch_db);
 
  private:
   // What a phrase's frames have been measured to be.
@@ -130,11 +139,18 @@ class EncoderPanel : public QWidget {
   void ApplyPending();
   // Encodes the phrase shown with `options`, in the background.
   void StartEncode(const core::encoder::EncoderOptions& options);
-  void OnEncoded(int job, const core::project::PhraseId& id,
-                 const QString& name, core::project::EncoderOverrides overrides,
+  // A phrase's anchor is of its source squelched by its squelch, so it
+  // is kept by both: the phrase and the squelch's text.
+  using AnchorKey = std::pair<core::project::PhraseId, std::string>;
+  static AnchorKey AnchorKeyOf(const core::project::PhraseId& id,
+                               const core::encoder::EncoderOptions& options);
+  std::optional<double> KnownAnchor(const AnchorKey& key) const;
+
+  void OnEncoded(int job, const AnchorKey& anchor_key, const QString& name,
+                 core::project::EncoderOverrides overrides,
                  core::StatusOr<MeasuredEncoding> result);
   void StartMeasure();
-  void OnMeasured(const core::project::PhraseId& id,
+  void OnMeasured(const AnchorKey& anchor_key,
                   std::vector<core::lpc::Frame> frames, EncodingFacts facts);
   void SetDefaults(const core::encoder::EncoderOptions& options);
   // Shows the settings of the scope in the form.
@@ -179,6 +195,9 @@ class EncoderPanel : public QWidget {
   Scope pending_scope_ = Scope::kPhrase;
   core::encoder::EncoderOptions pending_options_;
 
+  // The squelch last given by SquelchChanged().
+  std::optional<double> shown_squelch_;
+
   int jobs_running_ = 0;
   int next_job_ = 0;
   // The latest encoding started for each phrase; earlier ones are
@@ -187,7 +206,7 @@ class EncoderPanel : public QWidget {
   // Encodings running, by phrase.
   std::map<core::project::PhraseId, int> encodes_running_;
   std::map<core::project::PhraseId, Measured> measured_;
-  std::map<core::project::PhraseId, double> anchors_;
+  std::map<AnchorKey, double> anchors_;
   // Measurements running, by phrase.
   std::map<core::project::PhraseId, std::vector<core::lpc::Frame>> measuring_;
 };

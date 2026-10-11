@@ -18,6 +18,7 @@
 #include <limits>
 #include <numbers>
 #include <optional>
+#include <span>
 #include <vector>
 
 #include "core/encoder/encoder_options.h"
@@ -145,6 +146,29 @@ TEST_F(EncoderTest, NoSoundGivesALoneStop) {
   ASSERT_TRUE(result.IsOk());
   EXPECT_EQ(result->frames, (std::vector<lpc::Frame>{lpc::Frame::Stop()}));
   EXPECT_FALSE(result->details.has_value());
+}
+
+TEST_F(EncoderTest, StagesWorkOnTheSquelchedSource) {
+  // Loud, then 60 dB quieter, half a second each.
+  std::vector<double> samples(8000, 0.5);
+  std::fill(samples.begin() + 4000, samples.end(), 0.0005);
+  EncoderOptions options;
+  options.squelch_db = 30.0;
+  std::vector<double> seen;
+  EXPECT_CALL(analyser_, Segment(_, _))
+      .WillOnce([&seen](std::span<const double> x,
+                        const EncoderOptions&) -> std::optional<Segmentation> {
+        seen.assign(x.begin(), x.end());
+        return std::nullopt;
+      });
+  ASSERT_TRUE(encoder_.Encode(samples, 8000, options).IsOk());
+  EXPECT_EQ(seen, SquelchedSource(samples, options));
+  EXPECT_EQ(seen.back(), 0.0);
+}
+
+TEST(SquelchedSourceTest, IsACopyWithoutASquelch) {
+  const std::vector<double> samples = {0.5, 0.0005, -0.25};
+  EXPECT_EQ(SquelchedSource(samples, {}), samples);
 }
 
 TEST_F(EncoderTest, AllSilentPlanGivesALoneStop) {
@@ -275,6 +299,25 @@ TEST(EncoderDeterminismTest, SameInputGivesSameFrames) {
   for (const lpc::Frame& f : first->frames) {
     EXPECT_TRUE(lpc::ValidateFrame(f).IsOk());
   }
+}
+
+// Quiet pauses (speak5220 datasheet §12.2) are a pass over the frames the
+// encoder would otherwise give: nothing else changes.
+TEST(EncoderQuietPausesTest, QuietensThePausesOfTheFramesItWouldGive) {
+  // The vowel, a 0.3 s pause, then the vowel again.
+  std::vector<double> x = SyntheticSpeech();
+  std::vector<double> gap(4500, 0.0);
+  std::copy(x.begin() + 1000, x.begin() + 3500, gap.begin());
+  x = gap;
+  x.insert(x.end(), gap.begin(), gap.begin() + 3500);
+  EncoderOptions off;
+  off.quiet_pauses = false;
+  const auto plain = MakeEncoder()->Encode(x, 8000, off);
+  const auto quiet = MakeEncoder()->Encode(x, 8000, {});
+  ASSERT_TRUE(plain.IsOk());
+  ASSERT_TRUE(quiet.IsOk());
+  EXPECT_EQ(quiet->frames, QuietPauses(plain->frames));
+  EXPECT_NE(quiet->frames, plain->frames);
 }
 
 }  // namespace

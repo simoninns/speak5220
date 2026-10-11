@@ -154,6 +154,11 @@ using ProgressCallback = std::function<void(const OptimiseResult& so_far,
 //     current options; otherwise the steps are halved, and the search
 //     ends when they reach their smallest.
 //
+// The squelch is never searched: it changes what the encodings are
+// scored against, so scores with different squelches do not compare.
+// Every candidate keeps the start's, and is scored against the source
+// squelched by it (encoder::SquelchedSource()).
+//
 // Candidates over the budget or the limit are kept in the history but
 // never chosen; they are not measured. Options already tried are not
 // tried again. Each batch (the grid, a round) is evaluated in parallel on

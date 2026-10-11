@@ -158,7 +158,7 @@ class EncoderIntermediatesTest : public ::testing::TestWithParam<std::string> {
   QJsonObject ref_;
   std::vector<double> input_;
   core::dsp::PocketFft fft_;
-  EncoderOptions options_;
+  EncoderOptions options_ = ReferenceEncoderOptions();
 };
 
 // tms5220enc.py _sosfiltfilt() with the committed second-order sections.

@@ -10,6 +10,7 @@
 
 #include "gui/encoder_panel/encoder_panel.h"
 
+#include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
 #include <QLabel>
@@ -18,9 +19,14 @@
 #include <QPushButton>
 #include <QString>
 #include <QUndoStack>
+#include <algorithm>
 #include <cstdint>
+#include <optional>
+#include <span>
 #include <utility>
+#include <vector>
 
+#include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
@@ -118,7 +124,7 @@ TEST_F(EncoderPanelTest, ShowsTheStatisticsAndTheMeasuredQuality) {
   // The test synth's output is idle (code -1) throughout.
   EXPECT_EQ(panel_.LevelLabel()->text(), QStringLiteral("peak code 1 of 127"));
   EXPECT_EQ(panel_.Quality()->Text(),
-            QStringLiteral("PESQ 2.00 (LPC best for this phrase 2.50): Fair"));
+            QStringLiteral("PESQ 2.00 (LPC reference 2.50): Fair"));
   EXPECT_EQ(panel_.JobsRunning(), 0);
 }
 
@@ -146,6 +152,80 @@ TEST_F(EncoderPanelTest, ASettingChangeReEncodesOnceAfterTheDebounce) {
   // Ticks after that do nothing.
   Tick(EncoderPanel::kDebounceMs);
   EXPECT_EQ(stack_.count(), 1);
+}
+
+TEST_F(EncoderPanelTest, SquelchedPhraseIsMeasuredAgainstItsSquelchedSource) {
+  // Loud, then 60 dB quieter, half a second each.
+  core::project::Phrase breath = AudioPhrase(4, "BREATH");
+  breath.audio.assign(8000, 0.5F);
+  std::fill(breath.audio.begin() + 4000, breath.audio.end(), 0.0005F);
+  project_ = ProjectWith({breath});
+  const std::vector<double> source(breath.audio.begin(), breath.audio.end());
+  std::vector<std::vector<double>> anchored;
+  std::vector<double> measured;
+  ON_CALL(encoding_.anchor, Score(_))
+      .WillByDefault([&anchored](std::span<const double> s) {
+        anchored.emplace_back(s.begin(), s.end());
+        return core::StatusOr<double>(TestEncoding::kAnchor);
+      });
+  ON_CALL(encoding_.quality, Measure(_, _))
+      .WillByDefault([&measured](std::span<const double> s,
+                                 const core::encoder::EncodeResult&) {
+        measured.assign(s.begin(), s.end());
+        return core::StatusOr<double>(TestEncoding::kScore);
+      });
+  Show(4);
+  panel_.ReEncodeButton()->click();
+  QCoreApplication::processEvents();
+  ASSERT_EQ(anchored.size(), 1U);
+  EXPECT_EQ(anchored[0], source);
+
+  panel_.Form()->OnBox("squelch_db")->setChecked(true);
+  Tick(EncoderPanel::kDebounceMs);
+  EncoderOptions squelched;
+  squelched.squelch_db = 30.0;
+  const std::vector<double> expected =
+      core::encoder::SquelchedSource(source, squelched);
+  ASSERT_NE(expected, source);
+  // A new squelch needs a new anchor.
+  ASSERT_EQ(anchored.size(), 2U);
+  EXPECT_EQ(anchored[1], expected);
+  EXPECT_EQ(measured, expected);
+
+  // Back to no squelch: the anchor measured before is used again.
+  panel_.Form()->OnBox("squelch_db")->setChecked(false);
+  Tick(EncoderPanel::kDebounceMs);
+  EXPECT_EQ(anchored.size(), 2U);
+  EXPECT_EQ(measured, source);
+}
+
+TEST_F(EncoderPanelTest, ReportsTheSquelchAsTheFormHasIt) {
+  std::vector<std::optional<double>> reported;
+  QObject::connect(&panel_, &EncoderPanel::SquelchChanged,
+                   [&reported](std::optional<double> squelch) {
+                     reported.push_back(squelch);
+                   });
+  Show(2);
+  EXPECT_EQ(panel_.ShownSquelch(), std::nullopt);
+  EXPECT_TRUE(reported.empty());
+  // At once, before the change is applied, so the waveform can show it.
+  panel_.Form()->OnBox("squelch_db")->setChecked(true);
+  EXPECT_EQ(reported, (std::vector<std::optional<double>>{30.0}));
+  Slider("squelch_db")->MoveTo(24.0);
+  EXPECT_EQ(reported.back(), 24.0);
+  Tick(EncoderPanel::kDebounceMs);
+  EXPECT_EQ(reported.size(), 2U);
+
+  // The project's defaults do not change a squelch the phrase sets.
+  panel_.SetScope(EncoderPanel::Scope::kProjectDefaults);
+  panel_.Form()->OnBox("squelch_db")->setChecked(true);
+  EXPECT_EQ(panel_.ShownSquelch(), 24.0);
+  panel_.SetScope(EncoderPanel::Scope::kPhrase);
+
+  // A locked phrase is never encoded, so it has none.
+  Show(3);
+  EXPECT_EQ(panel_.ShownSquelch(), std::nullopt);
+  EXPECT_EQ(reported.back(), std::nullopt);
 }
 
 TEST_F(EncoderPanelTest, StoresPesqAndTheAnchorWithTheEncoding) {
@@ -187,16 +267,16 @@ TEST_F(EncoderPanelTest, ReEncodeIsOfferedOnlyWhenThereIsSomethingToRedo) {
   EXPECT_TRUE(panel_.ReEncodeButton()->isEnabled());
 }
 
-TEST_F(EncoderPanelTest, EncodingAtOrAboveTheAnchorShowsAsGoodAsLpc) {
+TEST_F(EncoderPanelTest, EncodingAtOrAboveTheAnchorShowsLpcOrBetter) {
   ON_CALL(encoding_.quality, Measure(_, _)).WillByDefault(Return(2.6));
   Show(2);
   panel_.ReEncode();
   QCoreApplication::processEvents();
   ASSERT_TRUE(panel_.Quality()->Placement().has_value());
   EXPECT_EQ(panel_.Quality()->Placement()->band,
-            core::quality::QualityBand::kAsGoodAsLpc);
+            core::quality::QualityBand::kLpcOrBetter);
   EXPECT_TRUE(panel_.Quality()->Text().endsWith(
-      QStringLiteral(": As good as LPC can achieve")));
+      QStringLiteral(": As good as LPC or better")));
 }
 
 TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {

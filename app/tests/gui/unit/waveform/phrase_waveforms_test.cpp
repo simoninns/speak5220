@@ -129,6 +129,43 @@ TEST_F(PhraseWaveformsTest, RendersTheEncodedAudioOnceInTheBackground) {
   EXPECT_TRUE(Encoded()->HasSamples());
 }
 
+TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
+  // Loud for the first half, 60 dB quieter after.
+  std::fill(phrase_.audio.begin() + (kAudioSamples / 2), phrase_.audio.end(),
+            0.0001F);
+  ShowPhrase();
+  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+
+  waveforms_.SetSquelch(30.0);
+  ASSERT_THAT(Original()->Shading(), SizeIs(1));
+  const TimeExtent shaded = Original()->Shading().front();
+  // Inside the quiet half, after the hold, to the end.
+  EXPECT_GT(shaded.begin, kAudioSamples / 2);
+  EXPECT_DOUBLE_EQ(shaded.end, kAudioSamples);
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+            QStringLiteral("squelch 30 dB: shaded stretches are muted"));
+  EXPECT_TRUE(Encoded()->Shading().empty());
+
+  // Too low a squelch to mute anything says so.
+  waveforms_.SetSquelch(70.0);
+  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+            QStringLiteral("squelch 70 dB: nothing is quiet enough to mute"));
+
+  // Another phrase is shaded by the same squelch; none clears it.
+  waveforms_.SetSquelch(30.0);
+  const Phrase other = EncodedPhrase(2, "OTHER", 50);
+  waveforms_.ShowPhrase(&other);
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(Original()->Shading().empty());
+  ShowPhrase();
+  EXPECT_THAT(Original()->Shading(), SizeIs(1));
+  waveforms_.SetSquelch(std::nullopt);
+  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+}
+
 TEST_F(PhraseWaveformsTest, PanesShowTheSameSoundAtTheSamePlace) {
   ShowPhrase();
   // The panes are stacked, the same size (an odd pixel of height goes to

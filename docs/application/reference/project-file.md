@@ -41,7 +41,8 @@ project:
     target_rms: 20
     target_peak: null
     pre_emphasis: "chirp"
-    # ... every encoder option
+    # ... every encoder option (squelch_db only when set, quiet_pauses
+    # only when false)
   phroms:
     - number: 2
       header_strings: ["(C)2026 Simon Inns", "Numbers", "1.00"]
@@ -83,7 +84,7 @@ exports:
 | `name` | String | The file name, for a project made by `speak5220-cli new` | The project's name |
 | `header_strings` | List of strings | `["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]` | The strings in each PHROM's header. Each PHROM gets its number appended to the second string (`"My PHROM 2"`). Together, with a null after each, they must fit in 54 bytes, and they must be ASCII; the BBC Micro expects the first to start `(C)` |
 | `ascii_map` | Mapping | Empty | The "ASCII associated" words: each key is one printable ASCII character, each value a phrase name. A PHROM includes only the entries whose phrase it holds |
-| `default_encoder` | Mapping | The [encoder options](encoder-options.md)' defaults | The options every phrase is encoded with, unless it sets its own |
+| `default_encoder` | Mapping | The [encoder options](encoder-options.md)' defaults | The options every phrase is encoded with, unless it sets its own. Every option is written, except `squelch_db` while it is unset and `quiet_pauses` while it is `true`, so a project that does not change them reads the same in earlier versions of Speak5220 |
 | `phroms` | List | Empty | Header strings for single PHROMs: `number` (from 1) and `header_strings`, which replace the project's strings in that PHROM |
 
 ### phrases

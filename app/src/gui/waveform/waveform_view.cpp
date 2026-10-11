@@ -10,6 +10,7 @@
 
 #include "gui/waveform/waveform_view.h"
 
+#include <QBrush>
 #include <QColor>
 #include <QEvent>
 #include <QHelpEvent>
@@ -18,6 +19,7 @@
 #include <QMouseEvent>
 #include <QPaintEvent>
 #include <QPainter>
+#include <QPalette>
 #include <QPen>
 #include <QPointF>
 #include <QPolygonF>
@@ -62,6 +64,9 @@ constexpr double kMarkerFlag = 6.0;
 // One wheel notch (QWheelEvent::angleDelta()) and how far it scrolls.
 constexpr double kWheelNotch = 120.0;
 constexpr double kScrollPixelsPerNotch = 40.0;
+// How much of the background veils a shaded stretch's waveform: enough to
+// dim it, not to hide it.
+constexpr int kShadeAlpha = 170;
 
 }  // namespace
 
@@ -85,9 +90,17 @@ void WaveformView::Clear(const QString& placeholder) {
   peaks_ = PeakCache();
   source_offset_ = 0;
   frames_.clear();
+  shading_.clear();
   placeholder_ = placeholder;
   playhead_.reset();
   update();
+}
+
+void WaveformView::SetShading(std::vector<TimeExtent> spans) {
+  if (spans != shading_) {
+    shading_ = std::move(spans);
+    update();
+  }
 }
 
 void WaveformView::SetFrames(std::vector<lpc::Frame> frames) {
@@ -158,11 +171,18 @@ std::optional<int> WaveformView::FrameAtX(double x) const {
 }
 
 QString WaveformView::ToolTipAt(double x) const {
-  const std::optional<int> frame = FrameAtX(x);
-  if (!frame.has_value()) {
-    return {};
+  if (const std::optional<int> frame = FrameAtX(x); frame.has_value()) {
+    return DescribeFrame(*frame, frames_[static_cast<std::size_t>(*frame)]);
   }
-  return DescribeFrame(*frame, frames_[static_cast<std::size_t>(*frame)]);
+  const double sample = axis_.XToSample(x);
+  if (std::ranges::any_of(shading_, [sample](const TimeExtent& span) {
+        return sample >= span.begin && sample < span.end;
+      })) {
+    return QStringLiteral(
+        "Squelched: muted before encoding, and left out of the quality "
+        "measure");
+  }
+  return {};
 }
 
 QSize WaveformView::sizeHint() const {
@@ -254,6 +274,7 @@ void WaveformView::paintEvent(QPaintEvent* /*event*/) {
   painter.setPen(QPen(colours_.zero_line, 0));
   painter.drawLine(QLineF(0.0, SampleY(0.0F), width(), SampleY(0.0F)));
   PaintWave(painter);
+  PaintShading(painter);
   PaintMarks(painter);
   if (hasFocus()) {
     painter.setPen(QPen(palette().color(QPalette::Highlight), 0));
@@ -268,6 +289,24 @@ void WaveformView::Apply(const TimeAxis& axis, bool fitted) {
     axis_ = clamped;
     update();
     emit AxisChanged();
+  }
+}
+
+void WaveformView::PaintShading(QPainter& painter) const {
+  QColor veil = palette().color(QPalette::Base);
+  veil.setAlpha(kShadeAlpha);
+  // Hatched as well as dimmed, so it reads without colour.
+  const QBrush hatch(palette().color(QPalette::Mid), Qt::BDiagPattern);
+  for (const TimeExtent& span : shading_) {
+    const double left = std::max(axis_.SampleToX(span.begin), 0.0);
+    const double right =
+        std::min(axis_.SampleToX(span.end), static_cast<double>(width()));
+    if (right <= left) {
+      continue;
+    }
+    const QRectF stretch(left, 0.0, right - left, height());
+    painter.fillRect(stretch, veil);
+    painter.fillRect(stretch, hatch);
   }
 }
 

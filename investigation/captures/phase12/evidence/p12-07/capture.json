@@ -1,0 +1,64 @@
+{
+  "captured": "2026-10-11T17:18:52+0200",
+  "scope": {
+    "variant": "3405DMSO",
+    "serial": "CZ765/001",
+    "timebase": 64,
+    "interval_s": 4.96e-07,
+    "pre_trigger_samples": 20161,
+    "samples": 6471773,
+    "overflow_mask": 0,
+    "trigger_channel": "d"
+  },
+  "channels": {
+    "a": {
+      "signal": "SPEAKER (TP2)",
+      "probe": "x1"
+    },
+    "b": {
+      "signal": "T11 (TP3)",
+      "probe": "x10"
+    },
+    "c": {
+      "signal": "I/O (TP4)",
+      "probe": "x10"
+    },
+    "d": {
+      "signal": "SCOPE_TRIG (TP5)",
+      "probe": "x10"
+    }
+  },
+  "board": {
+    "config": "measure",
+    "description": "C1 disconnected: TP2 is loaded by R2 (1K) alone",
+    "r2_load_ohms": null
+  },
+  "pico": {
+    "firmware": "d66eeef-dirty",
+    "osc_hz": 640000,
+    "banks": "15:98e1bf9e",
+    "reset_status": 127,
+    "command": {
+      "speakext": "/tmp/nix-shell.RajVmR/claude-1000/-home-sdi-Coding-speak5220/ba131f64-dca3-404a-916f-73580b42a880/scratchpad/silence/a26_off.bin",
+      "bytes": 465,
+      "crc32": "718eba8a"
+    },
+    "result": {
+      "status": 95,
+      "talked": 1,
+      "ints": 60,
+      "reads": 61,
+      "us": 2672336,
+      "written": 465,
+      "trig_us": 3254154369
+    },
+    "trace": {
+      "count": 1957,
+      "dropped": 0,
+      "clock_hz": 144000000,
+      "crc": "862c9bf1"
+    }
+  },
+  "host_git": "989d281-dirty",
+  "note": "quiet pauses failure case: arctic_a0026 squelch 24 dB, quiet pauses off"
+}

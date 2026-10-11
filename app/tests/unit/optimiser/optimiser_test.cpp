@@ -157,6 +157,37 @@ TEST(OptimiserTest, VariesTheTargetPeakWhenTheStartSetsOne) {
   EXPECT_EQ(rms, (std::set<double>{20.0}));
 }
 
+// The squelch changes what encodings are scored against, so it is kept
+// from the start, and every candidate is scored against the source as
+// the start squelches it.
+TEST(OptimiserTest, KeepsTheSquelchAndScoresAgainstTheSquelchedSource) {
+  FakeSearch search;
+  // Loud, then 60 dB quieter.
+  std::vector<double> source(8000, 0.5);
+  std::fill(source.begin() + 4000, source.end(), 0.0005);
+  EncoderOptions start;
+  start.squelch_db = 30.0;
+  const std::vector<double> squelched = encoder::SquelchedSource(source, start);
+  int unsquelched = 0;
+  ON_CALL(search.Metric(), Measure(_, _))
+      .WillByDefault([&](std::span<const double> reference,
+                         const encoder::EncodeResult&) -> StatusOr<double> {
+        if (!std::ranges::equal(reference, squelched)) {
+          ++unsquelched;
+        }
+        return 2.0;
+      });
+  OptimiseRequest request = RequestFrom(start);
+  request.source = source;
+  request.plan.max_evaluations = 30;
+  const StatusOr<OptimiseResult> result = search.Run(request);
+  ASSERT_TRUE(result.IsOk());
+  EXPECT_EQ(unsquelched, 0);
+  for (const Candidate& c : result->history) {
+    EXPECT_EQ(c.options.squelch_db, 30.0);
+  }
+}
+
 TEST(OptimiserTest, DescendsToTheBestOptions) {
   FakeSearch search;
   // Best at a target RMS of 23 and a silence gate of 52 dB, neither on

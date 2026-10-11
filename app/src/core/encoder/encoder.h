@@ -17,6 +17,7 @@
 #include <string_view>
 #include <vector>
 
+#include "core/dsp/squelch.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_analyser.h"
@@ -31,9 +32,9 @@ namespace speak5220::core::encoder {
 
 // The version of the encoder's output. A project's cached encodings record
 // it, and are redone when it changes (plan §3.4), so it changes whenever
-// the same audio and options can give different frames: in the commit
-// that regenerates the encoder's reference data (AGENTS.md §3.1).
-inline constexpr std::string_view kEncoderVersion = "1.0.0";
+// the same audio and options can give different frames (AGENTS.md §3.1).
+// 1.1.0: quiet pauses (QuietPauses()), on by default.
+inline constexpr std::string_view kEncoderVersion = "1.1.0";
 
 // The analysis behind an encoding, for tests and the waveform view.
 // Output sample kReachedSample + 200 j of the reference synthesis
@@ -120,6 +121,19 @@ class Encoder : public IEncoder {
   IRepeatSearch* repeat_search_;
   ILevelSetter* level_setter_;
 };
+
+// The source an encoding is made from and scored against: `samples` (8
+// kHz) squelched when options.squelch_db is set (dsp::Squelch()), else a
+// copy. The encoder applies it itself; whatever measures an encoding
+// against its source (PESQ, the anchor) applies it to the source first,
+// so breaths muted for the encoder are not asked of it. Pure; O(n).
+std::vector<double> SquelchedSource(std::span<const double> samples,
+                                    const EncoderOptions& options);
+
+// The stretches of `samples` (8 kHz) that SquelchedSource() lowers, for
+// showing what the squelch mutes; none without a squelch. Pure; O(n).
+std::vector<dsp::SampleSpan> SquelchedSpans(std::span<const double> samples,
+                                            const EncoderOptions& options);
 
 // An IEncoder with the standard stages over pocketfft: the encoder the
 // application uses. Stateless between calls; thread-safe.

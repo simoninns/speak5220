@@ -61,8 +61,9 @@ class EncoderSettingsForm : public QWidget {
   // The slider of `field` (the coefficient's for the pre-emphasis), or
   // nullptr for an on/off option.
   OptionSlider* Slider(std::string_view field) const;
-  // The check box that turns the target peak on.
-  QCheckBox* PeakBox() const;
+  // The check box that turns an optional option (target_peak,
+  // squelch_db) on; nullptr for other options.
+  QCheckBox* OnBox(std::string_view field) const;
   QToolButton* ResetButton(std::string_view field) const;
   // Whether the row of `field` differs from the baseline.
   bool IsMarked(std::string_view field) const;

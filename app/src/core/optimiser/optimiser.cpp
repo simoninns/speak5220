@@ -463,8 +463,13 @@ StatusOr<OptimiseResult> Optimiser::Run(const OptimiseRequest& request,
     return cancel != nullptr && cancel->load(std::memory_order_relaxed);
   };
 
+  // What the candidates are scored against: the source squelched as the
+  // encoder squelches it (no axis changes the squelch).
+  const std::vector<double> reference =
+      encoder::SquelchedSource(request.source, request.start);
+
   // Encodes, checks and measures one candidate (on a worker).
-  auto evaluate = [this, &request, higher_is_better,
+  auto evaluate = [this, &request, &reference, higher_is_better,
                    cancelled](Candidate candidate) -> Evaluation {
     Evaluation evaluation{.candidate = std::move(candidate), .frames = {}};
     Candidate& c = evaluation.candidate;
@@ -496,7 +501,7 @@ StatusOr<OptimiseResult> Optimiser::Run(const OptimiseRequest& request,
         return evaluation;
       }
     }
-    StatusOr<double> score = metric_->Measure(request.source, *encoding);
+    StatusOr<double> score = metric_->Measure(reference, *encoding);
     if (!score.IsOk()) {
       c.outcome = CandidateOutcome::kFailed;
       c.message = score.GetStatus().Message();

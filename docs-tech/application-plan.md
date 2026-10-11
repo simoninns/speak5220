@@ -12,14 +12,16 @@ it. The project's existing tools are re-implemented as C++ classes:
 - the **reference emulator** (`investigation/emulator/`, C) becomes
   `Tms5220` and `Tms6100` classes, used for playback;
 - the **PESQ** measurement used in `investigation/tools/speechqual.py`
-  becomes an `IQualityMetric` implementation;
+  became an `IQualityMetric` implementation (Phase 3). Phase 8 replaces it
+  with a set of objective measures suited to LPC (§3.3);
 - the **Acorn PHROM, TI indexed and Speak External** packaging from
   §12.8–§12.9 of the reference datasheet (`acornPhrom()`, `tiIndexed()`,
   `speakExternalStream()` in the Python encoder) becomes the packaging
   classes.
 
 This applies to the project's own code. Third-party libraries (Qt,
-libsndfile, libsamplerate, pocketfft, libzip, yaml-cpp, spdlog) are used freely, provided
+libsndfile, libsamplerate, pocketfft, libzip, yaml-cpp, spdlog, and from
+Phase 8 libfvad, SPTK, REAPER, WORLD and ViSQOL) are used freely, provided
 their licences are GPLv3-compatible (§2.4).
 
 The original Python and C are the **references** while the C++ is being
@@ -71,8 +73,8 @@ Other source files carry the two SPDX lines in their own comment syntax:
   - a C++ file's `File:` line does not match its filename exactly.
 - `investigation/` is outside the application and is not changed by this
   plan.
-- Third-party dependencies must be GPLv3-compatible (§2.4). PESQ is the
-  project's own GPLv3 code (D6).
+- Third-party dependencies must be GPLv3-compatible (§2.4). ESTOI is the
+  project's own GPLv3 code, ported from the MIT-licensed pystoi (D10).
 
 ### 1.2 Build
 
@@ -92,7 +94,7 @@ Other source files carry the two SPDX lines in their own comment syntax:
   ctest --test-dir build/app --output-on-failure
   ```
 
-- In Phase 11, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
+- In Phase 13, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
   and a DMG (macOS). CMake stays the single build description. Nix supplies
   the dependencies on Linux. On Windows and macOS, CI installs Qt with
   `aqtinstall` and the other libraries with vcpkg (manifest mode, pinned
@@ -214,8 +216,8 @@ they are test oracles only:
 - The golden data becomes a fixed **regression baseline**:
   - **Emulator:** its golden data never changes, unless the datasheet
     itself changes.
-  - **Encoder:** improvements are made in C++ and judged by PESQ and the
-    evaluation measures, not by agreement with Python. When an intended
+  - **Encoder:** improvements are made in C++ and judged by the quality
+    measures (§3.3), not by agreement with Python. When an intended
     improvement changes the frames, the encoder baseline is regenerated
     from the C++ itself, in its own commit that records the change and the
     quality before and after.
@@ -244,10 +246,10 @@ app/                            the Speak5220 application (new)
       emulator/                 Tms5220 and Tms6100 classes (from the C reference emulator)
       encoder/                  Encoder, PitchTracker, ... (from tms5220enc.py)
       synth/                    renders frames to 8 kHz samples with the emulator classes
-      quality/                  PESQ and secondary measures
+      quality/                  signal preparation, voice activity mask, the quality measures, overall rating
       util/                     Status/StatusOr, hashing, logging setup (spdlog, §2.6)
       packaging/                Acorn PHROM, TI indexed, Speak External, C header, .bin
-      bbc/                      BBC BASIC tokeniser, DFS .ssd writer
+      bbc/                      BBC BASIC tokeniser, DFS disc image writer
       project/                  project model, (de)serialisation
     gui/                        Qt Widgets GUI: the "speak5220" executable
       main_window/ phrase_list/ phrase_editor/ waveform/ encoder_panel/ export/
@@ -275,15 +277,15 @@ no code copied from `investigation/`.
 |---|---|
 | `AudioIO` | Read WAV (any rate, any channel count, mixed to mono); write WAV (16- or 24-bit) |
 | `Resampler` | Sinc resampling to 8 kHz from any input rate (libsamplerate `SRC_SINC_BEST_QUALITY`) |
-| `Fft` | A thin wrapper over pocketfft for the real FFTs the encoder and PESQ use |
+| `Fft` | A thin wrapper over pocketfft for the real FFTs the encoder and the quality measures use |
 | `Frame`, `FrameCodec` | Coded frames (silence, stop, repeat, unvoiced, voiced); `pack()`/`parse()` with the §8.1/§12.1 bit order |
 | `Tms5220`, `Tms6100` | The chip and VSM emulators as C++ classes, re-implemented from `investigation/emulator/` (§2.3) |
 | `Encoder` | Re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set |
 | `Synth` | Runs `Tms5220` on a frame list through the VSM path or the Speak External path; returns codes and 16-bit samples |
-| `Quality` | PESQ (P.862 narrowband, as P.862.1 MOS-LQO) plus cheap measures (level error, spectral distance) |
-| `Optimiser` | Searches encoder options for the best PESQ, within the 64-PHROM project budget, optionally with a per-phrase byte limit |
+| `Quality` | Prepares the original and the chip output alike, masks them to speech-active frames, and measures spectral envelope, pitch and voicing, and intelligibility (ESTOI); an overall score and rating from *Poor* to *Good*; optionally ViSQOL (§3.3). PESQ until Phase 8 |
+| `Optimiser` | Searches encoder options for the best overall score (§3.3), within the 64-PHROM project budget, optionally with a per-phrase byte limit |
 | `Packager` | Acorn PHROM image, TI indexed image, Speak External stream, raw `.bin`, C header |
-| `BbcExport` | Tokenised BBC BASIC program plus data files on an Acorn DFS `.ssd` image |
+| `BbcExport` | A double-sided Acorn DFS disc image (`.dsd`): the fixed player program, and each PHROM's phrase data and index |
 | `Project` | Phrases, their audio, settings and cached encodings; the editing operations (§2.5); load/save |
 
 Classes depend on interfaces, not on concrete classes, and receive them
@@ -344,7 +346,13 @@ hash of the packed bytes plus the path).
 | FFT | pocketfft (C++ header-only version) | BSD-3 | The FFT that NumPy itself uses, which helps the C++ encoder match the Python golden data |
 | Project container | libzip | BSD-3 | See §4 |
 | Project metadata | yaml-cpp | MIT | YAML 1.2 (§4) |
-| PESQ | The project's own code (`quality/`) | GPLv3-or-later | Written for the project from the ITU-T P.862 and P.862.1 texts, with the constants and details the text leaves open taken from the ITU reference implementation (D6) |
+| PESQ | The project's own code (`quality/`) | GPLv3-or-later | Until Phase 8, which removes it: written from the ITU-T P.862 and P.862.1 texts, with the constants and details the text leaves open taken from the ITU reference implementation (D6) |
+| Voice activity | libfvad (a C port of the WebRTC VAD) | BSD-3 | The speech-active mask for every quality measure (§3.3); supports 8 kHz and 10, 20 or 30 ms frames |
+| LPC and cepstral analysis | SPTK 4 (C++) | Apache-2.0 | The spectral envelopes for log spectral distortion (§3.3) |
+| Pitch and voicing | REAPER (C++) | Apache-2.0 | F0 and voicing for the pitch measures (§3.3) |
+| Pitch, alternative | WORLD (C++), its Harvest estimator | Modified BSD | Selectable in place of REAPER, behind the same interface |
+| Overall perceptual score | ViSQOL v3 (C++) | Apache-2.0 | Speech mode, full reference, without its machine-learned model (§3.3, R1); brings Abseil, protobuf, Armadillo, PFFFT and libsvm, all GPLv3-compatible, and is built with Bazel upstream |
+| ESTOI | The project's own code (`quality/`) | GPLv3-or-later | A direct port of the reference algorithm in pystoi (MIT), checked against pystoi's values (D10) |
 | Logging | spdlog | MIT | `info`, `debug` and `trace`, to the console, a file or both (§2.6) |
 | Tests | Google Test with Google Mock | BSD-3 | Run through CTest; layout and lanes in TESTING.md |
 
@@ -420,7 +428,7 @@ Warnings and errors are always logged, whichever level is selected.
 | `--log-file PATH` | Also writes the log to `PATH`, replacing any existing file |
 | `--no-console-log` | Turns console output off (needs `--log-file`) |
 
-The GUI also has these as preferences (Phase 10). A command-line option
+The GUI also has these as preferences (Phase 12). A command-line option
 overrides the preference for that run.
 
 **Implementation.**
@@ -494,79 +502,146 @@ fixed set of non-default option combinations:
 Bit-exact floating point across compilers is not a goal. `-ffast-math` is
 banned in `s5core`.
 
-### 3.3 PESQ and the optimiser
+### 3.3 Quality measurement and the optimiser
 
-- PESQ is measured as in `speechqual.py`: P.862 narrowband at 8 kHz, as
-  P.862.1 MOS-LQO, reference = the 8 kHz original, degraded = the emulator
-  output with the 25 ms lead aligned.
-- PESQ is the project's own code, licensed GPLv3-or-later (D6). It is
-  written for the project from the ITU-T P.862 and P.862.1 Recommendation
-  texts, and each stage cites its section of P.862:
-  - The text leaves most numbers and details to the ANSI-C reference
-    implementation, which Annex A makes part of the Recommendation. Those
-    constants and details are taken from the reference implementation (as
-    the Python `pesq` package bundles it).
-  - The Python package produces the golden scores the C++ is checked
-    against (§1.4), to within ±0.01 on the corpus.
-  - The ITU's texts and code are not committed.
-- **Optimise** searches the encoder options in `EncoderOptions`:
-  - `targetRms` or `targetPeak`;
-  - `repeats` and `repeatLambda`;
-  - `gateDb`;
-  - `preEmphasis` (`chirp` or μ);
-  - `window`, `lagWindowHz`;
-  - `voicingThreshold`, `voicingEvidence`;
-  - `iterations`;
-  - `fadeUnvoiced`;
-  - `levelAgc`, `compression`.
+Until Phase 8 the application measures quality with PESQ ("PESQ, until
+Phase 8" below). PESQ was designed for telephony codecs that preserve the
+waveform. The TMS5220 is a parametric vocoder, whose output does not follow
+the original's waveform or phase, so PESQ ranks its encodings poorly. Noise
+in pauses also skews it easily: Phase 11 found it rewarding encodings that
+reproduce breaths and room noise. Phase 8 replaces it with a set of
+complementary objective measures, which compare the chip output with the
+original recording.
 
-  Method:
-  1. A coarse grid over the options with the most effect (`preEmphasis`,
-     `voicingThreshold`, `voicingEvidence`, `repeatLambda`, `targetRms`).
-  2. Coordinate descent (or Nelder–Mead on the continuous options) from the
-     best grid point.
-  3. **The project budget** (decision D4) is 64 PHROMs (64 × 16 KB). A
-     candidate encoding is rejected if it would push the project past 64
-     PHROMs under the list-order assignment of §4.1.
-  4. Optionally, a **per-phrase byte limit** as well: maximise PESQ subject
-     to bytes ≤ N, or maximise PESQ − λ·kbit/s with a user-chosen λ.
+**Preparing the signals.** Both signals are prepared in the same way before
+any measure is taken:
+
+1. **The original** is the phrase's source as the encoder sees it, squelched
+   when the squelch is on (Phase 11). It is resampled to 8 kHz if it is not
+   already (§3.1).
+2. **The chip output** is the emulator's output for the encoding. Its DC
+   offset is removed.
+3. **Both are band-limited** by the same filter, to the band the chip can
+   reproduce. The corners are fixed in Phase 8 and recorded in the HLD.
+4. **They are time-aligned by cross-correlation**, searched in a window
+   around the emulator's start latency. This replaces the fixed 25 ms lead
+   of the PESQ alignment.
+5. **Their levels are normalised** to the same RMS over speech-active
+   frames.
+6. **A voice activity mask** is built from the original with libfvad, a C
+   port of the WebRTC VAD, at 8 kHz in 10 ms frames. Its aggressiveness and
+   any hangover are fixed in Phase 8. Every measure uses only the frames
+   the mask marks as speech, so silence, pauses and non-vocal sounds such
+   as breaths and clicks do not affect the results.
+
+**The primary measures.** Three measures are tracked for each phrase:
+
+| Measure | What it reports | How |
+|---|---|---|
+| **Spectral envelope** | Mean log spectral distortion (LSD) in dB between the LPC envelopes of the original and the chip output, and the percentage of outlier frames above 2 dB and above 4 dB | In the chip's 25 ms frames. The classic criteria for transparent LPC quantisation are a mean of about 1 dB, fewer than 2 % of frames between 2 and 4 dB, and none above 4 dB; the chip's quantisation and interpolation do not reach them, but they give the figures a scale. SPTK 4 provides the LPC and cepstral analysis; the order, window and frequency range are fixed in Phase 8 |
+| **Pitch and voicing** | Gross pitch error (the percentage of frames voiced in both signals whose F0 differs by more than 20 %), F0 RMSE in cents over the other frames voiced in both, and voicing decision error (the percentage of frames whose voicing differs) | REAPER on both signals, with WORLD's Harvest selectable instead, behind one interface. An estimator independent of the encoder's own YIN tracker, so the encoder is not judged by its own pitch decisions |
+| **Intelligibility** | ESTOI, from 0 to 1 | A direct port of the reference algorithm in pystoi (`extended=True`): resampling to 10 kHz, one-third-octave bands, 384 ms segments, and its own removal of frames 40 dB below the loudest. Frames outside the voice activity mask are removed in the same step. Its comparison of band envelopes tolerates the vocoder's phase differences |
+
+**The overall score and rating.** The optimiser needs a single number, and
+the user needs a plain answer, so the primary measures are combined:
+
+- Each of the three measures is mapped to a component score from 0 to 1,
+  between a *poor* value and a *good* value. The envelope component uses
+  the mean LSD and the outliers; the pitch component uses the gross pitch
+  error, the F0 RMSE and the voicing decision error; the intelligibility
+  component uses ESTOI.
+- The **overall score**, from 0 to 1, is a weighted geometric mean of the
+  three components, so a poor component pulls it down and cannot be hidden
+  by good ones.
+- The **overall rating** of the phrase divides the overall score into bands
+  from *Poor* through *Fair* to *Good*.
+- The end points, the weights and the band thresholds are calibrated in
+  Phase 8 on the corpus and confirmed by listening. The calibration is
+  recorded in the HLD.
+- The rating is absolute: *Good* means the same on every phrase. The anchor
+  vocoder ("PESQ, until Phase 8") no longer gives each phrase its own
+  reference. It is kept for the calibration, where its results on the corpus
+  show what unquantised LPC reaches and help place the *Good* threshold.
+
+**An overall perceptual score.** Where a single perceptual figure is needed,
+the application uses Google's ViSQOL v3 in its speech mode, a full-reference
+measure that is more robust than PESQ for this kind of speech. Both signals
+are resampled to 16 kHz, the rate its speech mode needs, and it reports a
+MOS from 1 to 5. It is used without its machine-learned model (R1). It is
+shown beside the rating and cross-checks the calibration, where its
+agreement with the overall score is recorded. It is not part of the overall
+score, so the optimiser's objective depends only on the primary measures.
+
+Every component is native C or C++ with no machine-learned model, so the
+toolchain stays portable to Windows, macOS and the Flatpak.
+
+**Presenting quality to the user.** The encoder panel shows:
+
+- **the overall rating** on a bar from *Poor* to *Good*, with the overall
+  score to two decimals. The bar uses text as well as colour, so it is
+  readable without colour vision;
+- **the three components**, each with its own small bar, so the user can see
+  whether the envelope, the pitch or the intelligibility holds an encoding
+  back;
+- **the figures behind them**: mean LSD and its outliers, gross pitch error,
+  F0 RMSE, voicing decision error and ESTOI, and the ViSQOL MOS when it has
+  been measured;
+- **a tooltip** that explains each measure, and that the measures cover
+  speech-active frames only;
+- **before and after**: while Optimise runs, the rating shows the starting
+  score and the best so far.
+
+**Optimise** searches the encoder options in `EncoderOptions`:
+
+- `targetRms` or `targetPeak`;
+- `repeats` and `repeatLambda`;
+- `gateDb`;
+- `preEmphasis` (`chirp` or μ);
+- `window`, `lagWindowHz`;
+- `voicingThreshold`, `voicingEvidence`;
+- `iterations`;
+- `fadeUnvoiced`;
+- `levelAgc`, `compression`.
+
+Method:
+
+1. A coarse grid over the options with the most effect (`preEmphasis`,
+   `voicingThreshold`, `voicingEvidence`, `repeatLambda`, `targetRms`).
+2. Coordinate descent (or Nelder–Mead on the continuous options) from the
+   best grid point.
+3. **The project budget** (decision D4) is 64 PHROMs (64 × 16 KB). A
+   candidate encoding is rejected if it would push the project past 64
+   PHROMs under the list-order assignment of §4.1.
+4. Optionally, a **per-phrase byte limit** as well: maximise the overall
+   score subject to bytes ≤ N, or maximise the score − λ·kbit/s with a
+   user-chosen λ.
+
 - Optimising runs as a cancellable background job (`QtConcurrent` with a
   thread pool, one candidate per thread). Progress, the best score so far and
   the best settings update live. The user can accept the result or revert to
   the previous settings. Every evaluated candidate is kept in a history table
   that can be shown.
 - Batch: **Optimise all** runs over a selection of phrases.
+- The squelch is not searched, because scores against differently squelched
+  sources do not compare (Phase 11).
 
-**Presenting PESQ to the user.** A raw PESQ score is hard to read for LPC
-speech. The scale runs from 1.0 to 4.5, but no TMS5220 encoding comes close
-to 4.5. On the project's 243 test inputs, the encoder's median is about 2.03
-(most files fall between 1.79 and 2.32), and an unquantised LPC-10 vocoder
-(the "anchor" of `speechqual.py`) scores about 2.30. A score of 2.1 is
-therefore good, though it looks poor on PESQ's own scale. So the GUI shows
-PESQ two ways:
+**PESQ, until Phase 8.** Phases 3, 7 and 11 built PESQ and its quality scale,
+which Phase 8 removes:
 
-- **The score itself**, to two decimals (MOS-LQO), always available.
-- **A quality scale** for the phrase, from **Bad** to **As good as LPC can
-  achieve**:
-  - **The ceiling** is the phrase's own **anchor score**: PESQ for an
-    unquantised, floating-point LPC-10 vocoder of the same 8 kHz source
-    (order 10, 25 ms frames, the chip's 8-step K interpolation, pulse or
-    noise excitation, no quantisation), as `speechqual.py --anchor` defines
-    it. It is computed once per source and cached. It depends on the
-    recording, so each phrase gets its own ceiling.
-  - **The floor** is PESQ's minimum, 1.0.
-  - **The position** is `(score − 1.0) / (anchor − 1.0)`, clamped to the
-    scale. An encoding that matches or beats the anchor is shown at the top.
-  - **Bands** with plain-language labels (for example *Bad*, *Poor*,
-    *Fair*, *Good*, *As good as LPC can achieve*) divide the scale. Their
-    thresholds are calibrated on the corpus in Phase 3, and confirmed by
-    listening.
-- **The scale uses text as well as colour**, so it is readable without
-  colour vision. A tooltip explains what PESQ measures, why 4.5 is out of
-  reach for LPC, and that PESQ was not validated for vocoders, so it ranks
-  encodings rather than predicting a listener's score.
-- **Before and after:** while Optimise runs, the scale shows the starting
-  score and the best so far.
+- PESQ was measured as in `speechqual.py`: P.862 narrowband at 8 kHz, as
+  P.862.1 MOS-LQO, with the reference the 8 kHz original and the degraded
+  signal the emulator output with the 25 ms lead aligned. It was the
+  project's own code (D6), checked against the Python `pesq` package to
+  within ±0.01 on the corpus.
+- No TMS5220 encoding comes close to PESQ's 4.5. On the corpus the
+  encoder's median is about 2.03, and an unquantised LPC-10 vocoder, the
+  **anchor** of `speechqual.py --anchor` (order 10, 25 ms frames, the chip's
+  8-step K interpolation, pulse or noise excitation, no quantisation),
+  scores about 2.30.
+- So the GUI showed the score with a **quality scale** relative to the
+  phrase's own anchor score, `(score − 1.0) / (anchor − 1.0)`, on a bar
+  running a quarter past the anchor, in bands from *Bad* to *As good as LPC
+  or better* (Phase 11).
 
 ### 3.4 Encoding is cached, not authoritative
 
@@ -574,7 +649,7 @@ A phrase stores its **encoder settings** and **source audio**. The frames are
 a cache derived from them, saved in the project so a project opens instantly.
 The cache is invalidated by a hash of (source audio, settings, encoder
 version). A phrase can also be **locked**: frames imported from an existing PHROM
-image (Phase 10) are never re-encoded.
+image (Phase 12) are never re-encoded.
 
 ---
 
@@ -633,7 +708,7 @@ exports:                          # presets remembered by the Export dialog, run
     scope: "all"
     layout: "separate"            # one .bin per PHROM, or "concatenated"
   - name: "bbc-disc"
-    format: "bbc-ssd"
+    format: "bbc-dsd"
     scope: "all"
 ```
 
@@ -649,11 +724,23 @@ frames:
   - {energy: 4, repeat: 0, pitch: 0, k: [20, 18, 9, 6]}
   - {energy: 0}
   - {energy: 15}
-quality:                          # cached with the encoding; the anchor is cached per source
-  pesq: 2.08
-  anchor: 2.31
+quality:                          # cached with the encoding (Phase 8; before it, pesq and anchor)
+  measures_version: 1
+  lsd_db: 2.41
+  lsd_over_2db: 38.5              # percentages of speech-active frames
+  lsd_over_4db: 6.2
+  gross_pitch_error: 3.1
+  f0_rmse_cents: 41.0
+  voicing_error: 7.4
+  estoi: 0.71
+  score: 0.68
+  visqol: 2.9                     # only when measured
 ```
 
+- **Cached quality** is recomputed when `measures_version` is missing or
+  older than the application's. The `pesq` and `anchor` keys written before
+  Phase 8 are dropped, not kept as unknown keys, since the application wrote
+  them itself.
 - **Strings are always written quoted.** Without quotes, YAML reads some
   words as booleans or numbers. PHROM words such as `NO`, `YES`, `ON` and
   `OFF` would become booleans in YAML 1.1 readers, and ASCII-map keys such
@@ -730,8 +817,9 @@ more speech than one PHROM (decision D4):
 |   ...          |-------------------------------------------------------------- |
 |                |  Encoding: 41 frames, 1 248 bits (156 B), 1 217 bit/s         |
 |                |  voiced 48% unvoiced 21% repeat 19% silence 12%               |
-|                |  Quality  Bad [=====================|---] As good as LPC     |
-|                |           PESQ 2.08 (LPC best for this phrase 2.31): Good     |
+|                |  Quality  [  Poor  |  Fair  |  Good ▼  ]   0.68: Good         |
+|                |    envelope ▮▮▮▮▯  pitch ▮▮▮▮▮  intelligibility ▮▮▮▯▯         |
+|                |    LSD 2.41 dB · GPE 3.1% · F0 41 cents · ESTOI 0.71          |
 |                |  Settings: [targetRms] [repeatLambda] [preEmphasis] ...       |
 |                |  [Re-encode] [Optimise] [Reset to project defaults]           |
 +----------------+---------------------------------------------------------------+
@@ -767,8 +855,9 @@ more speech than one PHROM (decision D4):
   - The two panes share a time axis option (linked zoom/scroll), offset by the
     emulator's start latency, so the same sound lines up.
 - **Encoder panel**: statistics (frames, bits, bytes, bit rate, kind
-  breakdown, peak code, limiter activity), the **PESQ score and quality
-  scale** (§3.3, "Presenting PESQ to the user"), a settings form generated
+  breakdown, peak code, limiter activity), the **overall rating, its
+  components and the figures behind them** (§3.3, "Presenting quality to the
+  user"), a settings form generated
   from `EncoderOptions` metadata (name, range, default, tooltip from
   `usage.md`), and Re-encode, Optimise and Reset buttons. Changing a setting
   re-encodes in the background after a short debounce.
@@ -780,7 +869,7 @@ more speech than one PHROM (decision D4):
   scheme, at start-up and when it changes. Widgets take their colours from
   the palette; colours of our own (warnings, the waveforms, frame kinds, the
   quality scale) have a light and a dark form, chosen in one place.
-  Preferences can override the scheme (Phase 10).
+  Preferences can override the scheme (Phase 12).
 
 ---
 
@@ -794,7 +883,7 @@ more speech than one PHROM (decision D4):
 | **C header, PHROM** (`.h`) | Selected or all | One `const uint8_t name_phrom_N[16384]` per PHROM, plus an `enum`/table giving each word's PHROM, number, name, offset and length |
 | **C header, Speak External** (`.h`) | Selected or all | One `const uint8_t` array per phrase (Speak External form), with a length constant and a lookup table |
 | **WAV** | Selected or all | The encoded (emulator) output, or the 8 kHz original; one file per phrase, named from the phrase name |
-| **BBC Micro DFS disc** (`.ssd`) | Selected or all | See below |
+| **BBC Micro DFS disc** (`.dsd`) | Selected or all, at most 8 PHROMs | See below |
 
 Header generation uses include guards, a generated-file comment with the
 project name and date, and an SPDX header. The licence of the generated file
@@ -803,23 +892,70 @@ is configurable, because users own their speech data; the default is
 
 **BBC Micro disc image:**
 
-- An Acorn DFS single-sided 80-track `.ssd` (option: 40 track): catalogue in
-  sectors 0–1, the disc title, `!BOOT` with `*OPT 4,3` set so Shift+Break
-  runs it.
-- Files on the disc:
-  - `!BOOT` → `CHAIN "SPEAK"`;
-  - `SPEAK`, a **tokenised BBC BASIC II** program;
-  - `DATA`, **one combined data file** holding every phrase's stream, with
-    an index (offset and length per phrase) at its start. One file is used
-    because an Acorn DFS catalogue holds only 31 files.
-- The program shows a menu of the phrases and speaks the selected one.
-  Speaking is done by a **6502 routine** (decision D3), assembled at run
+- **One fixed player program.** The disc carries the same program whatever
+  the project holds, so it is written and tested once and never generated.
+  It finds what is on the disc by reading the index files described below.
+- **The disc** is an Acorn DFS **double-sided 40-track** image (`.dsd`,
+  tracks interleaved side 0, side 1, as BBC emulators and the Gotek read
+  it): 2 × 100 KB, 200 KB in all. Each side is its own DFS drive (0 and 2)
+  with its own catalogue. Drive 0 has the disc title (the project name, cut
+  to 12 characters) and `!BOOT` with `*OPT 4,3` set, so Shift+Break runs
+  the player.
+- **At most 8 PHROMs.** Each PHROM's data is at most 16 KB, so 8 of them
+  (128 KB) leave room for the program and the indexes. A project or
+  selection that needs more is refused, with a message. The project budget
+  of 64 PHROMs (§4.1) is unchanged; only this export is limited.
+- **Files**, always in the same places so that the program never changes:
+
+  | Drive | Files |
+  |---|---|
+  | 0 | `!BOOT` (`CHAIN "SPEAK"`), `SPEAK`, `PHROM1`–`PHROM4`, `INDEX1`–`INDEX4` |
+  | 2 | `PHROM5`–`PHROM8`, `INDEX5`–`INDEX8` |
+
+  A project of 4 PHROMs or fewer is entirely on side 0. Only the PHROMs
+  the project uses are written.
+- **`PHROMn`** holds only the raw phrase data of PHROM n: each phrase's
+  Speak External stream (§12.9), in the PHROM's phrase order, one after
+  another. There is no PHROM header, ASCII map, pointer table or names.
+  The streams are in FIFO order, so the player sends them unreversed (see
+  "Bit order" below).
+- **`INDEXn`** describes PHROM n: its title (its second header string, as
+  §4.1 gives it), the number of phrases, then one **fixed-size record** per
+  phrase: the name padded to 16 characters, and the stream's offset in
+  `PHROMn` and its length, as 16-bit little-endian values. Fixed-size
+  records let the player read any one with `PTR#`, without holding the
+  whole index in memory. The HLD gives the exact layout.
+- **The player** is a tokenised BBC BASIC II program that runs in
+  **MODE 7**, whose 1 KB screen leaves the most memory free:
+  1. At start it opens `INDEX1`–`INDEX8` on their drives. `OPENIN` gives 0
+     for a file that is missing, so the PHROMs that are not there are left
+     out. It lists the titles of the PHROMs found, with their phrase counts.
+  2. When the user selects a PHROM, it lists that PHROM's phrase names a
+     page at a time, reading the records for the page from `INDEXn`.
+  3. The user selects a phrase to speak it, or chooses **play all** to
+     speak every phrase of the PHROM in order, one after another. Escape
+     stops play all after the phrase being spoken, and goes back to the
+     PHROM list from the phrase list.
+- **Memory.** Phrases are loaded **on demand**: each one is read from
+  `PHROMn` into one buffer just before it is spoken, and only the index
+  records for the page on screen are read. No phrase, and no PHROM, is held
+  in memory beyond that.
+  - With Acorn DFS, PAGE is &1900, and in MODE 7 HIMEM is &7C00, which
+    leaves about 24.75 KB.
+  - The buffer is 16 KB. A `PHROMn` file is at most 16 KB, so every phrase
+    fits, and the exporter needs no per-phrase check beyond the PHROM's
+    own size (§4.1).
+  - The program, its variables and the assembled routine share what is
+    left, about 8.75 KB. If HIMEM − TOP is too small at start (another
+    filing system raises PAGE, say), the program says so and stops.
+- Speaking is done by a **6502 routine** (decision D3), assembled at run
   time by BASIC's inline assembler. It does not use the MOS speech queue
   (`SOUND &FF60`/`&FF00`).
 - **What the routine does**, following §12.9:
-  1. Loads the phrase from `DATA` into a buffer with OSGBPB, so phrases are
-     read from disc one at a time. A whole project need not fit in the BBC's
-     memory.
+  1. Loads the phrase's stream from `PHROMn` into the buffer with OSGBPB
+     (read at the record's offset, for the record's length). Disc reads are
+     far slower than speech, so a phrase is loaded whole before it is
+     spoken; in play all, the load is the gap between phrases.
   2. Sends Speak External (&60) with OSBYTE &9F.
   3. Writes the first 16 bytes (at most), one OSBYTE &9F call per byte.
      Speech starts once 9 are in the FIFO.
@@ -848,15 +984,16 @@ is configurable, because users own their speech data; the default is
 - **Stream rules:**
   - Every stream has at least 9 bytes (§12.9).
   - Bytes are written one at a time, so no even-length padding is needed.
-  - The exporter checks each phrase against the buffer size the program
-    reserves.
-- **To confirm on an emulator and on hardware** (Phase 9, task 1):
+- **To confirm on an emulator and on hardware** (Phase 10, task 1):
   - the bit order;
   - that the MOS speech interrupt handler doesn't interfere when its own
-    speech queue is empty, given that the routine drives the chip directly.
-- A BASIC tokeniser in `s5core/bbc` handles the keyword table, line number
-  encoding (`&8D`) and line layout. Its tests compare against programs saved
-  by a real BBC Micro or an emulator.
+    speech queue is empty, given that the routine drives the chip directly;
+  - the memory left in MODE 7 with Acorn DFS, for the program and the
+    16 KB buffer.
+- The player's source is kept as text in the repository. A BASIC tokeniser
+  in `s5core/bbc` turns it into the `SPEAK` file: the keyword table, line
+  number encoding (`&8D`) and line layout. Its tests compare against
+  programs saved by a real BBC Micro or an emulator.
 
 ---
 
@@ -1041,6 +1178,8 @@ Depends on: Phase 1.
 
 Depends on: Phase 2.
 
+Phase 8 replaces the PESQ and the quality scale built here (§3.3).
+
 1. **Quality reference data.** A script in `app/scripts/golden/` records
    PESQ scores (as `speechqual.py` measures them), the anchor scores
    (`speechqual.py --anchor`) and the `evaluate.py` measures for the corpus.
@@ -1057,8 +1196,8 @@ Depends on: Phase 2.
 3. **Cheap measures.** Level error and mel spectral distance, as in
    `evaluate.py`, behind `IQualityMetric`, for live feedback.
    - **Acceptance:** functional tests match the reference values.
-4. **Anchor and quality scale.** The anchor vocoder (§3.3, "Presenting PESQ
-   to the user") and a `QualityScale` that turns a score and an anchor into
+4. **Anchor and quality scale.** The anchor vocoder (§3.3, "PESQ, until
+   Phase 8") and a `QualityScale` that turns a score and an anchor into
    a position and a band. The band thresholds are calibrated on the corpus,
    and the result is recorded in the HLD.
    - **Acceptance:** functional tests match the reference anchor scores
@@ -1205,7 +1344,110 @@ Depends on: Phase 6.
      files within the budget and any per-phrase limit; the timings are
      recorded.
 
-### Phase 8: Export: binary, C and audio
+### Phase 8: Quality measures in place of PESQ
+
+Depends on: Phase 7 and Phase 11 (its squelch and quiet pauses change what
+is scored, and its quality scale is replaced).
+
+PESQ ranks the chip's encodings poorly and is skewed by noise in pauses
+(§3.3). This phase measures quality with complementary objective measures on
+speech-active frames, combines them into an overall score and a rating from
+*Poor* to *Good*, reassesses the default encoder settings against the new
+score, and removes PESQ.
+
+1. **Libraries.** libfvad, SPTK 4, REAPER, WORLD and ViSQOL v3 (§2.4), in
+   the Nix dev shell and package (as derivations where nixpkgs lacks them),
+   in vcpkg for Windows and macOS, and as Flatpak modules. ViSQOL is built
+   with CMake from its sources, since upstream uses Bazel. Each is wrapped
+   behind an interface (`IVoiceActivity`, `ILpcAnalysis`, `IPitchEstimator`,
+   `IPerceptualScore`), listed in TESTING.md.
+   - **Acceptance:** `nix build .#speak5220` succeeds; a manually started
+     Windows and macOS run passes both lanes; functional tests call each
+     adapter once on a short signal.
+2. **Reference data.** A script in `app/scripts/golden/` records, for a
+   corpus subset of original and chip-output pairs: the voice activity masks
+   from py-webrtcvad (the original WebRTC code), ESTOI from pystoi, LSD from
+   an independent NumPy implementation of §3.3's definition, the REAPER and
+   Harvest tracks from their own command-line tools, and ViSQOL scores from
+   its command-line tool. The data replaces the PESQ and anchor scores in
+   `app/golden/quality/`, with the user's agreement.
+   - **Acceptance:** the data is committed and the script reproduces it.
+3. **Signal preparation and the voice activity mask.** The six steps of
+   §3.3: resampling, DC removal, the shared band-limit, alignment by
+   cross-correlation, level normalisation and the libfvad mask.
+   - **Acceptance:** unit tests on synthetic signals: a known delay is
+     recovered to the sample, DC is removed, the levels match, and tone
+     bursts in silence are masked as speech and the silence is not;
+     functional tests match the reference masks on the corpus subset.
+4. **Spectral envelope.** Mean LSD and the percentages of frames above 2 dB
+   and 4 dB, from SPTK 4's LPC and cepstral analysis.
+   - **Acceptance:** unit tests: identical signals give 0 dB, and a pair of
+     known all-pole filters gives their computed distortion; frames outside
+     the mask are not counted; functional tests are within ±0.01 dB of the
+     reference values.
+5. **Pitch and voicing.** Gross pitch error, F0 RMSE in cents and voicing
+   decision error from REAPER, with Harvest selectable.
+   - **Acceptance:** unit tests with a mocked `IPitchEstimator`: a 25-cent
+     shift gives 25 cents, an octave error counts as gross and is left out
+     of the RMSE, and voicing disagreements are counted; on synthetic pulse
+     trains at 8 kHz both estimators find F0 within 1 %; functional tests
+     match the reference tracks.
+6. **ESTOI.** The port of pystoi's ESTOI, with the voice activity mask
+   applied with its own frame removal (§3.3). Each stage cites its place in
+   pystoi and in Jensen and Taal's paper (AGENTS.md §4.3.6).
+   - **Acceptance:** unit tests per stage (the one-third-octave matrix, the
+     frame removal, the segment normalisation); functional tests are within
+     ±0.005 of pystoi on the corpus subset.
+7. **ViSQOL.** The speech mode at 16 kHz, without a machine-learned model,
+   behind `IPerceptualScore`. It is measured on request in the encoder
+   panel, and by the corpus scripts, but not by Optimise.
+   - **Acceptance:** functional tests are within ±0.01 of the reference
+     scores.
+8. **Overall score, rating and calibration.** The component scores, the
+   weighted geometric mean and the *Poor*, *Fair* and *Good* bands (§3.3).
+   They are calibrated on the corpus's reference encodings, on Optimise's
+   results and on the anchor vocoder's output, and checked by listening to
+   phrases from every band.
+   - **Acceptance:**
+     - unit tests of the mappings, the combination and the band boundaries;
+     - the end points, weights and thresholds, the listening check, and the
+       rank agreement of the overall score with ViSQOL on the corpus are
+       recorded in the HLD.
+9. **PESQ removed.** The overall score replaces PESQ everywhere: the
+   encoder panel (§3.3, "Presenting quality to the user"), Optimise's
+   objective and history table, the CLI's output, the cached quality in
+   `frames.yaml` (§4), `corpus-check.sh`, `benchmark.sh` and the user
+   documentation. The PESQ code, its tests, the anchor-relative quality
+   scale and the PESQ golden data are deleted. The anchor vocoder stays for
+   the calibration.
+   - **Acceptance:**
+     - no PESQ code or reference remains under `app/` or in
+       `docs/application/`;
+     - GUI unit tests: the rating, the three components, the figures and
+       the tooltip, readable with colour removed; the before and after
+       during Optimise;
+     - optimiser unit tests with a mocked score; a functional test gets the
+       same result with 1 and 8 threads;
+     - fixtures with `pesq` and `anchor` keys load, drop them and recompute
+       the quality; `mkdocs build --strict` passes.
+10. **Default encoder settings reassessed.** Optimise is run over the corpus
+    with the new score, with and without the squelch, and the best settings
+    are studied across files. New defaults are chosen for the best median
+    overall score, weighing the size change. They are agreed with the user
+    before they are made. Projects saved earlier keep the settings they were
+    encoded with: the project format moves to version 2, and loading a
+    version 1 project writes the old defaults out explicitly, so its
+    encodings do not change until the user resets them.
+    - **Acceptance:**
+      - the before-and-after distributions of the overall score, the
+        ratings and the size on the corpus are recorded in the HLD;
+      - unit tests of the migration: a version 1 project loads with the old
+        defaults and its encodings stay current, and saves as version 2;
+      - the comparisons with the reference encoder pass its options
+        explicitly, so the reference data does not change; the fixtures
+        are migrated, and their encodings are unchanged.
+
+### Phase 9: Export: binary, C and audio
 
 Depends on: Phase 7.
 
@@ -1230,42 +1472,128 @@ Depends on: Phase 7.
    - **Acceptance:** rerunning matches the baseline; a deliberate change to
      an exporter is detected.
 
-### Phase 9: Export: BBC Micro disc
+### Phase 10: Export: BBC Micro disc
 
-Depends on: Phase 8.
+Depends on: Phase 9.
 
-1. **Hardware spike.** A hand-written BASIC program with the 6502 routine
-   of §6 speaks one encoder-made phrase, with its bytes unreversed. It is
-   run on an emulator with speech support, and on a BBC Micro with the
-   speech upgrade.
+1. **Hardware spike.** A hand-written BASIC program in MODE 7 with the
+   6502 routine of §6 loads one encoder-made phrase from a file on disc
+   into a 16 KB buffer and speaks it, with its bytes unreversed. It is run
+   on an emulator with speech support, and on a BBC Micro with the speech
+   upgrade and Acorn DFS.
    - **Acceptance:** the bit order, the Buffer Low refill and the MOS
-     interrupt behaviour are confirmed (R5), and the results are recorded
-     in the HLD.
+     interrupt behaviour are confirmed (R5), the memory left beside the
+     buffer is measured, and the results are recorded in the HLD.
 2. **BASIC tokeniser.** BBC BASIC II keywords, line numbers (`&8D`
    encoding) and line layout.
    - **Acceptance:** unit tests match programs saved on a BBC Micro or an
      emulator, byte for byte.
-3. **DFS disc image.** The `.ssd` writer: catalogue, title, boot option,
-   40 or 80 tracks, and the 31-file limit.
-   - **Acceptance:** unit tests check the catalogue fields; a functional
-     test reads the image back with an independent reader.
-4. **Player program and data file.** The generated BASIC program with the
-   6502 routine, and the combined `DATA` file with its index (§6),
-   including the buffer-size checks.
-   - **Acceptance:** unit tests check the data file layout; the `.ssd`
-     boots on an emulator, shows the menu and speaks every phrase of the
-     `app/projects/bbc/` fixtures; the same is checked by hand on a Gotek;
-     the `bbc` suite is added to the hash baseline.
-5. **PHROM images on a BBC Micro.** A generated PHROM image is tested in a
+3. **DFS disc image.** The double-sided 40-track `.dsd` writer: a
+   catalogue per side, title, boot option, the 31-file limit per side, and
+   the side interleave.
+   - **Acceptance:** unit tests check the catalogue fields and where each
+     side's sectors lie; a functional test reads the image back with an
+     independent reader.
+4. **Player program.** The fixed BASIC program of §6, with its 6502
+   routine: the PHROM list, the paged phrase list, speaking a phrase, play
+   all, and the memory check at start. Its source is kept as text and
+   tokenised (task 2).
+   - **Acceptance:** on an emulator, with discs holding one PHROM and
+     eight, it lists the PHROMs present, pages through their phrases,
+     speaks each phrase it is asked for, plays all in order, and stops play
+     all on Escape; it runs within the memory measured in task 1 with the
+     largest phrase a PHROM can hold. The same is checked by hand on a
+     Gotek.
+5. **Disc export.** The `PHROMn` data files and `INDEXn` index files of
+   §6, their fixed places on the two sides, the 8-PHROM limit, and the
+   export preset (`bbc-dsd`).
+   - **Acceptance:** unit tests check the data and index layouts and the
+     file placement; exporting 9 PHROMs is refused with a message; the
+     `.dsd` images of the `app/projects/bbc/` fixtures boot on an emulator
+     and speak every phrase; the `bbc` suite is added to the hash baseline.
+6. **PHROM images on a BBC Micro.** A generated PHROM image is tested in a
    BBC Micro's speech system.
    - **Acceptance:** the result is recorded in the HLD and reported. It
      answers the open question in
      [Appendix B](../docs/technical/datasheet/gaps.md#the-acorn-phrom-format-and-the-bbc-micro),
      which is updated only with the user's agreement (AGENTS.md §9.4).
 
-### Phase 10: Polish
+### Phase 11: Pauses, breaths and the quality scale
 
-Depends on: Phase 9.
+Depends on: Phase 7.
+
+Listening to optimised encodings showed three problems: the quality
+scale treated the anchor as a ceiling that Optimise often beats; PESQ
+rewarded encodings that reproduce breaths and room noise; and on the chip
+a pause of silence frames buzzes. The squelch's pauses made the last one
+common. The chip's behaviour in pauses is measured on the bench
+([§12.2](../docs/technical/datasheet/authoring.md#122-when-a-frame-is-heard)).
+
+1. **The quality scale against the LPC reference.** The anchor (§3.3) is
+   a reference, not a ceiling. The score relative to it,
+   `(score − 1.0) / (anchor − 1.0)`, is placed on a bar that runs a
+   quarter past it (to 1.25), and the top band, *As good as LPC or
+   better* (*Best* in the bar), starts at the anchor. The text under the
+   bar names the anchor the *LPC reference*.
+   - **Acceptance:**
+     - unit tests of the relative score, the position, the clamping and
+       the bands; a score beyond the anchor shows how far, short of the
+       end of the bar;
+     - the band thresholds are recalibrated on the corpus's reference
+       encodings and on Optimise's results, and the table is recorded in
+       the HLD: with the defaults the typical encoding is *Good*.
+2. **The squelch.** An encoder option, `squelch_db`, off by default: the
+   source's stretches more than that many dB below its loudest sound
+   (breaths, room noise) are made silent, with a hold and soft edges, before
+   it is encoded. PESQ and the anchor are measured against the same
+   squelched source, in the encoder panel and in Optimise, so reproducing a
+   muted breath counts against an encoding. Optimise does not search it,
+   since scores against differently squelched sources do not compare. In
+   the settings form it is a slider with a check box, like the target peak.
+   - **Acceptance:**
+     - unit tests of the squelch (what it mutes and keeps, its hold, lead
+       and edges), of the encoder and Optimise scoring against the
+       squelched source, and of the panel measuring a new anchor for a new
+       squelch;
+     - while unset, it is left out of project files and of the settings
+       hash: existing projects save byte for byte as before and their
+       encodings stay current (the fixture round-trip test);
+     - the reference data is unchanged.
+3. **Squelch shading.** The stretches the squelch mutes are shaded on the
+   original waveform (dimmed and hatched, with a hover text), and the
+   pane's note gives the level. The shading follows the form as it is
+   edited, before the change is encoded.
+   - **Acceptance:** GUI unit tests of the view, the waveforms, the panel's
+     report of the squelch and the main window's wiring; the shading reads
+     in light and dark.
+4. **Quiet pauses.** Measure on the chip what a pause of silence frames
+   outputs, and quieten it in the encoder. An encoder option,
+   `quiet_pauses`, on by default, replaces the second silence frame of
+   every pause of three or more with a voiced frame at energy 1 with every
+   K at its index nearest zero, so the chip holds neutral K and the rest of
+   the pause is code 0. A repeat frame after such a pause is sent in full.
+   The encoder version changes, so existing encodings become stale; the
+   reference encoder has no such pass, so the reference data is compared
+   with the option off and does not change.
+   - **Acceptance:**
+     - captures on chip 1 of the same utterances with and without the
+       neutral frame: plain pauses buzz about 23 dB below the speech, and
+       after the neutral frame the pauses are at the bench's noise floor,
+       with the sound around them unchanged beyond take-to-take variation;
+       the captures are committed as evidence (p12-01 to p12-08) and the
+       datasheet's §12.2, §8.8 and Appendix B record the findings,
+       including where the emulator differs from the chip;
+     - unit tests of the pass (the pause lengths, the neutral frame, the
+       repeat rule and the case left alone) and of the encoder applying it;
+     - `corpus-check.sh`: all 972 reference encodings identical with the
+       option off; over the corpus with a 30 dB squelch, the size and PESQ
+       change are recorded in the HLD (PESQ unchanged within its noise);
+     - the fixtures' encodings are redone with the new version, and their
+       project files do not change.
+
+### Phase 12: Polish
+
+Depends on: Phase 11.
 
 1. **Preferences.** Audio device, default encoder settings, the colour
    scheme (follow the desktop, light or dark; Phase 6 makes following the
@@ -1291,9 +1619,9 @@ Depends on: Phase 9.
    - **Acceptance:** every YAML key, encoder option, CLI option and export
      format is documented; `mkdocs build --strict` passes.
 
-### Phase 11: Cross-platform packaging and release
+### Phase 13: Cross-platform packaging and release
 
-Depends on: Phase 10.
+Depends on: Phase 12.
 
 1. **Flatpak.** A manifest on the KDE runtime (`org.kde.Platform` 6.x),
    with libsndfile, libsamplerate, libzip and yaml-cpp as modules where the
@@ -1371,9 +1699,11 @@ In short:
 | D3 | How does the BBC disc speak a phrase? | **A 6502 routine from the start**, writing the chip with OSBYTE &9F and refilling on Buffer Low. The MOS `SOUND` queue is not used (§6). |
 | D4 | A size budget for the project? | **64 PHROMs (64 × 16 KB = 1 MB)**, a testing limit. PHROMs are filled automatically in list order. Imports, re-encoding and the optimiser never take the project past the budget. Size is shown in KB and in PHROMs (§4.1). |
 | D5 | What happens to the Python encoder and C emulator? | **Retired once the C++ is accepted.** The golden data becomes a fixed regression baseline, and the C++ becomes the only maintained implementation (§1.4). |
-| D6 | Where does the PESQ implementation come from? | **The project's own code**, licensed GPLv3-or-later with the rest of the project, written from the ITU-T P.862 and P.862.1 texts. The text leaves most constants and details to the ANSI-C reference implementation, which P.862 gives precedence; those are taken from it (§3.3). The ITU's texts and code are not committed. |
+| D6 | Where does the PESQ implementation come from? | **The project's own code**, licensed GPLv3-or-later with the rest of the project, written from the ITU-T P.862 and P.862.1 texts. The text leaves most constants and details to the ANSI-C reference implementation, which P.862 gives precedence; those are taken from it (§3.3). The ITU's texts and code are not committed. Superseded by D10: Phase 8 removes PESQ. |
 | D7 | When do the Windows and macOS CI jobs run? | **Only for a release** (a `v*` tag) or when started by hand, during development. Linux CI runs on every push (Phase 2, task 7). |
-| D8 | Which CI and distribution services are used? | **Free ones only.** GitHub's hosted runners (`ubuntu-latest` for Linux) with Nix installed by a free action and the public NixOS binary cache. No paid caches, remote builders or Nix CI services, and no paid code signing: the MSI is unsigned and the DMG is not notarised (Phase 11). |
+| D8 | Which CI and distribution services are used? | **Free ones only.** GitHub's hosted runners (`ubuntu-latest` for Linux) with Nix installed by a free action and the public NixOS binary cache. No paid caches, remote builders or Nix CI services, and no paid code signing: the MSI is unsigned and the DMG is not notarised (Phase 13). |
+| D9 | What does the BBC disc hold? | **One fixed player program and each PHROM's raw data.** A double-sided 40-track DFS disc (200 KB) with, per PHROM, a file of its phrases' Speak External streams and an index file; at most 8 PHROMs. The MODE 7 player lists the PHROMs it finds, and loads each phrase from disc only when it speaks it (§6). |
+| D10 | How is quality measured? | **Complementary objective measures instead of PESQ**, which handles a parametric vocoder poorly and is skewed by noise in pauses. Both signals are prepared alike and masked to speech-active frames with libfvad; the measures are log spectral distortion (SPTK 4), pitch and voicing errors (REAPER, or WORLD's Harvest) and ESTOI (the project's own port of pystoi). They combine into an overall score and a rating from *Poor* to *Good*, which Optimise maximises. ViSQOL v3 gives an overall perceptual score where one is needed. Every component is native C or C++ with no machine-learned model (§3.3, Phase 8). |
 
 ---
 
@@ -1381,10 +1711,10 @@ In short:
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | **PESQ accuracy.** The P.862 text alone does not pin down every detail that the ITU reference code does, so an implementation from the text may not reproduce the reference scores closely. It is also the largest single item in the plan | Take the constants and details the text leaves open from the reference implementation (D6), build it stage by stage with unit tests per stage, and check it against golden scores from the Python package. If the scores cannot be matched to ±0.01, record the remaining difference in the HLD; the optimiser can fall back to the cheap measures while the gap is closed |
+| R1 | **The quality libraries.** ViSQOL is built with Bazel upstream and brings Abseil, protobuf and Armadillo, which may be hard to package for Nix, vcpkg and the Flatpak, and recent versions may lean on a machine-learned model in speech mode. REAPER and Harvest are mostly used on speech above 8 kHz and may track 8 kHz speech less well. The ESTOI port depends on matching pystoi's resampling. (This replaces the PESQ accuracy risk, which Phase 8 retires) | Phase 8, task 1 builds every library on all three platforms before the measures are written. ViSQOL is outside the overall score, so it can be left out, without changing the rating, if it cannot be packaged or cannot run without a model. Both pitch estimators are tested on 8 kHz speech in task 5, and the better one becomes the default. The ESTOI port follows pystoi's resampler, and is checked against it within ±0.005 |
 | R2 | The C++ encoder drifts from Python through floating-point differences in near-tie decisions | Re-implement function by function with intermediate golden data; accept on frames plus PESQ, not bits alone (§3.2) |
 | R2a | The C++ emulator's restructuring (classes, observers) changes timing, for example the slot at which a host write lands or the order of events | Accept only on identical codes **and** events (§2.3); keep the slot-stepped design, and change structure, not order of evaluation |
 | R3 | The optimiser is too slow | A fast C++ encoder (Phase 2 target), parallel candidates, cached analysis shared between candidates where options do not affect it (pitch tracking is independent of the level options) |
 | R4 | `QAudioSink` at 8 kHz is unsupported on some devices | Resample to the device's preferred rate on output; use the device clock for the playhead |
-| R5 | BBC Micro behaviour is partly unverified: whether a new PHROM image is read, the bit order for Speak External, and whether the MOS speech interrupt handler interferes with the 6502 routine | Phase 9, task 1: a hand-written spike on an emulator and on hardware before the generator is built |
+| R5 | BBC Micro behaviour is partly unverified: whether a new PHROM image is read, the bit order for Speak External, whether the MOS speech interrupt handler interferes with the 6502 routine, and whether the player and a 16 KB phrase buffer fit in memory in MODE 7 | Phase 10, task 1: a hand-written spike on an emulator and on hardware before the player is written |
 | R6 | Windows/macOS builds diverge from Nix (library versions, compiler differences). Their CI jobs run only on release, so a divergence can go unnoticed between releases | Pin the same Qt version everywhere, and pin vcpkg with a baseline. The Windows and macOS jobs exist from Phase 2 (task 7), and can be started by hand at any time |

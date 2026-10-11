@@ -76,6 +76,14 @@ TEST(EncodingCacheTest, HashDependsOnAudioOptionsAndVersion) {
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, other_options,
                                               encoder::kEncoderVersion));
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, defaults, "0.0.1"));
+  encoder::EncoderOptions squelched;
+  squelched.squelch_db = 30.0;
+  const std::string squelched_hash =
+      EncodingCache::SettingsHash(audio, squelched, encoder::kEncoderVersion);
+  EXPECT_NE(hash, squelched_hash);
+  squelched.squelch_db = 24.0;
+  EXPECT_NE(squelched_hash, EncodingCache::SettingsHash(
+                                audio, squelched, encoder::kEncoderVersion));
 }
 
 TEST(EncodingCacheTest, PhraseWithoutAnEncodingIsNotCurrent) {

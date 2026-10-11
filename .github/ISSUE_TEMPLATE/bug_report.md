@@ -21,7 +21,7 @@ A clear and concise description of what the bug is.
 - [ ] PHROM assignment and project size
 - [ ] Project files (`.s5proj`, YAML)
 - [ ] Export (PHROM image, TI indexed, C header, `.bin`, WAV)
-- [ ] BBC Micro disc export (`.ssd`, Speak External player)
+- [ ] BBC Micro disc export (`.dsd`, PHROM player)
 - [ ] GUI
 - [ ] CLI (`speak5220-cli`)
 - [ ] Build / packaging (Nix, Flatpak, MSI, DMG)

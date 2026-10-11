@@ -43,6 +43,33 @@ TEST(EncoderOptionsTest, DefaultsMatchReferenceEncoder) {
   EXPECT_EQ(o.compression, 1.0);
 }
 
+// The squelch is not in the reference encoder, so it is off by default
+// and the defaults encode as the reference does.
+TEST(EncoderOptionsTest, SquelchIsOffByDefault) {
+  EXPECT_FALSE(EncoderOptions{}.squelch_db.has_value());
+}
+
+// Quiet pauses are not in the reference encoder either, but on by
+// default: without them the chip buzzes through every pause (§12.2).
+TEST(EncoderOptionsTest, QuietPausesAreOnByDefault) {
+  EXPECT_TRUE(EncoderOptions{}.quiet_pauses);
+  EncoderOptions o;
+  ASSERT_TRUE(SetEncoderOption(o, "quiet_pauses", "false").IsOk());
+  EXPECT_FALSE(o.quiet_pauses);
+  EXPECT_EQ(EncoderOptionText(o, "quiet_pauses"), "false");
+}
+
+TEST(EncoderOptionsTest, LaterOptionsAreLeftOutAtTheirDefaults) {
+  EncoderOptions o;
+  EXPECT_TRUE(IsLeftOutAtDefault(o, "squelch_db"));
+  EXPECT_TRUE(IsLeftOutAtDefault(o, "quiet_pauses"));
+  EXPECT_FALSE(IsLeftOutAtDefault(o, "target_rms"));
+  o.squelch_db = 30.0;
+  o.quiet_pauses = false;
+  EXPECT_FALSE(IsLeftOutAtDefault(o, "squelch_db"));
+  EXPECT_FALSE(IsLeftOutAtDefault(o, "quiet_pauses"));
+}
+
 TEST(EncoderOptionsTest, DefaultsAreValid) {
   EXPECT_TRUE(ValidateEncoderOptions({}).IsOk());
 }
@@ -55,7 +82,7 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
     EXPECT_FALSE(info.help.empty()) << info.key;
     EXPECT_LE(info.minimum, info.maximum) << info.key;
   }
-  EXPECT_EQ(keys.size(), 15U);
+  EXPECT_EQ(keys.size(), 17U);
   EXPECT_EQ(EncoderOptionInfos().front().key, "targetRms");
   EXPECT_EQ(EncoderOptionInfos().back().key, "compression");
 }
@@ -96,6 +123,26 @@ TEST(EncoderOptionsTest, ChecksTargetPeakOnlyWhenSet) {
   EXPECT_TRUE(ValidateEncoderOptions(o).IsOk());
   o.target_peak = 200.0;
   EXPECT_FALSE(ValidateEncoderOptions(o).IsOk());
+}
+
+TEST(EncoderOptionsTest, ChecksSquelchOnlyWhenSet) {
+  EncoderOptions o;
+  o.squelch_db = 30.0;
+  EXPECT_TRUE(ValidateEncoderOptions(o).IsOk());
+  o.squelch_db = 2.0;
+  EXPECT_FALSE(ValidateEncoderOptions(o).IsOk());
+  EXPECT_FALSE(SetEncoderOption(o, "squelch_db", "100").IsOk());
+}
+
+TEST(EncoderOptionsTest, SetsAndReadsTheSquelchAsText) {
+  EncoderOptions o;
+  EXPECT_EQ(EncoderOptionText(o, "squelch_db"), "none");
+  ASSERT_TRUE(SetEncoderOption(o, "squelch_db", "24").IsOk());
+  EXPECT_EQ(o.squelch_db, 24.0);
+  EXPECT_FALSE(o.target_peak.has_value());
+  EXPECT_EQ(EncoderOptionText(o, "squelch_db"), "24");
+  ASSERT_TRUE(SetEncoderOption(o, "squelch_db", "none").IsOk());
+  EXPECT_FALSE(o.squelch_db.has_value());
 }
 
 TEST(EncoderOptionsTest, ChecksPreEmphasisCoefficientOnlyWhenNotChirp) {
