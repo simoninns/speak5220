@@ -26,7 +26,6 @@ endif()
 
 project(
     speak5220
-    VERSION 0.1.0
     DESCRIPTION "TMS5220 LPC speech data and PHROM editor"
     LANGUAGES CXX
 )

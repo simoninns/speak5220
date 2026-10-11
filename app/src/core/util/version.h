@@ -17,7 +17,9 @@ namespace speak5220::core {
 // The application name, as shown to users.
 inline constexpr std::string_view kApplicationName = "Speak5220";
 
-// Returns the version as "major.minor.patch", set from the CMake project.
+// Returns the version: the short (7-character) git commit hash of the build,
+// with "-dirty" appended when tracked files had uncommitted changes, or
+// "unknown" for a build outside a git checkout.
 // Thread-safe: returns a view of static storage.
 std::string_view Version();
 

@@ -16,40 +16,43 @@
 namespace speak5220::core {
 namespace {
 
-// True if `v` is three non-empty runs of digits separated by dots. Checked
-// by hand: Google Test's regular expressions on Windows have no character
-// classes, and std::regex trips GCC's -Wmaybe-uninitialized under the
-// sanitizers.
-bool IsMajorMinorPatch(std::string_view v) {
-  int parts = 1;
-  bool digit_seen = false;
+// True if `v` is seven lower-case hexadecimal digits, optionally followed
+// by "-dirty", or is "unknown". Checked by hand: Google Test's regular
+// expressions on Windows have no character classes, and std::regex trips
+// GCC's -Wmaybe-uninitialized under the sanitizers.
+bool IsGitVersion(std::string_view v) {
+  if (v == "unknown") {
+    return true;
+  }
+  constexpr std::string_view kDirty = "-dirty";
+  if (v.ends_with(kDirty)) {
+    v.remove_suffix(kDirty.size());
+  }
+  if (v.size() != 7) {
+    return false;
+  }
   for (const char c : v) {
-    if (c == '.') {
-      if (!digit_seen) {
-        return false;
-      }
-      ++parts;
-      digit_seen = false;
-    } else if (c >= '0' && c <= '9') {
-      digit_seen = true;
-    } else {
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'))) {
       return false;
     }
   }
-  return parts == 3 && digit_seen;
+  return true;
 }
 
-TEST(VersionTest, ReportsMajorMinorPatch) {
-  EXPECT_TRUE(IsMajorMinorPatch(Version())) << Version();
+TEST(VersionTest, ReportsGitHash) {
+  EXPECT_TRUE(IsGitVersion(Version())) << Version();
 }
 
 TEST(VersionTest, VersionCheckRejectsOtherForms) {
-  EXPECT_FALSE(IsMajorMinorPatch("1.2"));
-  EXPECT_FALSE(IsMajorMinorPatch("1.2.3.4"));
-  EXPECT_FALSE(IsMajorMinorPatch("1..3"));
-  EXPECT_FALSE(IsMajorMinorPatch("1.2.x"));
-  EXPECT_FALSE(IsMajorMinorPatch("1.2."));
-  EXPECT_TRUE(IsMajorMinorPatch("10.20.30"));
+  EXPECT_TRUE(IsGitVersion("1ec2afb"));
+  EXPECT_TRUE(IsGitVersion("1ec2afb-dirty"));
+  EXPECT_TRUE(IsGitVersion("unknown"));
+  EXPECT_FALSE(IsGitVersion("0.1.0"));
+  EXPECT_FALSE(IsGitVersion("1ec2af"));
+  EXPECT_FALSE(IsGitVersion("1ec2afb0"));
+  EXPECT_FALSE(IsGitVersion("1EC2AFB"));
+  EXPECT_FALSE(IsGitVersion("1ec2afb-"));
+  EXPECT_FALSE(IsGitVersion("-dirty"));
 }
 
 }  // namespace

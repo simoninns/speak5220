@@ -33,10 +33,9 @@
           inherit (pkgs) lib;
           system = pkgs.stdenv.hostPlatform.system;
 
-          # The version is set once, in app/CMakeLists.txt
-          version = builtins.head (
-            builtins.match ".*project\\([^)]*VERSION ([0-9.]+).*" (builtins.readFile ./app/CMakeLists.txt)
-          );
+          # The version is the git commit hash, with "-dirty" for uncommitted
+          # changes, as app/cmake/GitVersion.cmake finds it outside Nix
+          version = self.shortRev or self.dirtyShortRev or "unknown";
 
           # pocketfft's header-only C++ version, which nixpkgs does not package
           pocketfft = pkgs.stdenvNoCC.mkDerivation {
@@ -107,7 +106,11 @@
             cmakeBuildDir = "../build";
             cmakeDir = "../source";
 
-            cmakeFlags = [ (lib.cmakeBool "SPEAK5220_BUILD_TESTS" finalAttrs.doCheck) ];
+            # The sources carry no .git, so the version is passed in
+            cmakeFlags = [
+              (lib.cmakeBool "SPEAK5220_BUILD_TESTS" finalAttrs.doCheck)
+              (lib.cmakeFeature "SPEAK5220_GIT_VERSION" version)
+            ];
 
             # The packaged build runs the fast, mocked unit lane only (TESTING.md)
             doCheck = true;

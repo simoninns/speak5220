@@ -1,6 +1,5 @@
 {
   "name": "speak5220",
-  "version-string": "0.1.0",
   "description": "The libraries the application takes from vcpkg on Windows and macOS (BUILD.md); Qt comes from aqtinstall.",
   "builtin-baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
   "dependencies": [

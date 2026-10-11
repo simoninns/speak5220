@@ -51,10 +51,29 @@ add_library(
 )
 
 target_include_directories(s5core PUBLIC "${PROJECT_SOURCE_DIR}/src")
-target_compile_definitions(
-    s5core
-    PRIVATE SPEAK5220_VERSION="${PROJECT_VERSION}"
+
+# The version is the git commit hash, with "-dirty" for uncommitted changes
+# (cmake/GitVersion.cmake). It is found at every build, not at configure
+# time, so it follows commits made without reconfiguring.
+set(SPEAK5220_GIT_VERSION
+    ""
+    CACHE STRING
+    "Version to report instead of asking git (the Nix package sets it)"
 )
+set(_version_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
+add_custom_target(
+    s5version
+    COMMAND
+        "${CMAKE_COMMAND}" "-DSOURCE_DIR=${PROJECT_SOURCE_DIR}"
+        "-DOUTPUT=${_version_dir}/core/util/version_string.h"
+        "-DGIT_VERSION=${SPEAK5220_GIT_VERSION}" -P
+        "${PROJECT_SOURCE_DIR}/cmake/GitVersion.cmake"
+    BYPRODUCTS "${_version_dir}/core/util/version_string.h"
+    COMMENT "Finding the version from git"
+    VERBATIM
+)
+add_dependencies(s5core s5version)
+target_include_directories(s5core PRIVATE "${_version_dir}")
 target_link_libraries(
     s5core
     PUBLIC Qt6::Core spdlog::spdlog

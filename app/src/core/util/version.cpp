@@ -11,8 +11,10 @@
 
 #include <string_view>
 
+#include "core/util/version_string.h"
+
 namespace speak5220::core {
 
-std::string_view Version() { return SPEAK5220_VERSION; }
+std::string_view Version() { return kVersionString; }
 
 }  // namespace speak5220::core

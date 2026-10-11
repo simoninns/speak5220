@@ -113,8 +113,16 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   every platform (§8); `-ffast-math` is never used. Debug and
   sanitizer builds also define `_GLIBCXX_ASSERTIONS`, so `operator[]` on
   standard containers is range-checked (§4).
-- The version is set once, in `project(... VERSION ...)`. `s5core` receives
-  it as `SPEAK5220_VERSION`, and `flake.nix` reads it for the package.
+- There is no version number. The version is the short (7-character) git
+  commit hash, with `-dirty` appended when tracked files have uncommitted
+  changes (untracked files do not count). The target `s5version` runs
+  `cmake/GitVersion.cmake` at every build, so the version follows commits
+  made without reconfiguring; it rewrites the generated
+  `core/util/version_string.h` (the constant `kVersionString`) only when the version changes. The cache
+  variable `SPEAK5220_GIT_VERSION` overrides git: the Nix package, whose
+  sources carry no `.git`, sets it from the flake's `shortRev` or
+  `dirtyShortRev`, which it also uses as the package version. Outside a git
+  checkout the version is `unknown`.
 - `SPEAK5220_BUILD_TESTS` (default `ON`) adds `app/tests/`.
 - `cmake/Dependencies.cmake` finds the libraries of §10: Qt 6 (Core,
   Widgets) and spdlog by their CMake packages; libsndfile and libsamplerate
