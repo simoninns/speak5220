@@ -3,7 +3,7 @@
  * Module:      test support
  * Purpose:     gMock mocks of the interfaces the project code depends on:
  *              the encoder, WAV reading and coding, resampling, file
- *              digests and project stores
+ *              digests, project stores and the editing operations
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -16,12 +16,15 @@
 #include <filesystem>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "core/audio/wav_io.h"
 #include "core/dsp/resampler.h"
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
+#include "core/project/phrase.h"
+#include "core/project/project_editor.h"
 #include "core/project/project_store.h"
 #include "core/util/file_digest.h"
 #include "core/util/status.h"
@@ -71,6 +74,32 @@ class MockProjectStore : public core::project::IProjectStore {
   MOCK_METHOD(core::StatusOr<core::project::ProjectFiles>, Read, (),
               (override));
   MOCK_METHOD(core::Status, Write, (const core::project::ProjectFiles& files),
+              (override));
+};
+
+class MockProjectEditor : public core::project::IProjectEditor {
+ public:
+  MOCK_METHOD(core::Status, InsertPhrases,
+              (std::vector<core::project::PlacedPhrase> phrases), (override));
+  MOCK_METHOD(core::StatusOr<std::vector<core::project::PlacedPhrase>>,
+              RemovePhrases, (std::span<const core::project::PhraseId> ids),
+              (override));
+  MOCK_METHOD(core::StatusOr<std::vector<core::project::PhraseId>>, MovePhrases,
+              (std::span<const core::project::PhraseId> ids, int destination),
+              (override));
+  MOCK_METHOD(core::StatusOr<std::vector<core::project::PhraseId>>, SortPhrases,
+              (), (override));
+  MOCK_METHOD(core::StatusOr<std::vector<core::project::PhraseId>>, SetOrder,
+              (std::span<const core::project::PhraseId> order), (override));
+  MOCK_METHOD(core::StatusOr<std::string>, RenamePhrase,
+              (const core::project::PhraseId& id, std::string_view name),
+              (override));
+  MOCK_METHOD(core::StatusOr<std::string>, SetDescription,
+              (const core::project::PhraseId& id, std::string description),
+              (override));
+  MOCK_METHOD(core::StatusOr<core::project::EncodingChange>, SetEncoding,
+              (const core::project::PhraseId& id,
+               core::project::EncodingChange change),
               (override));
 };
 

@@ -13,7 +13,7 @@ A cross-platform Qt/C++ application for creating and editing TMS5220 LPC speech 
 - play the original and the encoded speech, the latter through a built-in emulator;
 - export Acorn PHROM and TI indexed images, C headers, raw data, WAV, and BBC Micro disc images that speak through Speak External.
 
-So far its core library has the emulator, the encoder and the quality measures (PESQ and the quality scale), each checked against the retired references, and the project model: phrases, PHROM allocation, cached encodings and the `.s5proj` file. Around them are the build, an empty main window, a command-line tool that creates projects, imports WAV files, encodes them and exports Acorn PHROM images, the test tree, and the format, lint and CI checks. The plan is in [`docs-tech/application-plan.md`](docs-tech/application-plan.md), and the design in [`docs-tech/design/high-level-design.md`](docs-tech/design/high-level-design.md).
+So far its core library has the emulator, the encoder and the quality measures (PESQ and the quality scale), each checked against the retired references, and the project model: phrases, PHROM allocation, cached encodings and the `.s5proj` file. Around them are the build, a main window with the phrase list, phrase names and descriptions, and undo, a command-line tool that creates projects, imports WAV files, encodes them and exports Acorn PHROM images, the test tree, and the format, lint and CI checks. The plan is in [`docs-tech/application-plan.md`](docs-tech/application-plan.md), and the design in [`docs-tech/design/high-level-design.md`](docs-tech/design/high-level-design.md).
 
 ## Repository layout
 

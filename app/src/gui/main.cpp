@@ -10,14 +10,18 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QString>
+#include <QStringList>
 #include <QTextStream>
 #include <string_view>
 
 #include "core/util/logging.h"
 #include "core/util/logging_options.h"
 #include "core/util/status.h"
+#include "core/util/task_runner.h"
 #include "core/util/version.h"
+#include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
+#include "gui/main_window/recent_files.h"
 
 namespace {
 
@@ -34,12 +38,19 @@ int main(int argc, char* argv[]) {
   namespace core = speak5220::core;
   QApplication application(argc, argv);
   QApplication::setApplicationName(ToQString(core::kApplicationName));
+  // Where QSettings keeps the preferences (the recent-file list).
+  QApplication::setOrganizationName(ToQString(core::kApplicationName));
   QApplication::setApplicationVersion(ToQString(core::Version()));
 
   QCommandLineParser parser;
   parser.addHelpOption();
   parser.addVersionOption();
   core::AddLoggingOptions(parser);
+  parser.addPositionalArgument(
+      QStringLiteral("project"),
+      QStringLiteral("A project to open: a .s5proj file or a project "
+                     "directory."),
+      QStringLiteral("[project]"));
   parser.process(application);
 
   const core::StatusOr<core::LogSettings> settings =
@@ -57,8 +68,21 @@ int main(int argc, char* argv[]) {
   core::Logger(core::kLogModuleGui)
       ->info("speak5220 {} started", core::Version());
 
-  speak5220::app::MainWindow window;
+  const QStringList projects = parser.positionalArguments();
+  if (projects.size() > 1) {
+    QTextStream(stderr) << "speak5220: give at most one project\n";
+    return kUsageExitCode;
+  }
+
+  speak5220::app::QtDialogs dialogs;
+  speak5220::app::SettingsRecentFilesStore recent_files;
+  core::ThreadPoolTaskRunner runner;
+  speak5220::app::MainWindow window(dialogs, recent_files, runner);
+  dialogs.SetParent(&window);
   window.show();
+  if (!projects.isEmpty()) {
+    window.OpenProject(projects.front());
+  }
   const int result = QApplication::exec();
   core::Logger(core::kLogModuleGui)->info("speak5220 finished");
   core::ShutdownLogging();

@@ -49,3 +49,11 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `... holds an unsafe path, "../evil.txt": refusing to open it` | The archive has a path that could write outside the project. It may have been made by another tool, or tampered with; it is not opened |
 | `... is not a Speak5220 project (it has no project.yaml): not replacing it` | Saving the unpacked form never replaces a directory that holds other files |
 | `phrases/<id>/source.wav is missing: phrase HELLO has no audio` | A file of the project has been deleted. The previous version, `NAME.s5proj~`, may still have it |
+| `cannot open PATH: ...` / `cannot save PATH: ...` | The main window's form of the messages above, naming the project. A failed save leaves the project open with its changes, and the file as it was |
+
+## The main window
+
+| Message | Meaning |
+|---|---|
+| `PATH: ...` (Add Phrases) | A file could not be imported; the message after the path says why (as under [importing audio](#importing-audio)). The other files were added |
+| `cannot sort the phrases: the project would need 65 PHROMs, ...` (Edit Phrases) | A sort, or a move (`cannot move the phrases: ...`), would take the project past its budget, so it was not made |

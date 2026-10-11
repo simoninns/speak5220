@@ -3,7 +3,21 @@
 
 # The GUI's widgets are a library, so the GUI tests can link them; the
 # speak5220 executable adds only main().
-add_library(speak5220_gui STATIC main_window/main_window.cpp)
+add_library(
+    speak5220_gui
+    STATIC
+    main_window/dialogs.cpp
+    main_window/main_window.cpp
+    main_window/project_document.cpp
+    main_window/recent_files.cpp
+    main_window/status_text.cpp
+    phrase_editor/phrase_details.cpp
+    phrase_list/phrase_list_delegate.cpp
+    phrase_list/phrase_list_model.cpp
+    phrase_list/phrase_list_panel.cpp
+    undo/project_commands.cpp
+    undo/project_edits.cpp
+)
 
 set_target_properties(speak5220_gui PROPERTIES AUTOMOC ON)
 target_include_directories(speak5220_gui PUBLIC "${PROJECT_SOURCE_DIR}/src")

@@ -6,7 +6,10 @@ built so far.
 
 So far the application has:
 
-- a GUI, `speak5220`, that opens an empty main window;
+- a GUI, `speak5220`, whose [main window](user-manual/main-window.md) opens
+  and saves projects, imports WAV files as phrases, orders, sorts, renames
+  and describes them with undo and redo, and shows how many PHROMs they
+  fill;
 - a command-line tool, `speak5220-cli`, that creates
   [projects](user-manual/projects.md), imports WAV files into them as
   phrases, encodes them and exports Acorn PHROM images, described in the

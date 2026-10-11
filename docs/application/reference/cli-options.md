@@ -11,6 +11,12 @@ general and logging options; the commands and their options are
 | `--help`, `-h` | both | Lists the options and exits |
 | `--version`, `-v` | both | Prints the version and exits |
 
+## The GUI's argument
+
+`speak5220 [PROJECT]` opens `PROJECT`, a `.s5proj` file or a project
+directory, at start-up. More than one is an unusable command line (exit
+code 2).
+
 ## Commands
 
 `speak5220-cli COMMAND PROJECT [ARGUMENTS] [OPTIONS]`. `PROJECT` is a

@@ -225,7 +225,9 @@ way its callers can be unit tested.
 | `ISynth` | `Synth` | `PesqMetric`, `Optimiser`, `Player` |
 | `IQualityMetric` | `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` | `Optimiser` |
 | `IProjectStore` | `ZipProjectStore` (libzip), `DirectoryProjectStore` | `ProjectSerializer` |
-| `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands, `PhraseListModel` |
+| `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails` |
+| `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`) | `MainWindow`: file choices, the save prompt, confirmations, errors |
+| `IRecentFilesStore` | `SettingsRecentFilesStore` (`QSettings`) | `MainWindow`'s recent-file list |
 | `ITaskRunner` | `ThreadPoolTaskRunner` (a `QThreadPool`); `InlineTaskRunner` runs jobs at once | `Optimiser`, background jobs such as the import (run inline in tests) |
 | `IAudioOutput` | `QAudioSink` adapter | `Player`, the playhead |
 | `IClock` | Monotonic clock | The playhead timer, the debounce of re-encoding |
@@ -290,7 +292,8 @@ app/tests/
 ├── unit/                 → speak5220_unit_tests,           ctest label "unit"
 ├── functional/           → speak5220_functional_tests,     label "functional"
 └── gui/
-    ├── support/          Shared QApplication entry point (offscreen platform)
+    ├── support/          Shared QApplication entry point (offscreen platform),
+    │                     mocks of the main window's dialogs and settings
     ├── unit/             → speak5220_gui_unit_tests,       label "unit"
     └── functional/       → speak5220_gui_functional_tests, label "functional"
 ```

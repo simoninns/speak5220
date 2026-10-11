@@ -45,7 +45,7 @@ This builds:
 
 | Output | What it is |
 |---|---|
-| `build/app/src/gui/speak5220` | The GUI (so far an empty main window) |
+| `build/app/src/gui/speak5220` | The GUI: `speak5220 [PROJECT]` opens a project at start-up |
 | `build/app/src/cli/speak5220-cli` | The command-line tool: `new`, `add`, `encode` and `export` on project files, and the logging options `--log-level`, `--log-file` and `--no-console-log` |
 | `build/app/tests/...` | The test binaries; the `speak5220_tests` target builds them all |
 

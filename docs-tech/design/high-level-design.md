@@ -27,13 +27,13 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`) | Implemented |
-| `speak5220` GUI | Implemented as a skeleton: an empty `MainWindow`, logging options |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (Acorn PHROM images), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| Optimiser, the other export formats, BBC export, the GUI's views | Planned |
+| Optimiser, the other export formats, BBC export, the GUI's waveforms, playback, encoder panel and Export dialog | Planned |
 
 ---
 
@@ -77,7 +77,12 @@ app/
                                 EncodingCache, ProjectSerializer, the project
                                 stores, PhraseImporter, the PHROM export (§14)
     gui/                        library "speak5220_gui" + the "speak5220" executable
-      main_window/              MainWindow
+      main_window/              MainWindow, ProjectDocument, IDialogs, the
+                                recent-file list, the status bar's text
+      phrase_list/              PhraseListModel, its delegate and panel
+      phrase_editor/            PhraseDetails (name and description)
+      undo/                     one QUndoCommand per editing operation,
+                                ProjectEdits
     cli/                        the "speak5220-cli" executable and its commands
   tests/
     .clang-tidy                 the app's settings, plus one test exception
@@ -90,8 +95,7 @@ app/
 Planned additions, each created with its first code (plan §2.1):
 
 - `src/core/`: `bbc/`;
-- `src/gui/`: `phrase_list/`, `phrase_editor/`, `waveform/`,
-  `encoder_panel/`, `export/`, `undo/`;
+- `src/gui/`: `waveform/`, `encoder_panel/`, `export/`;
 - `app/projects/bbc/` and `app/projects/benchmark/` (fixture projects),
   `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
   WiX/CPack, macOS);
@@ -254,7 +258,8 @@ Phase 2 task 7).
     fricative, pauses), a delay and white noise, for the quality unit
     tests;
   - `project_mocks.h`: gMock mocks of `IEncoder`, `IWavReader`,
-    `IWavCodec`, `IResampler`, `IFileDigest` and `IProjectStore`;
+    `IWavCodec`, `IResampler`, `IFileDigest`, `IProjectStore` and
+    `IProjectEditor`;
   - `project_builder`: fixed phrase ids, frames that pack to a chosen
     number of bytes, and phrases and projects built from them.
 - The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`), the
@@ -269,7 +274,10 @@ Phase 2 task 7).
   the timings (`EncoderBenchmark` and `QualityBenchmark`, `benchmark.sh`).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
-  `QApplication` and runs Google Test.
+  `QApplication` and runs Google Test. `app/tests/gui/support/gui_mocks.h`
+  has a gMock mock of `IDialogs`, an in-memory `IRecentFilesStore`, and
+  `IdsAre()`, a matcher for spans of phrase ids. The GUI functional lane
+  has `SPEAK5220_PROJECTS_DIR` compiled in.
 
 ---
 
@@ -293,7 +301,10 @@ Plan §2.2, with the names as built.
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
-| `MainWindow` | **Implemented** as an empty window (`gui/main_window`) |
+| `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
+| `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
+| `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
+| `ProjectEdits` and the undo commands | **Implemented** (`gui/undo/`): one `QUndoCommand` per `IProjectEditor` operation (§15) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
 | `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
@@ -559,7 +570,7 @@ search (81 candidate lags). Nothing has been optimised yet; Optimise
 
 | Need | Library | Licence | Status |
 |---|---|---|---|
-| GUI, threads | Qt 6 (Widgets, Concurrent, Multimedia) | LGPLv3 / GPLv3 | Core and Widgets linked; the rest in the Nix shell |
+| GUI, threads | Qt 6 (Widgets, Concurrent, Multimedia) | LGPLv3 / GPLv3 | Core, Gui (`QUndoStack`) and Widgets linked; the rest in the Nix shell |
 | Audio playback | Qt Multimedia `QAudioSink` | LGPLv3 | In the Nix shell |
 | WAV read/write | libsndfile | LGPL-2.1+ | Linked by `s5core` |
 | Sinc resampling | libsamplerate | BSD-2 | Linked by `s5core` |
@@ -579,8 +590,10 @@ Both executables are thin front ends over `s5core`.
 **Implemented:**
 
 - The GUI's widgets are the static library `speak5220_gui`, so the GUI
-  tests link them; the `speak5220` executable adds only `main()`.
-  `MainWindow` sets the title "Speak5220" and an initial size.
+  tests link them; the `speak5220` executable adds only `main()`, which
+  creates the real `QtDialogs`, `SettingsRecentFilesStore` and
+  `ThreadPoolTaskRunner`, and opens `speak5220 [PROJECT]` if given. The
+  window is described in §15.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
@@ -602,8 +615,7 @@ give byte-identical exports. The editing operations are core functions
 behind `IProjectEditor` (§14), each returning what is needed to reverse it;
 the CLI calls them directly and has no undo.
 
-**Planned** (plan §2.5): undo/redo in the GUI (`gui/undo/`, one
-`QUndoCommand` per operation).
+The GUI's undo/redo wraps the same operations (§15).
 
 ---
 
@@ -890,3 +902,121 @@ open well within a second, so nothing has been optimised.
   phrase, saves, and reloads it identically;
 - the fixtures load in functional tests, and `mkdocs build --strict`
   passes.
+
+---
+
+## 15. The main window
+
+**Implemented** (plan §2.5, §5, Phase 5) in `app/src/gui/`. The user's view
+is [`docs/application/user-manual/main-window.md`](../../docs/application/user-manual/main-window.md).
+
+**Structure.**
+
+```
+MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner (injected)
+ ├── ProjectDocument: Project + QUndoStack + ProjectEdits + path
+ ├── PhraseListModel (reads a Project snapshot, edits through ProjectEdits)
+ │    └── PhraseListPanel: QListView + PhraseListDelegate + buttons
+ ├── PhraseDetails (name, description; edits through ProjectEdits)
+ └── status bar: ProjectSizeText(Project::Allocation())
+```
+
+- **`ProjectDocument`** owns the core `Project`, the `QUndoStack` and the
+  path. It is modified while the stack is away from its clean index, and
+  emits `Changed()` on every index change (edit, undo, redo) and when a
+  project is opened or started. Opening and saving use
+  `MakeProjectStore()` and `ProjectSerializer`, as the CLI does. Opening a
+  `project.yaml` opens its directory. Save keeps the project's form; Save
+  As always writes a `.s5proj` file, adding the extension, and gives a
+  project with no name the file's stem (outside the undo stack, since the
+  project is saved with it at once).
+- **Undo** (`gui/undo/`). `ProjectCommand` is a `QUndoCommand` whose
+  `Execute()` runs the operation the first time; `ProjectEdits` pushes the
+  command only if that succeeded, and the stack's own first `redo()` is
+  skipped. A failed operation therefore never reaches the stack, and does
+  not discard the redo history either, which `QUndoStack::push()` would do
+  even for a command that makes itself obsolete. Each of the seven
+  commands applies its `IProjectEditor` operation in `redo()` and the
+  returned reverse in `undo()` (table in §14). An undo or redo that fails
+  regardless is logged and the command made obsolete, so the stack drops
+  it.
+- **`PhraseListModel`** is a flat list model of a snapshot: the main
+  window calls `SetProject()` on every `Changed()`, which resets the model.
+  `PhraseListPanel` remembers the selected ids before a reset and selects
+  them again after, so the selection follows phrases that move. Rows carry
+  roles for the id, the encoding state, the placement, the cost, the PHROM
+  and word number, and `kPhromStartRole` for the first phrase of each
+  PHROM after the first, taken from `PhromAllocation::phroms`. The
+  delegate draws that row taller, with a "PHROM N" band; a phrase too
+  large for a PHROM has a red foreground. Whether an encoding is current
+  (`EncodingCache::IsCurrent()`, which hashes the audio) is remembered per
+  phrase, keyed by the default options, the phrase's overrides, the stored
+  hash and version, and the audio's length, so an edit does not hash every
+  phrase again; no operation changes a phrase's audio once imported.
+- **Edits from the list.** Move Up puts the selected phrases, in order,
+  before the row above the first of them (`MovePhrases(ids, first − 1)`);
+  Move Down after the row below the last (`last + 2`). Dragging rows sends
+  their ids under `application/x-speak5220-phrase-ids`, and dropping them
+  is one `MovePhrases()`; a drop inside or beside the dragged block makes
+  no command. The model implements neither `moveRows()` nor `removeRows()`,
+  so `QListView` falls back to `dropMimeData()` and never removes the
+  source rows itself. Dropped local files emit `FilesDropped()`. Failed
+  edits emit `EditFailed()`, which the window shows through `IDialogs`.
+- **`PhraseDetails`.** `FilterNameEdit()` applies decision D2 to each
+  keystroke (`textEdited`): a–z become A–Z, and any other refused character
+  restores the previous text and cursor and shows the message (in the core
+  message's words, naming the character as typed). The field's maximum
+  length is 16. Name and description are applied on `editingFinished`; a
+  name that normalises to the current one makes no command, and a rename
+  the project refuses shows the message and restores the name.
+- **Imports.** `MainWindow::ImportFiles()` posts one job per batch to the
+  `ITaskRunner`; the job runs `PhraseImporter` on each file (names taken
+  are updated as it goes) and returns the results to the GUI thread with a
+  queued `QMetaObject::invokeMethod()`. If any file clips or is very quiet,
+  the window asks once through `IDialogs::AskNormalise()` and, if agreed,
+  imports the batch again with `normalise` set, so the result is the same
+  as the CLI's `--normalise`. The phrases go in as one `InsertPhrases()`
+  command and are selected; failures are listed. A counter of opened
+  projects drops results that arrive after another project was opened, and
+  the window's destructor waits for the runner.
+- **Dialogs and settings behind interfaces.** Modal dialogs cannot be
+  answered offscreen, so every question goes through `IDialogs`
+  (`QtDialogs` uses `QFileDialog` and `QMessageBox`); the recent-file list
+  (`RecentFiles`, at most eight, newest first) is kept through
+  `IRecentFilesStore` (`SettingsRecentFilesStore`, `QSettings` under the
+  organisation and application name "Speak5220").
+- **Shutdown order.** Child widgets are deleted by `QObject` after the
+  window's members, so `~MainWindow()` deletes the panel and the details
+  (which use the model and the document) first and disconnects the
+  document; `~ProjectDocument()` disconnects the stack, which clears itself
+  (and signals) as it is destroyed.
+- **Status bar.** `ProjectSizeText()` formats
+  `37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3` (KB of 1024 bytes,
+  one decimal, C locale), "No PHROMs in use" for none, and appends "over
+  budget" and the counts of phrases too large or not encoded.
+
+**Deviations from the plan.**
+
+- The plan's mocked `IProjectEditor` cannot also supply the list's
+  contents, so the model reads a `Project` value (built by the test
+  helpers) and sends its edits to the mock through `ProjectEdits`.
+- The plan has no Export menu yet; it comes with the Export dialog
+  (Phase 8), and is left out rather than shown disabled.
+- `speak5220 [PROJECT]` opens a project at start-up; the plan does not
+  mention it.
+
+**Acceptance** (plan Phase 5, met):
+
+- GUI functional tests (offscreen) open fixture projects, save as and save
+  in both forms, and close with unsaved changes (save, discard, cancel, a
+  cancelled save); unit tests cover the same prompts without files;
+- GUI unit tests drive the model with a mocked `IProjectEditor` (move up
+  and down, sort, remove, drag and drop, file drops, failures), and check
+  that the dividers match `Project::Allocation()`;
+- GUI unit tests type into the name field: lower case is converted, a
+  refused character shows a message and leaves the name unchanged;
+- GUI unit tests check each command's `redo()` and `undo()` against a
+  mocked `IProjectEditor`, that undoing a sort restores the previous order
+  (also on a real `Project`), and that a failed operation is not pushed;
+- GUI unit tests format the status text for given allocations;
+- the whole GUI test set passes under ASan and UBSan.

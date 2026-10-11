@@ -3,9 +3,10 @@
 A project holds the speech for one or more PHROMs: a list of **phrases**,
 each with its audio, its encoder settings and its frames. It is kept in one
 `.s5proj` file, or unpacked as a directory; both are described in the
-[project file](../reference/project-file.md) reference. So far projects are
-made and edited with the [command-line tool](cli.md); the GUI's phrase
-list comes later.
+[project file](../reference/project-file.md) reference. Projects are made
+and edited in the [main window](main-window.md) or with the
+[command-line tool](cli.md); so far only the command-line tool encodes and
+exports them.
 
 ## Phrases and their names
 
@@ -34,7 +35,8 @@ Speak5220:
    audio unchanged if it is already 8 kHz;
 3. checks the level. Audio that clips (its peak reaches full scale) or is
    very quiet (its peak is below −30 dBFS) is reported. It is changed only
-   if you ask for it to be normalised, which scales its peak to −1 dBFS;
+   if you ask for it to be normalised (the main window asks; the
+   command-line tool has `--normalise`), which scales its peak to −1 dBFS;
    otherwise the level is left alone, because the encoder sets the output
    level itself (`target_rms`);
 4. stores the 8 kHz copy in the project as 24-bit PCM, with the original
