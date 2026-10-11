@@ -39,14 +39,14 @@ ctest --test-dir build/app -L unit          # the fast, mocked lane
 ctest --test-dir build/app -L functional    # file system, processes, reference data, GUI (offscreen)
 ```
 
-The application links Qt 6 (Core, Widgets), spdlog, libsndfile, libsamplerate and pocketfft (header-only), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
+The application links Qt 6 (Core, Widgets), spdlog, libsndfile, libsamplerate, pocketfft (header-only), yaml-cpp and libzip (for the project file), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
 
 This builds:
 
 | Output | What it is |
 |---|---|
 | `build/app/src/gui/speak5220` | The GUI (so far an empty main window) |
-| `build/app/src/cli/speak5220-cli` | The command-line tool (so far prints its version, and takes the logging options `--log-level`, `--log-file` and `--no-console-log`) |
+| `build/app/src/cli/speak5220-cli` | The command-line tool: `new`, `add`, `encode` and `export` on project files, and the logging options `--log-level`, `--log-file` and `--no-console-log` |
 | `build/app/tests/...` | The test binaries; the `speak5220_tests` target builds them all |
 
 CMake options:
@@ -74,6 +74,10 @@ ctest --test-dir build/app -L functional
 `.github/workflows/app-platforms.yml` does the same on GitHub's Windows and macOS runners.
 
 The testing rules are in [`TESTING.md`](TESTING.md).
+
+### Fixture projects
+
+`app/projects/` holds small projects in the unpacked (directory) form, which the functional tests load: `general/` (one phrase, several phrases with Acorn-style names and an ASCII map, and a locked phrase with every kind of frame) and `phrom/` (a project that fills exactly one PHROM, and one that spills into a second). The phrases with audio were added and encoded with `speak5220-cli` from short synthetic clips; the locked phrases' frames were written directly. When the encoder's output changes, the fixtures' encodings must be redone (`speak5220-cli encode --force` on each), or the functional tests report them as stale.
 
 ### Reference data
 

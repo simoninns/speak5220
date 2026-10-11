@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <string_view>
 #include <vector>
 
 #include "core/encoder/encoder_options.h"
@@ -27,6 +28,12 @@
 #include "core/util/status.h"
 
 namespace speak5220::core::encoder {
+
+// The version of the encoder's output. A project's cached encodings record
+// it, and are redone when it changes (plan §3.4), so it changes whenever
+// the same audio and options can give different frames: in the commit
+// that regenerates the encoder's reference data (AGENTS.md §3.1).
+inline constexpr std::string_view kEncoderVersion = "1.0.0";
 
 // The analysis behind an encoding, for tests and the waveform view.
 // Output sample kReachedSample + 200 j of the reference synthesis

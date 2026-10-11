@@ -5,8 +5,10 @@
 # byte. Windows checkouts (core.autocrlf=true, as on GitHub's runners) would
 # otherwise turn an LF byte in a small binary into CR LF.
 
-# Reference data: text files keep LF on every platform...
+# Reference data and fixture projects: text files keep LF on every
+# platform...
 app/golden/** text eol=lf
+app/projects/** text eol=lf
 # ...and these are binary, whatever their contents look like.
 *.bin binary
 *.wav binary

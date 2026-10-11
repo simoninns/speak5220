@@ -9,7 +9,12 @@
       "default-features": false
     },
     "libsamplerate",
+    {
+      "name": "libzip",
+      "default-features": false
+    },
     "pocketfft",
-    "spdlog"
+    "spdlog",
+    "yaml-cpp"
   ]
 }

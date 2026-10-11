@@ -11,6 +11,7 @@ add_library(
     encoder_golden.cpp
     frame_builder.cpp
     golden_data.cpp
+    project_builder.cpp
     quality_golden.cpp
     synthetic_speech.cpp
 )

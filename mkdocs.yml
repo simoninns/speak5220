@@ -65,8 +65,11 @@ nav:
   - Application:
       - application/index.md
       - User manual:
+          - Projects and phrases: application/user-manual/projects.md
           - Command-line tool: application/user-manual/cli.md
+          - Troubleshooting: application/user-manual/troubleshooting.md
       - Reference:
+          - Project file: application/reference/project-file.md
           - Command-line options: application/reference/cli-options.md
           - Encoder options: application/reference/encoder-options.md
   - Technical:

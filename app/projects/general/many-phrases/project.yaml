@@ -1,0 +1,104 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "Many phrases"
+  header_strings: ["(C)2026 speak5220", "Many phrases", "1.00"]
+  ascii_map:
+    " ": "(TONE 1)"
+    "1": "ONE,WON"
+    "2": "2- (TWEN-)"
+    "7": "SEVEN"
+  default_encoder:
+    target_rms: 20
+    target_peak: null
+    peak_limit: 120
+    repeats: true
+    repeat_lambda: 70
+    gate_db: 45
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    iterations: 5
+    fade_unvoiced: true
+    level_agc: 1
+    compression: 1
+phrases:
+  - id: "5519feec-6244-462b-8f7c-051904f4487e"
+    name: "ONE,WON"
+    description: "A number, and the words that sound like it"
+    source:
+      file: "one.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.4
+      sha256: "4efae645c89693db5b85a9ae5b9d34041cf38ff99ca13cbcee9b12753700e926"
+    locked: false
+    play_start: 0
+  - id: "756740d5-694f-439e-a17c-86065ff2c9e1"
+    name: "2- (TWEN-)"
+    description: ""
+    source:
+      file: "twenty.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.52
+      sha256: "f6bd170f064a84ba2b6a60b0a239b4f638fe7f2a714dc32524038e2927203149"
+    locked: false
+    play_start: 0
+  - id: "15ca37e0-e607-4990-a373-297992338efa"
+    name: "O'CLOCK"
+    description: ""
+    source:
+      file: "oclock.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.47
+      sha256: "b46ff41dcde8ee4267cd0bcc7f6381a13bcaacf1d4f8e6b82efcd813a5704e4b"
+    locked: false
+    play_start: 0
+  - id: "40f95cfb-2ba3-4a31-b527-931f9b8dc82c"
+    name: "-ING"
+    description: ""
+    source:
+      file: "ing.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.33
+      sha256: "137ca29203ac67ab028b2a6a5847286459a65bbb59e74d920744268f14a42c93"
+    locked: false
+    play_start: 0
+  - id: "b304d68b-78aa-4d23-aeb5-3eea0ef9e3ae"
+    name: "(TONE 1)"
+    description: ""
+    source:
+      file: "tone.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.36
+      sha256: "982d59b05d4e8e88643a792ae32c029ff8804183a9dc9c651e69eed80b80a3df"
+    locked: false
+    play_start: 0
+  - id: "3505933c-96a7-44bb-b3fc-88152be0f903"
+    name: "SEVEN"
+    description: "Encoded with a lower silence gate"
+    source:
+      file: "seven.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.48
+      sha256: "f19a92d8fdb1dffa736d8ba956e55bbb4f941f8c0827119e9398b35be278756f"
+    encoder:
+      gate_db: 40
+    locked: false
+    play_start: 0
+exports:
+  - name: "phrom"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "separate"
+  - name: "joined"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "concatenated"

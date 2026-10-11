@@ -14,6 +14,8 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
+#include <vector>
 
 #include "core/util/status.h"
 #include "gtest/gtest.h"
@@ -95,8 +97,92 @@ TEST(EncoderOptionsTest, ChecksPreEmphasisCoefficientOnlyWhenNotChirp) {
 TEST(EncoderOptionsTest, ErrorNamesTheOption) {
   EncoderOptions o;
   o.repeat_lambda = -1.0;
-  EXPECT_NE(ValidateEncoderOptions(o).Message().find("repeatLambda"),
+  EXPECT_NE(ValidateEncoderOptions(o).Message().find("repeat_lambda"),
             std::string::npos);
+}
+
+TEST(EncoderOptionsTest, EveryOptionHasASnakeCaseField) {
+  std::set<std::string_view> fields;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    EXPECT_TRUE(fields.insert(info.field).second) << info.field;
+    for (const char c : info.field) {
+      EXPECT_TRUE((c >= 'a' && c <= 'z') || c == '_') << info.field;
+    }
+    EXPECT_EQ(FindEncoderOption(info.field), &info);
+  }
+  EXPECT_EQ(FindEncoderOption("targetRms"), nullptr);
+}
+
+TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
+  const EncoderOptions defaults;
+  EncoderOptions options;
+  options.target_rms = 1.0;
+  options.pre_emphasis = PreEmphasis::FirstOrder(0.5);
+  options.repeats = false;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    const std::string text = EncoderOptionText(defaults, info.field);
+    EXPECT_TRUE(SetEncoderOption(options, info.field, text).IsOk())
+        << info.field << " = " << text;
+  }
+  EXPECT_EQ(options, defaults);
+}
+
+TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
+  EncoderOptions options;
+  EXPECT_EQ(EncoderOptionText(options, "target_rms"), "20");
+  EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.3");
+  EXPECT_EQ(EncoderOptionText(options, "window"), "240");
+  EXPECT_EQ(EncoderOptionText(options, "repeats"), "true");
+  EXPECT_EQ(EncoderOptionText(options, "target_peak"), "none");
+  EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "chirp");
+  options.target_peak = 100.0;
+  options.pre_emphasis = PreEmphasis::FirstOrder(0.9375);
+  EXPECT_EQ(EncoderOptionText(options, "target_peak"), "100");
+  EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "0.9375");
+  EXPECT_EQ(EncoderOptionText(options, "no_such_option"), "");
+}
+
+TEST(EncoderOptionsTest, SetsEachTypeFromText) {
+  EncoderOptions options;
+  ASSERT_TRUE(SetEncoderOption(options, "target_rms", "18.5").IsOk());
+  EXPECT_EQ(options.target_rms, 18.5);
+  ASSERT_TRUE(SetEncoderOption(options, "window", "200").IsOk());
+  EXPECT_EQ(options.window, 200);
+  ASSERT_TRUE(SetEncoderOption(options, "fade_unvoiced", "false").IsOk());
+  EXPECT_FALSE(options.fade_unvoiced);
+  ASSERT_TRUE(SetEncoderOption(options, "target_peak", "90").IsOk());
+  EXPECT_EQ(options.target_peak, 90.0);
+  ASSERT_TRUE(SetEncoderOption(options, "target_peak", "none").IsOk());
+  EXPECT_FALSE(options.target_peak.has_value());
+  ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "0.9").IsOk());
+  EXPECT_EQ(options.pre_emphasis, PreEmphasis::FirstOrder(0.9));
+  ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "chirp").IsOk());
+  EXPECT_EQ(options.pre_emphasis, PreEmphasis::Chirp());
+}
+
+TEST(EncoderOptionsTest, RefusingTextLeavesTheOptionsUnchanged) {
+  const EncoderOptions defaults;
+  EncoderOptions options;
+  const std::vector<std::pair<std::string, std::string>> bad = {
+      {"target_rms", "loud"},  {"target_rms", "1,5"}, {"target_rms", "500"},
+      {"window", "240.5"},     {"window", "10"},      {"repeats", "yes"},
+      {"repeats", "1"},        {"target_peak", "x"},  {"pre_emphasis", "1.5"},
+      {"pre_emphasis", "fir"}, {"targetRms", "20"},   {"no_such_option", "1"},
+  };
+  for (const auto& [field, text] : bad) {
+    EXPECT_FALSE(SetEncoderOption(options, field, text).IsOk())
+        << field << " = " << text;
+    EXPECT_EQ(options, defaults) << field;
+  }
+}
+
+TEST(EncoderOptionsTest, RefusalNamesTheOptionByItsField) {
+  EncoderOptions options;
+  EXPECT_NE(SetEncoderOption(options, "gate_db", "5").Message().find("gate_db"),
+            std::string::npos);
+  EXPECT_NE(
+      SetEncoderOption(options, "gate_db", "x").Message().find("a number"),
+      std::string::npos);
 }
 
 }  // namespace

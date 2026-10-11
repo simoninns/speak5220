@@ -32,6 +32,19 @@ add_library(
     packaging/acorn_phrom.cpp
     packaging/speak_external_stream.cpp
     packaging/ti_indexed.cpp
+    project/c_identifier.cpp
+    project/directory_project_store.cpp
+    project/encoding_cache.cpp
+    project/phrase.cpp
+    project/phrase_importer.cpp
+    project/phrase_name.cpp
+    project/phrom_allocator.cpp
+    project/project.cpp
+    project/project_export.cpp
+    project/project_migration.cpp
+    project/project_serializer.cpp
+    project/project_store.cpp
+    project/zip_project_store.cpp
     quality/anchor_vocoder.cpp
     quality/cheap_measures.cpp
     quality/numpy_normal.cpp
@@ -45,8 +58,12 @@ add_library(
     synth/reference_synthesizer.cpp
     synth/synth.cpp
     util/logging.cpp
+    util/file_digest.cpp
     util/logging_options.cpp
+    util/number_text.cpp
+    util/sha256.cpp
     util/status.cpp
+    util/task_runner.cpp
     util/version.cpp
 )
 
@@ -76,8 +93,9 @@ add_dependencies(s5core s5version)
 target_include_directories(s5core PRIVATE "${_version_dir}")
 target_link_libraries(
     s5core
-    PUBLIC Qt6::Core spdlog::spdlog
+    PUBLIC Qt6::Core spdlog::spdlog yaml-cpp::yaml-cpp
     PRIVATE
+        libzip::zip
         speak5220::sndfile
         speak5220::samplerate
         speak5220_pocketfft

@@ -1,0 +1,48 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "One PHROM"
+  header_strings: ["(C)2026 speak5220", "One PHROM", "1.00"]
+  ascii_map: {}
+  default_encoder:
+    target_rms: 20
+    target_peak: null
+    peak_limit: 120
+    repeats: true
+    repeat_lambda: 70
+    gate_db: 45
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    iterations: 5
+    fade_unvoiced: true
+    level_agc: 1
+    compression: 1
+phrases:
+  - id: "55b9d15c-0a7e-4114-9c58-c07ca30f2bb9"
+    name: "PART 1"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "f5b74d0d-9a82-41dc-b057-d9694cc851dc"
+    name: "PART 2"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "3f584aac-5688-4488-956a-482229cf4e40"
+    name: "PART 3"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "195e2104-12a9-478a-ac91-ffa72a9ae685"
+    name: "PART 4"
+    description: ""
+    locked: true
+    play_start: 0
+exports:
+  - name: "phrom"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "separate"

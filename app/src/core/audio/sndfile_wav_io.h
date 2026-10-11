@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <span>
+#include <vector>
 
 #include "core/audio/wav_io.h"
 #include "core/util/status.h"
@@ -37,6 +38,16 @@ class SndfileWavWriter : public IWavWriter {
   Status Write(const std::filesystem::path& path,
                std::span<const float> samples, int sample_rate,
                WavOutputFormat format) override;
+};
+
+// IWavCodec over libsndfile's virtual I/O. Decodes what SndfileWavReader
+// reads, with the same limits. Stateless; thread-safe.
+class SndfileWavCodec : public IWavCodec {
+ public:
+  StatusOr<DecodedWav> Decode(std::span<const std::uint8_t> bytes) override;
+  StatusOr<std::vector<std::uint8_t>> Encode(std::span<const float> samples,
+                                             int sample_rate,
+                                             WavOutputFormat format) override;
 };
 
 }  // namespace speak5220::core::audio

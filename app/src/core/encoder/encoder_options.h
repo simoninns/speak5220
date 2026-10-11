@@ -13,6 +13,7 @@
 
 #include <optional>
 #include <span>
+#include <string>
 #include <string_view>
 
 #include "core/util/status.h"
@@ -86,9 +87,12 @@ enum class EncoderOptionType {
 
 // What the user interface needs to show and check one option.
 struct EncoderOptionInfo {
-  // The key in project files and on the command line: the Python option
-  // name (targetRms, ...).
+  // The option's name in the reference encoder, tms5220enc.py (targetRms,
+  // ...), as its documentation and the reference data use it.
   std::string_view key;
+  // The name in project files and on the command line: the EncoderOptions
+  // field (target_rms, ...), as plan §4 names YAML keys.
+  std::string_view field;
   std::string_view label;
   std::string_view help;
   EncoderOptionType type = EncoderOptionType::kReal;
@@ -105,6 +109,28 @@ std::span<const EncoderOptionInfo> EncoderOptionInfos();
 // Checks every option against its range. The encoder refuses options that
 // fail this.
 Status ValidateEncoderOptions(const EncoderOptions& options);
+
+// The option whose field name (EncoderOptionInfo::field) is `field`, or
+// nullptr.
+const EncoderOptionInfo* FindEncoderOption(std::string_view field);
+
+// The text for unset target_peak.
+inline constexpr std::string_view kUnsetOptionText = "none";
+
+// Sets one option from text, as a user types it or a project file holds
+// it: a number ("18", "0.35"), "true" or "false", "chirp" or a number for
+// pre_emphasis, and a number or "none" for target_peak. Numbers use '.' as
+// the decimal point, whatever the locale. Fails, leaving `options`
+// unchanged, for an unknown field, text of the wrong type, a fractional
+// value for a whole-number option, or a value outside the option's range.
+Status SetEncoderOption(EncoderOptions& options, std::string_view field,
+                        std::string_view text);
+
+// The text of one option, which SetEncoderOption() reads back to the same
+// value: the shortest exact number, "true"/"false", "chirp", or "none".
+// Returns an empty string for an unknown field.
+std::string EncoderOptionText(const EncoderOptions& options,
+                              std::string_view field);
 
 }  // namespace speak5220::core::encoder
 

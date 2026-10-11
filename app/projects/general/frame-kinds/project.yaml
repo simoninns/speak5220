@@ -1,0 +1,33 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "Frame kinds"
+  header_strings: ["(C)2026 speak5220", "Frame kinds", "1.00"]
+  ascii_map: {}
+  default_encoder:
+    target_rms: 20
+    target_peak: null
+    peak_limit: 120
+    repeats: true
+    repeat_lambda: 70
+    gate_db: 45
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    iterations: 5
+    fade_unvoiced: true
+    level_agc: 1
+    compression: 1
+phrases:
+  - id: "a5a072da-45e0-4203-8aeb-0468e9c80c39"
+    name: "EVERY KIND"
+    description: "Locked: voiced, repeat, unvoiced, silence, an unvoiced repeat and the stop"
+    locked: true
+    play_start: 0
+exports:
+  - name: "phrom"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "separate"

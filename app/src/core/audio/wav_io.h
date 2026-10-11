@@ -10,6 +10,7 @@
 #ifndef SPEAK5220_CORE_AUDIO_WAV_IO_H_
 #define SPEAK5220_CORE_AUDIO_WAV_IO_H_
 
+#include <cstdint>
 #include <filesystem>
 #include <span>
 #include <vector>
@@ -53,6 +54,25 @@ class IWavWriter {
   virtual Status Write(const std::filesystem::path& path,
                        std::span<const float> samples, int sample_rate,
                        WavOutputFormat format) = 0;
+};
+
+// Converts between samples and the bytes of a WAV file held in memory, as
+// a project stores its audio (plan §4). Implementations are thread-safe.
+class IWavCodec {
+ public:
+  virtual ~IWavCodec() = default;
+
+  // Decodes a WAV file's bytes as IWavReader::Read() reads a file. 24-bit
+  // and 16-bit PCM decode exactly (code / 2^23, code / 2^15). Fails for
+  // bytes that are not a usable WAV file.
+  virtual StatusOr<DecodedWav> Decode(std::span<const std::uint8_t> bytes) = 0;
+
+  // Encodes mono `samples` (-1..1) as a WAV file at `sample_rate`. For
+  // 24-bit PCM each sample is rounded to the nearest code (ToPcm24()), so a
+  // sample already on the 24-bit grid decodes back exactly.
+  virtual StatusOr<std::vector<std::uint8_t>> Encode(
+      std::span<const float> samples, int sample_rate,
+      WavOutputFormat format) = 0;
 };
 
 }  // namespace speak5220::core::audio

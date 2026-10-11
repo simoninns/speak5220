@@ -1,0 +1,43 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "Two PHROMs"
+  header_strings: ["(C)2026 speak5220", "Two PHROMs", "1.00"]
+  ascii_map: {}
+  default_encoder:
+    target_rms: 20
+    target_peak: null
+    peak_limit: 120
+    repeats: true
+    repeat_lambda: 70
+    gate_db: 45
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    iterations: 5
+    fade_unvoiced: true
+    level_agc: 1
+    compression: 1
+phrases:
+  - id: "696f7eca-eece-4218-82b3-a4c787ec702f"
+    name: "FIRST"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "e36fcb4e-ec75-401a-a90d-1a0c5db0e556"
+    name: "SECOND"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "283e5e44-a2d0-411e-941f-e3dd6ba29451"
+    name: "THIRD"
+    description: ""
+    locked: true
+    play_start: 0
+exports:
+  - name: "phrom"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "separate"

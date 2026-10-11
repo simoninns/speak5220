@@ -65,15 +65,17 @@ speak5220_add_test_lane(
 speak5220_add_test_lane(
     speak5220_functional_tests
     functional
-    LIBRARIES s5core Qt6::Core speak5220::sndfile GTest::gmock_main
+    LIBRARIES s5core Qt6::Core speak5220::sndfile libzip::zip GTest::gmock_main
 )
 # The functional lane reads the committed reference data in app/golden/ and
-# runs the CLI end to end (TESTING.md).
+# the fixture projects in app/projects/, and runs the CLI end to end
+# (TESTING.md).
 target_compile_definitions(
     speak5220_functional_tests
     PRIVATE
         SPEAK5220_CLI_PATH="$<TARGET_FILE:speak5220-cli>"
         SPEAK5220_GOLDEN_DIR="${PROJECT_SOURCE_DIR}/golden"
+        SPEAK5220_PROJECTS_DIR="${PROJECT_SOURCE_DIR}/projects"
 )
 add_dependencies(speak5220_functional_tests speak5220-cli)
 

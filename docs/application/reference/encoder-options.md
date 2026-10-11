@@ -6,28 +6,33 @@ encoder (`investigation/encoder/tms5220enc.py`) exactly, so these options
 mean what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md).
 
-!!! note
-    The encoder is built, but nothing reaches it yet: the encoder panel and
-    the project file, where these options will be set, come later. The keys
-    below are the names they will use.
+Options are set in the [project file](project-file.md): `default_encoder`
+holds the project's values, and a phrase's `encoder` mapping holds only the
+options it sets for itself. The encoder panel, where they will be set in
+the GUI, comes later.
 
-| Key | Meaning | Type | Default | Range |
-|---|---|---|---|---|
-| `targetRms` | RMS of the output over sounding frames, in DAC codes | Number | 20 | 1 to 100 |
-| `targetPeak` | If set, scale so the loudest output peak reaches this many codes, instead of using `targetRms` | Number, or unset | Unset | 1 to 127 |
-| `peakLimit` | No output code goes beyond this (the DAC's range is ±127) | Number | 120 | 1 to 127 |
-| `repeats` | Send a frame whose coefficients barely change as an 11-bit repeat of the frame before | Yes or no | Yes | |
-| `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 70 | 0 to 1000 |
-| `gateDb` | Frames this many dB below the loudest frame become silence | Number | 45 | 10 to 90 |
-| `preEmphasis` | Pre-emphasis for the voiced analysis: `chirp` whitens the chip's excitation pulse; a number μ uses 1 − μz⁻¹ | `chirp` or a number | `chirp` | μ from 0 to 0.99 |
-| `window` | Length of the analysis window, in samples at 8 kHz | Whole number | 240 (30 ms) | 80 to 480 |
-| `lagWindowHz` | Bandwidth of the Gaussian lag window, in Hz, which widens the formant peaks | Number | 60 | 0 to 400 |
-| `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.3 | 0 to 1 |
-| `voicingEvidence` | Weight of spectral tilt and zero crossings in the voicing decision; 0 uses periodicity alone | Number | 4 | 0 to 20 |
-| `iterations` | Closed-loop passes that adjust each frame's energy against the synthesised output | Whole number | 5 | 1 to 20 |
-| `fadeUnvoiced` | Fade hiss out before a silence or the end (datasheet §12.2) | Yes or no | Yes | |
-| `levelAgc` | Compression ratio of a slow (0.75 s) loudness envelope, which brings quiet words up; 1 is off | Number | 1 | 1 to 10 |
-| `compression` | Per-frame level compression ratio around the median level; 1 is off | Number | 1 | 1 to 10 |
+| Key | Reference encoder | Meaning | Type | Default | Range |
+|---|---|---|---|---|---|
+| `target_rms` | `targetRms` | RMS of the output over sounding frames, in DAC codes | Number | 20 | 1 to 100 |
+| `target_peak` | `targetPeak` | If set, scale so the loudest output peak reaches this many codes, instead of using `target_rms` | Number, or `null` (unset) | Unset | 1 to 127 |
+| `peak_limit` | `peakLimit` | No output code goes beyond this (the DAC's range is ±127) | Number | 120 | 1 to 127 |
+| `repeats` | `repeats` | Send a frame whose coefficients barely change as an 11-bit repeat of the frame before | `true` or `false` | `true` | |
+| `repeat_lambda` | `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 70 | 0 to 1000 |
+| `gate_db` | `gateDb` | Frames this many dB below the loudest frame become silence | Number | 45 | 10 to 90 |
+| `pre_emphasis` | `preEmphasis` | Pre-emphasis for the voiced analysis: `"chirp"` whitens the chip's excitation pulse; a number μ uses 1 − μz⁻¹ | `"chirp"` or a number | `"chirp"` | μ from 0 to 0.99 |
+| `window` | `window` | Length of the analysis window, in samples at 8 kHz | Whole number | 240 (30 ms) | 80 to 480 |
+| `lag_window_hz` | `lagWindowHz` | Bandwidth of the Gaussian lag window, in Hz, which widens the formant peaks | Number | 60 | 0 to 400 |
+| `voicing_threshold` | `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.3 | 0 to 1 |
+| `voicing_evidence` | `voicingEvidence` | Weight of spectral tilt and zero crossings in the voicing decision; 0 uses periodicity alone | Number | 4 | 0 to 20 |
+| `iterations` | `iterations` | Closed-loop passes that adjust each frame's energy against the synthesised output | Whole number | 5 | 1 to 20 |
+| `fade_unvoiced` | `fadeUnvoiced` | Fade hiss out before a silence or the end (datasheet §12.2) | `true` or `false` | `true` | |
+| `level_agc` | `levelAgc` | Compression ratio of a slow (0.75 s) loudness envelope, which brings quiet words up; 1 is off | Number | 1 | 1 to 10 |
+| `compression` | `compression` | Per-frame level compression ratio around the median level; 1 is off | Number | 1 | 1 to 10 |
 
-A value outside its range is refused, with a message naming the option.
-The encoder takes audio at 8000 Hz only; importing a phrase resamples it.
+The key is the option's name in project files. The second column is its
+name in the reference encoder and its documentation.
+
+Numbers are written with a `.` as the decimal point, whatever the
+computer's language settings. A value outside its range, or of the wrong
+type, is refused, with a message naming the option. The encoder takes audio
+at 8000 Hz only; importing a phrase resamples it.

@@ -7,6 +7,9 @@
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
 find_package(spdlog 1.12 CONFIG REQUIRED)
+# The project file (plan §4): YAML metadata in a ZIP container
+find_package(yaml-cpp 0.7 CONFIG REQUIRED)
+find_package(libzip 1.7 CONFIG REQUIRED)
 
 # libsndfile and libsamplerate, found by header and library. Their pkg-config
 # files list private dependencies (FLAC, Vorbis, ...) that a shared build

@@ -16,22 +16,24 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | Area | Status |
 |---|---|
 | CMake build, in-source guard, compiler warnings, sanitizer option | Implemented |
-| `s5core`: `util/` (Status, logging, version) | Implemented |
+| `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests) | Implemented |
 | `s5core`: `lpc/` (tables, frames, bit stream) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
-| `s5core`: `audio/`, `dsp/` (WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
+| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`) | Implemented, matching the reference tools' values on the whole corpus |
+| `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
+| Fixture projects in `app/projects/` (`general/`, `phrom/`) | Implemented |
 | `speak5220` GUI | Implemented as a skeleton: an empty `MainWindow`, logging options |
-| `speak5220-cli` | Implemented as a skeleton: version and logging options |
+| `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (Acorn PHROM images), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| Optimiser, project, BBC export, the GUI's views | Planned |
+| Optimiser, the other export formats, BBC export, the GUI's views | Planned |
 
 ---
 
@@ -53,14 +55,17 @@ app/
                                 encoder.py, quality.py (offline, run by
                                 hand: §13)
   golden/                       reference data from the retired references (§13)
+  projects/                     fixture projects, unpacked: general/, phrom/ (§14)
   src/
     core/                       library "s5core" (QtCore at most)
-      util/                     Status/StatusOr, logging, logging options, version
+      util/                     Status/StatusOr, logging, logging options, version,
+                                number text, SHA-256, task runners, file digests
       lpc/                      coding tables, Frame, FrameCodec, BitReverse
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
       synth/                    Synth, ReferenceSynthesizer
       packaging/                AcornPhrom, TiIndexed, SpeakExternalStream
-      audio/                    WAV interfaces and the libsndfile adapters
+      audio/                    WAV interfaces, the libsndfile adapters, the
+                                24-bit grid of project audio
       dsp/                      resampler and FFT interfaces and adapters;
                                 SOS/FIR filters and their constants,
                                 NumPy-ordered sums and windows, LPC analysis
@@ -68,9 +73,12 @@ app/
       quality/                  PESQ, PesqMetric, the output alignment, the
                                 anchor vocoder, the cheap measures,
                                 QualityScale (§9)
+      project/                  Project, IProjectEditor, the PHROM allocator,
+                                EncodingCache, ProjectSerializer, the project
+                                stores, PhraseImporter, the PHROM export (§14)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow
-    cli/                        the "speak5220-cli" executable
+    cli/                        the "speak5220-cli" executable and its commands
   tests/
     .clang-tidy                 the app's settings, plus one test exception
     support/                    speak5220_test_support (helpers, mocks, golden readers)
@@ -81,11 +89,12 @@ app/
 
 Planned additions, each created with its first code (plan §2.1):
 
-- `src/core/`: `bbc/`, `project/`;
+- `src/core/`: `bbc/`;
 - `src/gui/`: `phrase_list/`, `phrase_editor/`, `waveform/`,
   `encoder_panel/`, `export/`, `undo/`;
-- `app/projects/` (fixture projects), `app/resources/` (icons, `.desktop`,
-  metainfo), `app/packaging/` (Flatpak, WiX/CPack, macOS);
+- `app/projects/bbc/` and `app/projects/benchmark/` (fixture projects),
+  `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
+  WiX/CPack, macOS);
 - more scripts in `app/scripts/`: `run-projects.sh`, `output-hashes.sh`.
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
@@ -125,7 +134,7 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   checkout the version is `unknown`.
 - `SPEAK5220_BUILD_TESTS` (default `ON`) adds `app/tests/`.
 - `cmake/Dependencies.cmake` finds the libraries of §10: Qt 6 (Core,
-  Widgets) and spdlog by their CMake packages; libsndfile and libsamplerate
+  Widgets), spdlog, yaml-cpp and libzip by their CMake packages; libsndfile and libsamplerate
   by header and library (their pkg-config files name private dependencies a
   shared build does not need); pocketfft by its header, as an interface
   target that defines `POCKETFFT_NO_MULTITHREADING`. Google Test is found by
@@ -137,11 +146,12 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   `app/scripts/lint.sh`.
 - **Windows and macOS:** Qt from aqtinstall, pinned to the flake's Qt
   version (6.11.2); the other libraries from vcpkg in manifest mode
-  (`app/vcpkg.json`, pinned by `builtin-baseline`; libsndfile without its
-  compressed-format features), through vcpkg's CMake toolchain file.
+  (`app/vcpkg.json`, pinned by `builtin-baseline`; libsndfile and libzip
+  without their optional compression and encryption features), through
+  vcpkg's CMake toolchain file.
 - The root `.gitattributes` stops git converting line endings in the
   reference data: `.bin`, `.wav`, `.flac` and `.ssd` files are binary, and
-  the text files in `app/golden/` keep LF. Without it, a Windows checkout
+  the text files in `app/golden/` and `app/projects/` keep LF. Without it, a Windows checkout
   (`core.autocrlf=true`) turns LF bytes in small binaries into CR LF.
 
 **Nix** (`flake.nix`):
@@ -242,9 +252,15 @@ Phase 2 task 7).
   - `synth_mocks.h`: a gMock mock of `ISynth`;
   - `synthetic_speech`: a deterministic speech-like signal (two vowels, a
     fricative, pauses), a delay and white noise, for the quality unit
-    tests.
-- The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`) and the
-  reference data's directory (`SPEAK5220_GOLDEN_DIR`) compiled in.
+    tests;
+  - `project_mocks.h`: gMock mocks of `IEncoder`, `IWavReader`,
+    `IWavCodec`, `IResampler`, `IFileDigest` and `IProjectStore`;
+  - `project_builder`: fixed phrase ids, frames that pack to a chosen
+    number of bytes, and phrases and projects built from them.
+- The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`), the
+  reference data's directory (`SPEAK5220_GOLDEN_DIR`) and the fixture
+  projects' directory (`SPEAK5220_PROJECTS_DIR`) compiled in, and links
+  libzip (to build unsafe archives for the store's tests).
 - **By-hand tests.** A few functional tests carry Google Test's `DISABLED_`
   prefix, so CTest lists them as disabled and never runs them. The scripts
   run them with `--gtest_also_run_disabled_tests`, passing inputs and an
@@ -273,6 +289,7 @@ Plan §2.2, with the names as built.
 | `ReferenceSynthesizer` | **Implemented** (`core/synth/reference_synthesizer`): the encoder's reference-algorithm synthesiser (`synthesize()` in the Python), which matches the emulator's VSM path |
 | `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's |
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
+| `SndfileWavCodec` (`IWavCodec`) | **Implemented** (`core/audio/sndfile_wav_io`): the same, to and from bytes in memory (libsndfile's virtual I/O), with integer PCM read and 24-bit PCM written exactly (§14) |
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
@@ -280,9 +297,15 @@ Plan §2.2, with the names as built.
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
 | `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
-| Raw `.bin`, C header export | Planned |
+| `Project` (`IProjectEditor`) | **Implemented** (`core/project/project`): phrases, their audio, settings and cached encodings; the editing operations (§14) |
+| `AllocatePhroms()` | **Implemented** (`core/project/phrom_allocator`): list-order assignment to PHROMs and the 64-PHROM budget (§14) |
+| `EncodingCache` | **Implemented** (`core/project/encoding_cache`): the settings hash and re-encoding within the budget, over `IEncoder` (§14) |
+| `ProjectSerializer`, `ZipProjectStore`, `DirectoryProjectStore` (`IProjectStore`) | **Implemented** (`core/project/`): the `.s5proj` file (§14) |
+| `PhraseImporter` | **Implemented** (`core/project/phrase_importer`): plan §3.1 over `IWavReader`, `IResampler` and `IFileDigest`, inline or through `ITaskRunner` (§14) |
+| `InlineTaskRunner`, `ThreadPoolTaskRunner` (`ITaskRunner`) | **Implemented** (`core/util/task_runner`): background jobs (§14) |
+| `RunExport()`, `BuildAcornPhroms()` | **Implemented** (`core/project/project_export`): a project's Acorn PHROM images (§14) |
+| TI, raw `.bin`, C header and WAV export | Planned |
 | `BbcExport` | Planned: tokenised BBC BASIC program plus data files on an Acorn DFS `.ssd` image |
-| `Project` | Planned: phrases, their audio, settings and cached encodings; the editing operations; load/save |
 
 Classes depend on `I`-prefixed interfaces, injected through their
 constructors. Everything that does I/O, wraps a third-party library, uses
@@ -541,8 +564,8 @@ search (81 candidate lags). Nothing has been optimised yet; Optimise
 | WAV read/write | libsndfile | LGPL-2.1+ | Linked by `s5core` |
 | Sinc resampling | libsamplerate | BSD-2 | Linked by `s5core` |
 | FFT | pocketfft (C++ header-only) | BSD-3 | Used by `s5core`; packaged in `flake.nix` |
-| Project container | libzip | BSD-3 | In the Nix shell |
-| Project metadata | yaml-cpp | MIT | In the Nix shell |
+| Project container | libzip | BSD-3 | Linked by `s5core` |
+| Project metadata | yaml-cpp | MIT | Linked by `s5core` (public: the migration interface takes a `YAML::Node`) |
 | PESQ | The project's own code (`core/quality/`), its constants and details from the ITU reference implementation (§9) | GPLv3-or-later | Implemented |
 | Logging | spdlog | MIT | Linked by `s5core` |
 | Tests | Google Test with Google Mock | BSD-3 | Linked by the test binaries |
@@ -561,16 +584,26 @@ Both executables are thin front ends over `s5core`.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
+- Its commands (`cli/cli_commands`) are `new`, `add`, `encode` and
+  `export`, each a thin sequence of core calls: `MakeProjectStore()` and
+  `ProjectSerializer` to open and save, `PhraseImporter` and
+  `Project::InsertPhrases()` to add, `EncodingCache::Refresh()` to encode,
+  `RunExport()` to export. `--output DIR` writes the project (or the
+  exported files) into a directory of the caller's choosing, so the fixture
+  projects can be encoded and exported without being changed (TESTING.md).
+  It imports sequentially and encodes inline: there is nothing to wait for.
+  Exit codes: 0 success, 1 a failed command, 2 an unusable command line.
 - Both executables add the logging options with `AddLoggingOptions()`, read
   them with `LogSettingsFromParser()`, and exit with code 2 and a message on
   stderr for an unusable value.
 
-**Planned** (plan §2.5): everything that produces a result is in `s5core`,
-so the GUI and CLI give byte-identical exports. Editing operations are core
-functions behind `IProjectEditor`, each returning a `Status` and what is
-needed to reverse it. Undo/redo lives in the GUI (`gui/undo/`, one
-`QUndoCommand` per operation). The CLI calls the editing operations directly
-and has no undo.
+Everything that produces a result is in `s5core`, so the GUI and CLI will
+give byte-identical exports. The editing operations are core functions
+behind `IProjectEditor` (§14), each returning what is needed to reverse it;
+the CLI calls them directly and has no undo.
+
+**Planned** (plan §2.5): undo/redo in the GUI (`gui/undo/`, one
+`QUndoCommand` per operation).
 
 ---
 
@@ -588,7 +621,7 @@ and has no undo.
   dropping when the queue is full. `ConfigureLoggingWithSinks()` installs
   given sinks synchronously (tests use a ringbuffer sink).
 - `Logger(module)` returns the named logger for a module (`cli`, `gui`,
-  `emulator`, `synth`, `audio`, `encoder`, `quality`, …), created on first use with the current
+  `emulator`, `synth`, `audio`, `encoder`, `quality`, `project`, `export`, …), created on first use with the current
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
@@ -659,3 +692,201 @@ tests read only these files and never run anything in `investigation/`.
 - The emulator's data is never regenerated unless the datasheet changes;
   the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).
+
+---
+
+## 14. The project
+
+**Implemented** (plan §3.1, §3.4, §4, Phase 4) in `core/project/`, with
+`core/util/task_runner`, `file_digest`, `sha256` and `number_text`, and
+`core/audio/pcm24.h`. The file format is documented for users in
+[`docs/application/reference/project-file.md`](../../docs/application/reference/project-file.md).
+
+**Model.** `Phrase` is a plain struct: a UUID id, name, description,
+optional `SourceInfo`, the 8 kHz audio as floats, its `EncoderOverrides`
+(option field name → text), `locked`, `play_start` and an optional
+`CachedEncoding` (frames, encoder version, settings hash, cached PESQ and
+anchor). `ProjectContents` holds the `ProjectSettings` (name, header
+strings, ASCII map, default `EncoderOptions`, per-PHROM header strings), the
+phrases in PHROM order, the export presets, and whatever the file held that
+this version does not know. `Project` wraps it and keeps the rules: valid,
+unique ids and names, consistent phrases (audio and source together; a
+phrase without audio must be locked; frames valid; overrides valid against
+the defaults). `Project::FromContents()` checks them when a file is read,
+but not the budget, so an over-budget file still opens.
+
+**Editing operations** (`IProjectEditor`, plan §2.5). Each operation checks
+everything first and changes nothing on failure, and returns its reverse:
+
+| Operation | Returns | Reverse |
+|---|---|---|
+| `InsertPhrases(placed)` | — | `RemovePhrases(ids)` |
+| `RemovePhrases(ids)` | the phrases with their indices | `InsertPhrases(result)` |
+| `MovePhrases(ids, destination)`, `SortPhrases()`, `SetOrder(order)` | the previous order | `SetOrder(result)` |
+| `RenamePhrase(id, name)` | the previous name | `RenamePhrase(id, result)` |
+| `SetDescription(id, text)` | the previous text | `SetDescription(id, result)` |
+| `SetEncoding(id, {overrides, encoding})` | the previous pair | `SetEncoding(id, result)` |
+
+`SetEncoding()` takes the settings and the encoding made from them
+together, so a settings change and its re-encoding are one undoable step,
+and the encoding can be computed in the background before the step is
+applied. A locked phrase refuses it. Renaming does not change the ASCII map,
+which names phrases by name, so a rename and its reverse are exact.
+
+**PHROM allocation** (plan §4.1). `AllocatePhroms()` takes each phrase's
+cost (or none, if not encoded) and fills PHROMs in list order, never
+back-filling; a phrase larger than 16 128 bytes is placed nowhere. The
+fixed overhead of 256 bytes per PHROM and the cost of packed bytes + name +
+2 match `AcornPhrom::Build()` exactly (header 64, ASCII pointers 190, the
+0xFF, the null word). PHROMs beyond the budget are still counted, so a
+check can say how many a change would need. The packed size is counted from
+the frame lengths (`PackedSize()`), not by packing, since every edit
+recomputes every phrase's cost.
+
+**The budget** (decision D4). Every editing operation refuses a result that
+needs more PHROMs than the budget (64), or than the project already uses if
+it is over budget (so such a project can still shrink). The plan names
+imports, re-encoding and the optimiser; renaming and reordering are checked
+as well, because both change costs or packing, and a project inside the
+budget then stays inside it whatever is done to it.
+
+**Encoding cache** (plan §3.4). `EncodingCache::SettingsHash()` is the
+SHA-256 of the encoder version, every option's text in
+`EncoderOptionInfos()` order (the options in effect, so an override equal
+to a new default keeps an encoding current), and the audio's 24-bit codes.
+`IsCurrent()` compares it, and the version, with the stored encoding; a
+locked phrase is always current. `ChangeSettings()` encodes with the new
+overrides and stores them through `SetEncoding()`, which refuses a result
+over the budget, leaving the previous settings and encoding (the message
+says so). `Refresh()` encodes every stale phrase in list order, storing
+each as it is made, so the budget is checked phrase by phrase and a failure
+does not stop the rest. `encoder::kEncoderVersion` (now `1.0.0`) changes
+whenever the encoder's output does, in the commit that regenerates its
+reference data.
+
+**Audio on the 24-bit grid.** A project stores audio as 24-bit PCM, so the
+importer rounds the 8 kHz samples to codes / 2^23 (`QuantiseToPcm24()`),
+which floats hold exactly. `SndfileWavCodec` writes those codes and reads
+integer PCM as integers, so a saved and reloaded phrase has the same
+samples bit for bit, and its settings hash does not change. (libsndfile's
+own float-to-24-bit conversion scales by 2^23 − 1, which moves codes near
+full scale.) `SndfileWavReader` now reads integer PCM the same way, which
+gives the same values as before.
+
+**Serialisation** (`ProjectSerializer`, over yaml-cpp and `IWavCodec`):
+
+- Writing goes through `YAML::Emitter`. Every string is double-quoted;
+  numbers are written as text made by `FormatNumber()` (shortest exact,
+  locale-independent) or `std::to_string`, never through yaml-cpp's stream
+  output, which follows the global locale. Booleans are `true`/`false`,
+  unset values `null`. Options are written in `EncoderOptionInfos()` order,
+  `default_encoder` in full. Frames are one flow mapping each, with only
+  the fields their kind carries.
+- Reading is type-checked: numbers and booleans must be plain scalars,
+  numbers are parsed by `ParseNumber()`/`ParseInteger()` (a stream in the
+  classic locale, since `std::from_chars` for `double` is missing from some
+  supported standard libraries), every value is range-checked, repeated keys
+  are refused, and messages name the file and the key path
+  (`project.yaml: phrases[2].play_start must be a whole number`). yaml-cpp's
+  exceptions are caught at this boundary.
+- **Unknown keys** are kept per mapping as (key, YAML text), and **unknown
+  files** per phrase directory and per project. yaml-cpp drops a scalar's
+  quoting when it writes a loaded node, so `EmitNode()` writes them back
+  itself, quoted scalars quoted and flow collections in flow style.
+- **Versions.** `format` must be `speak5220-project`; `version` is migrated
+  by `MigrateProjectDocument()` through `ProjectMigrationSteps()` (none yet:
+  version 1 is the first), and a newer version is refused.
+- Phrase ids must be canonical lower-case UUIDs before they are used as
+  paths.
+
+The YAML keys are the snake_case C++ field names (plan §4), so
+`EncoderOptionInfo` gained `field` (`target_rms`), with `key` kept as the
+reference encoder's name (`targetRms`), which its documentation and the
+reference data use. `SetEncoderOption()` and `EncoderOptionText()` convert
+one option to and from text, for project files and later the CLI and GUI.
+
+**Stores** (`IProjectStore`: `Read()` and `Write()` of the whole file set,
+paths checked by `IsSafeProjectPath()`; `MakeProjectStore()` picks the form
+by the `.s5proj` extension):
+
+- `ZipProjectStore` (libzip): `zip_close()` writes a temporary file and
+  renames it over the project only when complete; on failure the archive is
+  discarded and the old file is untouched. The old file is first copied to
+  `NAME.s5proj~`. Entries are written in path order with a fixed DOS date
+  (1980-01-01), so the same project gives the same bytes. `SetCancelCheck()`
+  installs libzip's cancel callback, which abandons a save part-way: a long
+  save can be cancelled, and the functional tests use it to simulate a
+  crash. Reading refuses unsafe names (directory entries included),
+  duplicates, more than 100 000 entries or 1 GB.
+- `DirectoryProjectStore`: writes `NAME.saving` completely, renames the old
+  directory to `NAME~` and the new one into place (and back, if that
+  fails). It never replaces a directory that holds files but no
+  `project.yaml`, and refuses symbolic links when reading.
+
+**Import** (`PhraseImporter`, plan §3.1): `IWavReader` reads and mixes to
+mono; `IResampler` converts to 8 kHz unless the file already is; a peak
+≥ 0.999 counts as clipping and < 0.0316 (−30 dBFS) as very quiet, and
+either is scaled to a peak of 0.891 (−1 dBFS) only if the request asks
+(the GUI asks the user first, the CLI has `--normalise`); the samples are
+quantised to the 24-bit grid; `IFileDigest` gives the source's SHA-256. A
+name is normalised from the request or made from the file name
+(`SuggestPhraseName()`). `ImportInBackground()` posts the import to an
+`ITaskRunner` and passes the result to a callback on the worker thread.
+
+**Task runners** (`ITaskRunner`: `Post()` and `Wait()`). `InlineTaskRunner`
+runs each job inside `Post()` (unit tests, the CLI); `ThreadPoolTaskRunner`
+uses a `QThreadPool` of its own. The plan names QtConcurrent; a QtCore
+thread pool does the same without linking Qt Concurrent into `s5core`.
+
+**Names** (decision D2). `NormalisePhraseName()` converts lower case, trims
+spaces, and refuses an empty name, more than 16 characters, or a character
+outside A–Z, 0–9, space and `' ( ) , - .`, naming the character.
+`CIdentifiersForNames()` derives the C identifiers for the header exports
+(plan §4), with `_2`, `_3`, … for clashes; nothing uses them until the C
+header export (Phase 8).
+
+**Export** (`RunExport()`). Only the `acorn-phrom` format exists so far,
+built from the allocation: one `AcornPhrom::Build()` per PHROM, with the
+project's header strings and the PHROM number appended to the second (or
+that PHROM's own strings), and the ASCII entries whose phrase the PHROM
+holds. Layouts `separate` (`NAME_1.bin`, …) and `concatenated`
+(`NAME.bin`). A phrase with no frames, or too large for a PHROM, fails the
+export; the CLI also refuses stale encodings. The other formats and the
+Export dialog are Phase 8.
+
+**Fixtures** (`app/projects/`, unpacked; TESTING.md): `general/one-phrase`,
+`general/many-phrases` (Acorn-style names with punctuation, an ASCII map, an
+override, two presets), `general/frame-kinds` (a locked phrase with every
+frame kind), `phrom/one-phrom` (exactly 16 384 bytes) and
+`phrom/two-phroms` (spills into a second PHROM). The phrases with audio were
+added and encoded with `speak5220-cli` from synthetic clips; the locked
+frames were written directly. A functional test checks that each loads,
+that its encodings are current, that its presets run, and that saving it
+gives back its own files byte for byte. The 64-PHROM project is built by
+its test instead: as YAML it would be about 12 MB.
+
+**Performance.** Saving and reloading the 64-PHROM project (about 165 000
+frames, 12 MB of YAML) takes about 4.4 s, nearly all of it yaml-cpp; a full
+PHROM loads and exports in about 45 ms. Typical projects of a few PHROMs
+open well within a second, so nothing has been optimised.
+
+**Acceptance** (plan Phase 4, met):
+
+- unit tests for every editing operation and its reverse; every name of the
+  Acorn PHROM A word list (as listed and as stored) is accepted, and lower
+  case and other characters are handled as specified;
+- unit tests for a project that fills exactly one PHROM, one that spills
+  into a second, a phrase too large for an empty PHROM, and an addition
+  that needs a 65th PHROM;
+- unit tests with a mocked `IEncoder`: a settings change re-encodes; one
+  that would exceed the budget keeps the previous encoding and says why;
+- unit tests with a mocked store and codec (quoted strings, unknown keys
+  kept, version migration); functional tests: the ZIP and directory forms
+  load identically, an interrupted save leaves the previous file intact,
+  and a project saved under a decimal-comma locale reloads identically;
+- unit tests of the import with a mocked reader and resampler; functional
+  tests import 44.1 kHz stereo and 8 kHz mono files;
+- a functional test creates a project with the CLI, adds and encodes a
+  phrase, saves, and reloads it identically;
+- the fixtures load in functional tests, and `mkdocs build --strict`
+  passes.
