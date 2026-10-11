@@ -11,6 +11,7 @@ add_library(
     dsp/fft.cpp
     dsp/iir_filter.cpp
     dsp/lpc_analysis.cpp
+    dsp/output_filter.cpp
     dsp/resampler.cpp
     dsp/squelch.cpp
     emulator/chip_arithmetic.cpp

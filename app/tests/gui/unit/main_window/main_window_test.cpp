@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/project/phrase.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
@@ -128,6 +129,27 @@ TEST_F(MainWindowTest, RemembersWhetherTheAdvancedSettingsAreShown) {
   MainWindow window(dialogs_, recent_, shown, runner_, playback_.synth,
                     playback_.player, encoding_.Tools());
   EXPECT_TRUE(window.Encoder()->Form()->AdvancedShown());
+}
+
+TEST_F(MainWindowTest, OutputFilterMenuSetsTheFilterAndRemembersIt) {
+  using core::dsp::OutputFilter;
+  EXPECT_TRUE(window_.OutputFilterAction(OutputFilter::kNone)->isChecked());
+  window_.OutputFilterAction(OutputFilter::kBbcMicro)->trigger();
+  EXPECT_TRUE(window_.OutputFilterAction(OutputFilter::kBbcMicro)->isChecked());
+  EXPECT_FALSE(window_.OutputFilterAction(OutputFilter::kNone)->isChecked());
+  EXPECT_EQ(playback_.player.Filter(), OutputFilter::kBbcMicro);
+  EXPECT_EQ(window_.Waveforms()->Filter(), OutputFilter::kBbcMicro);
+  EXPECT_EQ(preferences_.filter, OutputFilter::kBbcMicro);
+}
+
+TEST_F(MainWindowTest, OutputFilterStartsAsLastChosen) {
+  using core::dsp::OutputFilter;
+  FakeViewPreferences chosen;
+  chosen.filter = OutputFilter::kBbcMicro;
+  MainWindow window(dialogs_, recent_, chosen, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.OutputFilterAction(OutputFilter::kBbcMicro)->isChecked());
+  EXPECT_EQ(window.Waveforms()->Filter(), OutputFilter::kBbcMicro);
 }
 
 TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {

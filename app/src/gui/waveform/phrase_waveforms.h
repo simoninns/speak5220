@@ -19,6 +19,7 @@
 #include <optional>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
@@ -63,6 +64,10 @@ class WaveformView;
 //   the original audio (encoder::SquelchedSpans()), and the original
 //   pane's note gives its level, so what will be left out of the encoding
 //   and of the quality measure can be seen before encoding.
+// - With an output filter (SetOutputFilter()), the encoded audio is shown
+//   through it (core::dsp::FilterSamples()), as that computer's audio
+//   stage would deliver it, and the encoded pane's note names it; the
+//   Player plays it through the same filter. The original is unchanged.
 // - Each pane has its own play button, which shows pause while that pane
 //   plays (Space in a pane's view does the same); one pane plays at a
 //   time, through the Player, and its view shows the playhead.
@@ -91,6 +96,11 @@ class PhraseWaveforms : public QWidget {
   // panel's settings have it, changes not yet applied included.
   void SetSquelch(std::optional<double> squelch_db);
   std::optional<double> Squelch() const { return squelch_db_; }
+
+  // The audio stage the encoded audio is shown through; none at first.
+  // Changing it redraws the encoded audio, keeping the zoom.
+  void SetOutputFilter(core::dsp::OutputFilter filter);
+  core::dsp::OutputFilter Filter() const { return filter_; }
 
   WaveformPane* OriginalPane() const { return original_; }
   WaveformPane* EncodedPane() const { return encoded_; }
@@ -186,6 +196,7 @@ class PhraseWaveforms : public QWidget {
   // The note given with the phrase (such as "stale").
   QString encoded_note_;
   std::optional<double> squelch_db_;
+  core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
   bool original_shows_pause_ = false;
   bool encoded_shows_pause_ = false;
   // The latest render of each phrase.

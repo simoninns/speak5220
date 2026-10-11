@@ -14,6 +14,7 @@
 #include <numeric>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -205,6 +206,45 @@ TEST(ToPcm16Test, RoundsAndClips) {
                                       -1.0F, 2.0F, 0.25F / 32768.0F};
   EXPECT_THAT(ToPcm16(samples),
               ElementsAre(0, 16384, -16384, 32767, -32768, 32767, 0));
+}
+
+TEST_F(PlayerTest, OutputFilterPlaysTheEncodedAudioAt48Kilohertz) {
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_CALL(output_, PlaybackRate(core::dsp::kOutputRate));
+  EXPECT_CALL(output_,
+              Start(SizeIs((8000 - 1200) * 6), core::dsp::kOutputRate));
+  ASSERT_TRUE(player_.Play(PlaybackSource::kEncoded, Numbered(), 1200).IsOk());
+  // The playhead still counts 8 kHz samples.
+  EXPECT_EQ(player_.Position(), 1200);
+}
+
+TEST_F(PlayerTest, OutputFilterLeavesTheOriginalAlone) {
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_CALL(output_, Start(SizeIs(8000), Player::kSampleRate));
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+}
+
+TEST_F(PlayerTest, OutputFilterIsResampledToTheDevicesRate) {
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_CALL(output_, PlaybackRate(core::dsp::kOutputRate))
+      .WillOnce(Return(44100));
+  EXPECT_CALL(resampler_,
+              Resample(SizeIs(8000 * 6), core::dsp::kOutputRate, 44100))
+      .WillOnce(Return(std::vector<float>(44100)));
+  EXPECT_CALL(output_, Start(SizeIs(44100), 44100));
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOptimised, Numbered(), 0).IsOk());
+}
+
+TEST_F(PlayerTest, ChangingTheOutputFilterStopsTheEncodedAudio) {
+  ASSERT_TRUE(player_.Play(PlaybackSource::kEncoded, Numbered(), 0).IsOk());
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_EQ(player_.State(), PlaybackState::kStopped);
+}
+
+TEST_F(PlayerTest, ChangingTheOutputFilterKeepsTheOriginalPlaying) {
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_EQ(player_.State(), PlaybackState::kPlaying);
 }
 
 }  // namespace

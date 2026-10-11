@@ -29,6 +29,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
 #include "core/synth/synth.h"
@@ -421,6 +422,22 @@ TEST_F(PhraseWaveformsTest, StaleNoteFollowsTheLevelNote) {
   QCoreApplication::processEvents();
   // The idle test output has no sound, so it is not level matched.
   EXPECT_EQ(waveforms_.EncodedPane()->Note(), QStringLiteral("stale"));
+}
+
+TEST_F(PhraseWaveformsTest, OutputFilterRedrawsTheEncodedAudioInPlace) {
+  ShowPhrase();
+  waveforms_.ZoomInButton()->click();
+  const TimeAxis axis = Encoded()->Axis();
+  // Drawn again from the render kept, not spoken again.
+  EXPECT_CALL(playback_.synth, Synthesize(_, _)).Times(0);
+  waveforms_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_EQ(waveforms_.EncodedPane()->Note(),
+            QStringLiteral("BBC Micro output filter"));
+  EXPECT_TRUE(Encoded()->HasSamples());
+  EXPECT_EQ(Encoded()->Axis().first, axis.first);
+  EXPECT_EQ(Encoded()->Axis().samples_per_pixel, axis.samples_per_pixel);
+  waveforms_.SetOutputFilter(core::dsp::OutputFilter::kNone);
+  EXPECT_TRUE(waveforms_.EncodedPane()->Note().isEmpty());
 }
 
 TEST_F(PhraseWaveformsTest, AnotherPhraseStopsPlayback) {

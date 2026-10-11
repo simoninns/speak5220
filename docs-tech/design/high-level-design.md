@@ -21,7 +21,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
-| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch) | Implemented |
+| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`, the encoded audio for display) | Implemented, matching the reference tools' values on the whole corpus |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
@@ -329,6 +329,7 @@ Plan §2.2, with the names as built.
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
+| `OutputFilter`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at 48 kHz through a computer's audio stage (none, or the BBC Micro's), for listening and display only (§16) |
 | `Squelch()`, `SquelchGain()`, `SquelchedSpans()` | **Implemented** (`core/dsp/squelch`): mutes stretches below a level relative to the loudest, for the `squelch_db` option (§8), and reports them for the waveform's shading (§16) |
 | `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`, `IViewPreferences`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
@@ -1127,8 +1128,12 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   (`RecentFiles`, at most eight, newest first) is kept through
   `IRecentFilesStore` (`SettingsRecentFilesStore`, `QSettings` under the
   organisation and application name "Speak5220"). What the user chose to
-  see, so far whether the encoder panel shows its advanced settings, is
-  kept the same way through `IViewPreferences` (`SettingsViewPreferences`).
+  see and hear (whether the encoder panel shows its advanced settings, and
+  the output filter chosen in the **Audio > Output Filter** menu, by its
+  `OutputFilterInfo::key`) is kept the same way through `IViewPreferences`
+  (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()` passes the
+  filter to the `Player` and to `PhraseWaveforms`, ticks its menu item and
+  saves it.
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
   (which use the model and the document) first and disconnects the
@@ -1223,6 +1228,14 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   recording. `PhraseWaveforms` shows and plays it multiplied by the level
   gain, and the encoded pane's note gives the gain in dB before any note
   passed in (such as "stale"). The frames and exports are unchanged.
+- **Output filter.** With a filter (`PhraseWaveforms::SetOutputFilter()`),
+  the encoded pane shows the level-matched samples through
+  `FilterSamples()`: `FilterDacOutput()` at 48 kHz averaged back to one
+  value per 8 kHz sample, so the view's sample positions, offset and frame
+  grid are unchanged. The unfiltered samples go to the `Player`, which
+  applies the filter itself. A change redraws from the render kept,
+  restoring the extent and axis, and the note names the filter after the
+  level gain. The original is never filtered.
 - **Shared time axis.** The panes are stacked with equal stretch, so the
   views are the same size. Both scroll over the union of their content extents, and each
   view's `AxisChanged()` sets the same axis on the other (a flag stops the
@@ -1265,7 +1278,14 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   audio nor jumps with the device's buffer; a 33 ms `QTimer` moves it, and
   it stops at the end or when the output reports finished. If the device
   does not take 8 kHz (`PlaybackRate()`), the buffer is resampled with
-  `IResampler`. `QtAudioOutput` plays mono 16-bit from a `QBuffer` in pull
+  `IResampler`. With an output filter (`Player::SetOutputFilter()`),
+  every source but the original is played as `FilterDacOutput()` gives
+  it: each sample held for 6 values at 48 kHz, through the filter's
+  second-order sections, the whole buffer at `Play()` so the filters'
+  state at any start is as from the beginning, then resampled from 48 kHz
+  if the device does not take it. The playhead still counts 8 kHz
+  samples. Changing the filter stops the chip's output if it is playing
+  or paused. `QtAudioOutput` plays mono 16-bit from a `QBuffer` in pull
   mode on the default device, using the device's channel count (each
   sample copied to every channel) if it refuses mono.
 - **Colours.** `ColoursFor(palette)` returns the light or the dark set of
@@ -1482,7 +1502,7 @@ Revert leaves, so they are the honest comparison. Each is spoken with
 drops speakings from an earlier one) and played at the recording's level
 (`level_gain`), as the encoded pane plays it. They play through the
 window's `Player` as `PlaybackSource::kBeforeOptimise` and `kOptimised`,
-which `PhraseWaveforms` gives no playhead; the dialog stops them on
+through the output filter if one is chosen, which `PhraseWaveforms` gives no playhead; the dialog stops them on
 Accept, Revert, Cancel or another phrase. The play/pause icons, drawn in
 the palette's colours, are shared with the waveforms
 (`gui/playback/playback_icon`).

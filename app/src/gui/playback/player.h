@@ -17,6 +17,7 @@
 #include <span>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/dsp/resampler.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
@@ -44,7 +45,14 @@ enum class PlaybackState { kStopped, kPlaying, kPaused };
 // neither runs ahead of the audio nor jumps with the device's buffer.
 // It moves on a timer while playing (kTickIntervalMs), or when Tick() is
 // called. When the device does not take 8 kHz, the samples are resampled
-// to its rate. GUI thread only; the output, clock and resampler must
+// to its rate.
+//
+// The chip's output (every source but kOriginal) is played through the
+// output filter (SetOutputFilter()), if there is one: as the DAC's
+// staircase through that computer's audio stage, at 48 kHz
+// (core::dsp::FilterDacOutput()), resampled to the device's rate if it
+// does not take 48 kHz. The playhead still counts 8 kHz samples. GUI
+// thread only; the output, clock and resampler must
 // outlive the player.
 class Player : public QObject {
   Q_OBJECT
@@ -73,6 +81,11 @@ class Player : public QObject {
   // Stops; the playhead returns to where play started.
   void Stop();
 
+  // The audio stage the chip's output is played through; none at first.
+  // Changing it stops the chip's output if it is playing or paused.
+  void SetOutputFilter(core::dsp::OutputFilter filter);
+  core::dsp::OutputFilter Filter() const { return filter_; }
+
   PlaybackState State() const { return state_; }
   // The source of what is playing or paused; meaningless when stopped.
   PlaybackSource Source() const { return source_; }
@@ -90,6 +103,8 @@ class Player : public QObject {
  private:
   core::Status StartOutput(int from);
   void SetState(PlaybackState state);
+  // Whether `source` is played through the output filter.
+  bool IsFiltered(PlaybackSource source) const;
 
   IAudioOutput* output_;
   core::IClock* clock_;
@@ -99,6 +114,10 @@ class Player : public QObject {
   PlaybackState state_ = PlaybackState::kStopped;
   PlaybackSource source_ = PlaybackSource::kOriginal;
   std::vector<std::int16_t> samples_;
+  core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
+  // samples_ through the output filter, at core::dsp::kOutputRate, when
+  // the source is filtered; otherwise empty.
+  std::vector<float> filtered_;
   // Where play started, where the device's buffer starts, the playhead.
   int start_ = 0;
   int base_ = 0;

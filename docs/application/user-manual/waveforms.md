@@ -56,6 +56,39 @@ the pane's title gives the gain, for example
 **level matched to the original (14.6 dB)**. Only the display and playback
 change; the frames, and anything exported, are as the chip makes them.
 
+## Output filter
+
+On its own, the chip's output looks lopsided next to the original. Its
+voiced sound starts each pitch period with a pulse that only goes one way,
+and nothing removes the steady offset this causes. A real computer sends
+the output through an audio stage that removes the offset and smooths the
+steps between samples. To hear and see the encoded audio as a particular
+computer would play it, choose that computer under
+**Audio > Output Filter**:
+
+| Filter | What it models |
+|---|---|
+| None | The chip's samples as they are, the default |
+| BBC Micro | The BBC Model B's speech path: a 279 Hz high-pass, which removes the offset and cuts the bass, and a reconstruction filter that is −3 dB at about 5.5 kHz. Its components are given in the [audio output stage](../../technical/hardware/audio-output-stage.md) |
+
+The filter changes the encoded pane and the encoded audio played in the
+main window and in the Optimise window. The original audio is not filtered.
+With a filter chosen, the note beside the encoded pane's title names it,
+for example **BBC Micro output filter**. The level is unchanged in the
+passband, and is still matched to the original as described above.
+
+With a filter chosen, the encoded audio plays at 48 kHz: each sample is
+held for its whole period, as the chip's DAC holds it, then passed through
+the filter. So you also hear what is left of the steps between samples
+above 4 kHz, as the computer's speaker would play them. The encoded pane
+still draws one point per 8 kHz sample: the filtered output averaged over
+that sample's period.
+
+The filter only affects what you see and hear. The frames, the quality
+measure (PESQ) and anything exported are unchanged. The window remembers
+the choice for next time. Changing it stops the encoded audio if it is
+playing.
+
 ## Frames
 
 The encoded pane is shaded by the kind of each frame (voiced, unvoiced,
@@ -114,6 +147,8 @@ to the play start.
 
 Audio plays on the system's default output device. If the device does not
 take 8 kHz audio, the audio is resampled to the device's own rate first.
+With an [output filter](#output-filter), the encoded audio plays at
+48 kHz, or is resampled from 48 kHz to the device's own rate.
 
 ## Light and dark
 

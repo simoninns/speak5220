@@ -166,7 +166,7 @@ From the digital sample value, there is no net inversion. A full-scale input is 
 | 12 kHz | 0.0 dB | −19.9 dB | −19.9 dB |
 | 16 kHz | 0.0 dB | −29.3 dB | −29.3 dB |
 
-The full circuit differs from an ideal 1st-order high-pass at 279 Hz cascaded with two ideal Butterworth sections at 6.95 kHz by at most 0.1 dB between 30 Hz and 20 kHz. `investigation/tools/process.py` uses that ideal cascade (`listenAudio`) to make the "BBC" listening files.
+The full circuit differs from an ideal 1st-order high-pass at 279 Hz cascaded with two ideal Butterworth sections at 6.95 kHz by at most 0.1 dB between 30 Hz and 20 kHz. `investigation/tools/process.py` uses that ideal cascade (`listenAudio`) to make the "BBC" listening files. The application's BBC Micro [output filter](../../application/user-manual/waveforms.md#output-filter) uses the same cascade.
 
 ## Why the filtering looks like this
 

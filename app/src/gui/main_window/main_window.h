@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "core/audio/sndfile_wav_io.h"
+#include "core/dsp/output_filter.h"
 #include "core/dsp/resampler.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
@@ -34,6 +35,7 @@
 #include "gui/playback/player.h"
 
 class QAction;
+class QActionGroup;
 class QCloseEvent;
 class QLabel;
 class QMenu;
@@ -58,8 +60,8 @@ class PhraseWaveforms;
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
 // go through IDialogs, the recent-file list through IRecentFilesStore,
-// what the user chose to see (the advanced encoder settings) through
-// IViewPreferences;
+// what the user chose to see and hear (the advanced encoder settings, the
+// output filter of the Audio menu) through IViewPreferences;
 // imports, encoding and the rendering of encoded audio (through the
 // ISynth) run as background jobs on the ITaskRunner, their results coming
 // back to the GUI thread queued; the waveforms play through the Player;
@@ -113,6 +115,13 @@ class MainWindow : public QMainWindow {
   void ReEncodeSelected();
   // Batch re-encodings started and not yet finished.
   int EncodesRunning() const { return encodes_running_; }
+
+  // Hears and shows the chip's output through `filter` (Audio > Output
+  // Filter): the encoded waveform, and the encoded audio played here and
+  // in the Optimise window. Remembered between sessions.
+  void SetOutputFilter(core::dsp::OutputFilter filter);
+  // The Audio > Output Filter menu's item for `filter`.
+  QAction* OutputFilterAction(core::dsp::OutputFilter filter) const;
 
  signals:
   // An import finished, successfully or not.
@@ -198,6 +207,10 @@ class MainWindow : public QMainWindow {
   QAction* quit_action_ = nullptr;
   QAction* undo_action_ = nullptr;
   QAction* redo_action_ = nullptr;
+  // One per core::dsp::OutputFilters(), in its order, in an exclusive
+  // group.
+  QActionGroup* output_filter_group_ = nullptr;
+  std::vector<QAction*> output_filter_actions_;
   QAction* add_action_ = nullptr;
   QAction* remove_action_ = nullptr;
   QAction* move_up_action_ = nullptr;

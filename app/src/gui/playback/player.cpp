@@ -14,12 +14,14 @@
 #include <QTimer>
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <span>
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/dsp/resampler.h"
 #include "core/util/clock.h"
 #include "core/util/logging.h"
@@ -33,6 +35,16 @@ namespace {
 constexpr std::int64_t kMicrosecondsPerSecond = 1000000;
 // Full scale of a 16-bit sample.
 constexpr float kFullScale = 32768.0F;
+
+// `samples` as fractions of full scale.
+std::vector<float> ToFloat(std::span<const std::int16_t> samples) {
+  std::vector<float> out;
+  out.reserve(samples.size());
+  for (const std::int16_t v : samples) {
+    out.push_back(static_cast<float>(v) / kFullScale);
+  }
+  return out;
+}
 
 }  // namespace
 
@@ -72,6 +84,12 @@ core::Status Player::Play(PlaybackSource source,
   }
   samples_ = std::move(samples);
   source_ = source;
+  filtered_.clear();
+  if (IsFiltered(source)) {
+    // The whole buffer, so the filters' state at any start is as it
+    // would be had it played from the beginning.
+    filtered_ = core::dsp::FilterDacOutput(filter_, ToFloat(samples_));
+  }
   start_ =
       (start < 0 || std::cmp_greater_equal(start, samples_.size())) ? 0 : start;
   position_ = start_;
@@ -126,17 +144,42 @@ void Player::Tick() {
   emit PositionChanged(position_);
 }
 
+void Player::SetOutputFilter(core::dsp::OutputFilter filter) {
+  if (filter == filter_) {
+    return;
+  }
+  filter_ = filter;
+  // The chip's output, whichever way the filter changed.
+  if (state_ != PlaybackState::kStopped &&
+      source_ != PlaybackSource::kOriginal) {
+    Stop();
+  }
+}
+
+bool Player::IsFiltered(PlaybackSource source) const {
+  return filter_ != core::dsp::OutputFilter::kNone &&
+         source != PlaybackSource::kOriginal;
+}
+
 core::Status Player::StartOutput(int from) {
-  std::vector<std::int16_t> buffer(samples_.begin() + from, samples_.end());
-  const int rate = output_->PlaybackRate(kSampleRate);
-  if (rate != kSampleRate) {
-    std::vector<float> scaled;
-    scaled.reserve(buffer.size());
-    for (const std::int16_t v : buffer) {
-      scaled.push_back(static_cast<float>(v) / kFullScale);
-    }
+  // The rest of the buffer: the filtered output at 48 kHz, or the samples
+  // themselves at 8 kHz.
+  const bool filtered = !filtered_.empty();
+  const int source_rate = filtered ? core::dsp::kOutputRate : kSampleRate;
+  const std::vector<float> rest =
+      filtered ? std::vector<float>(
+                     filtered_.begin() + (static_cast<std::ptrdiff_t>(from) *
+                                          core::dsp::kOutputOversampling),
+                     filtered_.end())
+               : ToFloat(std::span<const std::int16_t>(samples_).subspan(
+                     static_cast<std::size_t>(from)));
+  const int rate = output_->PlaybackRate(source_rate);
+  std::vector<std::int16_t> buffer;
+  if (rate == source_rate) {
+    buffer = ToPcm16(rest);
+  } else {
     core::StatusOr<std::vector<float>> resampled =
-        resampler_->Resample(scaled, kSampleRate, rate);
+        resampler_->Resample(rest, source_rate, rate);
     if (!resampled.IsOk()) {
       SetState(PlaybackState::kStopped);
       return resampled.GetStatus();

@@ -29,6 +29,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/dsp/squelch.h"
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
@@ -380,7 +381,9 @@ void PhraseWaveforms::ShowEncoded(const Rendered& rendered) {
   // with like; the frames and exports are unchanged.
   std::vector<float> matched =
       ToFloat(encoded_audio_.samples, encoded_audio_.level_gain);
+  // The player applies the output filter itself.
   encoded_playback_ = ToPcm16(matched);
+  matched = core::dsp::FilterSamples(filter_, matched);
   WaveformView* view = encoded_->View();
   // Not followed: its own fit would be copied to the original, which
   // would then no longer be fitted. UpdateExtents() fits both together.
@@ -463,6 +466,10 @@ void PhraseWaveforms::UpdateEncodedNote() {
                      kDecibelsPerDecade * std::log10(encoded_audio_.level_gain),
                      0, 'f', 1);
   }
+  if (filter_ != core::dsp::OutputFilter::kNone) {
+    parts << QStringLiteral("%1 output filter")
+                 .arg(ToQString(core::dsp::InfoFor(filter_).label));
+  }
   if (!encoded_note_.isEmpty()) {
     parts << encoded_note_;
   }
@@ -474,6 +481,26 @@ void PhraseWaveforms::SetSquelch(std::optional<double> squelch_db) {
     squelch_db_ = squelch_db;
     UpdateShading();
   }
+}
+
+void PhraseWaveforms::SetOutputFilter(core::dsp::OutputFilter filter) {
+  if (filter == filter_) {
+    return;
+  }
+  filter_ = filter;
+  const auto found = rendered_.find(id_);
+  if (encoded_shown_ && found != rendered_.end()) {
+    // The same length as before, so the same extent and zoom.
+    WaveformView* view = encoded_->View();
+    const TimeExtent extent = view->Extent();
+    const TimeAxis axis = view->Axis();
+    ShowEncoded(found->second);
+    following_ = true;
+    view->SetExtent(extent);
+    view->SetAxis(axis);
+    following_ = false;
+  }
+  UpdateEncodedNote();
 }
 
 void PhraseWaveforms::UpdateShading() {

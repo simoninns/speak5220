@@ -11,6 +11,7 @@
 #include "gui/main_window/main_window.h"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QCloseEvent>
 #include <QDir>
 #include <QDockWidget>
@@ -31,15 +32,18 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
@@ -141,6 +145,8 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
             view_preferences_->SetAdvancedSettingsShown(shown);
           });
 
+  SetOutputFilter(view_preferences_->ChosenOutputFilter());
+
   OnProjectChanged();
   UpdateTitle();
   UpdateRecentMenu();
@@ -163,6 +169,26 @@ MainWindow::~MainWindow() {
   delete encoder_panel_;
   delete optimise_dialog_;
   delete optimise_session_;
+}
+
+void MainWindow::SetOutputFilter(core::dsp::OutputFilter filter) {
+  player_->SetOutputFilter(filter);
+  waveforms_->SetOutputFilter(filter);
+  if (QAction* action = OutputFilterAction(filter); action != nullptr) {
+    action->setChecked(true);
+  }
+  view_preferences_->SetOutputFilter(filter);
+}
+
+QAction* MainWindow::OutputFilterAction(core::dsp::OutputFilter filter) const {
+  const std::span<const core::dsp::OutputFilterInfo> filters =
+      core::dsp::OutputFilters();
+  for (std::size_t i = 0; i < filters.size(); ++i) {
+    if (filters[i].filter == filter && i < output_filter_actions_.size()) {
+      return output_filter_actions_[i];
+    }
+  }
+  return nullptr;
 }
 
 QString MainWindow::StatusText() const { return status_label_->text(); }
@@ -202,6 +228,21 @@ void MainWindow::CreateActions() {
   redo_action_ =
       document_.UndoStack().createRedoAction(this, QStringLiteral("&Redo"));
   redo_action_->setShortcut(QKeySequence::Redo);
+
+  output_filter_group_ = new QActionGroup(this);
+  for (const core::dsp::OutputFilterInfo& info : core::dsp::OutputFilters()) {
+    auto* action = new QAction(ToQString(info.label), output_filter_group_);
+    action->setCheckable(true);
+    action->setStatusTip(
+        info.filter == core::dsp::OutputFilter::kNone
+            ? QStringLiteral("Hear and see the chip's DAC output unfiltered")
+            : QStringLiteral("Hear and see the chip's output through the %1's "
+                             "audio stage")
+                  .arg(ToQString(info.label)));
+    connect(action, &QAction::triggered, this,
+            [this, filter = info.filter] { SetOutputFilter(filter); });
+    output_filter_actions_.push_back(action);
+  }
 
   add_action_ = new QAction(QStringLiteral("&Add Phrases..."), this);
   add_action_->setIconText(QStringLiteral("+"));
@@ -281,6 +322,12 @@ void MainWindow::CreateMenus() {
   phrase->addSeparator();
   phrase->addAction(re_encode_action_);
   phrase->addAction(optimise_action_);
+
+  QMenu* audio = menuBar()->addMenu(QStringLiteral("&Audio"));
+  QMenu* output_filter = audio->addMenu(QStringLiteral("Output &Filter"));
+  for (QAction* action : output_filter_actions_) {
+    output_filter->addAction(action);
+  }
 
   QMenu* help = menuBar()->addMenu(QStringLiteral("&Help"));
   help->addAction(about_action_);

@@ -13,6 +13,10 @@
 #include <QSettings>
 #include <QString>
 #include <QVariant>
+#include <string>
+#include <string_view>
+
+#include "core/dsp/output_filter.h"
 
 namespace speak5220::app {
 
@@ -23,6 +27,21 @@ bool SettingsViewPreferences::AdvancedSettingsShown() {
 
 void SettingsViewPreferences::SetAdvancedSettingsShown(bool shown) {
   settings_.setValue(QString::fromLatin1(kAdvancedSettingsKey), shown);
+}
+
+core::dsp::OutputFilter SettingsViewPreferences::ChosenOutputFilter() {
+  const std::string key = settings_.value(QString::fromLatin1(kOutputFilterKey))
+                              .toString()
+                              .toStdString();
+  return core::dsp::OutputFilterFromKey(key).value_or(
+      core::dsp::OutputFilter::kNone);
+}
+
+void SettingsViewPreferences::SetOutputFilter(core::dsp::OutputFilter filter) {
+  const std::string_view key = core::dsp::InfoFor(filter).key;
+  settings_.setValue(
+      QString::fromLatin1(kOutputFilterKey),
+      QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
 }
 
 }  // namespace speak5220::app

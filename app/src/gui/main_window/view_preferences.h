@@ -13,6 +13,8 @@
 
 #include <QSettings>
 
+#include "core/dsp/output_filter.h"
+
 namespace speak5220::app {
 
 // The user's choices of what the window shows, which belong to the user
@@ -25,6 +27,11 @@ class IViewPreferences {
   // saved.
   virtual bool AdvancedSettingsShown() = 0;
   virtual void SetAdvancedSettingsShown(bool shown) = 0;
+
+  // The audio stage the chip's output is heard and shown through; none if
+  // never saved, or saved by a version that had a filter this one lacks.
+  virtual core::dsp::OutputFilter ChosenOutputFilter() = 0;
+  virtual void SetOutputFilter(core::dsp::OutputFilter filter) = 0;
 };
 
 // IViewPreferences in the application's QSettings (the platform's usual
@@ -32,9 +39,13 @@ class IViewPreferences {
 class SettingsViewPreferences : public IViewPreferences {
  public:
   static constexpr const char* kAdvancedSettingsKey = "advancedEncoderSettings";
+  // Holds the filter's key (core::dsp::OutputFilterInfo::key).
+  static constexpr const char* kOutputFilterKey = "outputFilter";
 
   bool AdvancedSettingsShown() override;
   void SetAdvancedSettingsShown(bool shown) override;
+  core::dsp::OutputFilter ChosenOutputFilter() override;
+  void SetOutputFilter(core::dsp::OutputFilter filter) override;
 
  private:
   QSettings settings_;

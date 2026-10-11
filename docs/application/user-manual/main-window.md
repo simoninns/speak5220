@@ -103,6 +103,13 @@ If the name is already taken (or a longer name would need a 65th PHROM),
 the message says so and the name goes back to what it was. The
 description is free text, kept only in the project.
 
+## The Audio menu
+
+**Audio > Output Filter** chooses the computer's audio stage that the
+encoded audio is heard and shown through: **None** (the default) or
+**BBC Micro**. See [output filter](waveforms.md#output-filter). The window
+remembers the choice for next time.
+
 ## Undo and redo
 
 **Edit > Undo** (Ctrl+Z) and **Edit > Redo** (Ctrl+Shift+Z, or Ctrl+Y on

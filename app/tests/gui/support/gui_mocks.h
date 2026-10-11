@@ -20,6 +20,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/output_filter.h"
 #include "core/encoder/encoder.h"
 #include "core/project/phrase.h"
 #include "core/quality/quality_metric.h"
@@ -67,8 +68,13 @@ class FakeViewPreferences : public app::IViewPreferences {
  public:
   bool AdvancedSettingsShown() override { return advanced_shown; }
   void SetAdvancedSettingsShown(bool shown) override { advanced_shown = shown; }
+  core::dsp::OutputFilter ChosenOutputFilter() override { return filter; }
+  void SetOutputFilter(core::dsp::OutputFilter chosen) override {
+    filter = chosen;
+  }
 
   bool advanced_shown = false;
+  core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
 };
 
 class MockAudioOutput : public app::IAudioOutput {
