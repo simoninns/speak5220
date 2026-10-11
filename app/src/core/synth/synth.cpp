@@ -30,8 +30,6 @@
 namespace speak5220::core::synth {
 namespace {
 
-// Codes are scaled to 16-bit samples by 64, as the encoder's --wav does.
-constexpr int kSampleScale = 64;
 // The idle output code (§8.8: u1 = -9).
 constexpr int kIdleCode = -1;
 // FNV-1a, 64 bits.

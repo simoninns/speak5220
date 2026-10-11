@@ -11,9 +11,7 @@
 #include "gui/phrase_list/phrase_list_model.h"
 
 #include <QAbstractListModel>
-#include <QBrush>
 #include <QByteArray>
-#include <QColor>
 #include <QList>
 #include <QMimeData>
 #include <QModelIndex>
@@ -42,9 +40,6 @@ namespace speak5220::app {
 namespace project = core::project;
 
 namespace {
-
-// The colour of a phrase too large for any PHROM (plan §5).
-const QColor kTooLargeColour(0xC0, 0x00, 0x00);
 
 // Separates the parts of a staleness key; it occurs in no option text.
 constexpr char kKeySeparator = '\n';
@@ -243,11 +238,6 @@ QVariant PhraseListModel::data(const QModelIndex& index, int role) const {
       return row.name;
     case Qt::ToolTipRole:
       return ToolTip(row);
-    case Qt::ForegroundRole:
-      if (row.slot.placement == project::Placement::kTooLarge) {
-        return QBrush(kTooLargeColour);
-      }
-      return {};
     case kIdRole:
       return QString::fromStdString(row.id);
     case kStateRole:

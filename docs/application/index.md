@@ -9,7 +9,9 @@ So far the application has:
 - a GUI, `speak5220`, whose [main window](user-manual/main-window.md) opens
   and saves projects, imports WAV files as phrases, orders, sorts, renames
   and describes them with undo and redo, and shows how many PHROMs they
-  fill;
+  fill; it shows each phrase's original and encoded
+  [waveforms](user-manual/waveforms.md) and plays them, in light or dark
+  as the desktop is set;
 - a command-line tool, `speak5220-cli`, that creates
   [projects](user-manual/projects.md), imports WAV files into them as
   phrases, encodes them and exports Acorn PHROM images, described in the

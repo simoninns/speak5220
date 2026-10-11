@@ -57,3 +57,6 @@ prints them on stderr, prefixed `speak5220-cli:`.
 |---|---|
 | `PATH: ...` (Add Phrases) | A file could not be imported; the message after the path says why (as under [importing audio](#importing-audio)). The other files were added |
 | `cannot sort the phrases: the project would need 65 PHROMs, ...` (Edit Phrases) | A sort, or a move (`cannot move the phrases: ...`), would take the project past its budget, so it was not made |
+| `there is no audio output device` (Play) | The system has no output device to play on. Connect or enable one |
+| `cannot play on DEVICE` (Play) | The output device would not start. Another program may hold it, or it may not take 16-bit audio |
+| `Cannot speak the frames: ...` (in the encoded pane) | The emulator could not speak the phrase's frames, for the reason given; the frames may have been edited outside Speak5220. Encoding the phrase again replaces them |

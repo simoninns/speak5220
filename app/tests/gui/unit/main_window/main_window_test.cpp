@@ -40,6 +40,7 @@ using testing::MockDialogs;
 using ::testing::Return;
 using ::testing::StrictMock;
 using testing::TestId;
+using testing::TestPlayback;
 
 class MainWindowTest : public ::testing::Test {
  protected:
@@ -57,7 +58,9 @@ class MainWindowTest : public ::testing::Test {
   StrictMock<MockDialogs> dialogs_;
   FakeRecentFilesStore recent_;
   core::InlineTaskRunner runner_;
-  MainWindow window_{dialogs_, recent_, runner_};
+  TestPlayback playback_;
+  MainWindow window_{dialogs_, recent_, runner_, playback_.synth,
+                     playback_.player};
 };
 
 TEST_F(MainWindowTest, NewProjectIsUntitledAndUnmodified) {

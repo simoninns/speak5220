@@ -5,7 +5,13 @@
 # exposed as an imported target, so its headers are system headers and the
 # project's warning flags do not apply to them.
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets)
+# 6.8 for QStyleHints::setColorScheme(); Multimedia plays the audio
+# (plan §2.4)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets Multimedia)
+# D-Bus asks the XDG desktop portal for the desktop's colour scheme
+if(UNIX AND NOT APPLE)
+    find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
+endif()
 find_package(spdlog 1.12 CONFIG REQUIRED)
 # The project file (plan §4): YAML metadata in a ZIP container
 find_package(yaml-cpp 0.7 CONFIG REQUIRED)

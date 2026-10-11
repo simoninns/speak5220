@@ -39,7 +39,7 @@ ctest --test-dir build/app -L unit          # the fast, mocked lane
 ctest --test-dir build/app -L functional    # file system, processes, reference data, GUI (offscreen)
 ```
 
-The application links Qt 6 (Core, Widgets), spdlog, libsndfile, libsamplerate, pocketfft (header-only), yaml-cpp and libzip (for the project file), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
+The application links Qt 6.8 or later (Core, Widgets, Multimedia, and D-Bus on Linux), spdlog, libsndfile, libsamplerate, pocketfft (header-only), yaml-cpp and libzip (for the project file), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
 
 This builds:
 

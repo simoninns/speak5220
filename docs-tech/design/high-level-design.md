@@ -16,24 +16,24 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | Area | Status |
 |---|---|
 | CMake build, in-source guard, compiler warnings, sanitizer option | Implemented |
-| `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests) | Implemented |
+| `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests, clock) | Implemented |
 | `s5core`: `lpc/` (tables, frames, bit stream) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
-| `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`) | Implemented, matching the reference tools' values on the whole corpus |
+| `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`, the encoded audio for display) | Implemented, matching the reference tools' values on the whole corpus |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15) |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (Acorn PHROM images), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| Optimiser, the other export formats, BBC export, the GUI's waveforms, playback, encoder panel and Export dialog | Planned |
+| Optimiser, the other export formats, BBC export, the GUI's encoder panel and Export dialog | Planned |
 
 ---
 
@@ -49,7 +49,8 @@ app/
   scripts/                      check-spdx.sh, check-header-guards.sh,
                                 clang-format-check.sh, clang-tidy.sh,
                                 format.sh, lint.sh; corpus-check.sh,
-                                benchmark.sh, generate_corpus.py,
+                                benchmark.sh, arctic-project.sh,
+                                generate_corpus.py,
                                 generate_filter_constants.py (§8)
     golden/                     generate_golden.py and its scenario scripts,
                                 encoder.py, quality.py (offline, run by
@@ -59,7 +60,8 @@ app/
   src/
     core/                       library "s5core" (QtCore at most)
       util/                     Status/StatusOr, logging, logging options, version,
-                                number text, SHA-256, task runners, file digests
+                                number text, SHA-256, task runners, file digests,
+                                IClock
       lpc/                      coding tables, Frame, FrameCodec, BitReverse
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
       synth/                    Synth, ReferenceSynthesizer
@@ -72,7 +74,7 @@ app/
       encoder/                  Encoder and its stages, EncoderOptions (§8)
       quality/                  PESQ, PesqMetric, the output alignment, the
                                 anchor vocoder, the cheap measures,
-                                QualityScale (§9)
+                                QualityScale (§9), RenderEncodedAudio (§16)
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
                                 stores, PhraseImporter, the PHROM export (§14)
@@ -81,6 +83,11 @@ app/
                                 recent-file list, the status bar's text
       phrase_list/              PhraseListModel, its delegate and panel
       phrase_editor/            PhraseDetails (name and description)
+      waveform/                 PhraseWaveforms, WaveformPane, WaveformView,
+                                PeakCache, TimeAxis, the frame map (§16)
+      playback/                 Player, IAudioOutput, QtAudioOutput (§16)
+      theme/                    ThemeColours, the desktop colour scheme
+                                and its portal adapter (§16)
       undo/                     one QUndoCommand per editing operation,
                                 ProjectEdits
     cli/                        the "speak5220-cli" executable and its commands
@@ -88,14 +95,15 @@ app/
     .clang-tidy                 the app's settings, plus one test exception
     support/                    speak5220_test_support (helpers, mocks, golden readers)
     unit/  functional/          speak5220_unit_tests, speak5220_functional_tests
-    gui/support/                speak5220_gui_test_main (QApplication, offscreen)
+    gui/support/                speak5220_gui_test_main (QApplication, offscreen),
+                                the GUI's mocks and fakes, test palettes
     gui/unit/  gui/functional/  speak5220_gui_unit_tests, speak5220_gui_functional_tests
 ```
 
 Planned additions, each created with its first code (plan §2.1):
 
 - `src/core/`: `bbc/`;
-- `src/gui/`: `waveform/`, `encoder_panel/`, `export/`;
+- `src/gui/`: `encoder_panel/`, `export/`;
 - `app/projects/bbc/` and `app/projects/benchmark/` (fixture projects),
   `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
   WiX/CPack, macOS);
@@ -137,8 +145,9 @@ the CLI. It contains no C sources and no code copied from `investigation/`.
   `dirtyShortRev`, which it also uses as the package version. Outside a git
   checkout the version is `unknown`.
 - `SPEAK5220_BUILD_TESTS` (default `ON`) adds `app/tests/`.
-- `cmake/Dependencies.cmake` finds the libraries of §10: Qt 6 (Core,
-  Widgets), spdlog, yaml-cpp and libzip by their CMake packages; libsndfile and libsamplerate
+- `cmake/Dependencies.cmake` finds the libraries of §10: Qt 6.8 or later
+  (Core, Widgets, Multimedia, and D-Bus on Linux and the BSDs; 6.8 for
+  `QStyleHints::setColorScheme()`), spdlog, yaml-cpp and libzip by their CMake packages; libsndfile and libsamplerate
   by header and library (their pkg-config files name private dependencies a
   shared build does not need); pocketfft by its header, as an interface
   target that defines `POCKETFFT_NO_MULTITHREADING`. Google Test is found by
@@ -275,8 +284,11 @@ Phase 2 task 7).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test. `app/tests/gui/support/gui_mocks.h`
-  has a gMock mock of `IDialogs`, an in-memory `IRecentFilesStore`, and
-  `IdsAre()`, a matcher for spans of phrase ids. The GUI functional lane
+  has gMock mocks of `IDialogs` and `IAudioOutput`, an in-memory
+  `IRecentFilesStore`, a `FakeClock`, `TestPlayback` (a `Player` over a
+  mocked output, and a mocked synth, for windows not testing playback),
+  and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
+  light and dark palettes like Fusion's. The GUI functional lane
   has `SPEAK5220_PROJECTS_DIR` compiled in.
 
 ---
@@ -305,6 +317,10 @@ Plan §2.2, with the names as built.
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
 | `ProjectEdits` and the undo commands | **Implemented** (`gui/undo/`): one `QUndoCommand` per `IProjectEditor` operation (§15) |
+| `PhraseWaveforms`, `WaveformPane`, `WaveformView`, `PeakCache`, `TimeAxis` | **Implemented** (`gui/waveform/`): the original and encoded waveforms, their shared time axis and controls, the play start (§16) |
+| `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
+| `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
+| `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
 | `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
@@ -570,8 +586,8 @@ search (81 candidate lags). Nothing has been optimised yet; Optimise
 
 | Need | Library | Licence | Status |
 |---|---|---|---|
-| GUI, threads | Qt 6 (Widgets, Concurrent, Multimedia) | LGPLv3 / GPLv3 | Core, Gui (`QUndoStack`) and Widgets linked; the rest in the Nix shell |
-| Audio playback | Qt Multimedia `QAudioSink` | LGPLv3 | In the Nix shell |
+| GUI, threads | Qt 6 (Widgets, Concurrent, Multimedia) | LGPLv3 / GPLv3 | Core, Gui (`QUndoStack`), Widgets and Multimedia linked; D-Bus on Linux and the BSDs, for the desktop's colour scheme (§16) |
+| Audio playback | Qt Multimedia `QAudioSink` | LGPLv3 | Linked by `speak5220_gui` (§16) |
 | WAV read/write | libsndfile | LGPL-2.1+ | Linked by `s5core` |
 | Sinc resampling | libsamplerate | BSD-2 | Linked by `s5core` |
 | FFT | pocketfft (C++ header-only) | BSD-3 | Used by `s5core`; packaged in `flake.nix` |
@@ -591,9 +607,11 @@ Both executables are thin front ends over `s5core`.
 
 - The GUI's widgets are the static library `speak5220_gui`, so the GUI
   tests link them; the `speak5220` executable adds only `main()`, which
-  creates the real `QtDialogs`, `SettingsRecentFilesStore` and
-  `ThreadPoolTaskRunner`, and opens `speak5220 [PROJECT]` if given. The
-  window is described in §15.
+  starts following the desktop's colour scheme (§16), creates the real
+  `QtDialogs`, `SettingsRecentFilesStore`, `ThreadPoolTaskRunner`, `Synth`
+  and `Player` (over `QtAudioOutput`, `SteadyClock` and `SincResampler`),
+  and opens `speak5220 [PROJECT]` if given. The window is described in
+  §15 and §16.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
@@ -736,6 +754,7 @@ everything first and changes nothing on failure, and returns its reverse:
 | `RemovePhrases(ids)` | the phrases with their indices | `InsertPhrases(result)` |
 | `MovePhrases(ids, destination)`, `SortPhrases()`, `SetOrder(order)` | the previous order | `SetOrder(result)` |
 | `RenamePhrase(id, name)` | the previous name | `RenamePhrase(id, result)` |
+| `SetPlayStart(id, sample)` | the previous play start | `SetPlayStart(id, result)` |
 | `SetDescription(id, text)` | the previous text | `SetDescription(id, result)` |
 | `SetEncoding(id, {overrides, encoding})` | the previous pair | `SetEncoding(id, result)` |
 
@@ -913,11 +932,13 @@ is [`docs/application/user-manual/main-window.md`](../../docs/application/user-m
 **Structure.**
 
 ```
-MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner (injected)
+MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player
+ │             (injected)
  ├── ProjectDocument: Project + QUndoStack + ProjectEdits + path
  ├── PhraseListModel (reads a Project snapshot, edits through ProjectEdits)
  │    └── PhraseListPanel: QListView + PhraseListDelegate + buttons
  ├── PhraseDetails (name, description; edits through ProjectEdits)
+ ├── PhraseWaveforms (§16; the play start through ProjectEdits)
  └── status bar: ProjectSizeText(Project::Allocation())
 ```
 
@@ -935,7 +956,7 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner (injected)
   command only if that succeeded, and the stack's own first `redo()` is
   skipped. A failed operation therefore never reaches the stack, and does
   not discard the redo history either, which `QUndoStack::push()` would do
-  even for a command that makes itself obsolete. Each of the seven
+  even for a command that makes itself obsolete. Each of the eight
   commands applies its `IProjectEditor` operation in `redo()` and the
   returned reverse in `undo()` (table in §14). An undo or redo that fails
   regardless is logged and the command made obsolete, so the stack drops
@@ -947,8 +968,8 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner (injected)
   roles for the id, the encoding state, the placement, the cost, the PHROM
   and word number, and `kPhromStartRole` for the first phrase of each
   PHROM after the first, taken from `PhromAllocation::phroms`. The
-  delegate draws that row taller, with a "PHROM N" band; a phrase too
-  large for a PHROM has a red foreground. Whether an encoding is current
+  delegate draws that row taller, with a "PHROM N" band; it draws the name
+  of a phrase too large for a PHROM in the theme's warning colour (§16). Whether an encoding is current
   (`EncodingCache::IsCurrent()`, which hashes the audio) is remembered per
   phrase, keyed by the default options, the phrase's overrides, the stored
   hash and version, and the audio's length, so an edit does not hash every
@@ -1020,3 +1041,145 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner (injected)
   (also on a real `Project`), and that a failed operation is not pushed;
 - GUI unit tests format the status text for given allocations;
 - the whole GUI test set passes under ASan and UBSan.
+
+---
+
+## 16. Waveforms, playback and colours
+
+**Implemented** (plan §5, Phase 6) in `app/src/gui/waveform/`,
+`gui/playback/`, `gui/theme/` and `core/quality/encoded_audio`. The user's
+view is [`docs/application/user-manual/waveforms.md`](../../docs/application/user-manual/waveforms.md).
+
+**Structure.**
+
+```
+PhraseWaveforms ── ProjectEdits, Player, ISynth, ITaskRunner (injected)
+ ├── WaveformPane "Original (8 kHz)" ─┐ stacked, equal heights
+ ├── WaveformPane "Encoded"          ─┘
+ │    each: title, note
+ │          + WaveformView (PeakCache, TimeAxis, ThemeColours)
+ ├── QScrollBar (shared)
+ └── play Original, play Encoded, reset play start, Frame grid,
+     zoom out, zoom in, fit (shared)
+Player ── IAudioOutput (QtAudioOutput: QAudioSink), IClock, IResampler
+ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
+```
+
+- **Time.** Both views count time in samples of the phrase's source
+  audio (`TimeAxis`: the source sample at pixel 0 and samples per pixel,
+  with fit, clamp, zoom about a pixel and scroll). A view's own samples
+  are placed by a source offset: sample `s + offset` is drawn at source
+  time `s`. The original's offset is 0.
+- **Encoded audio.** `RenderEncodedAudio()` packs the cached frames,
+  speaks them through `ISynth`'s VSM path and finds the offset: the sound
+  (first to last non-idle code, idle at 0) is lined up with the source
+  after the 60 Hz high-pass by `AlignByEnvelope()` and
+  `RefineBySpectrum()`, the alignment `PesqMetric` uses, and the offset is
+  the first sound's index less the lag. The level gain
+  (`LevelMatchGain()`, the scale of `MatchLevel()`) is measured on the
+  output placed by that lag, against the source's speech frames, and
+  converted from codes to fractions of 16-bit full scale. With no source,
+  or an output that never leaves idle, the offset is 125
+  (`kFirstFrameStretch`) and the gain 1. It runs as
+  a job on the `ITaskRunner`; the result comes back queued and is kept per
+  phrase id with the frames it was made from, so reselecting a phrase does
+  not render it again.
+- **Drawing.** `PeakCache` keeps each block's lowest and highest sample at
+  16, 64, 256, ... samples; a range takes the largest whole blocks inside
+  it and recurses at its ends (O(log n)). From 4 samples per pixel out,
+  each pixel is one line between the peaks of its samples and the last
+  sample of the pixel before, so neighbouring lines meet and the trace is
+  unbroken; closer in, the samples are joined by lines. Behind the encoded waveform each frame's
+  stretch, encoded samples `[125 + 200 j, 325 + 200 j)` (from
+  `encoder::kReachedSample`: half-way reached to half-way to the next), is
+  filled by its kind, with an optional grid line where it starts; the
+  hover text (`DescribeFrame()`) gives the frame's kind and indices.
+- **Levels.** The chip's codes x 64 (`synth::kSampleScale`) take a
+  quarter of 16-bit full scale, and the encoder aims at an RMS of 20
+  codes, so the encoded audio is about 15 dB below a normalised
+  recording. `PhraseWaveforms` shows and plays it multiplied by the level
+  gain, and the encoded pane's note gives the gain in dB before any note
+  passed in (such as "stale"). The frames and exports are unchanged.
+- **Shared time axis.** The panes are stacked with equal stretch, so the
+  views are the same size. Both scroll over the union of their content extents, and each
+  view's `AxisChanged()` sets the same axis on the other (a flag stops the
+  echo); with the same axis, the same sound is at the same x. New
+  contents (another phrase, or its encoded audio arriving) are placed
+  without following and then both views are fitted to the union, so a
+  phrase starts as Fit shows it. The shared
+  zoom and fit buttons and the scroll bar act on the original's view (the
+  encoded view's when there is no original), and the other follows; the
+  scroll bar follows either view.
+- **Play start.** A click asks for the marker at that source sample;
+  `PhraseWaveforms` rounds and limits it to the audio and applies
+  `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
+  Start"), so it is saved as `play_start` and undoable. Both views show
+  it. A phrase without audio has none.
+- **Playback.** `Player` plays one buffer at a time: `Play(source,
+  samples, start)`, `Pause()`, `Resume()` (a new buffer from the paused
+  position) and `Stop()`. The original plays from the play start; the
+  encoded audio from `play_start + offset`, limited to its samples. The
+  playhead is the clock time since the device started, but no more than
+  `IAudioOutput::ProcessedMicroseconds()`, so it neither runs ahead of the
+  audio nor jumps with the device's buffer; a 33 ms `QTimer` moves it, and
+  it stops at the end or when the output reports finished. If the device
+  does not take 8 kHz (`PlaybackRate()`), the buffer is resampled with
+  `IResampler`. `QtAudioOutput` plays mono 16-bit from a `QBuffer` in pull
+  mode on the default device, using the device's channel count (each
+  sample copied to every channel) if it refuses mono.
+- **Colours.** `ColoursFor(palette)` returns the light or the dark set of
+  `ThemeColours` (warning, wave, zero line, frame grid, playhead, marker,
+  the four frame kinds) by whether the palette's window is darker than
+  its text; each widget that uses them recomputes them on
+  `QEvent::PaletteChange`. Everything else comes from the palette. The
+  play/pause icons are drawn in the palette's button-text colour (the
+  style's media icons are fixed black images) and redrawn on a palette
+  change.
+- **Following the desktop.** On GNOME, Qt 6.11 picks its GTK 3 platform
+  theme, which reports the GTK theme's scheme (light) and palette, not
+  GNOME's dark preference; the XDG desktop portal's theme reports dark
+  but keeps the GTK palette. So `ColourSchemeFollower` reads the
+  preference from `IDesktopColourScheme` and requests it with
+  `QStyleHints::setColorScheme()` (unset for no preference), which switches
+  the style to its dark or light palette and sends every widget a palette
+  change. `PortalColourScheme` reads `org.freedesktop.appearance
+  color-scheme` with the portal's `ReadOne()` (or the older `Read()`),
+  waiting at most a second, and follows `SettingChanged`. It is built
+  where Qt D-Bus exists (Linux, the BSDs); elsewhere
+  `NoDesktopColourScheme` leaves Qt to follow the system.
+
+**Deviations from the plan.**
+
+- The plan offsets the encoded pane by the emulator's start latency. The
+  encoder leaves out leading silence and the project does not record
+  where its first frame starts, so a fixed latency would not line the
+  panes up; the offset is found by PESQ's alignment instead.
+- The play start is a project edit, undoable, which the plan does not
+  say; it is saved in the project as `play_start`, so changing it marks
+  the project modified.
+- One play start serves both panes (the encoded pane plays from the same
+  sound), rather than one marker per pane.
+- The plan's Phase 6 item 1 asks for the dark-mode cause to be fixed in
+  the build. No plugin was missing: the default GTK 3 theme does not
+  report GNOME's preference, so the fix is in the application, through
+  the portal.
+
+**Acceptance** (plan Phase 6):
+
+- unit tests check the colours of a light and a dark palette (different,
+  and at least 4.5:1 for the warning text and 3:1 for the marks against
+  the background and the frame fills), the portal's values, that each
+  preference and change is applied, and that the phrase details follow a
+  palette change;
+- unit tests check the peak cache against a plain scan, the
+  sample-to-pixel mapping, fit, zoom and scroll limits;
+- unit tests check `Player` with a mocked output and a fake clock (the
+  playhead, pause and resume, the end, resampling, failures);
+- unit tests map encoded samples and pointer positions to frames,
+  including the start latency, and show the same sound at the same place
+  in both panes, and that the shared controls move both;
+- a GUI functional test speaks a fixture phrase through the real
+  emulator and draws both panes offscreen;
+- still to be checked by hand: that the playhead follows the sound on
+  Linux with PipeWire, and that the window starts light or dark to match
+  the desktop and follows a change, on GNOME, KDE, Windows and macOS.

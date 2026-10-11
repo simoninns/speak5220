@@ -150,6 +150,22 @@ class SetDescriptionCommand : public ProjectCommand {
   std::string previous_description_;
 };
 
+// SetPlayStart(); reversed by SetPlayStart() with the previous sample.
+class SetPlayStartCommand : public ProjectCommand {
+ public:
+  SetPlayStartCommand(core::project::IProjectEditor& editor,
+                      core::project::PhraseId id, int sample);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  core::project::PhraseId id_;
+  int sample_;
+  int previous_sample_ = 0;
+};
+
 // SetEncoding(); reversed by SetEncoding() with the previous settings and
 // encoding.
 class SetEncodingCommand : public ProjectCommand {

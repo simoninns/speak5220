@@ -1,8 +1,9 @@
 /*
  * File:        gui_mocks.h
  * Module:      gui tests
- * Purpose:     A gMock mock of the main window's dialogs and an in-memory
- *              recent-file store
+ * Purpose:     gMock mocks of the main window's dialogs and the audio
+ *              output, an in-memory recent-file store, a fake clock, and
+ *              the playback the main window needs
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -13,15 +14,22 @@
 
 #include <QString>
 #include <QStringList>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <utility>
 #include <vector>
 
 #include "core/project/phrase.h"
+#include "core/util/clock.h"
+#include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/recent_files.h"
+#include "gui/playback/audio_output.h"
+#include "gui/playback/player.h"
+#include "support/project_mocks.h"
+#include "support/synth_mocks.h"
 
 namespace speak5220::testing {
 
@@ -46,6 +54,54 @@ class FakeRecentFilesStore : public app::IRecentFilesStore {
   void Save(const QStringList& saved) override { paths = saved; }
 
   QStringList paths;
+};
+
+class MockAudioOutput : public app::IAudioOutput {
+ public:
+  MOCK_METHOD(int, PlaybackRate, (int rate), (override));
+  MOCK_METHOD(core::Status, Start,
+              (std::vector<std::int16_t> samples, int rate), (override));
+  MOCK_METHOD(void, Stop, (), (override));
+  MOCK_METHOD(std::int64_t, ProcessedMicroseconds, (), (override));
+  MOCK_METHOD(bool, IsFinished, (), (override));
+};
+
+// A clock that moves only when told to.
+class FakeClock : public core::IClock {
+ public:
+  std::int64_t NowMicroseconds() const override { return now_us; }
+
+  std::int64_t now_us = 0;
+};
+
+// A Player over a mocked output that takes 8 kHz, starts, and never
+// finishes, with a fake clock and a mocked resampler; and a mocked synth
+// that speaks any phrase as kSpokenSamples idle samples. For main windows
+// and waveforms that are not testing playback.
+struct TestPlayback {
+  static constexpr int kSpokenSamples = 400;
+
+  TestPlayback() {
+    ON_CALL(output, PlaybackRate(::testing::_))
+        .WillByDefault(::testing::ReturnArg<0>());
+    ON_CALL(output, Start(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(core::OkStatus()));
+    ON_CALL(resampler, Resample(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(
+            core::InternalError("the test resampler is not set up")));
+    core::synth::SynthResult idle;
+    idle.codes.assign(kSpokenSamples, -1);
+    idle.samples.assign(kSpokenSamples, -64);
+    idle.leading_idle_samples = kSpokenSamples;
+    ON_CALL(synth, Synthesize(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(idle));
+  }
+
+  ::testing::NiceMock<MockAudioOutput> output;
+  FakeClock clock;
+  ::testing::NiceMock<MockResampler> resampler;
+  ::testing::NiceMock<MockSynth> synth;
+  app::Player player{output, clock, resampler};
 };
 
 // Matches a span of phrase ids against a list (std::span has no

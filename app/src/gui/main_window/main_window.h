@@ -21,6 +21,7 @@
 #include "core/dsp/resampler.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/synth/synth.h"
 #include "core/util/file_digest.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -28,6 +29,7 @@
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/phrase_list/phrase_list_model.h"
+#include "gui/playback/player.h"
 
 class QAction;
 class QCloseEvent;
@@ -38,26 +40,29 @@ namespace speak5220::app {
 
 class PhraseDetails;
 class PhraseListPanel;
+class PhraseWaveforms;
 
-// Plan §5: the top-level window. The phrase list is docked on the left,
-// the selected phrase's details are on the right, and the status bar
-// shows the project's size in KB and PHROMs. Menus: File (new, open,
-// recent, save, save as, quit), Edit (undo, redo), Phrase (add, remove,
-// move up and down, sort A-Z), Help.
+// Plan §5: the top-level window. The phrase list is docked on the left;
+// on the right are the selected phrase's details and its waveforms
+// (PhraseWaveforms), and the status bar shows the project's size in KB
+// and PHROMs. Menus: File (new, open, recent, save, save as, quit), Edit
+// (undo, redo), Phrase (add, remove, move up and down, sort A-Z), Help.
 //
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
-// go through IDialogs, the recent-file list through IRecentFilesStore, and
-// imports run as background jobs on the ITaskRunner, their results coming
-// back to the GUI thread queued. All three must outlive the window.
-// GUI thread only.
+// go through IDialogs, the recent-file list through IRecentFilesStore;
+// imports and the rendering of encoded audio (through the ISynth) run as
+// background jobs on the ITaskRunner, their results coming back to the GUI
+// thread queued; the waveforms play through the Player. All of them must
+// outlive the window. GUI thread only.
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
   MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
-             core::ITaskRunner& runner, QWidget* parent = nullptr);
-  // Waits for imports still running.
+             core::ITaskRunner& runner, core::synth::ISynth& synth,
+             Player& player, QWidget* parent = nullptr);
+  // Waits for background jobs still running.
   ~MainWindow() override;
   MainWindow(const MainWindow&) = delete;
   MainWindow& operator=(const MainWindow&) = delete;
@@ -66,6 +71,7 @@ class MainWindow : public QMainWindow {
   PhraseListModel& Model() { return model_; }
   PhraseListPanel* Panel() const { return panel_; }
   PhraseDetails* Details() const { return details_; }
+  PhraseWaveforms* Waveforms() const { return waveforms_; }
   // The status bar's project summary (ProjectSizeText()).
   QString StatusText() const;
   QStringList RecentPaths() const { return recent_.Paths(); }
@@ -126,6 +132,8 @@ class MainWindow : public QMainWindow {
   IDialogs* dialogs_;
   IRecentFilesStore* recent_store_;
   core::ITaskRunner* runner_;
+  core::synth::ISynth* synth_;
+  Player* player_;
   RecentFiles recent_;
 
   // The importer's collaborators are stateless, so jobs can share them.
@@ -142,6 +150,7 @@ class MainWindow : public QMainWindow {
   PhraseListModel model_{document_.Edits()};
   PhraseListPanel* panel_ = nullptr;
   PhraseDetails* details_ = nullptr;
+  PhraseWaveforms* waveforms_ = nullptr;
   QLabel* status_label_ = nullptr;
   QMenu* recent_menu_ = nullptr;
 

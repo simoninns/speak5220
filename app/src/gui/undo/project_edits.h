@@ -43,6 +43,7 @@ class ProjectEdits {
                             std::string name);
   core::Status SetDescription(const core::project::PhraseId& id,
                               std::string description);
+  core::Status SetPlayStart(const core::project::PhraseId& id, int sample);
   core::Status SetEncoding(const core::project::PhraseId& id,
                            core::project::EncodingChange change);
 

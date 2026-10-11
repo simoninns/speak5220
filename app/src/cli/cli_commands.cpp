@@ -54,6 +54,14 @@ const QCommandLineOption& NameOption() {
   return kOption;
 }
 
+const QCommandLineOption& DescriptionOption() {
+  static const QCommandLineOption kOption(
+      QStringLiteral("description"),
+      QStringLiteral("add: the phrase's description (one file only)."),
+      QStringLiteral("text"));
+  return kOption;
+}
+
 const QCommandLineOption& NormaliseOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("normalise"),
@@ -217,10 +225,13 @@ int RunAdd(const QCommandLineParser& parser, const QStringList& arguments) {
   if (arguments.size() < 2) {
     return Usage(
         "usage: speak5220-cli add PROJECT FILE.wav... [--name NAME] "
-        "[--normalise]");
+        "[--description TEXT] [--normalise]");
   }
   if (parser.isSet(NameOption()) && arguments.size() != 2) {
     return Usage("--name names one phrase: give one file with it");
+  }
+  if (parser.isSet(DescriptionOption()) && arguments.size() != 2) {
+    return Usage("--description describes one phrase: give one file with it");
   }
   const fs::path input = Normalised(ToPath(arguments.front()));
   core::StatusOr<project::Project> loaded = LoadProject(input);
@@ -246,6 +257,10 @@ int RunAdd(const QCommandLineParser& parser, const QStringList& arguments) {
         importer.Import(request, project::NewPhraseId(), taken);
     if (!result.IsOk()) {
       return Fail(result.GetStatus());
+    }
+    if (parser.isSet(DescriptionOption())) {
+      result->phrase.description =
+          parser.value(DescriptionOption()).toStdString();
     }
     const project::Phrase& phrase = result->phrase;
     if ((result->clipped || result->quiet) && !result->normalised) {
@@ -419,6 +434,7 @@ void AddCommandOptions(QCommandLineParser& parser) {
                      "unpacked form), then for add the WAV files."),
       QStringLiteral("[arguments...]"));
   parser.addOption(NameOption());
+  parser.addOption(DescriptionOption());
   parser.addOption(NormaliseOption());
   parser.addOption(ForceOption());
   parser.addOption(OutputOption());

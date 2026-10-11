@@ -99,6 +99,12 @@ class IProjectEditor {
   virtual StatusOr<std::string> SetDescription(const PhraseId& id,
                                                std::string description) = 0;
 
+  // Sets where a phrase's playback starts, in samples of its audio (0 to
+  // the number of samples). Returns the previous value. Fails for an
+  // unknown id or a sample outside the audio. Reverse: SetPlayStart() with
+  // the result.
+  virtual StatusOr<int> SetPlayStart(const PhraseId& id, int sample) = 0;
+
   // Sets a phrase's encoder overrides and its encoding together. Returns
   // the previous ones. Fails for an unknown id, a locked phrase, an
   // invalid override or frame, or the budget, which leaves the phrase

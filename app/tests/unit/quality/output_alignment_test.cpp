@@ -84,6 +84,16 @@ TEST(OutputAlignmentTest, MatchLevelEqualisesSpeechPower) {
   EXPECT_EQ(MatchLevel(x, silent), silent);
 }
 
+TEST(OutputAlignmentTest, LevelMatchGainIsTheRatioOfSpeechLevels) {
+  const std::vector<double> x = testing::SyntheticSpeech();
+  std::vector<double> quiet = x;
+  for (double& v : quiet) {
+    v *= 0.1;
+  }
+  EXPECT_NEAR(LevelMatchGain(x, quiet), 10.0, 1e-9);
+  EXPECT_EQ(LevelMatchGain(x, std::vector<double>(x.size(), 0.0)), 1.0);
+}
+
 TEST(OutputAlignmentTest, AlignmentFindsTheOutputsDelay) {
   constexpr int kDelay = 237;
   const std::vector<double> x = testing::SyntheticSpeech();

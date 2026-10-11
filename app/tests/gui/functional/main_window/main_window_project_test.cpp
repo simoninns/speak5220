@@ -50,6 +50,7 @@ using ::testing::HasSubstr;
 using testing::MockDialogs;
 using ::testing::Return;
 using ::testing::StrictMock;
+using testing::TestPlayback;
 
 // How long an import may take before a test gives up.
 constexpr qint64 kImportTimeoutMs = 20000;
@@ -123,7 +124,9 @@ class MainWindowProjectTest : public ::testing::Test {
   StrictMock<MockDialogs> dialogs_;
   FakeRecentFilesStore recent_;
   core::InlineTaskRunner runner_;
-  MainWindow window_{dialogs_, recent_, runner_};
+  TestPlayback playback_;
+  MainWindow window_{dialogs_, recent_, runner_, playback_.synth,
+                     playback_.player};
 };
 
 TEST_F(MainWindowProjectTest, OpensAFixtureProject) {
@@ -148,7 +151,8 @@ TEST_F(MainWindowProjectTest, OpensAnUnpackedProjectThroughItsProjectYaml) {
 TEST_F(MainWindowProjectTest, FailedOpenIsReportedAndKeepsTheProject) {
   const QString missing = Temp(QStringLiteral("missing.s5proj"));
   recent_.paths = {missing};
-  MainWindow window(dialogs_, recent_, runner_);
+  MainWindow window(dialogs_, recent_, runner_, playback_.synth,
+                    playback_.player);
   EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Open Project"), _))
       .WillOnce([](const QString&, const QString& message) {
         EXPECT_TRUE(message.startsWith(QStringLiteral("cannot open")));
@@ -293,7 +297,8 @@ TEST(MainWindowThreadedImportTest, ImportsOnAThreadPool) {
   StrictMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
   core::ThreadPoolTaskRunner runner(2);
-  MainWindow window(dialogs, recent, runner);
+  TestPlayback playback;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
   window.ImportFiles({path}, 0);
   EXPECT_EQ(window.ImportsRunning(), 1);
   WaitForImports(window);

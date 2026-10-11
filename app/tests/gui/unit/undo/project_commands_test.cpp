@@ -10,6 +10,7 @@
 
 #include "gui/undo/project_commands.h"
 
+#include <QString>
 #include <QUndoStack>
 #include <string>
 #include <vector>
@@ -142,6 +143,17 @@ TEST_F(ProjectCommandsTest, DescriptionIsUndoneBySettingThePreviousText) {
         .WillOnce(Return(std::string("new text")));
   }
   ASSERT_TRUE(edits_.SetDescription(TestId(1), "new text").IsOk());
+  stack_.undo();
+}
+
+TEST_F(ProjectCommandsTest, PlayStartIsUndoneBySettingThePreviousOne) {
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetPlayStart(TestId(1), 800)).WillOnce(Return(0));
+    EXPECT_CALL(editor_, SetPlayStart(TestId(1), 0)).WillOnce(Return(800));
+  }
+  ASSERT_TRUE(edits_.SetPlayStart(TestId(1), 800).IsOk());
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Move Play Start"));
   stack_.undo();
 }
 

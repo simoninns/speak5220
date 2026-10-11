@@ -222,15 +222,16 @@ way its callers can be unit tested.
 | `IFft` | `PocketFft` (pocketfft) | Encoder stages |
 | `IFrameAnalyser`, `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | `FrameAnalyser`, `YinPitchTracker`, `VoicingClassifier`, `RepeatSearch`, `LevelSetter` | `Encoder` (orchestration only) |
 | `IEncoder` | `Encoder` | `Optimiser`, the project's re-encode logic (`EncodingCache`) |
-| `ISynth` | `Synth` | `PesqMetric`, `Optimiser`, `Player` |
+| `ISynth` | `Synth` | `PesqMetric`, `RenderEncodedAudio()`, `PhraseWaveforms`, `Optimiser` |
 | `IQualityMetric` | `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` | `Optimiser` |
 | `IProjectStore` | `ZipProjectStore` (libzip), `DirectoryProjectStore` | `ProjectSerializer` |
-| `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails` |
+| `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails`, `PhraseWaveforms` |
 | `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`) | `MainWindow`: file choices, the save prompt, confirmations, errors |
 | `IRecentFilesStore` | `SettingsRecentFilesStore` (`QSettings`) | `MainWindow`'s recent-file list |
-| `ITaskRunner` | `ThreadPoolTaskRunner` (a `QThreadPool`); `InlineTaskRunner` runs jobs at once | `Optimiser`, background jobs such as the import (run inline in tests) |
-| `IAudioOutput` | `QAudioSink` adapter | `Player`, the playhead |
-| `IClock` | Monotonic clock | The playhead timer, the debounce of re-encoding |
+| `ITaskRunner` | `ThreadPoolTaskRunner` (a `QThreadPool`); `InlineTaskRunner` runs jobs at once | `Optimiser`, background jobs such as the import and the rendering of encoded audio (run inline in tests) |
+| `IAudioOutput` | `QtAudioOutput` (`QAudioSink`) | `Player`, the playhead |
+| `IClock` | `SteadyClock` (`std::chrono::steady_clock`) | The playhead, the debounce of re-encoding |
+| `IDesktopColourScheme` | `PortalColourScheme` (the XDG desktop portal over Qt D-Bus); `NoDesktopColourScheme` on Windows and macOS | `ColourSchemeFollower` |
 
 Code with no dependencies is unit tested directly, in memory, with no
 mocks. That covers `FrameCodec` (pack/parse, bit order), `Booth`, the tables,
@@ -239,8 +240,10 @@ BASIC tokeniser, the DFS image writer, the YAML mapping, and the
 name/identifier rules.
 
 The adapters over third-party libraries (libsndfile, libsamplerate,
-pocketfft, libzip, `QAudioSink`) are kept as thin as possible. They can only
-be tested for real, so their tests are functional.
+pocketfft, libzip, `QAudioSink`, Qt D-Bus) are kept as thin as possible.
+They can only be tested for real, so their tests are functional; the
+audio output and the desktop portal need a device and a desktop session,
+so they are checked by hand.
 
 ## Determinism requirements
 
@@ -293,7 +296,8 @@ app/tests/
 ├── functional/           → speak5220_functional_tests,     label "functional"
 └── gui/
     ├── support/          Shared QApplication entry point (offscreen platform),
-    │                     mocks of the main window's dialogs and settings
+    │                     mocks of the main window's dialogs, settings and
+    │                     audio output, a fake clock, light and dark palettes
     ├── unit/             → speak5220_gui_unit_tests,       label "unit"
     └── functional/       → speak5220_gui_functional_tests, label "functional"
 ```
@@ -393,6 +397,12 @@ hand, and only to create or, by agreement, regenerate the reference data
   per-file timings into `build/app/project-output/benchmark/`. It takes the
   corpus subset by default, or any directory of WAV files. Later phases add
   Optimise for each thread configuration, and `app/projects/benchmark/`.
+- `app/scripts/arctic-project.sh` builds a project of real speech for
+  trying the GUI by hand: the 33 CMU ARCTIC prompts of the corpus
+  recordings, added and encoded with the default options, in
+  `build/app/test-projects/arctic.s5proj`. It is derived from committed
+  files, so it is generated, not committed; it is run by hand in the
+  default Nix shell (`nix develop --command app/scripts/arctic-project.sh`).
 - **By-hand tests.** The full-corpus check and the timing are functional
   tests with Google Test's `DISABLED_` prefix: CTest lists them as disabled
   and never runs them. The scripts run them with

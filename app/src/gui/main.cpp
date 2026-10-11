@@ -12,8 +12,12 @@
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
+#include <memory>
 #include <string_view>
 
+#include "core/dsp/resampler.h"
+#include "core/synth/synth.h"
+#include "core/util/clock.h"
 #include "core/util/logging.h"
 #include "core/util/logging_options.h"
 #include "core/util/status.h"
@@ -22,6 +26,9 @@
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
 #include "gui/main_window/recent_files.h"
+#include "gui/playback/player.h"
+#include "gui/playback/qt_audio_output.h"
+#include "gui/theme/colour_scheme.h"
 
 namespace {
 
@@ -74,10 +81,21 @@ int main(int argc, char* argv[]) {
     return kUsageExitCode;
   }
 
+  // Plan §5, "Colours": light or dark as the desktop prefers.
+  const std::unique_ptr<speak5220::app::IDesktopColourScheme> desktop_scheme =
+      speak5220::app::MakeDesktopColourScheme();
+  const speak5220::app::ColourSchemeFollower follower(*desktop_scheme);
+
   speak5220::app::QtDialogs dialogs;
   speak5220::app::SettingsRecentFilesStore recent_files;
   core::ThreadPoolTaskRunner runner;
-  speak5220::app::MainWindow window(dialogs, recent_files, runner);
+  core::synth::Synth synth;
+  speak5220::app::QtAudioOutput audio_output;
+  core::SteadyClock clock;
+  core::dsp::SincResampler resampler;
+  speak5220::app::Player player(audio_output, clock, resampler);
+  speak5220::app::MainWindow window(dialogs, recent_files, runner, synth,
+                                    player);
   dialogs.SetParent(&window);
   window.show();
   if (!projects.isEmpty()) {

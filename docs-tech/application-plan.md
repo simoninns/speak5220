@@ -776,6 +776,11 @@ more speech than one PHROM (decision D4):
   move, sort, rename, describe and settings changes.
 - **Status bar**: the project size in KB and in PHROMs (§4.1), for example
   `37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3`.
+- **Colours**: the application follows the desktop's light or dark colour
+  scheme, at start-up and when it changes. Widgets take their colours from
+  the palette; colours of our own (warnings, the waveforms, frame kinds, the
+  quality scale) have a light and a dark form, chosen in one place.
+  Preferences can override the scheme (Phase 10).
 
 ---
 
@@ -1132,21 +1137,40 @@ Depends on: Phase 4.
 
 Depends on: Phase 5.
 
-1. **Waveform view.** `WaveformView`: the peak cache, zoom, scroll, the
-   play-start marker and its reset (§5).
+1. **Light and dark mode.** The application follows the desktop's colour
+   scheme (§5, "Colours"):
+   - find why it does not today (on GNOME with Wayland it stays light while
+     the desktop prefers dark), for example the platform theme Qt chooses
+     or a plugin missing from the Nix wrapper or the development shell, and
+     fix it in the build rather than with settings in the user's
+     environment;
+   - replace the fixed colours in the GUI (the red of refused names and of
+     phrases too large for a PHROM) with colours taken from the palette or
+     from one place that chooses them for the scheme in use;
+   - repaint when the scheme changes while the application runs
+     (`QStyleHints::colorSchemeChanged`).
+   - **Acceptance:**
+     - GUI unit tests: the colours chosen differ between a light and a dark
+       palette and contrast with the background in both; a change of scheme
+       is applied to open widgets;
+     - manual checks, recorded, that the application starts light or dark
+       to match the desktop and follows a change, on Linux (GNOME and KDE),
+       Windows and macOS.
+2. **Waveform view.** `WaveformView`: the peak cache, zoom, scroll, the
+   play-start marker and its reset (§5). Its colours come from item 1.
    - **Acceptance:** unit tests for the peak cache and the
      sample-to-pixel mapping; a GUI functional test renders offscreen.
-2. **Player.** `Player` over `IAudioOutput` (a `QAudioSink` adapter) and
+3. **Player.** `Player` over `IAudioOutput` (a `QAudioSink` adapter) and
    `IClock`: play, pause and resume from the marker, one pane at a time,
    and resampling when the device does not accept 8 kHz.
    - **Acceptance:** unit tests with a mocked output and a fake clock; a
      manual check that the playhead follows the sound on Linux with
      PipeWire.
-3. **Encoded pane.** The emulator output through `ISynth`, the frame
+4. **Encoded pane.** The emulator output through `ISynth`, the frame
    overlay and the hover information.
    - **Acceptance:** unit tests map pointer positions to the right frame,
      including the emulator's start latency.
-4. **Linked time axes.** Linked zoom and scroll, offset by the emulator's
+5. **Linked time axes.** Linked zoom and scroll, offset by the emulator's
    start latency.
    - **Acceptance:** unit tests show the same sound at the same position in
      both panes.
@@ -1243,8 +1267,9 @@ Depends on: Phase 8.
 
 Depends on: Phase 9.
 
-1. **Preferences.** Audio device, default encoder settings, theme, waveform
-   colours, and the log level and log file (§2.6).
+1. **Preferences.** Audio device, default encoder settings, the colour
+   scheme (follow the desktop, light or dark; Phase 6 makes following the
+   desktop work), waveform colours, and the log level and log file (§2.6).
    - **Acceptance:** GUI unit tests show the settings stored and applied.
 2. **About box.** Licence and third-party notices.
    - **Acceptance:** every library in §2.4 is listed with its licence.
@@ -1255,7 +1280,8 @@ Depends on: Phase 9.
 4. **Accessibility and display.** Keyboard navigation, accessible names,
    high-DPI and dark mode.
    - **Acceptance:** the getting-started walkthrough can be completed with
-     the keyboard alone; high-DPI and dark-mode checks are recorded.
+     the keyboard alone; high-DPI checks are recorded, and the light and
+     dark checks of Phase 6 are repeated for every window and dialog.
 5. **Import of existing PHROM images.** Words from an Acorn PHROM image
    become locked phrases with no source audio (§3.4).
    - **Acceptance:** functional test: an exported image imports back to the

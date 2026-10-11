@@ -97,6 +97,8 @@ class MockProjectEditor : public core::project::IProjectEditor {
   MOCK_METHOD(core::StatusOr<std::string>, SetDescription,
               (const core::project::PhraseId& id, std::string description),
               (override));
+  MOCK_METHOD(core::StatusOr<int>, SetPlayStart,
+              (const core::project::PhraseId& id, int sample), (override));
   MOCK_METHOD(core::StatusOr<core::project::EncodingChange>, SetEncoding,
               (const core::project::PhraseId& id,
                core::project::EncodingChange change),

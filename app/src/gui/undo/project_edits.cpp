@@ -64,6 +64,11 @@ core::Status ProjectEdits::SetDescription(const project::PhraseId& id,
                                                       std::move(description)));
 }
 
+core::Status ProjectEdits::SetPlayStart(const project::PhraseId& id,
+                                        int sample) {
+  return Push(std::make_unique<SetPlayStartCommand>(*editor_, id, sample));
+}
+
 core::Status ProjectEdits::SetEncoding(const project::PhraseId& id,
                                        project::EncodingChange change) {
   return Push(

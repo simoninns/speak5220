@@ -1,14 +1,15 @@
 # The main window
 
 `speak5220` opens a window with the project's phrases on the left, the
-selected phrase's name and description on the right, and the project's
-size in the status bar. To open a project at start-up, give it on the
-command line: `speak5220 greetings.s5proj`.
+selected phrase's name and description on the right with its
+[waveforms](waveforms.md) below them, and the project's size in the status
+bar. To open a project at start-up, give it on the command line:
+`speak5220 greetings.s5proj`. The window follows the desktop's light or
+dark setting (see [light and dark](waveforms.md#light-and-dark)).
 
 !!! note
-    The waveform panes, playback, the encoder panel and export come later.
-    So far, phrases are encoded and exported with the
-    [command-line tool](cli.md).
+    The encoder panel and export come later. So far, phrases are encoded
+    and exported with the [command-line tool](cli.md).
 
 ## Projects
 
@@ -104,7 +105,8 @@ description is free text, kept only in the project.
 
 **Edit > Undo** (Ctrl+Z) and **Edit > Redo** (Ctrl+Shift+Z, or Ctrl+Y on
 some platforms) step through every change to the phrases: adding,
-removing, moving, sorting, renaming and changing a description. The menu
+removing, moving, sorting, renaming, changing a description and moving
+the [play start](waveforms.md#the-play-start). The menu
 names the step, for example **Undo Rename to HELLO**. Undoing back to the
 last save clears the unsaved-changes mark. Opening or starting a project
 clears the history.

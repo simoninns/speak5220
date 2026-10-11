@@ -11,6 +11,7 @@
 #include "gui/phrase_list/phrase_list_delegate.h"
 
 #include <QApplication>
+#include <QColor>
 #include <QFont>
 #include <QFontMetrics>
 #include <QModelIndex>
@@ -24,7 +25,9 @@
 #include <QStyleOptionViewItem>
 #include <QVariant>
 
+#include "core/project/phrom_allocator.h"
 #include "gui/phrase_list/phrase_list_model.h"
+#include "gui/theme/colours.h"
 
 namespace speak5220::app {
 
@@ -59,6 +62,16 @@ QString PhraseListDelegate::DetailText(const QModelIndex& index) {
   return parts.join(QStringLiteral(" · "));
 }
 
+QColor PhraseListDelegate::NameColour(const QPalette& palette,
+                                      const QModelIndex& index) {
+  if (static_cast<core::project::Placement>(
+          index.data(PhraseListModel::kPlacementRole).toInt()) ==
+      core::project::Placement::kTooLarge) {
+    return ColoursFor(palette).warning;
+  }
+  return palette.color(QPalette::Text);
+}
+
 int PhraseListDelegate::DividerHeight(const QStyleOptionViewItem& option,
                                       const QModelIndex& index) {
   if (index.data(PhraseListModel::kPhromStartRole).toInt() == 0) {
@@ -73,6 +86,7 @@ void PhraseListDelegate::paint(QPainter* painter,
   const int divider = DividerHeight(option, index);
   QStyleOptionViewItem item = option;
   item.rect.setTop(option.rect.top() + divider);
+  item.palette.setColor(QPalette::Text, NameColour(option.palette, index));
 
   if (divider > 0) {
     // Plan §5: "PHROM N" where each PHROM after the first starts.

@@ -12,6 +12,7 @@
 
 #include <QChar>
 #include <QColor>
+#include <QEvent>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -24,6 +25,7 @@
 #include "core/project/phrase.h"
 #include "core/project/phrase_name.h"
 #include "core/util/status.h"
+#include "gui/theme/colours.h"
 #include "gui/undo/project_edits.h"
 
 namespace speak5220::app {
@@ -31,9 +33,6 @@ namespace speak5220::app {
 namespace project = core::project;
 
 namespace {
-
-// The colour of a refusal under the fields.
-const QColor kMessageColour(0xC0, 0x00, 0x00);
 
 // How wide the name field is, in characters (names have at most 16).
 constexpr int kNameFieldCharacters = 20;
@@ -76,9 +75,7 @@ PhraseDetails::PhraseDetails(ProjectEdits& edits, QWidget* parent)
   description_->setPlaceholderText(
       QStringLiteral("A note about the phrase, kept in the project only"));
   message_->setWordWrap(true);
-  QPalette palette = message_->palette();
-  palette.setColor(QPalette::WindowText, kMessageColour);
-  message_->setPalette(palette);
+  UpdateColours();
 
   auto* name_label = new QLabel(QStringLiteral("&Name"), this);
   name_label->setBuddy(name_);
@@ -134,6 +131,25 @@ void PhraseDetails::ShowPhrase(const project::Phrase* phrase) {
 }
 
 QString PhraseDetails::Message() const { return message_->text(); }
+
+QColor PhraseDetails::MessageColour() const {
+  return message_->palette().color(QPalette::WindowText);
+}
+
+void PhraseDetails::changeEvent(QEvent* event) {
+  // Plan §5, "Colours": a change of scheme reaches the widget as a palette
+  // change.
+  if (event->type() == QEvent::PaletteChange) {
+    UpdateColours();
+  }
+  QWidget::changeEvent(event);
+}
+
+void PhraseDetails::UpdateColours() {
+  QPalette message_palette = message_->palette();
+  message_palette.setColor(QPalette::WindowText, ColoursFor(palette()).warning);
+  message_->setPalette(message_palette);
+}
 
 void PhraseDetails::OnNameEdited(const QString& text) {
   const NameEdit edit = FilterNameEdit(text);

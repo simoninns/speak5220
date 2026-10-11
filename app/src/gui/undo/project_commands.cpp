@@ -196,6 +196,25 @@ core::Status SetDescriptionCommand::Revert() {
   return Editor().SetDescription(id_, previous_description_).GetStatus();
 }
 
+SetPlayStartCommand::SetPlayStartCommand(project::IProjectEditor& editor,
+                                         project::PhraseId id, int sample)
+    : ProjectCommand(editor, QStringLiteral("Move Play Start")),
+      id_(std::move(id)),
+      sample_(sample) {}
+
+core::Status SetPlayStartCommand::Apply() {
+  const core::StatusOr<int> previous = Editor().SetPlayStart(id_, sample_);
+  if (!previous.IsOk()) {
+    return previous.GetStatus();
+  }
+  previous_sample_ = *previous;
+  return core::OkStatus();
+}
+
+core::Status SetPlayStartCommand::Revert() {
+  return Editor().SetPlayStart(id_, previous_sample_).GetStatus();
+}
+
 SetEncodingCommand::SetEncodingCommand(project::IProjectEditor& editor,
                                        project::PhraseId id,
                                        project::EncodingChange change)

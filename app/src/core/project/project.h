@@ -145,6 +145,7 @@ class Project : public IProjectEditor {
                                      std::string_view name) override;
   StatusOr<std::string> SetDescription(const PhraseId& id,
                                        std::string description) override;
+  StatusOr<int> SetPlayStart(const PhraseId& id, int sample) override;
   StatusOr<EncodingChange> SetEncoding(const PhraseId& id,
                                        EncodingChange change) override;
 

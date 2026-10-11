@@ -555,6 +555,20 @@ StatusOr<std::string> Project::SetDescription(const PhraseId& id,
       std::move(description));
 }
 
+StatusOr<int> Project::SetPlayStart(const PhraseId& id, int sample) {
+  const std::optional<int> index = IndexOf(id);
+  if (!index) {
+    return NotFoundError("no phrase with id " + id);
+  }
+  Phrase& phrase = contents_.phrases[static_cast<std::size_t>(*index)];
+  if (sample < 0 || static_cast<std::size_t>(sample) > phrase.audio.size()) {
+    return OutOfRangeError(
+        fmt::format("the play start of {} must be from 0 to {}, not {}",
+                    phrase.name, phrase.audio.size(), sample));
+  }
+  return std::exchange(phrase.play_start, sample);
+}
+
 StatusOr<EncodingChange> Project::SetEncoding(const PhraseId& id,
                                               EncodingChange change) {
   const std::optional<int> index = IndexOf(id);

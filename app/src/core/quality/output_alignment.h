@@ -63,6 +63,12 @@ int RefineBySpectrum(std::span<const double> input,
 // (speechqual.py placed()).
 std::vector<double> Place(std::span<const double> output, int lag, int n);
 
+// The gain that gives `degraded` the input's mean power over the input's
+// speech frames (the scale of speechqual.py matchLevel()); 1 if `degraded`
+// is silent there.
+double LevelMatchGain(std::span<const double> input,
+                      std::span<const double> degraded);
+
 // `degraded` scaled to the input's mean power over the input's speech
 // frames (speechqual.py matchLevel()); unchanged if it is silent there.
 std::vector<double> MatchLevel(std::span<const double> input,

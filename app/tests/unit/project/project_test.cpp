@@ -321,6 +321,29 @@ TEST(ProjectTest, DescriptionMustBeUtf8) {
   EXPECT_TRUE(project.SetDescription(TestId(3), "\xf0\x9f\x94\x8a").IsOk());
 }
 
+TEST(ProjectTest, PlayStartIsReversedBySetPlayStart) {
+  Project project = FivePhrases();
+  const Project before = project;
+  StatusOr<int> previous = project.SetPlayStart(TestId(3), 4);
+  ASSERT_TRUE(previous.IsOk());
+  EXPECT_EQ(*previous, 0);
+  EXPECT_EQ(project.FindPhrase(TestId(3))->play_start, 4);
+  ASSERT_TRUE(project.SetPlayStart(TestId(3), *previous).IsOk());
+  EXPECT_EQ(project, before);
+}
+
+TEST(ProjectTest, PlayStartMustBeWithinTheAudio) {
+  Project project = FivePhrases();
+  const Project before = project;
+  EXPECT_EQ(project.SetPlayStart(TestId(3), 5).GetStatus().Code(),
+            StatusCode::kOutOfRange);
+  EXPECT_EQ(project.SetPlayStart(TestId(3), -1).GetStatus().Code(),
+            StatusCode::kOutOfRange);
+  EXPECT_EQ(project.SetPlayStart(TestId(99), 0).GetStatus().Code(),
+            StatusCode::kNotFound);
+  EXPECT_EQ(project, before);
+}
+
 TEST(ProjectTest, SetEncodingIsReversedBySetEncoding) {
   Project project = FivePhrases();
   const Project before = project;

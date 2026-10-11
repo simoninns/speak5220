@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_GUI_PHRASE_EDITOR_PHRASE_DETAILS_H_
 #define SPEAK5220_GUI_PHRASE_EDITOR_PHRASE_DETAILS_H_
 
+#include <QColor>
 #include <QString>
 #include <QWidget>
 #include <optional>
@@ -18,6 +19,7 @@
 #include "core/project/phrase.h"
 #include "gui/undo/project_edits.h"
 
+class QEvent;
 class QLabel;
 class QLineEdit;
 
@@ -59,12 +61,18 @@ class PhraseDetails : public QWidget {
   QLineEdit* DescriptionField() const { return description_; }
   // The last message, or empty.
   QString Message() const;
+  // The message's colour: the theme's warning colour (ColoursFor()).
+  QColor MessageColour() const;
+
+ protected:
+  void changeEvent(QEvent* event) override;
 
  private:
   void OnNameEdited(const QString& text);
   void CommitName();
   void CommitDescription();
   void ShowMessage(const QString& message);
+  void UpdateColours();
 
   ProjectEdits* edits_;
   QLineEdit* name_;

@@ -89,8 +89,10 @@ TEST(ProjectMigrationTest, RefusesAVersionBelowOne) {
 }
 
 TEST(ProjectMigrationTest, FailingStepStopsTheMigration) {
-  const std::vector<MigrationStep> steps = {
-      [](YAML::Node&) { return DataLossError("no title"); }};
+  // Added after construction: GCC 15 at -O3 wrongly warns that a
+  // std::function built inside a braced list may be used uninitialised.
+  std::vector<MigrationStep> steps;
+  steps.emplace_back([](YAML::Node&) { return DataLossError("no title"); });
   YAML::Node root = YAML::Load("version: 1\n");
   const Status status = MigrateProjectDocument(root, 1, steps);
   EXPECT_EQ(status.Code(), StatusCode::kDataLoss);

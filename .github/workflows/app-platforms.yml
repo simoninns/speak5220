@@ -49,6 +49,8 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
+          # Qt Multimedia plays the audio (plan §2.4)
+          modules: qtmultimedia
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
       - name: Install vcpkg

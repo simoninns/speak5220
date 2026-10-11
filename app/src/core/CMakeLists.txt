@@ -47,6 +47,7 @@ add_library(
     project/zip_project_store.cpp
     quality/anchor_vocoder.cpp
     quality/cheap_measures.cpp
+    quality/encoded_audio.cpp
     quality/numpy_normal.cpp
     quality/output_alignment.cpp
     quality/pesq.cpp
@@ -57,6 +58,7 @@ add_library(
     quality/quality_scale.cpp
     synth/reference_synthesizer.cpp
     synth/synth.cpp
+    util/clock.cpp
     util/logging.cpp
     util/file_digest.cpp
     util/logging_options.cpp

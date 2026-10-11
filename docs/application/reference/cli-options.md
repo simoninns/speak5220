@@ -26,7 +26,7 @@ no command, `speak5220-cli` prints its name and version.
 | Command | Arguments | Options | What it does |
 |---|---|---|---|
 | `new` | `PROJECT` | `--name`, `--output` | Creates an empty project. Fails if `PROJECT` exists |
-| `add` | `PROJECT FILE.wav...` | `--name` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
+| `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
 | `encode` | `PROJECT` | `--force`, `--output` | Encodes the phrases whose frames are out of date, and saves |
 | `export` | `PROJECT` | `--output` (required), `--preset`, `--format`, `--layout` | Writes exported files into the `--output` directory |
 
@@ -37,6 +37,7 @@ no command, `speak5220-cli` prints its name and version.
 | `--name` | text | `new`, `add` | `new`: the project's name (default: the file name without its extension). `add`: the phrase's name, normalised to upper case (default: made from the file name) |
 | `--normalise` | none | `add` | Scales a file that clips or is very quiet (peak below −30 dBFS) to a peak of −1 dBFS. Other files are never changed |
 | `--force` | none | `encode` | Encodes every phrase that is not locked, even if its frames are current |
+| `--description` | text | `add` | The phrase's description, a note kept in the project only (default: none) |
 | `--output` | a directory | all | `new`, `add`, `encode`: saves the project into this directory, under its own name, instead of in place. `export`: the directory for the exported files. Created if missing |
 | `--preset` | a preset name | `export` | Runs this export preset of the project; may be given more than once. Without `--preset` or `--format`, every preset runs |
 | `--format` | `acorn-phrom` | `export` | Exports in this format instead of running presets; the files are named after the project |
@@ -71,4 +72,4 @@ Line formats:
 |---|---|
 | 0 | Success |
 | 1 | The command failed: a project or file that cannot be read or written, an invalid or taken name, a phrase that cannot be encoded or would exceed the budget, or an export that cannot run. The message is on stderr |
-| 2 | The command line cannot be used: an unknown command or level, missing arguments, `--name` with more than one file, `export` without `--output`, `--preset` with `--format`, `--no-console-log` without `--log-file`, or a log file that cannot be opened |
+| 2 | The command line cannot be used: an unknown command or level, missing arguments, `--name` or `--description` with more than one file, `export` without `--output`, `--preset` with `--format`, `--no-console-log` without `--log-file`, or a log file that cannot be opened |

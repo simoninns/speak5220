@@ -29,7 +29,7 @@ speak5220-cli export words.s5proj --output out --format acorn-phrom
 - **`add PROJECT FILE.wav...`** imports WAV files as new phrases at the end
   of the list (see [importing audio](projects.md#importing-audio)). Each
   phrase is named from its file name, or by `--name` when one file is
-  given. `--normalise` normalises a file that clips or is very quiet; without
+  given; `--description` gives that one phrase a description. `--normalise` normalises a file that clips or is very quiet; without
   it, such a file is imported unchanged with a warning.
 - **`encode PROJECT`** encodes every phrase whose frames are out of date, in
   list order, and reports the PHROMs the project fills. `--force` encodes

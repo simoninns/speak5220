@@ -26,12 +26,14 @@ using testing::EncodedPhrase;
 using testing::FakeRecentFilesStore;
 using testing::MockDialogs;
 using ::testing::NiceMock;
+using testing::TestPlayback;
 
 TEST(MainWindowShowTest, BecomesVisibleWhenShown) {
   NiceMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
   core::InlineTaskRunner runner;
-  MainWindow window(dialogs, recent, runner);
+  TestPlayback playback;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
   window.show();
   QApplication::processEvents();
   EXPECT_TRUE(window.isVisible());
@@ -41,7 +43,8 @@ TEST(MainWindowShowTest, PaintsThePhraseListWithDividers) {
   NiceMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
   core::InlineTaskRunner runner;
-  MainWindow window(dialogs, recent, runner);
+  TestPlayback playback;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
   ASSERT_TRUE(window.Document()
                   .Edits()
                   .InsertPhrases(

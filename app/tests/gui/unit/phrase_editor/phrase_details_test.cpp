@@ -21,6 +21,8 @@
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gui/support/test_palettes.h"
+#include "gui/theme/colours.h"
 #include "gui/undo/project_edits.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
@@ -30,7 +32,9 @@ namespace {
 
 using core::project::Phrase;
 using testing::AudioPhrase;
+using testing::DarkPalette;
 using ::testing::Eq;
+using testing::LightPalette;
 using testing::MockProjectEditor;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -97,6 +101,14 @@ TEST_F(PhraseDetailsTest, ShowsThePhrase) {
   EXPECT_EQ(details_.DescriptionField()->text(), QStringLiteral("A greeting"));
   EXPECT_TRUE(details_.NameField()->isEnabled());
   EXPECT_EQ(details_.NameField()->maxLength(), 16);
+}
+
+TEST_F(PhraseDetailsTest, MessageColourFollowsThePalette) {
+  details_.setPalette(LightPalette());
+  EXPECT_EQ(details_.MessageColour(), ColoursFor(LightPalette()).warning);
+  // A change of colour scheme reaches the widget as a palette change.
+  details_.setPalette(DarkPalette());
+  EXPECT_EQ(details_.MessageColour(), ColoursFor(DarkPalette()).warning);
 }
 
 TEST_F(PhraseDetailsTest, NoPhraseClearsAndDisablesTheFields) {

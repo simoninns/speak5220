@@ -220,6 +220,23 @@ TEST_F(CliProjectTest, ExportRefusesPhrasesThatAreNotEncoded) {
   EXPECT_THAT(run.err, HasSubstr("HELLO is not encoded"));
 }
 
+TEST_F(CliProjectTest, AddSetsTheDescriptionOfOnePhrase) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  const CliRun run =
+      RunCli({QStringLiteral("add"), Q(path), Q(Path("speech.wav")),
+              QStringLiteral("--name"), QStringLiteral("AGAIN"),
+              QStringLiteral("--description"),
+              QStringLiteral("Lord, but I'm glad to see you again, Phil.")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  const core::StatusOr<project::Project> loaded = Load(path);
+  ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
+  ASSERT_EQ(loaded->Phrases().size(), 2U);
+  EXPECT_EQ(loaded->Phrases()[0].description, "");
+  EXPECT_EQ(loaded->Phrases()[1].description,
+            "Lord, but I'm glad to see you again, Phil.");
+}
+
 TEST_F(CliProjectTest, FailuresExitWithCode1) {
   const fs::path path = Path("test.s5proj");
   CreateWithPhrase(path);
@@ -245,6 +262,11 @@ TEST_F(CliProjectTest, UnusableCommandLinesExitWithCode2) {
   EXPECT_EQ(RunCli({QStringLiteral("add"), Q(Path("p")),
                     QStringLiteral("a.wav"), QStringLiteral("b.wav"),
                     QStringLiteral("--name"), QStringLiteral("X")})
+                .exit_code,
+            2);
+  EXPECT_EQ(RunCli({QStringLiteral("add"), Q(Path("p")),
+                    QStringLiteral("a.wav"), QStringLiteral("b.wav"),
+                    QStringLiteral("--description"), QStringLiteral("X")})
                 .exit_code,
             2);
 }

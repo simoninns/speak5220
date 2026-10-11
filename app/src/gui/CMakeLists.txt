@@ -15,17 +15,39 @@ add_library(
     phrase_list/phrase_list_delegate.cpp
     phrase_list/phrase_list_model.cpp
     phrase_list/phrase_list_panel.cpp
+    playback/player.cpp
+    playback/qt_audio_output.cpp
+    theme/colour_scheme.cpp
+    theme/colours.cpp
     undo/project_commands.cpp
     undo/project_edits.cpp
+    waveform/frame_map.cpp
+    waveform/peak_cache.cpp
+    waveform/phrase_waveforms.cpp
+    waveform/time_axis.cpp
+    waveform/waveform_pane.cpp
+    waveform/waveform_view.cpp
 )
 
 set_target_properties(speak5220_gui PROPERTIES AUTOMOC ON)
 target_include_directories(speak5220_gui PUBLIC "${PROJECT_SOURCE_DIR}/src")
 target_link_libraries(
     speak5220_gui
-    PUBLIC s5core Qt6::Widgets
+    PUBLIC s5core Qt6::Widgets Qt6::Multimedia
     PRIVATE speak5220_compile_options
 )
+
+# The desktop's light or dark preference comes from the XDG desktop portal
+# over D-Bus on Linux and the BSDs; Qt follows the desktop itself on
+# Windows and macOS (plan §5, "Colours").
+if(TARGET Qt6::DBus)
+    target_sources(speak5220_gui PRIVATE theme/portal_colour_scheme.cpp)
+    target_link_libraries(speak5220_gui PRIVATE Qt6::DBus)
+    target_compile_definitions(
+        speak5220_gui
+        PRIVATE SPEAK5220_HAVE_DESKTOP_PORTAL
+    )
+endif()
 
 add_executable(speak5220 WIN32 MACOSX_BUNDLE main.cpp)
 target_link_libraries(speak5220 PRIVATE speak5220_gui speak5220_compile_options)

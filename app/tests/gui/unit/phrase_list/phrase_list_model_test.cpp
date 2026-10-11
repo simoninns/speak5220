@@ -10,12 +10,15 @@
 
 #include "gui/phrase_list/phrase_list_model.h"
 
-#include <QBrush>
+#include <QApplication>
+#include <QColor>
 #include <QList>
 #include <QMimeData>
 #include <QModelIndex>
+#include <QPalette>
 #include <QString>
 #include <QStringList>
+#include <QStyle>
 #include <QUndoStack>
 #include <QUrl>
 #include <memory>
@@ -32,6 +35,7 @@
 #include "gtest/gtest.h"
 #include "gui/phrase_list/phrase_list_delegate.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/theme/colours.h"
 #include "gui/undo/project_edits.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
@@ -129,16 +133,19 @@ TEST_F(PhraseListModelTest, DividerSkipsPhrasesInNoPhrom) {
   EXPECT_EQ(Data(2, PhraseListModel::kPhromStartRole).toInt(), 2);
 }
 
-TEST_F(PhraseListModelTest, PhraseTooLargeForAPhromIsRed) {
+TEST_F(PhraseListModelTest, PhraseTooLargeForAPhromIsMarked) {
   model_.SetProject(ProjectWith(
       {EncodedPhrase(1, "SMALL", 100), EncodedPhrase(2, "HUGE", 17000)}));
   EXPECT_EQ(Data(1, PhraseListModel::kPlacementRole).toInt(),
             static_cast<int>(Placement::kTooLarge));
   EXPECT_EQ(Data(1, PhraseListModel::kSizeRole).toInt(), 17000);
   EXPECT_EQ(Data(1, PhraseListModel::kPhromRole).toInt(), 0);
-  EXPECT_EQ(Data(1, Qt::ForegroundRole).value<QBrush>().color(),
-            QColor(0xC0, 0x00, 0x00));
-  EXPECT_FALSE(Data(0, Qt::ForegroundRole).isValid());
+  // The delegate draws its name in the theme's warning colour.
+  const QPalette palette = QApplication::style()->standardPalette();
+  EXPECT_EQ(PhraseListDelegate::NameColour(palette, model_.index(1)),
+            ColoursFor(palette).warning);
+  EXPECT_EQ(PhraseListDelegate::NameColour(palette, model_.index(0)),
+            palette.color(QPalette::Text));
   EXPECT_TRUE(Data(1, Qt::ToolTipRole)
                   .toString()
                   .contains(QStringLiteral("too large")));

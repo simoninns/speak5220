@@ -42,6 +42,7 @@
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
 #include "core/project/project_store.h"
+#include "core/synth/synth.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -53,6 +54,8 @@
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/phrase_list/phrase_list_panel.h"
+#include "gui/playback/player.h"
+#include "gui/waveform/phrase_waveforms.h"
 
 namespace speak5220::app {
 
@@ -78,11 +81,14 @@ std::filesystem::path ToPath(const QString& text) {
 }  // namespace
 
 MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
-                       core::ITaskRunner& runner, QWidget* parent)
+                       core::ITaskRunner& runner, core::synth::ISynth& synth,
+                       Player& player, QWidget* parent)
     : QMainWindow(parent),
       dialogs_(&dialogs),
       recent_store_(&recent_store),
       runner_(&runner),
+      synth_(&synth),
+      player_(&player),
       recent_(recent_store.Load()) {
   resize(kInitialWidth, kInitialHeight);
   CreateActions();
@@ -103,6 +109,7 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           &MainWindow::ImportFiles);
   connect(panel_, &PhraseListPanel::SelectionChanged, this,
           &MainWindow::OnSelectionChanged);
+  connect(waveforms_, &PhraseWaveforms::Failed, this, &MainWindow::ShowError);
 
   OnProjectChanged();
   UpdateTitle();
@@ -114,10 +121,11 @@ MainWindow::~MainWindow() {
   runner_->Wait();
   disconnect(&document_, nullptr, this, nullptr);
   // Child widgets outlive the members (QObject deletes them later), so
-  // the two that use the model and the document go first; otherwise their
+  // those that use the model and the document go first; otherwise their
   // signals on the way out would reach destroyed members.
   delete panel_;
   delete details_;
+  delete waveforms_;
 }
 
 QString MainWindow::StatusText() const { return status_label_->text(); }
@@ -238,8 +246,10 @@ void MainWindow::CreateWidgets() {
   auto* central = new QWidget(this);
   auto* layout = new QVBoxLayout(central);
   details_ = new PhraseDetails(document_.Edits(), central);
+  waveforms_ = new PhraseWaveforms(document_.Edits(), *player_, *synth_,
+                                   *runner_, central);
   layout->addWidget(details_);
-  layout->addStretch();
+  layout->addWidget(waveforms_, 1);
   setCentralWidget(central);
 
   status_label_ = new QLabel(this);
@@ -382,8 +392,26 @@ void MainWindow::OnProjectChanged() {
 
 void MainWindow::OnSelectionChanged() {
   const project::PhraseId id = panel_->SingleSelectedId();
-  details_->ShowPhrase(id.empty() ? nullptr
-                                  : document_.Project().FindPhrase(id));
+  const project::Phrase* phrase =
+      id.empty() ? nullptr : document_.Project().FindPhrase(id);
+  details_->ShowPhrase(phrase);
+  QString note;
+  if (phrase != nullptr) {
+    const QList<int> rows = panel_->SelectedRows();
+    switch (static_cast<EncodingState>(
+        model_.index(rows.front()).data(PhraseListModel::kStateRole).toInt())) {
+      case EncodingState::kStale:
+        note = QStringLiteral("stale: made with other settings");
+        break;
+      case EncodingState::kLocked:
+        note = QStringLiteral("locked");
+        break;
+      case EncodingState::kCurrent:
+      case EncodingState::kNotEncoded:
+        break;
+    }
+  }
+  waveforms_->ShowPhrase(phrase, note);
   UpdateActions();
 }
 

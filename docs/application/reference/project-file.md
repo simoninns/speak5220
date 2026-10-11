@@ -96,7 +96,7 @@ exports:
 | `source` | Mapping | None | Where the audio came from, below. Every phrase that is not locked has one |
 | `encoder` | Mapping | Empty | The [encoder options](encoder-options.md) this phrase sets for itself. Options it does not list follow `default_encoder`, also when that changes |
 | `locked` | `true` or `false` | `false` | A locked phrase is never re-encoded: its frames are its content |
-| `play_start` | Whole number | 0 | Where playback starts, in samples of the 8 kHz audio |
+| `play_start` | Whole number | 0 | Where playback starts, in samples of the 8 kHz audio: from 0 to the audio's length. Set by clicking in a [waveform](../user-manual/waveforms.md#the-play-start) |
 
 **Phrase names** follow the Acorn PHROM A word list:
 

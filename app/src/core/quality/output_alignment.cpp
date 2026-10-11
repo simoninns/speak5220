@@ -329,8 +329,8 @@ std::vector<double> Place(std::span<const double> output, int lag, int n) {
   return y;
 }
 
-std::vector<double> MatchLevel(std::span<const double> input,
-                               std::span<const double> degraded) {
+double LevelMatchGain(std::span<const double> input,
+                      std::span<const double> degraded) {
   const std::vector<bool> speech = SpeechFrames(FrameLevelsDb(input));
   std::vector<double> in_squares;
   std::vector<double> out_squares;
@@ -347,12 +347,15 @@ std::vector<double> MatchLevel(std::span<const double> input,
   }
   const double pr = dsp::Mean(in_squares);
   const double pd = dsp::Mean(out_squares);
+  return pd > 0 ? std::sqrt(pr / pd) : 1.0;
+}
+
+std::vector<double> MatchLevel(std::span<const double> input,
+                               std::span<const double> degraded) {
+  const double gain = LevelMatchGain(input, degraded);
   std::vector<double> out(degraded.begin(), degraded.end());
-  if (pd > 0) {
-    const double gain = std::sqrt(pr / pd);
-    for (double& v : out) {
-      v *= gain;
-    }
+  for (double& v : out) {
+    v *= gain;
   }
   return out;
 }
