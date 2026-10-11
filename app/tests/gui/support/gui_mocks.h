@@ -24,6 +24,7 @@
 #include "core/encoder/encoder.h"
 #include "core/project/phrase.h"
 #include "core/quality/quality_metric.h"
+#include "core/synth/output_pin.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -72,9 +73,12 @@ class FakeViewPreferences : public app::IViewPreferences {
   void SetOutputFilter(core::dsp::OutputFilter chosen) override {
     filter = chosen;
   }
+  core::synth::OutputPin ChosenOutputPin() override { return pin; }
+  void SetOutputPin(core::synth::OutputPin chosen) override { pin = chosen; }
 
   bool advanced_shown = false;
   core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
+  core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
 };
 
 class MockAudioOutput : public app::IAudioOutput {

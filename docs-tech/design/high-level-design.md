@@ -19,7 +19,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests, clock) | Implemented |
 | `s5core`: `lpc/` (tables, frames, bit stream, frame statistics) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
-| `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
+| `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
@@ -67,7 +67,7 @@ app/
       lpc/                      coding tables, Frame, FrameCodec, BitReverse,
                                 FrameStatistics
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
-      synth/                    Synth, ReferenceSynthesizer
+      synth/                    Synth, ReferenceSynthesizer, OutputPin
       packaging/                AcornPhrom, TiIndexed, SpeakExternalStream
       audio/                    WAV interfaces, the libsndfile adapters, the
                                 24-bit grid of project audio
@@ -323,6 +323,7 @@ Plan §2.2, with the names as built.
 | `Tms5220`, `Tms6100`, `ChipDriver` | **Implemented** (`core/emulator/`): §7 |
 | `Synth` (`ISynth`) | **Implemented** (`core/synth/synth`): §7 |
 | `ReferenceSynthesizer` | **Implemented** (`core/synth/reference_synthesizer`): the encoder's reference-algorithm synthesiser (`synthesize()` in the Python), which matches the emulator's VSM path |
+| `OutputPin`, `PinSamples()`, `ClippedSamples()` | **Implemented** (`core/synth/output_pin`): the encoded audio from the SPEAKER pin, each code clipped to the DAC's −128…+127 (`emulator::kDacMin`, `kDacMax`), or from the I/O pin's unclipped 10-bit codes, for listening and display only (§16) |
 | `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's |
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
 | `SndfileWavCodec` (`IWavCodec`) | **Implemented** (`core/audio/sndfile_wav_io`): the same, to and from bytes in memory (libsndfile's virtual I/O), with integer PCM read and 24-bit PCM written exactly (§14) |
@@ -1130,10 +1131,13 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   organisation and application name "Speak5220"). What the user chose to
   see and hear (whether the encoder panel shows its advanced settings, and
   the output filter chosen in the **Audio > Output Filter** menu, by its
-  `OutputFilterInfo::key`) is kept the same way through `IViewPreferences`
-  (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()` passes the
-  filter to the `Player` and to `PhraseWaveforms`, ticks its menu item and
-  saves it.
+  `OutputFilterInfo::key`, and the pin chosen in **Audio > Chip Output**,
+  by its `OutputPinInfo::key`) is kept the same way through
+  `IViewPreferences` (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()`
+  passes the filter to the `Player` and to `PhraseWaveforms`, ticks its
+  menu item and saves it. `MainWindow::SetOutputPin()` does the same with
+  the pin for `PhraseWaveforms` and the `OptimiseDialog`, first stopping
+  encoded audio that was taken from the other pin.
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
   (which use the model and the document) first and disconnects the
@@ -1236,6 +1240,15 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   applies the filter itself. A change redraws from the render kept,
   restoring the extent and axis, and the note names the filter after the
   level gain. The original is never filtered.
+- **Output pin.** The encoded audio is taken from the SPEAKER pin by
+  default (`PhraseWaveforms::SetOutputPin()`): `PinSamples()` clips each
+  code to the DAC's range before the level gain, as the chip clips before
+  its analogue output, and the note gives `ClippedSamples()` when any are
+  clipped. With the I/O pin the 10-bit codes are shown and played
+  unclipped, and the note says so. The level gain is measured on the
+  unclipped codes, so it is the same for both pins. A change redraws as
+  for the filter. The quality measure, the encoder and exports always use
+  the unclipped codes.
 - **Shared time axis.** The panes are stacked with equal stretch, so the
   views are the same size. Both scroll over the union of their content extents, and each
   view's `AxisChanged()` sets the same axis on the other (a flag stops the
@@ -1500,7 +1513,9 @@ candidate's frames are kept by the search, and the stored frames are what
 Revert leaves, so they are the honest comparison. Each is spoken with
 `RenderEncodedAudio()` on the runner once per search (a generation count
 drops speakings from an earlier one) and played at the recording's level
-(`level_gain`), as the encoded pane plays it. They play through the
+(`level_gain`) from the chosen pin (`OptimiseDialog::SetOutputPin()`),
+as the encoded pane plays it; the dialog keeps the `EncodedAudio` and
+makes the samples when a play starts. They play through the
 window's `Player` as `PlaybackSource::kBeforeOptimise` and `kOptimised`,
 through the output filter if one is chosen, which `PhraseWaveforms` gives no playhead; the dialog stops them on
 Accept, Revert, Cancel or another phrase. The play/pause icons, drawn in

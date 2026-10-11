@@ -80,6 +80,11 @@ constexpr std::uint32_t NoiseStep(std::uint32_t n) {
   return ((n << 1) | feedback) & kNoiseMask;
 }
 
+// speak5220 datasheet §8.2: the DAC takes the I/O code clipped to this
+// range, offset to 0..255; I/O itself carries the code unclipped.
+inline constexpr int kDacMin = -128;
+inline constexpr int kDacMax = 127;
+
 // The SPEAKER load of §8.2, Table 8-2.
 enum class DacLoad { k996Ohm, k482Ohm };
 

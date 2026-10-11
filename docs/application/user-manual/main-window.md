@@ -107,8 +107,14 @@ description is free text, kept only in the project.
 
 **Audio > Output Filter** chooses the computer's audio stage that the
 encoded audio is heard and shown through: **None** (the default) or
-**BBC Micro**. See [output filter](waveforms.md#output-filter). The window
-remembers the choice for next time.
+**BBC Micro**. See [output filter](waveforms.md#output-filter).
+
+**Audio > Chip Output** chooses which of the chip's pins the encoded audio
+is taken from: **SPEAKER (8-bit DAC)** (the default), whose DAC clips
+loud samples, or **I/O (10-bit codes)**, unclipped. See
+[chip output](waveforms.md#chip-output).
+
+The window remembers both choices for next time.
 
 ## Undo and redo
 

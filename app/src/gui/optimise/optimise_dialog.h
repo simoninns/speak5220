@@ -23,6 +23,7 @@
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/quality/encoded_audio.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -111,6 +112,11 @@ class OptimiseDialog : public QDialog {
   // resumes them if already playing or paused.
   void PlayPause(PlaybackSource source);
 
+  // The chip's pin the two encodings are heard from, as the encoded
+  // waveform pane has it; SPEAKER at first.
+  void SetOutputPin(core::synth::OutputPin pin) { pin_ = pin; }
+  core::synth::OutputPin Pin() const { return pin_; }
+
  signals:
   // Accepting the results failed.
   void Failed(const QString& title, const QString& message);
@@ -126,13 +132,12 @@ class OptimiseDialog : public QDialog {
  private:
   enum class Stage { kReady, kRunning, kDone, kNothing };
 
-  // A phrase's two encodings as played, once spoken: at the recording's
-  // level, as 16-bit samples.
+  // A phrase's two encodings, once spoken.
   struct Comparison {
     // False if the phrase had no frames before Optimise.
     bool had_frames = false;
-    std::optional<std::vector<std::int16_t>> original;
-    std::optional<std::vector<std::int16_t>> optimised;
+    std::optional<core::quality::EncodedAudio> original;
+    std::optional<core::quality::EncodedAudio> optimised;
     // Why one could not be spoken.
     QString problem;
   };
@@ -188,6 +193,7 @@ class OptimiseDialog : public QDialog {
   // dropped.
   int generation_ = 0;
   int renders_running_ = 0;
+  core::synth::OutputPin pin_ = core::synth::OutputPin::kSpeaker;
   bool original_shows_pause_ = false;
   bool optimised_shows_pause_ = false;
 };

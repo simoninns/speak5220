@@ -56,6 +56,27 @@ the pane's title gives the gain, for example
 **level matched to the original (14.6 dB)**. Only the display and playback
 change; the frames, and anything exported, are as the chip makes them.
 
+## Chip output
+
+The chip gives the same sound on two pins. Its **I/O** pin sends each
+sample as a 10-bit code, −512 to +511. Its **SPEAKER** pin drives a DAC
+that takes only 8 bits, so it clips every code to −128 to +127: loud
+speech that goes past that range is flattened at the top and bottom. Most
+computers play the SPEAKER pin, but the sound can also be regenerated from
+the I/O pin's codes. Choose which under **Audio > Chip Output**:
+
+| Pin | What you see and hear |
+|---|---|
+| SPEAKER (8-bit DAC) | Each code clipped to −128 to +127, the default. If any samples are clipped, the note beside the encoded pane's title says how many, for example **12 samples clipped by the DAC** |
+| I/O (10-bit codes) | The codes unclipped. The note says **I/O pin, 10-bit** |
+
+Only the clipping is modelled, not the uneven steps of the real DAC. The
+level match above is measured on the unclipped codes, so it is the same
+for both pins. Like the output filter below, the choice changes the
+encoded pane and the encoded audio played in the main window and in the
+Optimise window, but not the frames, the quality measure (PESQ) or
+anything exported. Changing it stops the encoded audio if it is playing.
+
 ## Output filter
 
 On its own, the chip's output looks lopsided next to the original. Its
@@ -76,6 +97,9 @@ main window and in the Optimise window. The original audio is not filtered.
 With a filter chosen, the note beside the encoded pane's title names it,
 for example **BBC Micro output filter**. The level is unchanged in the
 passband, and is still matched to the original as described above.
+
+The filter comes after the [chip output](#chip-output): with the SPEAKER
+pin, the clipped samples are filtered.
 
 With a filter chosen, the encoded audio plays at 48 kHz: each sample is
 held for its whole period, as the chip's DAC holds it, then passed through

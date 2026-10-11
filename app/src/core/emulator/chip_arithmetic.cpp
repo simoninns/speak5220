@@ -25,9 +25,6 @@ constexpr std::array<double, 8> kWeights482 = {0.87,  1.82,  3.94,  7.78,
 // speak5220 datasheet §8.2, Table 8-1: the LSB current per load.
 constexpr double kLsb996 = 4.49;
 constexpr double kLsb482 = 4.80;
-// The DAC takes the top 8 bits of the code, offset to 0..255.
-constexpr int kDacMin = -128;
-constexpr int kDacMax = 127;
 
 }  // namespace
 

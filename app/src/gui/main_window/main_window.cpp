@@ -48,6 +48,7 @@
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
 #include "core/project/project_store.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -146,6 +147,7 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           });
 
   SetOutputFilter(view_preferences_->ChosenOutputFilter());
+  SetOutputPin(view_preferences_->ChosenOutputPin());
 
   OnProjectChanged();
   UpdateTitle();
@@ -186,6 +188,32 @@ QAction* MainWindow::OutputFilterAction(core::dsp::OutputFilter filter) const {
   for (std::size_t i = 0; i < filters.size(); ++i) {
     if (filters[i].filter == filter && i < output_filter_actions_.size()) {
       return output_filter_actions_[i];
+    }
+  }
+  return nullptr;
+}
+
+void MainWindow::SetOutputPin(core::synth::OutputPin pin) {
+  // The audio being played was taken from the other pin.
+  if (player_->State() != PlaybackState::kStopped &&
+      player_->Source() != PlaybackSource::kOriginal &&
+      waveforms_->Pin() != pin) {
+    player_->Stop();
+  }
+  waveforms_->SetOutputPin(pin);
+  optimise_dialog_->SetOutputPin(pin);
+  if (QAction* action = OutputPinAction(pin); action != nullptr) {
+    action->setChecked(true);
+  }
+  view_preferences_->SetOutputPin(pin);
+}
+
+QAction* MainWindow::OutputPinAction(core::synth::OutputPin pin) const {
+  const std::span<const core::synth::OutputPinInfo> pins =
+      core::synth::OutputPins();
+  for (std::size_t i = 0; i < pins.size(); ++i) {
+    if (pins[i].pin == pin && i < output_pin_actions_.size()) {
+      return output_pin_actions_[i];
     }
   }
   return nullptr;
@@ -242,6 +270,21 @@ void MainWindow::CreateActions() {
     connect(action, &QAction::triggered, this,
             [this, filter = info.filter] { SetOutputFilter(filter); });
     output_filter_actions_.push_back(action);
+  }
+
+  output_pin_group_ = new QActionGroup(this);
+  for (const core::synth::OutputPinInfo& info : core::synth::OutputPins()) {
+    auto* action = new QAction(ToQString(info.label), output_pin_group_);
+    action->setCheckable(true);
+    action->setStatusTip(
+        info.pin == core::synth::OutputPin::kSpeaker
+            ? QStringLiteral("Hear and see the DAC's output, which clips each "
+                             "code to -128 to +127")
+            : QStringLiteral("Hear and see the 10-bit codes on the I/O pin, "
+                             "before the DAC clips them"));
+    connect(action, &QAction::triggered, this,
+            [this, pin = info.pin] { SetOutputPin(pin); });
+    output_pin_actions_.push_back(action);
   }
 
   add_action_ = new QAction(QStringLiteral("&Add Phrases..."), this);
@@ -324,6 +367,10 @@ void MainWindow::CreateMenus() {
   phrase->addAction(optimise_action_);
 
   QMenu* audio = menuBar()->addMenu(QStringLiteral("&Audio"));
+  QMenu* output_pin = audio->addMenu(QStringLiteral("Chip &Output"));
+  for (QAction* action : output_pin_actions_) {
+    output_pin->addAction(action);
+  }
   QMenu* output_filter = audio->addMenu(QStringLiteral("Output &Filter"));
   for (QAction* action : output_filter_actions_) {
     output_filter->addAction(action);

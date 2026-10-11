@@ -17,6 +17,7 @@
 #include <string_view>
 
 #include "core/dsp/output_filter.h"
+#include "core/synth/output_pin.h"
 
 namespace speak5220::app {
 
@@ -41,6 +42,21 @@ void SettingsViewPreferences::SetOutputFilter(core::dsp::OutputFilter filter) {
   const std::string_view key = core::dsp::InfoFor(filter).key;
   settings_.setValue(
       QString::fromLatin1(kOutputFilterKey),
+      QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
+}
+
+core::synth::OutputPin SettingsViewPreferences::ChosenOutputPin() {
+  const std::string key = settings_.value(QString::fromLatin1(kOutputPinKey))
+                              .toString()
+                              .toStdString();
+  return core::synth::OutputPinFromKey(key).value_or(
+      core::synth::OutputPin::kSpeaker);
+}
+
+void SettingsViewPreferences::SetOutputPin(core::synth::OutputPin pin) {
+  const std::string_view key = core::synth::InfoFor(pin).key;
+  settings_.setValue(
+      QString::fromLatin1(kOutputPinKey),
       QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
 }
 

@@ -27,6 +27,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/project/phrase.h"
+#include "core/synth/output_pin.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -150,6 +151,28 @@ TEST_F(MainWindowTest, OutputFilterStartsAsLastChosen) {
                     playback_.player, encoding_.Tools());
   EXPECT_TRUE(window.OutputFilterAction(OutputFilter::kBbcMicro)->isChecked());
   EXPECT_EQ(window.Waveforms()->Filter(), OutputFilter::kBbcMicro);
+}
+
+TEST_F(MainWindowTest, ChipOutputMenuSetsThePinAndRemembersIt) {
+  using core::synth::OutputPin;
+  EXPECT_TRUE(window_.OutputPinAction(OutputPin::kSpeaker)->isChecked());
+  EXPECT_EQ(window_.Waveforms()->Pin(), OutputPin::kSpeaker);
+  window_.OutputPinAction(OutputPin::kIo)->trigger();
+  EXPECT_TRUE(window_.OutputPinAction(OutputPin::kIo)->isChecked());
+  EXPECT_FALSE(window_.OutputPinAction(OutputPin::kSpeaker)->isChecked());
+  EXPECT_EQ(window_.Waveforms()->Pin(), OutputPin::kIo);
+  EXPECT_EQ(window_.OptimiseWindow()->Pin(), OutputPin::kIo);
+  EXPECT_EQ(preferences_.pin, OutputPin::kIo);
+}
+
+TEST_F(MainWindowTest, ChipOutputStartsAsLastChosen) {
+  using core::synth::OutputPin;
+  FakeViewPreferences chosen;
+  chosen.pin = OutputPin::kIo;
+  MainWindow window(dialogs_, recent_, chosen, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.OutputPinAction(OutputPin::kIo)->isChecked());
+  EXPECT_EQ(window.Waveforms()->Pin(), OutputPin::kIo);
 }
 
 TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {

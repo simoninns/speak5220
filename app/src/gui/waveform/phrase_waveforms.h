@@ -23,6 +23,7 @@
 #include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -68,6 +69,11 @@ class WaveformView;
 //   through it (core::dsp::FilterSamples()), as that computer's audio
 //   stage would deliver it, and the encoded pane's note names it; the
 //   Player plays it through the same filter. The original is unchanged.
+// - The encoded audio is taken from the chip's SPEAKER pin, whose DAC
+//   clips each code to 8 bits, or from its I/O pin's 10-bit codes
+//   (SetOutputPin()): shown and played so, and the encoded pane's note
+//   says how many samples the DAC clipped, or that it is the I/O pin. The
+//   level match is measured on the codes, so it is the same for both.
 // - Each pane has its own play button, which shows pause while that pane
 //   plays (Space in a pane's view does the same); one pane plays at a
 //   time, through the Player, and its view shows the playhead.
@@ -101,6 +107,10 @@ class PhraseWaveforms : public QWidget {
   // Changing it redraws the encoded audio, keeping the zoom.
   void SetOutputFilter(core::dsp::OutputFilter filter);
   core::dsp::OutputFilter Filter() const { return filter_; }
+  // The chip's pin the encoded audio is taken from; SPEAKER at first.
+  // Changing it redraws the encoded audio, keeping the zoom.
+  void SetOutputPin(core::synth::OutputPin pin);
+  core::synth::OutputPin Pin() const { return pin_; }
 
   WaveformPane* OriginalPane() const { return original_; }
   WaveformPane* EncodedPane() const { return encoded_; }
@@ -148,6 +158,9 @@ class PhraseWaveforms : public QWidget {
                   std::vector<core::lpc::Frame> frames,
                   core::StatusOr<core::quality::EncodedAudio> result);
   void ShowEncoded(const Rendered& rendered);
+  // Shows the encoded audio again, for a new filter or pin, keeping the
+  // zoom.
+  void RedrawEncoded();
   // The encoded pane's note: the level match, then the given note.
   void UpdateEncodedNote();
   // The shading of the squelched stretches and the original pane's note.
@@ -193,10 +206,13 @@ class PhraseWaveforms : public QWidget {
   core::quality::EncodedAudio encoded_audio_;
   // The encoded audio at the original's level, as played.
   std::vector<std::int16_t> encoded_playback_;
+  // The samples of encoded_audio_ the DAC clips.
+  int encoded_clipped_ = 0;
   // The note given with the phrase (such as "stale").
   QString encoded_note_;
   std::optional<double> squelch_db_;
   core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
+  core::synth::OutputPin pin_ = core::synth::OutputPin::kSpeaker;
   bool original_shows_pause_ = false;
   bool encoded_shows_pause_ = false;
   // The latest render of each phrase.

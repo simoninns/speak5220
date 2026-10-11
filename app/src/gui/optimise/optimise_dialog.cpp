@@ -47,6 +47,7 @@
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/quality/encoded_audio.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -62,6 +63,7 @@ namespace speak5220::app {
 namespace project = core::project;
 namespace optimiser = core::optimiser;
 namespace quality = core::quality;
+namespace synth = core::synth;
 
 namespace {
 
@@ -93,12 +95,13 @@ QString ToQString(std::string_view text) {
   return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
 }
 
-// The encoded audio at the recording's level, as the encoded waveform
-// pane plays it.
-std::vector<std::int16_t> AtRecordingLevel(const quality::EncodedAudio& audio) {
+// The encoded audio from `pin` at the recording's level, as the encoded
+// waveform pane plays it.
+std::vector<std::int16_t> AtRecordingLevel(const quality::EncodedAudio& audio,
+                                           synth::OutputPin pin) {
   std::vector<float> matched;
   matched.reserve(audio.samples.size());
-  for (const std::int16_t v : audio.samples) {
+  for (const std::int16_t v : synth::PinSamples(pin, audio.samples)) {
     matched.push_back(static_cast<float>(v * audio.level_gain / kFullScale));
   }
   return ToPcm16(matched);
@@ -561,7 +564,7 @@ void OptimiseDialog::OnSpoken(int generation, int phrase, bool optimised,
                              .arg(ToQString(result.GetStatus().Message()));
   } else {
     (optimised ? comparison.optimised : comparison.original) =
-        AtRecordingLevel(*result);
+        std::move(*result);
   }
   UpdateListenButtons();
 }
@@ -584,13 +587,14 @@ void OptimiseDialog::PlayPause(PlaybackSource source) {
   if (found == comparisons_.end()) {
     return;
   }
-  const std::optional<std::vector<std::int16_t>>& samples =
+  const std::optional<quality::EncodedAudio>& audio =
       source == PlaybackSource::kOptimised ? found->second.optimised
                                            : found->second.original;
-  if (!samples.has_value()) {
+  if (!audio.has_value()) {
     return;
   }
-  if (const core::Status status = player_->Play(source, *samples, 0);
+  if (const core::Status status =
+          player_->Play(source, AtRecordingLevel(*audio, pin_), 0);
       !status.IsOk()) {
     listen_note_->setText(ToQString(status.Message()));
   }

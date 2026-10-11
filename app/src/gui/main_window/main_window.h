@@ -22,6 +22,7 @@
 #include "core/dsp/resampler.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/file_digest.h"
 #include "core/util/status.h"
@@ -122,6 +123,13 @@ class MainWindow : public QMainWindow {
   void SetOutputFilter(core::dsp::OutputFilter filter);
   // The Audio > Output Filter menu's item for `filter`.
   QAction* OutputFilterAction(core::dsp::OutputFilter filter) const;
+  // Takes the encoded audio from the chip's `pin` (Audio > Chip Output):
+  // SPEAKER, through the DAC that clips each code to 8 bits, or I/O's
+  // 10-bit codes. Shown and played here and in the Optimise window; stops
+  // encoded audio playing. Remembered between sessions.
+  void SetOutputPin(core::synth::OutputPin pin);
+  // The Audio > Chip Output menu's item for `pin`.
+  QAction* OutputPinAction(core::synth::OutputPin pin) const;
 
  signals:
   // An import finished, successfully or not.
@@ -211,6 +219,9 @@ class MainWindow : public QMainWindow {
   // group.
   QActionGroup* output_filter_group_ = nullptr;
   std::vector<QAction*> output_filter_actions_;
+  // One per core::synth::OutputPins(), in its order, in an exclusive group.
+  QActionGroup* output_pin_group_ = nullptr;
+  std::vector<QAction*> output_pin_actions_;
   QAction* add_action_ = nullptr;
   QAction* remove_action_ = nullptr;
   QAction* move_up_action_ = nullptr;

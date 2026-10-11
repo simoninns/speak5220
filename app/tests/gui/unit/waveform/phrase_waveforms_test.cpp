@@ -32,6 +32,7 @@
 #include "core/dsp/output_filter.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -54,9 +55,11 @@ namespace {
 using core::project::Phrase;
 using core::quality::kFirstFrameStretch;
 using ::testing::_;
+using ::testing::DoAll;
 using testing::EncodedPhrase;
 using testing::MockProjectEditor;
 using ::testing::Return;
+using ::testing::SaveArg;
 using ::testing::SizeIs;
 using ::testing::StrictMock;
 using testing::TestId;
@@ -438,6 +441,42 @@ TEST_F(PhraseWaveformsTest, OutputFilterRedrawsTheEncodedAudioInPlace) {
   EXPECT_EQ(Encoded()->Axis().samples_per_pixel, axis.samples_per_pixel);
   waveforms_.SetOutputFilter(core::dsp::OutputFilter::kNone);
   EXPECT_TRUE(waveforms_.EncodedPane()->Note().isEmpty());
+}
+
+TEST_F(PhraseWaveformsTest, SpeakerPinClipsWhatTheIoPinKeeps) {
+  // No source audio, so no level match: the samples play as spoken.
+  phrase_.audio.clear();
+  phrase_.source.reset();
+  phrase_.play_start = 0;
+  core::synth::SynthResult loud = Idle(kEncodedSamples);
+  loud.codes[100] = 300;
+  loud.samples[100] = 300 * core::synth::kSampleScale;
+  loud.codes[101] = -300;
+  loud.samples[101] = -300 * core::synth::kSampleScale;
+  EXPECT_CALL(playback_.synth, Synthesize(_, _)).WillOnce(Return(loud));
+  ShowPhrase();
+  EXPECT_EQ(waveforms_.EncodedPane()->Note(),
+            QStringLiteral("2 samples clipped by the DAC"));
+
+  std::vector<std::int16_t> played;
+  EXPECT_CALL(playback_.output, Start(_, _))
+      .WillRepeatedly(DoAll(SaveArg<0>(&played), Return(core::OkStatus())));
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  ASSERT_FALSE(played.empty());
+  EXPECT_NEAR(*std::ranges::max_element(played),
+              127 * core::synth::kSampleScale, 1);
+  EXPECT_NEAR(*std::ranges::min_element(played),
+              -128 * core::synth::kSampleScale, 1);
+
+  playback_.player.Stop();
+  waveforms_.SetOutputPin(core::synth::OutputPin::kIo);
+  EXPECT_EQ(waveforms_.EncodedPane()->Note(),
+            QStringLiteral("I/O pin, 10-bit"));
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  EXPECT_NEAR(*std::ranges::max_element(played),
+              300 * core::synth::kSampleScale, 1);
+  EXPECT_NEAR(*std::ranges::min_element(played),
+              -300 * core::synth::kSampleScale, 1);
 }
 
 TEST_F(PhraseWaveformsTest, AnotherPhraseStopsPlayback) {

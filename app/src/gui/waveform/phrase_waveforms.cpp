@@ -36,6 +36,7 @@
 #include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -379,8 +380,11 @@ void PhraseWaveforms::ShowEncoded(const Rendered& rendered) {
   encoded_shown_ = true;
   // Shown and played at the original's level, so the two compare like
   // with like; the frames and exports are unchanged.
+  // The pin is applied first: the DAC clips the codes, before any gain.
+  encoded_clipped_ = core::synth::ClippedSamples(encoded_audio_.samples);
   std::vector<float> matched =
-      ToFloat(encoded_audio_.samples, encoded_audio_.level_gain);
+      ToFloat(core::synth::PinSamples(pin_, encoded_audio_.samples),
+              encoded_audio_.level_gain);
   // The player applies the output filter itself.
   encoded_playback_ = ToPcm16(matched);
   matched = core::dsp::FilterSamples(filter_, matched);
@@ -466,6 +470,14 @@ void PhraseWaveforms::UpdateEncodedNote() {
                      kDecibelsPerDecade * std::log10(encoded_audio_.level_gain),
                      0, 'f', 1);
   }
+  if (pin_ == core::synth::OutputPin::kIo) {
+    parts << QStringLiteral("I/O pin, 10-bit");
+  } else if (encoded_shown_ && encoded_clipped_ > 0) {
+    parts << (encoded_clipped_ == 1
+                  ? QStringLiteral("1 sample clipped by the DAC")
+                  : QStringLiteral("%1 samples clipped by the DAC")
+                        .arg(encoded_clipped_));
+  }
   if (filter_ != core::dsp::OutputFilter::kNone) {
     parts << QStringLiteral("%1 output filter")
                  .arg(ToQString(core::dsp::InfoFor(filter_).label));
@@ -484,10 +496,20 @@ void PhraseWaveforms::SetSquelch(std::optional<double> squelch_db) {
 }
 
 void PhraseWaveforms::SetOutputFilter(core::dsp::OutputFilter filter) {
-  if (filter == filter_) {
-    return;
+  if (filter != filter_) {
+    filter_ = filter;
+    RedrawEncoded();
   }
-  filter_ = filter;
+}
+
+void PhraseWaveforms::SetOutputPin(core::synth::OutputPin pin) {
+  if (pin != pin_) {
+    pin_ = pin;
+    RedrawEncoded();
+  }
+}
+
+void PhraseWaveforms::RedrawEncoded() {
   const auto found = rendered_.find(id_);
   if (encoded_shown_ && found != rendered_.end()) {
     // The same length as before, so the same extent and zoom.

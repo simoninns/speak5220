@@ -60,6 +60,7 @@ add_library(
     quality/pesq_metric.cpp
     quality/pesq_model.cpp
     quality/quality_scale.cpp
+    synth/output_pin.cpp
     synth/reference_synthesizer.cpp
     synth/synth.cpp
     util/clock.cpp
