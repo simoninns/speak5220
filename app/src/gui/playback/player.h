@@ -28,8 +28,9 @@ namespace speak5220::app {
 // Pure.
 std::vector<std::int16_t> ToPcm16(std::span<const float> samples);
 
-// Which waveform pane's audio is playing.
-enum class PlaybackSource { kOriginal, kEncoded };
+// What is playing: a waveform pane's audio, or in the Optimise window a
+// phrase's encoding before Optimise or the optimised one.
+enum class PlaybackSource { kOriginal, kEncoded, kBeforeOptimise, kOptimised };
 
 enum class PlaybackState { kStopped, kPlaying, kPaused };
 

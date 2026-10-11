@@ -17,6 +17,7 @@
 #include <string_view>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/util/status.h"
 
@@ -112,6 +113,14 @@ class IProjectEditor {
   // the result.
   virtual StatusOr<EncodingChange> SetEncoding(const PhraseId& id,
                                                EncodingChange change) = 0;
+  // Sets the options every phrase starts from (the project's
+  // default_encoder). Returns the previous ones. Fails for options out of
+  // range, or if a phrase's overrides no longer apply. Encodings made
+  // from the old defaults become stale; they are not redone here, so
+  // the budget is unaffected. Reverse: SetDefaultEncoder() with the
+  // result.
+  virtual StatusOr<encoder::EncoderOptions> SetDefaultEncoder(
+      encoder::EncoderOptions options) = 0;
 };
 
 }  // namespace speak5220::core::project

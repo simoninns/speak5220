@@ -52,7 +52,8 @@ class WaveformView;
 // - A click in either pane moves the phrase's play start there, and the
 //   reset button moves it to 0, each one undoable step
 //   (ProjectEdits::SetPlayStart()). The original plays from the play
-//   start, and the encoded audio from the same sound.
+//   start, and the encoded audio from the same sound; moving the play
+//   start while a pane plays or is paused takes playback there too.
 // - The encoded audio is shown and played at the original's level
 //   (EncodedAudio::level_gain), which the encoded pane's note gives in
 //   dB: the chip's output is about 15 dB quieter than a normalised
@@ -100,7 +101,10 @@ class PhraseWaveforms : public QWidget {
   // if that pane is already playing or paused.
   void PlayPause(PlaybackSource source);
   // Moves the play start to `source_sample`, rounded and limited to the
-  // audio, as one undoable step.
+  // audio, as one undoable step. Playback follows it: audio playing
+  // starts again from the new play start, and audio paused stops, so the
+  // next play starts there. It does so even when the play start is
+  // already there.
   void MovePlayStart(double source_sample);
 
  signals:
@@ -136,6 +140,8 @@ class PhraseWaveforms : public QWidget {
   void UpdateScrollBar();
   void OnScrolled(int value);
   void SetPlaying(PlaybackSource source, bool playing);
+  // Playing audio starts again from the play start; paused audio stops.
+  void FollowPlayStart();
   void OnPlayerStateChanged();
   void OnPlayerPositionChanged(int position);
   WaveformView* PlayingView() const;

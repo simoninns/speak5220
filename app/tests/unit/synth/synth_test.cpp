@@ -145,5 +145,16 @@ TEST(SynthTest, CachesEachPhraseAndPathOnce) {
   EXPECT_EQ(synth.CacheSize(), 2U);
 }
 
+TEST(SynthTest, KeepsNothingWithTheCacheOff) {
+  Synth synth({}, SynthCache::kOff);
+  const std::vector<std::uint8_t> phrase = Pack(VoicedPhrase());
+  const StatusOr<SynthResult> first = synth.Synthesize(phrase, SynthPath::kVsm);
+  const StatusOr<SynthResult> again = synth.Synthesize(phrase, SynthPath::kVsm);
+  ASSERT_TRUE(first.IsOk());
+  ASSERT_TRUE(again.IsOk());
+  EXPECT_EQ(first->codes, again->codes);
+  EXPECT_EQ(synth.CacheSize(), 0U);
+}
+
 }  // namespace
 }  // namespace speak5220::core::synth

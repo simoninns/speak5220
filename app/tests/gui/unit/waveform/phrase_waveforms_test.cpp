@@ -219,6 +219,42 @@ TEST_F(PhraseWaveformsTest, ResetMovesThePlayStartToTheBeginning) {
   EXPECT_EQ(Encoded()->Marker(), 0);
 }
 
+TEST_F(PhraseWaveformsTest, PlayingAudioStartsAgainFromTheNewPlayStart) {
+  ShowPhrase();
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  playback_.clock.now_us += 100 * kMillisecond;
+  ON_CALL(playback_.output, ProcessedMicroseconds())
+      .WillByDefault(Return(100 * kMillisecond));
+  playback_.player.Tick();
+  EXPECT_EQ(playback_.player.Position(), kPlayStart + 800);
+  EXPECT_CALL(editor_, SetPlayStart(TestId(1), 0)).WillOnce(Return(kPlayStart));
+  EXPECT_CALL(playback_.output, Start(SizeIs(kAudioSamples), _));
+  waveforms_.ResetButton()->click();
+  EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
+  EXPECT_EQ(playback_.player.Source(), PlaybackSource::kOriginal);
+  EXPECT_EQ(playback_.player.Position(), 0);
+}
+
+TEST_F(PhraseWaveformsTest, PausedAudioStopsSoTheNextPlayStartsThere) {
+  phrase_.play_start = 0;
+  ShowPhrase();
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  playback_.clock.now_us += 100 * kMillisecond;
+  ON_CALL(playback_.output, ProcessedMicroseconds())
+      .WillByDefault(Return(100 * kMillisecond));
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  ASSERT_EQ(playback_.player.State(), PlaybackState::kPaused);
+  // The play start is already at the beginning: no step to undo, but
+  // playback still goes back there.
+  waveforms_.ResetButton()->click();
+  EXPECT_EQ(stack_.count(), 0);
+  EXPECT_EQ(playback_.player.State(), PlaybackState::kStopped);
+  EXPECT_CALL(playback_.output,
+              Start(SizeIs(kEncodedSamples - kFirstFrameStretch), _));
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  EXPECT_EQ(playback_.player.Position(), kFirstFrameStretch);
+}
+
 TEST_F(PhraseWaveformsTest, RefusedMoveIsReportedAndChangesNothing) {
   ShowPhrase();
   QString failure;

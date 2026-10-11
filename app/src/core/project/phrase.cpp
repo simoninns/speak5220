@@ -14,7 +14,9 @@
 #include <array>
 #include <cstddef>
 #include <span>
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
@@ -64,6 +66,18 @@ StatusOr<encoder::EncoderOptions> EffectiveEncoderOptions(
     }
   }
   return options;
+}
+
+EncoderOverrides OverridesFor(const encoder::EncoderOptions& defaults,
+                              const encoder::EncoderOptions& options) {
+  EncoderOverrides overrides;
+  for (const encoder::EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+    std::string text = encoder::EncoderOptionText(options, info.field);
+    if (text != encoder::EncoderOptionText(defaults, info.field)) {
+      overrides.emplace(std::string(info.field), std::move(text));
+    }
+  }
+  return overrides;
 }
 
 StatusOr<int> PackedSize(std::span<const lpc::Frame> frames) {

@@ -101,6 +101,17 @@ struct EncoderOptionInfo {
   double maximum = 0.0;
   // The default, as text a user would type.
   std::string_view default_text;
+  // The unit of the option's values, as the GUI shows it after a value
+  // ("codes", "dB"); empty for none. ":1" marks a ratio, whose minimum (1)
+  // turns it off.
+  std::string_view unit;
+  // Where useful values lie, within minimum..maximum, and the step
+  // between them: what the GUI's sliders offer (a value outside, from a
+  // project file or Optimise, widens the slider). For kPreEmphasis, of
+  // mu; unused for kBoolean.
+  double typical_minimum = 0.0;
+  double typical_maximum = 0.0;
+  double step = 0.0;
 };
 
 // One entry per EncoderOptions field, in the order of the struct.

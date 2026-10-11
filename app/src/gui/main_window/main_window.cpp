@@ -23,6 +23,7 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMetaObject>
+#include <QSplitter>
 #include <QStatusBar>
 #include <QString>
 #include <QStringList>
@@ -39,6 +40,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
 #include "core/project/project_store.h"
@@ -47,14 +49,19 @@
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "core/util/version.h"
+#include "gui/encoder_panel/encoder_panel.h"
+#include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/main_window/status_text.h"
+#include "gui/optimise/optimise_dialog.h"
+#include "gui/optimise/optimise_session.h"
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/playback/player.h"
+#include "gui/undo/project_commands.h"
 #include "gui/waveform/phrase_waveforms.h"
 
 namespace speak5220::app {
@@ -64,8 +71,12 @@ namespace project = core::project;
 namespace {
 
 // The window's initial size in device-independent pixels.
-constexpr int kInitialWidth = 1024;
-constexpr int kInitialHeight = 640;
+constexpr int kInitialWidth = 1100;
+constexpr int kInitialHeight = 820;
+// The share of the height the waveforms start with, against the encoder
+// panel's.
+constexpr int kWaveformsStretch = 3;
+constexpr int kEncoderStretch = 2;
 
 // How long a progress message stays in the status bar, in milliseconds.
 constexpr int kStatusMessageMs = 5000;
@@ -82,13 +93,15 @@ std::filesystem::path ToPath(const QString& text) {
 
 MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
                        core::ITaskRunner& runner, core::synth::ISynth& synth,
-                       Player& player, QWidget* parent)
+                       Player& player, const EncodingTools& tools,
+                       QWidget* parent)
     : QMainWindow(parent),
       dialogs_(&dialogs),
       recent_store_(&recent_store),
       runner_(&runner),
       synth_(&synth),
       player_(&player),
+      tools_(tools),
       recent_(recent_store.Load()) {
   resize(kInitialWidth, kInitialHeight);
   CreateActions();
@@ -110,6 +123,11 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
   connect(panel_, &PhraseListPanel::SelectionChanged, this,
           &MainWindow::OnSelectionChanged);
   connect(waveforms_, &PhraseWaveforms::Failed, this, &MainWindow::ShowError);
+  connect(encoder_panel_, &EncoderPanel::Failed, this, &MainWindow::ShowError);
+  connect(encoder_panel_, &EncoderPanel::OptimiseRequested, this,
+          [this](const project::PhraseId& id) { Optimise({id}); });
+  connect(optimise_dialog_, &OptimiseDialog::Failed, this,
+          &MainWindow::ShowError);
 
   OnProjectChanged();
   UpdateTitle();
@@ -117,6 +135,10 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
 }
 
 MainWindow::~MainWindow() {
+  // Optimise's search uses the runner; it stops after the candidates
+  // running.
+  optimise_session_->Cancel();
+  tools_.optimiser_driver->Wait();
   // Jobs use the importer and post back to this window.
   runner_->Wait();
   disconnect(&document_, nullptr, this, nullptr);
@@ -126,6 +148,9 @@ MainWindow::~MainWindow() {
   delete panel_;
   delete details_;
   delete waveforms_;
+  delete encoder_panel_;
+  delete optimise_dialog_;
+  delete optimise_session_;
 }
 
 QString MainWindow::StatusText() const { return status_label_->text(); }
@@ -199,6 +224,21 @@ void MainWindow::CreateActions() {
   sort_action_->setToolTip(QStringLiteral("Sort the phrases by name"));
   connect(sort_action_, &QAction::triggered, this, [this] { model_.Sort(); });
 
+  re_encode_action_ = new QAction(QStringLiteral("Re-&encode"), this);
+  re_encode_action_->setToolTip(
+      QStringLiteral("Encode the selected phrases that are not encoded or "
+                     "are stale"));
+  re_encode_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+  connect(re_encode_action_, &QAction::triggered, this,
+          &MainWindow::ReEncodeSelected);
+
+  optimise_action_ = new QAction(QStringLiteral("&Optimise..."), this);
+  optimise_action_->setToolTip(QStringLiteral(
+      "Search the selected phrases' settings for the best quality"));
+  optimise_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O));
+  connect(optimise_action_, &QAction::triggered, this,
+          [this] { Optimise(EncodableSelection()); });
+
   about_action_ = new QAction(QStringLiteral("&About Speak5220"), this);
   about_action_->setMenuRole(QAction::AboutRole);
   connect(about_action_, &QAction::triggered, this, &MainWindow::ShowAbout);
@@ -226,6 +266,9 @@ void MainWindow::CreateMenus() {
   phrase->addAction(move_up_action_);
   phrase->addAction(move_down_action_);
   phrase->addAction(sort_action_);
+  phrase->addSeparator();
+  phrase->addAction(re_encode_action_);
+  phrase->addAction(optimise_action_);
 
   QMenu* help = menuBar()->addMenu(QStringLiteral("&Help"));
   help->addAction(about_action_);
@@ -246,11 +289,25 @@ void MainWindow::CreateWidgets() {
   auto* central = new QWidget(this);
   auto* layout = new QVBoxLayout(central);
   details_ = new PhraseDetails(document_.Edits(), central);
+  // The waveforms above the encoder panel, with a splitter between them.
+  auto* splitter = new QSplitter(Qt::Vertical, central);
   waveforms_ = new PhraseWaveforms(document_.Edits(), *player_, *synth_,
-                                   *runner_, central);
+                                   *runner_, splitter);
+  encoder_panel_ =
+      new EncoderPanel(document_.Edits(), tools_, *synth_, *runner_, splitter);
+  splitter->addWidget(waveforms_);
+  splitter->addWidget(encoder_panel_);
+  splitter->setStretchFactor(0, kWaveformsStretch);
+  splitter->setStretchFactor(1, kEncoderStretch);
+  splitter->setChildrenCollapsible(false);
   layout->addWidget(details_);
-  layout->addWidget(waveforms_, 1);
+  layout->addWidget(splitter, 1);
   setCentralWidget(central);
+
+  optimise_session_ =
+      new OptimiseSession(document_.Edits(), tools_, *runner_, this);
+  optimise_dialog_ =
+      new OptimiseDialog(*optimise_session_, *player_, *synth_, *runner_, this);
 
   status_label_ = new QLabel(this);
   statusBar()->addPermanentWidget(status_label_);
@@ -412,6 +469,7 @@ void MainWindow::OnSelectionChanged() {
     }
   }
   waveforms_->ShowPhrase(phrase, note);
+  encoder_panel_->ShowPhrase(document_.Project(), id);
   UpdateActions();
 }
 
@@ -428,6 +486,119 @@ void MainWindow::UpdateActions() {
   move_up_action_->setEnabled(model_.CanMoveUp(rows));
   move_down_action_->setEnabled(model_.CanMoveDown(rows));
   sort_action_->setEnabled(model_.PhraseCount() > 1);
+  re_encode_action_->setEnabled(!StaleSelection().empty());
+  optimise_action_->setEnabled(!EncodableSelection().empty());
+}
+
+std::vector<project::PhraseId> MainWindow::EncodableSelection() const {
+  std::vector<project::PhraseId> ids;
+  for (const int row : panel_->SelectedRows()) {
+    const project::PhraseId id = model_.IdAt(row);
+    const project::Phrase* phrase = document_.Project().FindPhrase(id);
+    if (phrase != nullptr && !phrase->locked && !phrase->audio.empty()) {
+      ids.push_back(id);
+    }
+  }
+  return ids;
+}
+
+std::vector<project::PhraseId> MainWindow::StaleSelection() const {
+  std::vector<project::PhraseId> ids;
+  for (const project::PhraseId& id : EncodableSelection()) {
+    const std::optional<int> row = model_.RowOf(id);
+    if (!row.has_value()) {
+      continue;
+    }
+    const auto state = static_cast<EncodingState>(
+        model_.index(*row).data(PhraseListModel::kStateRole).toInt());
+    if (state == EncodingState::kNotEncoded || state == EncodingState::kStale) {
+      ids.push_back(id);
+    }
+  }
+  return ids;
+}
+
+void MainWindow::Optimise(const std::vector<project::PhraseId>& ids) {
+  if (ids.empty() || optimise_session_->IsRunning()) {
+    return;
+  }
+  optimise_dialog_->Prepare(document_.Project(), ids);
+  optimise_dialog_->open();
+}
+
+void MainWindow::ReEncodeSelected() {
+  const std::vector<project::PhraseId> ids = StaleSelection();
+  if (ids.empty()) {
+    return;
+  }
+  // What each job needs: the phrase's audio and its settings now.
+  struct Input {
+    project::PhraseId id;
+    std::vector<float> audio;
+    core::encoder::EncoderOptions options;
+    project::EncoderOverrides overrides;
+  };
+  std::vector<Input> inputs;
+  const project::Project& now = document_.Project();
+  for (const project::PhraseId& id : ids) {
+    const project::Phrase* phrase = now.FindPhrase(id);
+    core::StatusOr<core::encoder::EncoderOptions> options =
+        project::EffectiveEncoderOptions(now.Settings().default_encoder,
+                                         phrase->encoder);
+    if (options.IsOk()) {
+      inputs.push_back({.id = id,
+                        .audio = phrase->audio,
+                        .options = *options,
+                        .overrides = phrase->encoder});
+    }
+  }
+  ++encodes_running_;
+  statusBar()->showMessage(
+      QStringLiteral("Encoding %1 phrase(s)...").arg(inputs.size()));
+  runner_->Post([this, inputs = std::move(inputs), tools = tools_,
+                 synth = synth_, generation = generation_] {
+    auto changes = std::make_shared<SetEncodingsCommand::Changes>();
+    auto failures = std::make_shared<QStringList>();
+    for (const Input& input : inputs) {
+      core::StatusOr<MeasuredEncoding> result =
+          EncodePhrase(tools, *synth, input.audio, input.options, std::nullopt);
+      if (result.IsOk()) {
+        changes->emplace_back(
+            input.id,
+            project::EncodingChange{.overrides = input.overrides,
+                                    .encoding = std::move(result->encoding)});
+      } else {
+        *failures << ToQString(result.GetStatus().Message());
+      }
+    }
+    QMetaObject::invokeMethod(
+        this,
+        [this, changes, failures, generation] {
+          --encodes_running_;
+          statusBar()->clearMessage();
+          if (generation == generation_ && !changes->empty()) {
+            const project::Phrase* first =
+                document_.Project().FindPhrase(changes->front().first);
+            const QString text =
+                changes->size() == 1 && first != nullptr
+                    ? QStringLiteral("Re-encode %1")
+                          .arg(QString::fromStdString(first->name))
+                    : QStringLiteral("Re-encode %1 Phrases")
+                          .arg(changes->size());
+            if (const core::Status status =
+                    document_.Edits().SetEncodings(std::move(*changes), text);
+                !status.IsOk()) {
+              *failures << ToQString(status.Message());
+            }
+          }
+          if (!failures->isEmpty()) {
+            ShowError(QStringLiteral("Re-encode"),
+                      failures->join(QLatin1Char('\n')));
+          }
+          emit EncodeFinished();
+        },
+        Qt::QueuedConnection);
+  });
 }
 
 void MainWindow::UpdateRecentMenu() {

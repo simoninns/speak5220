@@ -54,6 +54,9 @@ class ThreadPoolTaskRunner : public ITaskRunner {
   void Post(std::function<void()> job) override;
   void Wait() override;
 
+  // The most jobs that run at once.
+  int ThreadCount() const;
+
  private:
   std::unique_ptr<QThreadPool> pool_;
 };

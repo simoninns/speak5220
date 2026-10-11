@@ -11,7 +11,8 @@ So far the application has:
   and describes them with undo and redo, and shows how many PHROMs they
   fill; it shows each phrase's original and encoded
   [waveforms](user-manual/waveforms.md) and plays them, in light or dark
-  as the desktop is set;
+  as the desktop is set; and it encodes phrases, shows their quality, and
+  [optimises](user-manual/encoder.md) their settings within the budget;
 - a command-line tool, `speak5220-cli`, that creates
   [projects](user-manual/projects.md), imports WAV files into them as
   phrases, encodes them and exports Acorn PHROM images, described in the

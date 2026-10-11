@@ -1,0 +1,50 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "Synthetic speech"
+  header_strings: ["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]
+  ascii_map: {}
+  default_encoder:
+    target_rms: 20
+    target_peak: null
+    peak_limit: 120
+    repeats: true
+    repeat_lambda: 70
+    gate_db: 45
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    iterations: 5
+    fade_unvoiced: true
+    level_agc: 1
+    compression: 1
+phrases:
+  - id: "a1ba4f2a-a9bd-4556-bfed-9f7dd3856c1d"
+    name: "SHORT"
+    description: "1.5 s: two vowels and a fricative"
+    source:
+      file: "short.wav"
+      rate: 8000
+      channels: 1
+      duration: 1.5
+      sha256: "83753a226e2604c5ecc92008fbf3d1873fa2b672f612723026f9ef7b50cbc73a"
+    locked: false
+    play_start: 0
+  - id: "72c61656-d63c-497b-903d-fffa9590fdf5"
+    name: "LONG"
+    description: "3.4 s: five vowels and three fricatives"
+    source:
+      file: "long.wav"
+      rate: 8000
+      channels: 1
+      duration: 3.42
+      sha256: "93f8e279b6d8ce345c98a930adf2274f32d89b5a5798761fd4bd2842b1dd05a7"
+    locked: false
+    play_start: 0
+exports:
+  - name: "phrom"
+    format: "acorn-phrom"
+    scope: "all"
+    layout: "separate"

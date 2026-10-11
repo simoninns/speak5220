@@ -33,7 +33,9 @@ TEST(MainWindowShowTest, BecomesVisibleWhenShown) {
   FakeRecentFilesStore recent;
   core::InlineTaskRunner runner;
   TestPlayback playback;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
+  testing::TestEncoding encoding;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
+                    encoding.Tools());
   window.show();
   QApplication::processEvents();
   EXPECT_TRUE(window.isVisible());
@@ -44,7 +46,9 @@ TEST(MainWindowShowTest, PaintsThePhraseListWithDividers) {
   FakeRecentFilesStore recent;
   core::InlineTaskRunner runner;
   TestPlayback playback;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
+  testing::TestEncoding encoding;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
+                    encoding.Tools());
   ASSERT_TRUE(window.Document()
                   .Edits()
                   .InsertPhrases(

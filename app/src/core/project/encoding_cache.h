@@ -18,6 +18,7 @@
 
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
+#include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/util/status.h"
@@ -57,6 +58,13 @@ class EncodingCache {
   static std::string SettingsHash(std::span<const float> audio,
                                   const encoder::EncoderOptions& options,
                                   std::string_view encoder_version);
+
+  // The cache entry for `frames`, encoded from `audio` with `options` by
+  // this encoder version (kEncoderVersion), with no quality measured.
+  // Pure.
+  static CachedEncoding MakeEncoding(std::span<const float> audio,
+                                     const encoder::EncoderOptions& options,
+                                     std::vector<lpc::Frame> frames);
 
   // Whether a phrase's encoding needs no work: it is locked, or its
   // encoding's hash matches its inputs now. A phrase with no encoding is

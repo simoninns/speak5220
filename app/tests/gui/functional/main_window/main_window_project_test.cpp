@@ -125,8 +125,9 @@ class MainWindowProjectTest : public ::testing::Test {
   FakeRecentFilesStore recent_;
   core::InlineTaskRunner runner_;
   TestPlayback playback_;
-  MainWindow window_{dialogs_, recent_, runner_, playback_.synth,
-                     playback_.player};
+  testing::TestEncoding encoding_;
+  MainWindow window_{dialogs_,        recent_,          runner_,
+                     playback_.synth, playback_.player, encoding_.Tools()};
 };
 
 TEST_F(MainWindowProjectTest, OpensAFixtureProject) {
@@ -152,7 +153,7 @@ TEST_F(MainWindowProjectTest, FailedOpenIsReportedAndKeepsTheProject) {
   const QString missing = Temp(QStringLiteral("missing.s5proj"));
   recent_.paths = {missing};
   MainWindow window(dialogs_, recent_, runner_, playback_.synth,
-                    playback_.player);
+                    playback_.player, encoding_.Tools());
   EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Open Project"), _))
       .WillOnce([](const QString&, const QString& message) {
         EXPECT_TRUE(message.startsWith(QStringLiteral("cannot open")));
@@ -298,7 +299,9 @@ TEST(MainWindowThreadedImportTest, ImportsOnAThreadPool) {
   FakeRecentFilesStore recent;
   core::ThreadPoolTaskRunner runner(2);
   TestPlayback playback;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player);
+  testing::TestEncoding encoding;
+  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
+                    encoding.Tools());
   window.ImportFiles({path}, 0);
   EXPECT_EQ(window.ImportsRunning(), 1);
   WaitForImports(window);

@@ -15,6 +15,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project_editor.h"
 #include "core/util/logging.h"
@@ -234,6 +235,66 @@ core::Status SetEncodingCommand::Apply() {
 
 core::Status SetEncodingCommand::Revert() {
   return Editor().SetEncoding(id_, previous_).GetStatus();
+}
+
+SetEncodingsCommand::SetEncodingsCommand(project::IProjectEditor& editor,
+                                         Changes changes, const QString& text)
+    : ProjectCommand(editor, text), changes_(std::move(changes)) {}
+
+core::Status SetEncodingsCommand::Apply() {
+  std::vector<project::EncodingChange> previous;
+  previous.reserve(changes_.size());
+  for (const auto& [id, change] : changes_) {
+    core::StatusOr<project::EncodingChange> before =
+        Editor().SetEncoding(id, change);
+    if (!before.IsOk()) {
+      // Puts back those already changed, latest first.
+      for (std::size_t i = previous.size(); i-- > 0;) {
+        if (const core::Status status =
+                Editor()
+                    .SetEncoding(changes_[i].first, previous[i])
+                    .GetStatus();
+            !status.IsOk()) {
+          core::Logger(core::kLogModuleGui)
+              ->error("cannot put back an encoding: {}", status.Message());
+        }
+      }
+      return before.GetStatus();
+    }
+    previous.push_back(std::move(*before));
+  }
+  previous_ = std::move(previous);
+  return core::OkStatus();
+}
+
+core::Status SetEncodingsCommand::Revert() {
+  for (std::size_t i = previous_.size(); i-- > 0;) {
+    if (core::Status status =
+            Editor().SetEncoding(changes_[i].first, previous_[i]).GetStatus();
+        !status.IsOk()) {
+      return status;
+    }
+  }
+  return core::OkStatus();
+}
+
+SetDefaultEncoderCommand::SetDefaultEncoderCommand(
+    project::IProjectEditor& editor, core::encoder::EncoderOptions options)
+    : ProjectCommand(editor, QStringLiteral("Change Project Defaults")),
+      options_(options) {}
+
+core::Status SetDefaultEncoderCommand::Apply() {
+  core::StatusOr<core::encoder::EncoderOptions> previous =
+      Editor().SetDefaultEncoder(options_);
+  if (!previous.IsOk()) {
+    return previous.GetStatus();
+  }
+  previous_ = *previous;
+  return core::OkStatus();
+}
+
+core::Status SetDefaultEncoderCommand::Revert() {
+  return Editor().SetDefaultEncoder(previous_).GetStatus();
 }
 
 }  // namespace speak5220::app

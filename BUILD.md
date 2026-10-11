@@ -77,7 +77,7 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Fixture projects
 
-`app/projects/` holds small projects in the unpacked (directory) form, which the functional tests load: `general/` (one phrase, several phrases with Acorn-style names and an ASCII map, and a locked phrase with every kind of frame) and `phrom/` (a project that fills exactly one PHROM, and one that spills into a second). The phrases with audio were added and encoded with `speak5220-cli` from short synthetic clips; the locked phrases' frames were written directly. When the encoder's output changes, the fixtures' encodings must be redone (`speak5220-cli encode --force` on each), or the functional tests report them as stale.
+`app/projects/` holds small projects in the unpacked (directory) form, which the functional tests load: `general/` (one phrase, several phrases with Acorn-style names and an ASCII map, and a locked phrase with every kind of frame), `phrom/` (a project that fills exactly one PHROM, and one that spills into a second) and `benchmark/` (two speech-like clips, for timing Optimise with `benchmark.sh`). The phrases with audio were added and encoded with `speak5220-cli` from short synthetic clips; the locked phrases' frames were written directly. When the encoder's output changes, the fixtures' encodings must be redone (`speak5220-cli encode --force` on each), or the functional tests report them as stale.
 
 ### Reference data
 
@@ -109,8 +109,8 @@ nix develop --command python3 app/scripts/generate_filter_constants.py          
 Two scripts check the encoder and the quality measures by hand, from the repository root, after building the functional tests:
 
 ```bash
-nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames and quality measures (plan §3.2, Phase 3)
-nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core
+nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames and quality measures (plan §3.2, Phase 3), and Optimise on it (Phase 7)
+nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core; Optimise on one thread and on every core
 ```
 
 `corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`.

@@ -11,12 +11,17 @@
 #   0.02 of the reference's PESQ;
 # - measures every reference encoding with PESQ (within 0.01 of
 #   app/golden/quality/), every file's anchor (within 0.02) and the cheap
-#   measures.
+#   measures;
+# - optimises every file from the default options on every core (plan
+#   Phase 7), with each file's byte limit at its default encoding's size,
+#   and checks that the best is within the limit and scores above the
+#   defaults on most files. SPEAK5220_OPTIMISE_STRIDE=N takes every Nth
+#   file, for a quicker run.
 # It is slow, so it is run by hand, not by CTest.
 #
 # Usage: corpus-check.sh [BUILD_DIR [OUTPUT_DIR]]
 # BUILD_DIR defaults to build/app (the functional tests must be built);
-# OUTPUT_DIR, where the reports go (report.tsv, quality.tsv), to
+# OUTPUT_DIR, where the reports go (report.tsv, quality.tsv, optimise.tsv), to
 # BUILD_DIR/corpus-check. The corpus WAVs are written to
 # BUILD_DIR/generated-corpus. Run from the repository root in the default
 # Nix shell, which has the Python packages the corpus step needs:
@@ -53,6 +58,10 @@ awk -F'\t' 'NR > 1 { n[$3]++; t++ }
 SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_QUALITY_REPORT=$output_dir/quality.tsv \
   "$tests" --gtest_also_run_disabled_tests \
   --gtest_filter='QualityCorpusCheck.*' || status=1
+
+SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_OPTIMISE_REPORT=$output_dir/optimise.tsv \
+  "$tests" --gtest_also_run_disabled_tests \
+  --gtest_filter='OptimiserCorpusCheck.*' || status=1
 
 if [[ $status -eq 0 ]]; then
   echo "corpus-check: passed"

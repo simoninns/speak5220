@@ -60,6 +60,18 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
   EXPECT_EQ(EncoderOptionInfos().back().key, "compression");
 }
 
+TEST(EncoderOptionsTest, TypicalRangesLieWithinTheValidRanges) {
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    if (info.type == EncoderOptionType::kBoolean) {
+      continue;
+    }
+    EXPECT_GE(info.typical_minimum, info.minimum) << info.field;
+    EXPECT_LE(info.typical_maximum, info.maximum) << info.field;
+    EXPECT_LT(info.typical_minimum, info.typical_maximum) << info.field;
+    EXPECT_GT(info.step, 0.0) << info.field;
+  }
+}
+
 TEST(EncoderOptionsTest, RejectsValuesOutsideTheirRange) {
   EncoderOptions o;
   o.target_rms = 0.5;

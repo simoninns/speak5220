@@ -5,8 +5,9 @@ each with its audio, its encoder settings and its frames. It is kept in one
 `.s5proj` file, or unpacked as a directory; both are described in the
 [project file](../reference/project-file.md) reference. Projects are made
 and edited in the [main window](main-window.md) or with the
-[command-line tool](cli.md); so far only the command-line tool encodes and
-exports them.
+[command-line tool](cli.md). Both encode them (the window's
+[encoder panel](encoder.md) also optimises their settings); so far only
+the command-line tool exports them.
 
 ## Phrases and their names
 
@@ -95,7 +96,9 @@ time. No change takes a project past it:
 - renaming or reordering phrases that would need a 65th PHROM is refused.
 
 `speak5220-cli encode` reports how many PHROMs the project fills and the
-free space in the last one.
+free space in the last one; the main window shows it in its status bar.
+[Optimise](encoder.md#optimise) never chooses settings that would take
+the project past its budget.
 
 ## Exporting
 

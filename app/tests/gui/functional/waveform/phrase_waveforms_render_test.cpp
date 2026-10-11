@@ -43,7 +43,9 @@ TEST(PhraseWaveformsRenderTest, DrawsAFixturePhraseLinedUpWithItsSource) {
   core::InlineTaskRunner runner;
   core::synth::Synth synth;
   TestPlayback playback;
-  MainWindow window(dialogs, recent, runner, synth, playback.player);
+  testing::TestEncoding encoding;
+  MainWindow window(dialogs, recent, runner, synth, playback.player,
+                    encoding.Tools());
   window.resize(1200, 700);
   window.show();
   ASSERT_TRUE(window.OpenProject(ProjectsDir() +

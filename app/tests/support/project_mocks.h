@@ -103,6 +103,8 @@ class MockProjectEditor : public core::project::IProjectEditor {
               (const core::project::PhraseId& id,
                core::project::EncodingChange change),
               (override));
+  MOCK_METHOD(core::StatusOr<core::encoder::EncoderOptions>, SetDefaultEncoder,
+              (core::encoder::EncoderOptions options), (override));
 };
 
 }  // namespace speak5220::testing

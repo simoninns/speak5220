@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_CORE_PROJECT_PROJECT_H_
 #define SPEAK5220_CORE_PROJECT_PROJECT_H_
 
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <set>
@@ -95,6 +96,28 @@ struct ProjectContents {
 // valid default encoder options.
 Status ValidateProjectSettings(const ProjectSettings& settings);
 
+// Whether one phrase may take a new size, the rest of the project as it is
+// (plan §4.1): for the optimiser, which tries many encodings of one
+// phrase. A value; Check() is thread-safe.
+class PhraseBudgetCheck {
+ public:
+  // OK if the phrase, at `packed_bytes` (PackedSize()), keeps the project
+  // within its budget, or within the PHROMs it fills now if it is over.
+  // O(phrases).
+  Status Check(int packed_bytes) const;
+
+ private:
+  friend class Project;
+  PhraseBudgetCheck(std::vector<PhraseCostInput> costs, std::size_t index,
+                    int name_length, int limit, std::string name);
+
+  std::vector<PhraseCostInput> costs_;
+  std::size_t index_;
+  int name_length_;
+  int limit_;
+  std::string name_;
+};
+
 // A project: phrases with unique ids and unique valid names, in PHROM
 // order, and the editing operations of IProjectEditor. A value type;
 // thread-compatible.
@@ -131,6 +154,9 @@ class Project : public IProjectEditor {
 
   // The PHROMs the phrases fill now (plan §4.1).
   PhromAllocation Allocation() const;
+  // The check of a new size for the phrase with `id`. Fails for an
+  // unknown id.
+  StatusOr<PhraseBudgetCheck> BudgetCheckFor(const PhraseId& id) const;
 
   // IProjectEditor.
   Status InsertPhrases(std::vector<PlacedPhrase> phrases) override;
@@ -148,6 +174,8 @@ class Project : public IProjectEditor {
   StatusOr<int> SetPlayStart(const PhraseId& id, int sample) override;
   StatusOr<EncodingChange> SetEncoding(const PhraseId& id,
                                        EncodingChange change) override;
+  StatusOr<encoder::EncoderOptions> SetDefaultEncoder(
+      encoder::EncoderOptions options) override;
 
   friend bool operator==(const Project& a, const Project& b) {
     return a.contents_ == b.contents_;

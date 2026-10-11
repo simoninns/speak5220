@@ -12,8 +12,10 @@
 
 #include <QUndoCommand>
 #include <string>
+#include <utility>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project_editor.h"
 #include "core/util/status.h"
@@ -182,6 +184,44 @@ class SetEncodingCommand : public ProjectCommand {
   core::project::PhraseId id_;
   core::project::EncodingChange change_;
   core::project::EncodingChange previous_;
+};
+
+// One encoding change per phrase, as one step (Optimise, re-encoding a
+// selection): SetEncoding() on each in order; if one fails, those
+// already changed are put back and the command fails. Reversed by
+// SetEncoding() with each previous settings and encoding, in reverse
+// order.
+class SetEncodingsCommand : public ProjectCommand {
+ public:
+  using Changes = std::vector<
+      std::pair<core::project::PhraseId, core::project::EncodingChange>>;
+
+  SetEncodingsCommand(core::project::IProjectEditor& editor, Changes changes,
+                      const QString& text);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  Changes changes_;
+  std::vector<core::project::EncodingChange> previous_;
+};
+
+// SetDefaultEncoder(); reversed by SetDefaultEncoder() with the previous
+// options.
+class SetDefaultEncoderCommand : public ProjectCommand {
+ public:
+  SetDefaultEncoderCommand(core::project::IProjectEditor& editor,
+                           core::encoder::EncoderOptions options);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  core::encoder::EncoderOptions options_;
+  core::encoder::EncoderOptions previous_;
 };
 
 }  // namespace speak5220::app

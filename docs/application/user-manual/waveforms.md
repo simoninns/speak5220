@@ -17,10 +17,10 @@ phrases selected, or none, the panes are empty.
 
 !!! note
     The encoded pane shows the frames stored in the project. A phrase
-    that has not been encoded yet says so; encode it with
-    [`speak5220-cli encode`](cli.md). Frames made with other settings are
-    still shown, marked **stale** beside the pane's title. Encoding from
-    the window comes later.
+    that has not been encoded yet says so; encode it with **Encode** in
+    the [encoder panel](encoder.md) below. Frames made with other settings
+    are still shown, marked **stale** beside the pane's title, until the
+    phrase is re-encoded.
 
 ## Lining up the two
 
@@ -80,7 +80,9 @@ one covers, whichever pane or control you use.
 
 The orange line with a flag is where playback starts. Click in either pane
 to move it there; the **|◀** button under the panes moves it back to the
-beginning. Moving
+beginning. Playback goes with it: a pane that is playing starts again from
+the new play start, and one that is paused stops, so pressing play starts
+there instead of going on from the pause. Moving
 it is a change to the project, saved with it (`play_start` in the
 [project file](../reference/project-file.md)), and one step to
 [undo](main-window.md#undo-and-redo). A phrase with no source audio has no

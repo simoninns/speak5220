@@ -17,7 +17,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 |---|---|
 | CMake build, in-source guard, compiler warnings, sanitizer option | Implemented |
 | `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests, clock) | Implemented |
-| `s5core`: `lpc/` (tables, frames, bit stream) | Implemented |
+| `s5core`: `lpc/` (tables, frames, bit stream, frame statistics) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
@@ -25,15 +25,16 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`, the encoded audio for display) | Implemented, matching the reference tools' values on the whole corpus |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
+| `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
-| Fixture projects in `app/projects/` (`general/`, `phrom/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16) |
+| Fixture projects in `app/projects/` (`general/`, `phrom/`, `benchmark/`) | Implemented |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (Acorn PHROM images), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| Optimiser, the other export formats, BBC export, the GUI's encoder panel and Export dialog | Planned |
+| The other export formats, BBC export, the GUI's Export dialog | Planned |
 
 ---
 
@@ -56,13 +57,15 @@ app/
                                 encoder.py, quality.py (offline, run by
                                 hand: §13)
   golden/                       reference data from the retired references (§13)
-  projects/                     fixture projects, unpacked: general/, phrom/ (§14)
+  projects/                     fixture projects, unpacked: general/, phrom/,
+                                benchmark/ (§14, §17)
   src/
     core/                       library "s5core" (QtCore at most)
       util/                     Status/StatusOr, logging, logging options, version,
                                 number text, SHA-256, task runners, file digests,
                                 IClock
-      lpc/                      coding tables, Frame, FrameCodec, BitReverse
+      lpc/                      coding tables, Frame, FrameCodec, BitReverse,
+                                FrameStatistics
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
       synth/                    Synth, ReferenceSynthesizer
       packaging/                AcornPhrom, TiIndexed, SpeakExternalStream
@@ -78,14 +81,20 @@ app/
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
                                 stores, PhraseImporter, the PHROM export (§14)
+      optimiser/                Optimiser (§17)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow, ProjectDocument, IDialogs, the
                                 recent-file list, the status bar's text
       phrase_list/              PhraseListModel, its delegate and panel
       phrase_editor/            PhraseDetails (name and description)
+      encoder_panel/            EncoderPanel, EncoderSettingsForm,
+                                QualityScaleView, the encode-and-measure
+                                helpers and text (§17)
+      optimise/                 OptimiseSession, OptimiseDialog (§17)
       waveform/                 PhraseWaveforms, WaveformPane, WaveformView,
                                 PeakCache, TimeAxis, the frame map (§16)
-      playback/                 Player, IAudioOutput, QtAudioOutput (§16)
+      playback/                 Player, IAudioOutput, QtAudioOutput,
+                                PlayPauseIcon (§16)
       theme/                    ThemeColours, the desktop colour scheme
                                 and its portal adapter (§16)
       undo/                     one QUndoCommand per editing operation,
@@ -103,8 +112,8 @@ app/
 Planned additions, each created with its first code (plan §2.1):
 
 - `src/core/`: `bbc/`;
-- `src/gui/`: `encoder_panel/`, `export/`;
-- `app/projects/bbc/` and `app/projects/benchmark/` (fixture projects),
+- `src/gui/`: `export/`;
+- `app/projects/bbc/` (fixture projects),
   `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
   WiX/CPack, macOS);
 - more scripts in `app/scripts/`: `run-projects.sh`, `output-hashes.sh`.
@@ -263,12 +272,14 @@ Phase 2 task 7).
     encoding's lag, output length, PESQ and cheap measures; the anchor
     scores);
   - `synth_mocks.h`: a gMock mock of `ISynth`;
+  - `quality_mocks.h`: gMock mocks of `IQualityMetric` and
+    `IAnchorScorer`;
   - `synthetic_speech`: a deterministic speech-like signal (two vowels, a
     fricative, pauses), a delay and white noise, for the quality unit
     tests;
   - `project_mocks.h`: gMock mocks of `IEncoder`, `IWavReader`,
     `IWavCodec`, `IResampler`, `IFileDigest`, `IProjectStore` and
-    `IProjectEditor`;
+    `IProjectEditor` (with `SetDefaultEncoder()`);
   - `project_builder`: fixed phrase ids, frames that pack to a chosen
     number of bytes, and phrases and projects built from them.
 - The functional lane has the CLI's path (`SPEAK5220_CLI_PATH`), the
@@ -279,15 +290,17 @@ Phase 2 task 7).
   prefix, so CTest lists them as disabled and never runs them. The scripts
   run them with `--gtest_also_run_disabled_tests`, passing inputs and an
   output file through environment variables: the full-corpus check
-  (`EncoderCorpusCheck` and `QualityCorpusCheck`, `corpus-check.sh`) and
-  the timings (`EncoderBenchmark` and `QualityBenchmark`, `benchmark.sh`).
+  (`EncoderCorpusCheck`, `QualityCorpusCheck` and `OptimiserCorpusCheck`,
+  `corpus-check.sh`) and the timings (`EncoderBenchmark`,
+  `QualityBenchmark` and `OptimiserBenchmark`, `benchmark.sh`).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test. `app/tests/gui/support/gui_mocks.h`
   has gMock mocks of `IDialogs` and `IAudioOutput`, an in-memory
   `IRecentFilesStore`, a `FakeClock`, `TestPlayback` (a `Player` over a
   mocked output, and a mocked synth, for windows not testing playback),
-  and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
+  `TestEncoding` (`EncodingTools` over a mocked encoder, metric and
+  anchor, a fake clock and an inline runner), and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
   light and dark palettes like Fusion's. The GUI functional lane
   has `SPEAK5220_PROJECTS_DIR` compiled in.
 
@@ -323,7 +336,10 @@ Plan §2.2, with the names as built.
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
-| `Optimiser` | Planned: searches encoder options for the best PESQ, within the 64-PHROM project budget |
+| `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best PESQ, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
+| `EncoderPanel`, `EncoderSettingsForm`, `QualityScaleView` | **Implemented** (`gui/encoder_panel/`): statistics, the quality scale, the settings form and debounced re-encoding (§17) |
+| `OptimiseSession`, `OptimiseDialog` | **Implemented** (`gui/optimise/`): Optimise and Optimise all in the GUI (§17) |
+| `AnchorScorer` (`IAnchorScorer`) | **Implemented** (`core/quality/anchor_vocoder`): `AnchorScore()` behind an interface, for the GUI's tests (§17) |
 | `Project` (`IProjectEditor`) | **Implemented** (`core/project/project`): phrases, their audio, settings and cached encodings; the editing operations (§14) |
 | `AllocatePhroms()` | **Implemented** (`core/project/phrom_allocator`): list-order assignment to PHROMs and the 64-PHROM budget (§14) |
 | `EncodingCache` | **Implemented** (`core/project/encoding_cache`): the settings hash and re-encoding within the budget, over `IEncoder` (§14) |
@@ -382,8 +398,10 @@ boundary, then run until idle plus one frame):
   same codes × 64 as 16-bit samples, the length of the leading idle, and the
   period of the first code.
 - Results are cached per phrase in a hash map keyed by the path and the
-  bytes (FNV-1a hash, full comparison). `Synthesize()` is thread-safe; the
-  caller runs it on a worker thread.
+  bytes (FNV-1a hash, full comparison), unless the synth is made with
+  `SynthCache::kOff`: Optimise speaks hundreds of candidates once each,
+  so the synth behind its PESQ keeps nothing (§17). `Synthesize()` is
+  thread-safe; the caller runs it on a worker thread.
 
 **Acceptance** (met): the C++ emulator reproduces every reference run in
 `app/golden/emulator/` (§13), codes sample for sample and events line for
@@ -577,8 +595,8 @@ confirmed by listening; that has not been done yet.
 seconds per second of speech): PESQ alone 0.0076; `PesqMetric` (synthesis,
 alignment and PESQ) 0.047; the anchor score 0.012; the cheap measures
 0.0013. Most of `PesqMetric`'s time is the output alignment's spectral
-search (81 candidate lags). Nothing has been optimised yet; Optimise
-(Phase 7) will show whether it needs to be.
+search (81 candidate lags). Nothing has been optimised yet; Optimise's
+timings (§17) have not needed it.
 
 ---
 
@@ -610,8 +628,10 @@ Both executables are thin front ends over `s5core`.
   starts following the desktop's colour scheme (§16), creates the real
   `QtDialogs`, `SettingsRecentFilesStore`, `ThreadPoolTaskRunner`, `Synth`
   and `Player` (over `QtAudioOutput`, `SteadyClock` and `SincResampler`),
-  and opens `speak5220 [PROJECT]` if given. The window is described in
-  §15 and §16.
+  and the `EncodingTools` (the encoder, `PesqMetric` over an uncached
+  `Synth`, `AnchorScorer`, the clock, and a one-thread runner for
+  Optimise's search), and opens `speak5220 [PROJECT]` if given. The
+  window is described in §15, §16 and §17.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
@@ -757,12 +777,19 @@ everything first and changes nothing on failure, and returns its reverse:
 | `SetPlayStart(id, sample)` | the previous play start | `SetPlayStart(id, result)` |
 | `SetDescription(id, text)` | the previous text | `SetDescription(id, result)` |
 | `SetEncoding(id, {overrides, encoding})` | the previous pair | `SetEncoding(id, result)` |
+| `SetDefaultEncoder(options)` | the previous defaults | `SetDefaultEncoder(result)` |
 
 `SetEncoding()` takes the settings and the encoding made from them
 together, so a settings change and its re-encoding are one undoable step,
 and the encoding can be computed in the background before the step is
 applied. A locked phrase refuses it. Renaming does not change the ASCII map,
 which names phrases by name, so a rename and its reverse are exact.
+`SetDefaultEncoder()` (through `SetSettings()`) checks the options and
+that every phrase's overrides still apply; encodings made from the old
+defaults become stale but are not redone, so it cannot affect the budget.
+`OverridesFor(defaults, options)` gives the overrides (each option whose
+text differs) that turn the defaults into given options, so the GUI and
+the optimiser store only what a phrase changes.
 
 **PHROM allocation** (plan §4.1). `AllocatePhroms()` takes each phrase's
 cost (or none, if not encoded) and fills PHROMs in list order, never
@@ -776,7 +803,11 @@ recomputes every phrase's cost.
 
 **The budget** (decision D4). Every editing operation refuses a result that
 needs more PHROMs than the budget (64), or than the project already uses if
-it is over budget (so such a project can still shrink). The plan names
+it is over budget (so such a project can still shrink).
+`Project::BudgetCheckFor(id)` returns a `PhraseBudgetCheck`: a copy of the
+other phrases' costs that answers, for any packed size of that phrase,
+whether the project would stay within the same limit. The optimiser
+calls it once per candidate, from worker threads. The plan names
 imports, re-encoding and the optimiser; renaming and reordering are checked
 as well, because both change costs or packing, and a project inside the
 budget then stays inside it whatever is done to it.
@@ -888,8 +919,10 @@ Export dialog are Phase 8.
 **Fixtures** (`app/projects/`, unpacked; TESTING.md): `general/one-phrase`,
 `general/many-phrases` (Acorn-style names with punctuation, an ASCII map, an
 override, two presets), `general/frame-kinds` (a locked phrase with every
-frame kind), `phrom/one-phrom` (exactly 16 384 bytes) and
-`phrom/two-phroms` (spills into a second PHROM). The phrases with audio were
+frame kind), `phrom/one-phrom` (exactly 16 384 bytes),
+`phrom/two-phroms` (spills into a second PHROM) and
+`benchmark/synthetic-speech` (two speech-like clips of 1.5 and 3.4 s, for
+timing Optimise, §17). The phrases with audio were
 added and encoded with `speak5220-cli` from synthetic clips; the locked
 frames were written directly. A functional test checks that each loads,
 that its encodings are current, that its presets run, and that saving it
@@ -932,13 +965,16 @@ is [`docs/application/user-manual/main-window.md`](../../docs/application/user-m
 **Structure.**
 
 ```
-MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player
- │             (injected)
+MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player,
+ │             EncodingTools (injected)
  ├── ProjectDocument: Project + QUndoStack + ProjectEdits + path
  ├── PhraseListModel (reads a Project snapshot, edits through ProjectEdits)
  │    └── PhraseListPanel: QListView + PhraseListDelegate + buttons
  ├── PhraseDetails (name, description; edits through ProjectEdits)
- ├── PhraseWaveforms (§16; the play start through ProjectEdits)
+ ├── QSplitter
+ │    ├── PhraseWaveforms (§16; the play start through ProjectEdits)
+ │    └── EncoderPanel (§17; settings and encodings through ProjectEdits)
+ ├── OptimiseSession + OptimiseDialog (§17)
  └── status bar: ProjectSizeText(Project::Allocation())
 ```
 
@@ -956,11 +992,14 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player
   command only if that succeeded, and the stack's own first `redo()` is
   skipped. A failed operation therefore never reaches the stack, and does
   not discard the redo history either, which `QUndoStack::push()` would do
-  even for a command that makes itself obsolete. Each of the eight
-  commands applies its `IProjectEditor` operation in `redo()` and the
-  returned reverse in `undo()` (table in §14). An undo or redo that fails
-  regardless is logged and the command made obsolete, so the stack drops
-  it.
+  even for a command that makes itself obsolete. Each of the nine
+  single-operation commands applies its `IProjectEditor` operation in
+  `redo()` and the returned reverse in `undo()` (table in §14).
+  `SetEncodingsCommand` applies `SetEncoding()` to several phrases as one
+  step (Optimise, Re-encode); if one fails, those already changed are put
+  back and nothing is pushed, and undo reverses them latest first. An undo
+  or redo that fails regardless is logged and the command made obsolete,
+  so the stack drops it.
 - **`PhraseListModel`** is a flat list model of a snapshot: the main
   window calls `SetProject()` on every `Changed()`, which resets the model.
   `PhraseListPanel` remembers the selected ids before a reset and selects
@@ -1114,7 +1153,10 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   `PhraseWaveforms` rounds and limits it to the audio and applies
   `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
   Start"), so it is saved as `play_start` and undoable. Both views show
-  it. A phrase without audio has none.
+  it. A phrase without audio has none. Playback follows a move (and the
+  reset button, even when the play start is already 0): a pane playing
+  starts again from the new play start, and one paused stops, so the next
+  play starts there rather than resuming.
 - **Playback.** `Player` plays one buffer at a time: `Play(source,
   samples, start)`, `Pause()`, `Resume()` (a new buffer from the paused
   position) and `Stop()`. The original plays from the play start; the
@@ -1183,3 +1225,214 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 - still to be checked by hand: that the playhead follows the sound on
   Linux with PipeWire, and that the window starts light or dark to match
   the desktop and follows a change, on GNOME, KDE, Windows and macOS.
+
+---
+
+## 17. The encoder panel and Optimise
+
+**Implemented** (plan §3.3, §5, Phase 7) in `core/optimiser/`,
+`gui/encoder_panel/` and `gui/optimise/`. The user's view is
+[`docs/application/user-manual/encoder.md`](../../docs/application/user-manual/encoder.md).
+
+**Structure.**
+
+```
+EncoderPanel ── ProjectEdits, EncodingTools, ISynth, ITaskRunner
+ ├── state, FramesText/KindsText/LevelText (FrameStatistics, EncodingFacts)
+ ├── QualityScaleView: QualityBar + the QualityText line (QualityScale)
+ ├── "Settings for": this phrase | project defaults
+ ├── EncoderSettingsForm (from EncoderOptionInfos())
+ └── Re-encode, Optimise..., Reset
+OptimiseSession ── ProjectEdits, EncodingTools, ITaskRunner (candidates)
+ └── core::optimiser::Optimiser ── IEncoder, IQualityMetric, ITaskRunner
+OptimiseDialog ── OptimiseSession, Player, ISynth, ITaskRunner (A/B)
+EncodingTools: IEncoder, IQualityMetric (PESQ), IAnchorScorer, IClock,
+               ITaskRunner (Optimise's search, one at a time)
+```
+
+**The optimiser** (`Optimiser::Run()`, plan §3.3). The search starts from
+the phrase's options and is in two stages:
+
+1. **Grid.** The start, then the Cartesian product, around it, of the
+   pre-emphasis (the start's, and the other kind: chirp, or first order
+   with μ 0.9, the reference data's "lean" value), the voicing threshold
+   (±0.05), the voicing evidence (±2), the repeat trade-off (×0.5, ×2;
+   left out with repeats off) and the target RMS (±4; the target peak,
+   ±16, when the start sets one): 162 points.
+2. **Coordinate descent** from the best so far. Each round proposes one
+   step down and one up along every searched option (the target, repeat
+   trade-off, silence gate, pre-emphasis μ, window, lag window, voicing
+   threshold and evidence, level passes, slow gain control, compression)
+   and the other setting of each switch (repeats, fade, the pre-emphasis
+   kind), and evaluates them together. It moves to the best if its
+   objective is higher than the current one's; otherwise every step is
+   halved, down to its smallest, and the search ends when no step can be
+   halved. Values are rounded to a few decimals (whole numbers for the
+   window and passes) so the options' text stays short, and kept within
+   their ranges. Plan §3.3 mentions Nelder–Mead as an alternative for the
+   continuous options; plain coordinate steps suffice so far.
+
+At most 400 evaluations and 10 rounds (`SearchPlan`). Options already tried
+are not tried again (keyed by every option's text). Each candidate is
+encoded; its packed size is checked against the per-phrase byte limit
+(`kOverLimit`) and then the budget callback (`kOverBudget`), and only a
+candidate within both is measured (`kScored`), since PESQ is most of the
+cost. The objective is the score, or with a bit-rate weight λ, the score
+less λ per kbit/s (plan §3.3 step 4); a lower-is-better metric is negated.
+The best is the scored candidate with the highest objective, ties going to
+the lowest index.
+
+**Determinism.** Each batch (the start, the grid, a round) is posted to the
+workers one candidate per job; the thread running the search waits on a
+condition variable (it must not be one of the workers, since it blocks)
+and reports progress after each candidate finishes. Results are placed by
+index and reduced in index order, so the history and the best are the
+same whatever the thread count. The functional test runs a search on 1
+and 8 threads and compares every candidate's options, outcome, size and
+score bit for bit. Cancelling is an atomic flag checked before each
+candidate; the history keeps the cancelled ones (`kCancelled`).
+
+**The encoder panel.**
+
+- `ShowPhrase(project, id)` is called on every change of the project. The
+  panel keeps the phrase's audio, overrides and encoding, and whether the
+  encoding is current (`EncodingCache::IsCurrent()`).
+- A form edit records the options and a deadline 600 ms ahead on the
+  `IClock`, and starts a single-shot `QTimer`; `DebounceTick()` applies
+  the change once the clock passes the deadline, or waits again for the
+  rest. So a burst of edits gives one encoding, and the tests drive it
+  with a fake clock. A change still waiting is applied before another
+  phrase is shown or the scope changes, and stays in the form while it
+  waits or encodes.
+- For a phrase, the change becomes `OverridesFor(defaults, options)` and
+  an encoding job on the `ITaskRunner`: `EncodePhrase()` encodes, then
+  `MeasureFrames()` measures PESQ (`IQualityMetric`), the anchor (once per
+  phrase, `IAnchorScorer`) and the peak code (the frames spoken through
+  the shared, cached `ISynth`, which the waveforms then reuse). The result
+  comes back queued and is stored with `SetEncoding()`, PESQ and the anchor
+  in the `CachedEncoding`; a result superseded by a later encoding of the
+  same phrase is dropped. A refusal (the budget) is reported and the form
+  reloaded.
+- For the project's defaults, the change is `SetDefaultEncoder()`.
+- Frames without a stored PESQ (encoded by the CLI) are measured in the
+  background for display only; the panel keeps the measurement, keyed by
+  the frames, and does not change the project.
+- The limiter's activity (`LevelStats`) comes from the encoder's details,
+  so it is known only for encodings made in the session.
+
+**The settings form.** One row per `EncoderOptionInfo`, in two columns.
+`EncoderOptionInfo` gives each option a `unit` and a typical range and
+`step` (within its valid range), which the GUI's sliders use:
+`OptionSlider` is a `DefaultTickSlider` (a `QSlider` that paints a tick
+under its groove at the baseline's position) with the value's text and
+unit beside it, all of one width so the sliders line up (the analysis
+window in milliseconds; a ratio reads "off" at 1). Its positions are the
+typical range in steps; a value outside it widens the range to include
+it, and a value off the steps is shown exactly and kept until the slider
+moves. Real and whole-number options get a slider; switches a
+`QCheckBox`; the target peak a check box and a slider; the pre-emphasis
+a chirp/first-order chooser and a slider for μ. Values are read back
+through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
+options it was given and changes only the edited one.
+
+**The quality scale.** `QualityBar` draws the five bands of
+`QualityScale::kBandStarts` in `ThemeColours::quality_bands` (each a
+different colour; the top band a brighter green than *Good*, so it is
+not read as part of it), each band's name inside it where it fits (the
+top band, a tenth of the bar, as "Best"), at most 520 pixels wide, the score's mark (a line and a triangle in
+`quality_mark`) and an optional dashed mark for an earlier score. The
+mark's colour has a contrast ratio of at least 4.5:1 with every band in
+both palettes, so it reads without colour (WCAG's ratio is of luminance
+alone); the line under the bar gives the band in words.
+
+**Optimise in the GUI.** `OptimiseSession::Start()` copies the project and
+posts one job to `EncodingTools::optimiser_driver` (a one-thread
+`ThreadPoolTaskRunner` in the application), which runs the optimiser on
+each phrase in list order with its candidates on the window's runner. Each
+phrase's budget is checked against the copy with the earlier phrases'
+results stored in it, so the results fit together. Progress (the counts,
+the start and best so far, and new history rows) comes back queued per
+candidate. A phrase whose best differs from its start gets an
+`EncodingChange` (overrides, frames, PESQ, anchor); `Accept()` stores them
+all with one `SetEncodingsCommand`, and cancelling or `Discard()` drops
+them. The session's destructor cancels and waits for the driver, and the
+window waits for it before its runner. `OptimiseDialog` is window-modal,
+so the project cannot change under a search.
+
+**Listening before accepting.** When a search finds changes, the dialog
+offers each changed phrase (a combo box, hidden for one) with two play
+buttons: Original, the frames it has now (what Revert keeps), and
+Optimised, the frames found (what Accept keeps). Only the best
+candidate's frames are kept by the search, and the stored frames are what
+Revert leaves, so they are the honest comparison. Each is spoken with
+`RenderEncodedAudio()` on the runner once per search (a generation count
+drops speakings from an earlier one) and played at the recording's level
+(`level_gain`), as the encoded pane plays it. They play through the
+window's `Player` as `PlaybackSource::kBeforeOptimise` and `kOptimised`,
+which `PhraseWaveforms` gives no playhead; the dialog stops them on
+Accept, Revert, Cancel or another phrase. The play/pause icons, drawn in
+the palette's colours, are shared with the waveforms
+(`gui/playback/playback_icon`).
+
+**Re-encode.** Phrase > Re-encode posts one job that encodes and measures
+the selected phrases that are not encoded or stale (by the list model's
+state; unlocked, with audio) with their own settings, and stores them with
+one `SetEncodingsCommand`. It is disabled when there are none; likewise
+the panel's Re-encode button is enabled only for a phrase with no frames,
+stale frames, or a change waiting.
+
+**Deviations from the plan.**
+
+- The plan names `QtConcurrent`; the optimiser uses `ITaskRunner`, as the
+  other background jobs do (§14).
+- Cancelling discards the results, as the plan's acceptance asks, rather
+  than offering the best found so far.
+- The project's defaults are edited in the panel (a scope chooser), as an
+  undoable operation the plan did not list (`SetDefaultEncoder()`).
+- Phrase > Re-encode (a selection, as one step) is not in the plan; it is
+  needed after a change of defaults, or after adding phrases, which are
+  added unencoded.
+- The benchmark fixture is synthetic speech, like the other fixtures,
+  rather than corpus recordings, which are derived data (TESTING.md).
+
+**Results** (plan Phase 7, item 4).
+
+
+- **Corpus** (`corpus-check.sh`, all 243 files, from the default options,
+  each with a byte limit at its default encoding's size): PESQ rose on
+  242 files and stayed level on one; median gain 0.17, mean 0.21, largest
+  0.87; every best within its limit. 1.8 s per second of speech on 16
+  threads (with other work on the machine), 20 minutes for the 673 s of
+  speech. The test asks for a rise on more than half the files.
+- **Benchmark** (`benchmark.sh`, `benchmark/synthetic-speech`, 4.9 s of
+  speech, no byte limit): 11.6 s per second of speech on one thread, 1.36
+  s on 16 (a speed-up of 8.6); 212 to 240 candidates per phrase. A phrase
+  of a few seconds therefore takes a few seconds on a many-core machine
+  and under a minute on one core. The longer clip's start was already the
+  best found.
+- Most of a candidate's time is `PesqMetric` (the output alignment's
+  spectral search, §9), then the encoder. Nothing has been optimised for
+  speed; plan risk R3's shared analysis between candidates is not needed
+  yet.
+
+**Acceptance** (plan Phase 7):
+
+- unit tests of the optimiser with a mocked encoder and metric on an
+  inline runner: the grid around the start (and the target peak when set),
+  descent to an optimum off the grid, ties to the lowest index, no options
+  tried twice, candidates over the budget or the byte limit kept but never
+  chosen and not measured, the bit-rate weight, a lower-is-better metric,
+  failures, the evaluation limit, cancelling, progress, and options kept
+  in range and short;
+- a functional test finds the same result on 1 and 8 threads;
+- GUI unit tests: a setting change re-encodes once after the debounce (a
+  fake clock); Reset restores the project's defaults as one undoable
+  step; the defaults scope; a refused change; PESQ and the anchor stored
+  with the encoding; the scale's score, band label, tooltip and marks,
+  and an encoding at or above its anchor shown as *As good as LPC can
+  achieve*; the mark's contrast with every band in light and dark;
+- GUI unit tests of Optimise with inline runners: accepting is one
+  undoable step, Optimise all runs in list order and leaves out locked
+  phrases, the history, the byte limit, and cancelling leaves the
+  settings unchanged; the window's stages;
+- `corpus-check.sh` and `benchmark.sh` run Optimise (results above).

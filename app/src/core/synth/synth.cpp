@@ -96,7 +96,8 @@ std::size_t Synth::CacheKeyHash::operator()(const CacheKey& key) const {
   return static_cast<std::size_t>(hash);
 }
 
-Synth::Synth(const emulator::Tms5220Config& config) : config_(config) {}
+Synth::Synth(const emulator::Tms5220Config& config, SynthCache cache)
+    : config_(config), cache_policy_(cache) {}
 
 StatusOr<SynthResult> Synth::SpeakFromVsm(emulator::IVsmBus& vsm,
                                           std::uint32_t address) const {
@@ -162,7 +163,7 @@ StatusOr<SynthResult> Synth::Synthesize(std::span<const std::uint8_t> phrase,
       ->debug("synthesised {} bytes by the {} path: {} samples, {} idle first",
               phrase.size(), PathName(path), result->codes.size(),
               result->leading_idle_samples);
-  {
+  if (cache_policy_ == SynthCache::kOn) {
     const std::scoped_lock lock(mutex_);
     cache_.emplace(std::move(key),
                    std::make_shared<const SynthResult>(*result));

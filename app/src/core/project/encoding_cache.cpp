@@ -23,6 +23,7 @@
 #include "core/audio/pcm24.h"
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
+#include "core/lpc/frame.h"
 #include "core/util/logging.h"
 #include "core/util/sha256.h"
 
@@ -100,11 +101,17 @@ StatusOr<CachedEncoding> EncodingCache::Encode(
                   fmt::format("cannot encode {}: {}", phrase.name,
                               result.GetStatus().Message()));
   }
+  return MakeEncoding(phrase.audio, *options, std::move(result->frames));
+}
+
+CachedEncoding EncodingCache::MakeEncoding(
+    std::span<const float> audio, const encoder::EncoderOptions& options,
+    std::vector<lpc::Frame> frames) {
   CachedEncoding encoding;
   encoding.encoder_version = std::string(encoder::kEncoderVersion);
   encoding.settings_hash =
-      SettingsHash(phrase.audio, *options, encoder::kEncoderVersion);
-  encoding.frames = std::move(result->frames);
+      SettingsHash(audio, options, encoder::kEncoderVersion);
+  encoding.frames = std::move(frames);
   return encoding;
 }
 

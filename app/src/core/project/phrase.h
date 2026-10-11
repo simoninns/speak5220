@@ -132,6 +132,12 @@ PhraseId NewPhraseId();
 StatusOr<encoder::EncoderOptions> EffectiveEncoderOptions(
     const encoder::EncoderOptions& defaults, const EncoderOverrides& overrides);
 
+// The overrides that give `options` over `defaults`: the text of each
+// option whose text differs (EncoderOptionText()), so applying them to
+// `defaults` with EffectiveEncoderOptions() gives `options` back. Pure.
+EncoderOverrides OverridesFor(const encoder::EncoderOptions& defaults,
+                              const encoder::EncoderOptions& options);
+
 // The bytes the frames pack to, up to and including the stop (one is added
 // if there is none): a phrase's data in a PHROM. Fails for an invalid
 // frame.

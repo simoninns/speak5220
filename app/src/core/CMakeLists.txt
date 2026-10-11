@@ -29,6 +29,8 @@ add_library(
     encoder/voicing_classifier.cpp
     lpc/frame.cpp
     lpc/frame_codec.cpp
+    lpc/frame_statistics.cpp
+    optimiser/optimiser.cpp
     packaging/acorn_phrom.cpp
     packaging/speak_external_stream.cpp
     packaging/ti_indexed.cpp

@@ -74,6 +74,22 @@ std::vector<double> AnchorVocoder(std::span<const double> x);
 // source (speechqual.py --anchor). Fails as ScorePesq() does. Thread-safe.
 StatusOr<double> AnchorScore(std::span<const double> source);
 
+// Gives phrases' anchor scores, so their users can be tested without
+// running the vocoder. Implementations are thread-safe.
+class IAnchorScorer {
+ public:
+  virtual ~IAnchorScorer() = default;
+
+  // The anchor score of `source`, as AnchorScore() gives it.
+  virtual StatusOr<double> Score(std::span<const double> source) = 0;
+};
+
+// IAnchorScorer over AnchorScore(). Stateless; thread-safe.
+class AnchorScorer : public IAnchorScorer {
+ public:
+  StatusOr<double> Score(std::span<const double> source) override;
+};
+
 }  // namespace speak5220::core::quality
 
 #endif  // SPEAK5220_CORE_QUALITY_ANCHOR_VOCODER_H_

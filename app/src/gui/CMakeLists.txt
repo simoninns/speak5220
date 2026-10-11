@@ -6,15 +6,24 @@
 add_library(
     speak5220_gui
     STATIC
+    encoder_panel/encoder_panel.cpp
+    encoder_panel/encoder_settings_form.cpp
+    encoder_panel/encoding_summary.cpp
+    encoder_panel/option_slider.cpp
+    encoder_panel/phrase_encoder.cpp
+    encoder_panel/quality_scale_view.cpp
     main_window/dialogs.cpp
     main_window/main_window.cpp
     main_window/project_document.cpp
     main_window/recent_files.cpp
     main_window/status_text.cpp
+    optimise/optimise_dialog.cpp
+    optimise/optimise_session.cpp
     phrase_editor/phrase_details.cpp
     phrase_list/phrase_list_delegate.cpp
     phrase_list/phrase_list_model.cpp
     phrase_list/phrase_list_panel.cpp
+    playback/playback_icon.cpp
     playback/player.cpp
     playback/qt_audio_output.cpp
     theme/colour_scheme.cpp

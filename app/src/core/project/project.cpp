@@ -306,6 +306,40 @@ std::vector<PhraseCostInput> Project::CostsInOrder(
 
 PhromAllocation Project::Allocation() const { return AllocatePhroms(Costs()); }
 
+PhraseBudgetCheck::PhraseBudgetCheck(std::vector<PhraseCostInput> costs,
+                                     std::size_t index, int name_length,
+                                     int limit, std::string name)
+    : costs_(std::move(costs)),
+      index_(index),
+      name_length_(name_length),
+      limit_(limit),
+      name_(std::move(name)) {}
+
+Status PhraseBudgetCheck::Check(int packed_bytes) const {
+  std::vector<PhraseCostInput> costs = costs_;
+  costs[index_].cost = PhraseCost(packed_bytes, name_length_);
+  const int after = AllocatePhroms(costs).PhromsUsed();
+  if (after <= limit_) {
+    return OkStatus();
+  }
+  return ResourceExhaustedError(fmt::format(
+      "cannot re-encode {}: the project would need {} PHROMs, and its "
+      "budget is {}",
+      name_, after, kPhromBudget));
+}
+
+StatusOr<PhraseBudgetCheck> Project::BudgetCheckFor(const PhraseId& id) const {
+  const std::optional<int> index = IndexOf(id);
+  if (!index) {
+    return NotFoundError("no phrase with id " + id);
+  }
+  const Phrase& phrase = contents_.phrases[static_cast<std::size_t>(*index)];
+  return PhraseBudgetCheck(Costs(), static_cast<std::size_t>(*index),
+                           static_cast<int>(phrase.name.size()),
+                           std::max(kPhromBudget, Allocation().PhromsUsed()),
+                           phrase.name);
+}
+
 Status Project::CheckBudget(std::span<const PhraseCostInput> costs,
                             std::string_view action) const {
   const int now = Allocation().PhromsUsed();
@@ -601,6 +635,18 @@ StatusOr<EncodingChange> Project::SetEncoding(const PhraseId& id,
                           .encoding = std::move(phrase.encoding)};
   phrase.encoder = std::move(change.overrides);
   phrase.encoding = std::move(change.encoding);
+  return previous;
+}
+
+StatusOr<encoder::EncoderOptions> Project::SetDefaultEncoder(
+    encoder::EncoderOptions options) {
+  encoder::EncoderOptions previous = contents_.settings.default_encoder;
+  ProjectSettings settings = contents_.settings;
+  settings.default_encoder = options;
+  if (Status status = SetSettings(std::move(settings)); !status.IsOk()) {
+    return status;
+  }
+  Logger(kLogModuleProject)->debug("changed the default encoder options");
   return previous;
 }
 

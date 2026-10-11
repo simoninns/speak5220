@@ -13,8 +13,13 @@
 
 #include <QColor>
 #include <QPalette>
+#include <array>
+#include <cstddef>
 
 namespace speak5220::app {
+
+// The number of bands on the quality scale (core::quality::QualityBand).
+inline constexpr std::size_t kQualityBandCount = 5;
 
 // Plan §5, "Colours": the colours the palette has no role for. Widgets
 // take everything else from the palette. A plain value type.
@@ -33,6 +38,11 @@ struct ThemeColours {
   QColor unvoiced;
   QColor repeat;
   QColor silence;
+  // The quality scale's bands, worst first (core::quality::QualityBand
+  // order), and the marks drawn over them. The bands are told apart by
+  // their labels, not by colour alone; the marks contrast with every band.
+  std::array<QColor, kQualityBandCount> quality_bands;
+  QColor quality_mark;
 };
 
 // True when `palette` is dark: its window is darker than its text.

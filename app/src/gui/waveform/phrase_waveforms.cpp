@@ -12,20 +12,12 @@
 #include "gui/waveform/phrase_waveforms.h"
 
 #include <QCheckBox>
-#include <QColor>
 #include <QEvent>
 #include <QHBoxLayout>
 #include <QIcon>
 #include <QMetaObject>
-#include <QPainter>
-#include <QPixmap>
-#include <QPointF>
-#include <QPolygonF>
-#include <QRectF>
 #include <QScrollBar>
-#include <QSize>
 #include <QString>
-#include <QStyle>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -44,6 +36,7 @@
 #include "core/util/logging.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
+#include "gui/playback/playback_icon.h"
 #include "gui/playback/player.h"
 #include "gui/undo/project_edits.h"
 #include "gui/waveform/time_axis.h"
@@ -66,40 +59,6 @@ QToolButton* MakeButton(const QString& text, const QString& tip,
   button->setAccessibleName(tip);
   button->setAutoRaise(true);
   return button;
-}
-
-// The play or pause symbol in `colour`, `size` device-independent pixels
-// square. The style's own media icons are fixed black images, so the
-// symbols are drawn in the palette's colour instead.
-QPixmap PlaybackPixmap(bool pause, const QColor& colour, int size,
-                       qreal ratio) {
-  // The symbol's place within the square, as fractions of its side.
-  constexpr qreal kLeft = 0.25;
-  constexpr qreal kRight = 0.8;
-  constexpr qreal kTop = 0.15;
-  constexpr qreal kBottom = 0.85;
-  constexpr qreal kBar = 0.18;
-  QPixmap pixmap(QSize(size, size) * ratio);
-  pixmap.setDevicePixelRatio(ratio);
-  pixmap.fill(Qt::transparent);
-  QPainter painter(&pixmap);
-  painter.setRenderHint(QPainter::Antialiasing);
-  painter.setPen(Qt::NoPen);
-  painter.setBrush(colour);
-  const qreal side = size;
-  if (pause) {
-    painter.drawRect(QRectF(kLeft * side, kTop * side, kBar * side,
-                            (kBottom - kTop) * side));
-    painter.drawRect(QRectF((kRight - kBar) * side, kTop * side, kBar * side,
-                            (kBottom - kTop) * side));
-  } else {
-    QPolygonF triangle;
-    triangle << QPointF(kLeft * side, kTop * side)
-             << QPointF(kRight * side, side / 2.0)
-             << QPointF(kLeft * side, kBottom * side);
-    painter.drawPolygon(triangle);
-  }
-  return pixmap;
 }
 
 // A play/pause button labelled with its pane's name beside the icon.
@@ -283,8 +242,8 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     frames_.clear();
     encoded_shown_ = false;
     UpdateEncodedNote();
-    encoded_->View()->Clear(QStringLiteral(
-        "Not encoded yet: encode the project with speak5220-cli encode"));
+    encoded_->View()->Clear(
+        QStringLiteral("Not encoded yet: press Encode below"));
     play_encoded_->setEnabled(false);
   } else if (!same_phrase || frames != frames_) {
     frames_ = std::move(frames);
@@ -344,17 +303,30 @@ void PhraseWaveforms::MovePlayStart(double source_sample) {
   }
   const int sample = static_cast<int>(std::clamp(
       std::round(source_sample), 0.0, static_cast<double>(audio_.size())));
-  if (sample == play_start_) {
+  if (sample != play_start_) {
+    if (const core::Status status = edits_->SetPlayStart(id_, sample);
+        !status.IsOk()) {
+      emit Failed(QStringLiteral("Move Play Start"),
+                  ToQString(status.Message()));
+      return;
+    }
+    play_start_ = sample;
+    original_->View()->SetMarker(sample);
+    encoded_->View()->SetMarker(sample);
+  }
+  FollowPlayStart();
+}
+
+void PhraseWaveforms::FollowPlayStart() {
+  const PlaybackState state = player_->State();
+  if (state == PlaybackState::kStopped) {
     return;
   }
-  if (const core::Status status = edits_->SetPlayStart(id_, sample);
-      !status.IsOk()) {
-    emit Failed(QStringLiteral("Move Play Start"), ToQString(status.Message()));
-    return;
+  const PlaybackSource source = player_->Source();
+  player_->Stop();
+  if (state == PlaybackState::kPlaying) {
+    PlayPause(source);
   }
-  play_start_ = sample;
-  original_->View()->SetMarker(sample);
-  encoded_->View()->SetMarker(sample);
 }
 
 void PhraseWaveforms::Render(const std::vector<lpc::Frame>& frames) {
@@ -511,20 +483,7 @@ void PhraseWaveforms::SetPlaying(PlaybackSource source, bool playing) {
   // The label stays and only the icon changes, so the button keeps its
   // width. The icon is drawn in the button text's colour, so it matches
   // the other controls in light and dark (plan §5, "Colours").
-  const int size = style()->pixelMetric(QStyle::PM_SmallIconSize);
-  const qreal ratio = devicePixelRatioF();
-  QIcon icon;
-  icon.addPixmap(
-      PlaybackPixmap(playing,
-                     palette().color(QPalette::Active, QPalette::ButtonText),
-                     size, ratio),
-      QIcon::Normal);
-  icon.addPixmap(
-      PlaybackPixmap(playing,
-                     palette().color(QPalette::Disabled, QPalette::ButtonText),
-                     size, ratio),
-      QIcon::Disabled);
-  button->setIcon(icon);
+  button->setIcon(PlayPauseIcon(playing, *this));
   button->setToolTip(
       (playing ? QStringLiteral("Pause %1") : QStringLiteral("Play %1 (Space)"))
           .arg(name));
@@ -567,8 +526,17 @@ WaveformView* PhraseWaveforms::PlayingView() const {
   if (player_->State() == PlaybackState::kStopped) {
     return nullptr;
   }
-  return player_->Source() == PlaybackSource::kOriginal ? original_->View()
-                                                        : encoded_->View();
+  switch (player_->Source()) {
+    case PlaybackSource::kOriginal:
+      return original_->View();
+    case PlaybackSource::kEncoded:
+      return encoded_->View();
+    case PlaybackSource::kBeforeOptimise:
+    case PlaybackSource::kOptimised:
+      // The Optimise window's audio has no playhead here.
+      break;
+  }
+  return nullptr;
 }
 
 }  // namespace speak5220::app

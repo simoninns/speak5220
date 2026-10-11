@@ -11,12 +11,14 @@
 #ifndef SPEAK5220_GUI_UNDO_PROJECT_EDITS_H_
 #define SPEAK5220_GUI_UNDO_PROJECT_EDITS_H_
 
+#include <QString>
 #include <QUndoStack>
 #include <memory>
 #include <span>
 #include <string>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project_editor.h"
 #include "core/util/status.h"
@@ -46,6 +48,11 @@ class ProjectEdits {
   core::Status SetPlayStart(const core::project::PhraseId& id, int sample);
   core::Status SetEncoding(const core::project::PhraseId& id,
                            core::project::EncodingChange change);
+  // Changes several phrases' encodings as one step named `text`; all or
+  // none (SetEncodingsCommand).
+  core::Status SetEncodings(SetEncodingsCommand::Changes changes,
+                            const QString& text);
+  core::Status SetDefaultEncoder(core::encoder::EncoderOptions options);
 
  private:
   core::Status Push(std::unique_ptr<ProjectCommand> command);

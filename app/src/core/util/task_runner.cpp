@@ -36,4 +36,8 @@ void ThreadPoolTaskRunner::Post(std::function<void()> job) {
 
 void ThreadPoolTaskRunner::Wait() { pool_->waitForDone(); }
 
+int ThreadPoolTaskRunner::ThreadCount() const {
+  return pool_->maxThreadCount();
+}
+
 }  // namespace speak5220::core

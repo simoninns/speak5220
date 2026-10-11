@@ -25,6 +25,7 @@
 #include "core/util/file_digest.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
+#include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
@@ -38,30 +39,37 @@ class QMenu;
 
 namespace speak5220::app {
 
+class EncoderPanel;
+class OptimiseDialog;
+class OptimiseSession;
 class PhraseDetails;
 class PhraseListPanel;
 class PhraseWaveforms;
 
 // Plan §5: the top-level window. The phrase list is docked on the left;
-// on the right are the selected phrase's details and its waveforms
-// (PhraseWaveforms), and the status bar shows the project's size in KB
-// and PHROMs. Menus: File (new, open, recent, save, save as, quit), Edit
-// (undo, redo), Phrase (add, remove, move up and down, sort A-Z), Help.
+// on the right are the selected phrase's details, its waveforms
+// (PhraseWaveforms) and, below a splitter, its encoder panel
+// (EncoderPanel); the status bar shows the project's size in KB and
+// PHROMs. Menus: File (new, open, recent, save, save as, quit), Edit
+// (undo, redo), Phrase (add, remove, move up and down, sort A-Z,
+// re-encode, optimise), Help.
 //
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
 // go through IDialogs, the recent-file list through IRecentFilesStore;
-// imports and the rendering of encoded audio (through the ISynth) run as
-// background jobs on the ITaskRunner, their results coming back to the GUI
-// thread queued; the waveforms play through the Player. All of them must
-// outlive the window. GUI thread only.
+// imports, encoding and the rendering of encoded audio (through the
+// ISynth) run as background jobs on the ITaskRunner, their results coming
+// back to the GUI thread queued; the waveforms play through the Player;
+// encoding and Optimise use the EncodingTools (OptimiseSession,
+// OptimiseDialog). All of them must outlive the window. GUI thread only.
 class MainWindow : public QMainWindow {
   Q_OBJECT
 
  public:
   MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
              core::ITaskRunner& runner, core::synth::ISynth& synth,
-             Player& player, QWidget* parent = nullptr);
+             Player& player, const EncodingTools& tools,
+             QWidget* parent = nullptr);
   // Waits for background jobs still running.
   ~MainWindow() override;
   MainWindow(const MainWindow&) = delete;
@@ -72,6 +80,9 @@ class MainWindow : public QMainWindow {
   PhraseListPanel* Panel() const { return panel_; }
   PhraseDetails* Details() const { return details_; }
   PhraseWaveforms* Waveforms() const { return waveforms_; }
+  EncoderPanel* Encoder() const { return encoder_panel_; }
+  OptimiseSession* Optimisation() const { return optimise_session_; }
+  OptimiseDialog* OptimiseWindow() const { return optimise_dialog_; }
   // The status bar's project summary (ProjectSizeText()).
   QString StatusText() const;
   QStringList RecentPaths() const { return recent_.Paths(); }
@@ -92,9 +103,19 @@ class MainWindow : public QMainWindow {
   // Imports started and not yet finished.
   int ImportsRunning() const { return imports_running_; }
 
+  // Opens the Optimise window for the phrases with `ids`.
+  void Optimise(const std::vector<core::project::PhraseId>& ids);
+  // Re-encodes the selected phrases that are not encoded or are stale,
+  // with their settings, in the background, as one undoable step.
+  void ReEncodeSelected();
+  // Batch re-encodings started and not yet finished.
+  int EncodesRunning() const { return encodes_running_; }
+
  signals:
   // An import finished, successfully or not.
   void ImportFinished();
+  // A batch re-encoding finished.
+  void EncodeFinished();
 
  protected:
   void closeEvent(QCloseEvent* event) override;
@@ -129,11 +150,18 @@ class MainWindow : public QMainWindow {
       std::vector<core::StatusOr<core::project::ImportResult>> results, int row,
       bool asked_to_normalise, int generation);
 
+  // The ids of the selected phrases that can be encoded (unlocked, with
+  // audio).
+  std::vector<core::project::PhraseId> EncodableSelection() const;
+  // Those of them that are not encoded, or stale.
+  std::vector<core::project::PhraseId> StaleSelection() const;
+
   IDialogs* dialogs_;
   IRecentFilesStore* recent_store_;
   core::ITaskRunner* runner_;
   core::synth::ISynth* synth_;
   Player* player_;
+  EncodingTools tools_;
   RecentFiles recent_;
 
   // The importer's collaborators are stateless, so jobs can share them.
@@ -142,6 +170,7 @@ class MainWindow : public QMainWindow {
   core::FileSha256Digest digest_;
   core::project::PhraseImporter importer_{wav_reader_, resampler_, digest_};
   int imports_running_ = 0;
+  int encodes_running_ = 0;
   // Counts the projects opened, so an import finishing after another
   // project was opened is dropped.
   int generation_ = 0;
@@ -151,6 +180,9 @@ class MainWindow : public QMainWindow {
   PhraseListPanel* panel_ = nullptr;
   PhraseDetails* details_ = nullptr;
   PhraseWaveforms* waveforms_ = nullptr;
+  EncoderPanel* encoder_panel_ = nullptr;
+  OptimiseSession* optimise_session_ = nullptr;
+  OptimiseDialog* optimise_dialog_ = nullptr;
   QLabel* status_label_ = nullptr;
   QMenu* recent_menu_ = nullptr;
 
@@ -167,6 +199,8 @@ class MainWindow : public QMainWindow {
   QAction* move_up_action_ = nullptr;
   QAction* move_down_action_ = nullptr;
   QAction* sort_action_ = nullptr;
+  QAction* re_encode_action_ = nullptr;
+  QAction* optimise_action_ = nullptr;
   QAction* about_action_ = nullptr;
 };
 

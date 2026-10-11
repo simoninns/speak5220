@@ -68,6 +68,7 @@ nav:
           - Projects and phrases: application/user-manual/projects.md
           - The main window: application/user-manual/main-window.md
           - Waveforms and playback: application/user-manual/waveforms.md
+          - The encoder and Optimise: application/user-manual/encoder.md
           - Command-line tool: application/user-manual/cli.md
           - Troubleshooting: application/user-manual/troubleshooting.md
       - Reference:

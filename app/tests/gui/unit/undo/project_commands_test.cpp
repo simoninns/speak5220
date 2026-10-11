@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_editor.h"
@@ -169,6 +170,68 @@ TEST_F(ProjectCommandsTest, EncodingIsUndoneBySettingThePreviousOne) {
         .WillOnce(Return(change));
   }
   ASSERT_TRUE(edits_.SetEncoding(TestId(1), change).IsOk());
+  stack_.undo();
+}
+
+TEST_F(ProjectCommandsTest, EncodingsAreOneStepUndoneInReverse) {
+  const EncodingChange one{.overrides = {{"gate_db", "40"}},
+                           .encoding = std::nullopt};
+  const EncodingChange two{.overrides = {{"target_rms", "18"}},
+                           .encoding = std::nullopt};
+  const EncodingChange previous{.overrides = {}, .encoding = std::nullopt};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetEncoding(TestId(1), Eq(one)))
+        .WillOnce(Return(previous));
+    EXPECT_CALL(editor_, SetEncoding(TestId(2), Eq(two)))
+        .WillOnce(Return(previous));
+    EXPECT_CALL(editor_, SetEncoding(TestId(2), Eq(previous)))
+        .WillOnce(Return(two));
+    EXPECT_CALL(editor_, SetEncoding(TestId(1), Eq(previous)))
+        .WillOnce(Return(one));
+  }
+  ASSERT_TRUE(edits_
+                  .SetEncodings({{TestId(1), one}, {TestId(2), two}},
+                                QStringLiteral("Optimise 2 Phrases"))
+                  .IsOk());
+  EXPECT_EQ(stack_.count(), 1);
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Optimise 2 Phrases"));
+  stack_.undo();
+}
+
+TEST_F(ProjectCommandsTest, EncodingsAreAllOrNothing) {
+  const EncodingChange one{.overrides = {{"gate_db", "40"}},
+                           .encoding = std::nullopt};
+  const EncodingChange previous{.overrides = {}, .encoding = std::nullopt};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetEncoding(TestId(1), Eq(one)))
+        .WillOnce(Return(previous));
+    EXPECT_CALL(editor_, SetEncoding(TestId(2), Eq(one)))
+        .WillOnce(Return(core::ResourceExhaustedError("over the budget")));
+    // The first is put back.
+    EXPECT_CALL(editor_, SetEncoding(TestId(1), Eq(previous)))
+        .WillOnce(Return(one));
+  }
+  const core::Status status = edits_.SetEncodings(
+      {{TestId(1), one}, {TestId(2), one}}, QStringLiteral("Optimise"));
+  EXPECT_EQ(status.Message(), "over the budget");
+  EXPECT_EQ(stack_.count(), 0);
+}
+
+TEST_F(ProjectCommandsTest, DefaultsAreUndoneBySettingThePreviousOnes) {
+  core::encoder::EncoderOptions options;
+  options.target_rms = 25.0;
+  const core::encoder::EncoderOptions previous;
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetDefaultEncoder(Eq(options)))
+        .WillOnce(Return(previous));
+    EXPECT_CALL(editor_, SetDefaultEncoder(Eq(previous)))
+        .WillOnce(Return(options));
+  }
+  ASSERT_TRUE(edits_.SetDefaultEncoder(options).IsOk());
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Change Project Defaults"));
   stack_.undo();
 }
 

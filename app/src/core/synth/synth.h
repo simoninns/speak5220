@@ -68,16 +68,27 @@ class ISynth {
                                            SynthPath path) = 0;
 };
 
+// Whether Synth keeps its results.
+enum class SynthCache {
+  // Kept per phrase: playback speaks the same phrases again and again.
+  kOn,
+  // Not kept: the optimiser speaks hundreds of candidates once each,
+  // which would otherwise stay in memory.
+  kOff,
+};
+
 // Runs Tms5220 and Tms6100 on a phrase, from power-up, with the procedure
 // of the reference emulator's bulk mode (emulator::ChipDriver), so the
 // codes match the reference emulator sample for sample. Results are cached
-// per phrase, keyed by a hash of the packed bytes and the path; a cache
-// hit is checked against the full bytes. Thread-safe: renders run in
-// parallel, the cache is guarded by a mutex. Not on the GUI thread: a
-// phrase takes milliseconds per second of speech.
+// per phrase (unless made with SynthCache::kOff), keyed by a hash of the
+// packed bytes and the path; a cache hit is checked against the full
+// bytes. Thread-safe: renders run in parallel, the cache is guarded by a
+// mutex. Not on the GUI thread: a phrase takes milliseconds per second of
+// speech.
 class Synth : public ISynth {
  public:
-  explicit Synth(const emulator::Tms5220Config& config = {});
+  explicit Synth(const emulator::Tms5220Config& config = {},
+                 SynthCache cache = SynthCache::kOn);
 
   StatusOr<SynthResult> Synthesize(std::span<const std::uint8_t> phrase,
                                    SynthPath path) override;
@@ -106,6 +117,7 @@ class Synth : public ISynth {
   };
 
   emulator::Tms5220Config config_;
+  SynthCache cache_policy_;
   mutable std::mutex mutex_;
   std::unordered_map<CacheKey, std::shared_ptr<const SynthResult>, CacheKeyHash>
       cache_;

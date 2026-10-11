@@ -385,6 +385,50 @@ TEST(ProjectTest, SetEncodingThatWouldNeedA65thPhromKeepsThePrevious) {
   EXPECT_EQ(open, open_before);
 }
 
+TEST(ProjectTest, SetDefaultEncoderIsReversedBySetDefaultEncoder) {
+  Project project = FivePhrases();
+  const Project before = project;
+  encoder::EncoderOptions options = project.Settings().default_encoder;
+  options.target_rms = 18.0;
+  StatusOr<encoder::EncoderOptions> previous =
+      project.SetDefaultEncoder(options);
+  ASSERT_TRUE(previous.IsOk());
+  EXPECT_EQ(*previous, before.Settings().default_encoder);
+  EXPECT_EQ(project.Settings().default_encoder, options);
+  // The encodings stay as they were: stale, not redone.
+  EXPECT_EQ(project.Phrases(), before.Phrases());
+  ASSERT_TRUE(project.SetDefaultEncoder(*previous).IsOk());
+  EXPECT_EQ(project, before);
+}
+
+TEST(ProjectTest, SetDefaultEncoderRefusesOptionsOutOfRange) {
+  Project project = FivePhrases();
+  const Project before = project;
+  encoder::EncoderOptions options;
+  options.window = 1;
+  EXPECT_EQ(project.SetDefaultEncoder(options).GetStatus().Code(),
+            StatusCode::kInvalidArgument);
+  EXPECT_EQ(project, before);
+}
+
+TEST(ProjectTest, BudgetCheckAllowsWhatFitsAndRefusesA65thPhrom) {
+  Project project = ProjectNearTheBudget(15000);
+  ASSERT_TRUE(project
+                  .InsertPhrases({{.index = 64,
+                                   .phrase = EncodedPhrase(200, "OPEN", 500)}})
+                  .IsOk());
+  const StatusOr<PhraseBudgetCheck> check = project.BudgetCheckFor(TestId(200));
+  ASSERT_TRUE(check.IsOk());
+  // 15000 + 500 bytes of words fill the 64th PHROM's 16128 to 15500.
+  const int fits = testing::BytesForCost(kPhromWordCapacity - 15000, "OPEN");
+  EXPECT_TRUE(check->Check(fits).IsOk());
+  const Status refused = check->Check(fits + 1);
+  EXPECT_EQ(refused.Code(), StatusCode::kResourceExhausted);
+  EXPECT_NE(refused.Message().find("OPEN"), std::string::npos);
+  EXPECT_EQ(project.BudgetCheckFor(TestId(999)).GetStatus().Code(),
+            StatusCode::kNotFound);
+}
+
 TEST(ProjectTest, OverBudgetProjectMayStillShrink) {
   std::vector<Phrase> phrases;
   phrases.reserve(kPhromBudget + 1);

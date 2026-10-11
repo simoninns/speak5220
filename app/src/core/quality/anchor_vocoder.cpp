@@ -301,4 +301,8 @@ StatusOr<double> AnchorScore(std::span<const double> source) {
   return static_cast<double>(score->mos_lqo);
 }
 
+StatusOr<double> AnchorScorer::Score(std::span<const double> source) {
+  return AnchorScore(source);
+}
+
 }  // namespace speak5220::core::quality

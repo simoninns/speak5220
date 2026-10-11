@@ -16,6 +16,9 @@
 #include <string_view>
 
 #include "core/dsp/resampler.h"
+#include "core/encoder/encoder.h"
+#include "core/quality/anchor_vocoder.h"
+#include "core/quality/pesq_metric.h"
 #include "core/synth/synth.h"
 #include "core/util/clock.h"
 #include "core/util/logging.h"
@@ -23,6 +26,7 @@
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "core/util/version.h"
+#include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
 #include "gui/main_window/recent_files.h"
@@ -94,8 +98,23 @@ int main(int argc, char* argv[]) {
   core::SteadyClock clock;
   core::dsp::SincResampler resampler;
   speak5220::app::Player player(audio_output, clock, resampler);
+  // Plan §3.3: PESQ for the encoder panel and Optimise. Its synth keeps
+  // nothing, since Optimise speaks hundreds of candidates once each.
+  const std::unique_ptr<core::encoder::IEncoder> encoder =
+      core::encoder::MakeEncoder();
+  core::synth::Synth quality_synth({}, core::synth::SynthCache::kOff);
+  core::quality::PesqMetric pesq(quality_synth);
+  core::quality::AnchorScorer anchor;
+  // One search at a time; its candidates run on `runner`.
+  core::ThreadPoolTaskRunner optimiser_driver(1);
+  const speak5220::app::EncodingTools tools{
+      .encoder = encoder.get(),
+      .quality = &pesq,
+      .anchor = &anchor,
+      .clock = &clock,
+      .optimiser_driver = &optimiser_driver};
   speak5220::app::MainWindow window(dialogs, recent_files, runner, synth,
-                                    player);
+                                    player, tools);
   dialogs.SetParent(&window);
   window.show();
   if (!projects.isEmpty()) {

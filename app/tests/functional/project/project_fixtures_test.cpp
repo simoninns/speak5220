@@ -36,9 +36,9 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::array<const char*, 5> kFixtures = {
+constexpr std::array<const char*, 6> kFixtures = {
     "general/one-phrase", "general/many-phrases", "general/frame-kinds",
-    "phrom/one-phrom", "phrom/two-phroms"};
+    "phrom/one-phrom",    "phrom/two-phroms",     "benchmark/synthetic-speech"};
 
 fs::path FixturePath(const std::string& name) {
   return fs::path(SPEAK5220_PROJECTS_DIR) / name;

@@ -11,7 +11,10 @@
 #include "gui/main_window/main_window.h"
 
 #include <QAction>
+#include <QCoreApplication>
+#include <QLabel>
 #include <QLineEdit>
+#include <QPushButton>
 #include <QString>
 #include <QStringList>
 #include <QUndoStack>
@@ -22,7 +25,9 @@
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gui/encoder_panel/encoder_panel.h"
 #include "gui/main_window/dialogs.h"
+#include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
@@ -59,8 +64,9 @@ class MainWindowTest : public ::testing::Test {
   FakeRecentFilesStore recent_;
   core::InlineTaskRunner runner_;
   TestPlayback playback_;
-  MainWindow window_{dialogs_, recent_, runner_, playback_.synth,
-                     playback_.player};
+  testing::TestEncoding encoding_;
+  MainWindow window_{dialogs_,        recent_,          runner_,
+                     playback_.synth, playback_.player, encoding_.Tools()};
 };
 
 TEST_F(MainWindowTest, NewProjectIsUntitledAndUnmodified) {
@@ -88,6 +94,70 @@ TEST_F(MainWindowTest, SelectingOnePhraseShowsItsDetails) {
   EXPECT_EQ(window_.Details()->NameField()->text(), QStringLiteral("TWO"));
   window_.Panel()->Select({TestId(1), TestId(2)});
   EXPECT_FALSE(window_.Details()->NameField()->isEnabled());
+}
+
+TEST_F(MainWindowTest, SelectingAPhraseShowsItsEncoding) {
+  AddPhrases({EncodedPhrase(1, "ONE", 100), AudioPhrase(2, "TWO")});
+  window_.Panel()->Select({TestId(1)});
+  QCoreApplication::processEvents();
+  EXPECT_TRUE(window_.Encoder()->FramesLabel()->text().contains(
+      QStringLiteral("frames")));
+  EXPECT_TRUE(window_.Encoder()->ReEncodeButton()->isEnabled());
+  window_.Panel()->Select({TestId(1), TestId(2)});
+  EXPECT_FALSE(window_.Encoder()->ReEncodeButton()->isEnabled());
+}
+
+TEST_F(MainWindowTest, ReEncodeEncodesTheSelectionAsOneStep) {
+  AddPhrases({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO"),
+              testing::LockedPhrase(3, "THREE", 50)});
+  window_.Panel()->Select({TestId(1), TestId(2), TestId(3)});
+  const int steps = window_.Document().UndoStack().count();
+  window_.ReEncodeSelected();
+  QCoreApplication::processEvents();
+  EXPECT_EQ(window_.EncodesRunning(), 0);
+  const core::project::Project& project = window_.Document().Project();
+  ASSERT_TRUE(project.FindPhrase(TestId(1))->encoding.has_value());
+  ASSERT_TRUE(project.FindPhrase(TestId(2))->encoding.has_value());
+  EXPECT_EQ(project.FindPhrase(TestId(2))->encoding->pesq,
+            testing::TestEncoding::kScore);
+  EXPECT_EQ(window_.Document().UndoStack().count(), steps + 1);
+  EXPECT_EQ(window_.Document().UndoStack().undoText(),
+            QStringLiteral("Re-encode 2 Phrases"));
+}
+
+TEST_F(MainWindowTest, ReEncodeIsOfferedOnlyForStaleOrUnencodedPhrases) {
+  QAction* re_encode = nullptr;
+  for (QAction* action : window_.findChildren<QAction*>()) {
+    if (action->text() == QStringLiteral("Re-&encode")) {
+      re_encode = action;
+    }
+  }
+  ASSERT_NE(re_encode, nullptr);
+  AddPhrases({AudioPhrase(1, "ONE"), testing::LockedPhrase(2, "TWO", 50)});
+  window_.Panel()->Select({TestId(2)});
+  EXPECT_FALSE(re_encode->isEnabled());
+  window_.Panel()->Select({TestId(1)});
+  EXPECT_TRUE(re_encode->isEnabled());
+  window_.ReEncodeSelected();
+  QCoreApplication::processEvents();
+  EXPECT_FALSE(re_encode->isEnabled());
+  const int steps = window_.Document().UndoStack().count();
+  window_.ReEncodeSelected();
+  QCoreApplication::processEvents();
+  EXPECT_EQ(window_.Document().UndoStack().count(), steps);
+}
+
+TEST_F(MainWindowTest, OptimiseIsOfferedForPhrasesThatCanBeEncoded) {
+  AddPhrases({AudioPhrase(1, "ONE"), testing::LockedPhrase(2, "TWO", 50)});
+  window_.Panel()->Select({TestId(2)});
+  EXPECT_FALSE(window_.Encoder()->OptimiseButton()->isEnabled());
+  window_.Panel()->Select({TestId(1)});
+  EXPECT_TRUE(window_.Encoder()->OptimiseButton()->isEnabled());
+  window_.Encoder()->OptimiseButton()->click();
+  EXPECT_TRUE(window_.OptimiseWindow()->isVisible());
+  EXPECT_EQ(window_.OptimiseWindow()->windowTitle(),
+            QStringLiteral("Optimise ONE"));
+  window_.OptimiseWindow()->reject();
 }
 
 TEST_F(MainWindowTest, SelectionFollowsAPhraseThatMoves) {

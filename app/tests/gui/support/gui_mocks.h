@@ -20,15 +20,21 @@
 #include <utility>
 #include <vector>
 
+#include "core/encoder/encoder.h"
 #include "core/project/phrase.h"
+#include "core/quality/quality_metric.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
+#include "core/util/task_runner.h"
 #include "gmock/gmock.h"
+#include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/playback/audio_output.h"
 #include "gui/playback/player.h"
+#include "support/project_builder.h"
 #include "support/project_mocks.h"
+#include "support/quality_mocks.h"
 #include "support/synth_mocks.h"
 
 namespace speak5220::testing {
@@ -102,6 +108,44 @@ struct TestPlayback {
   ::testing::NiceMock<MockResampler> resampler;
   ::testing::NiceMock<MockSynth> synth;
   app::Player player{output, clock, resampler};
+};
+
+// Encoding tools over mocks, for windows and panels that are not testing
+// them: an encoder whose frames pack to kEncodedBytes whatever the
+// options, a PESQ of kScore, an anchor of kAnchor, a fake clock, and an
+// inline runner for Optimise's search.
+struct TestEncoding {
+  static constexpr int kEncodedBytes = 20;
+  static constexpr double kScore = 2.0;
+  static constexpr double kAnchor = 2.5;
+
+  TestEncoding() {
+    ON_CALL(encoder, Encode(::testing::_, ::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(core::encoder::EncodeResult{
+            .frames = FramesPackingTo(kEncodedBytes),
+            .details = std::nullopt}));
+    ON_CALL(quality, Measure(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(kScore));
+    ON_CALL(quality, Direction())
+        .WillByDefault(
+            ::testing::Return(core::quality::MetricDirection::kHigherIsBetter));
+    ON_CALL(anchor, Score(::testing::_))
+        .WillByDefault(::testing::Return(kAnchor));
+  }
+
+  app::EncodingTools Tools() {
+    return {.encoder = &encoder,
+            .quality = &quality,
+            .anchor = &anchor,
+            .clock = &clock,
+            .optimiser_driver = &driver};
+  }
+
+  ::testing::NiceMock<MockEncoder> encoder;
+  ::testing::NiceMock<MockQualityMetric> quality;
+  ::testing::NiceMock<MockAnchorScorer> anchor;
+  FakeClock clock;
+  core::InlineTaskRunner driver;
 };
 
 // Matches a span of phrase ids against a list (std::span has no

@@ -10,6 +10,7 @@
 
 #include "gui/undo/project_edits.h"
 
+#include <QString>
 #include <QUndoStack>
 #include <memory>
 #include <span>
@@ -17,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project_editor.h"
 #include "core/util/status.h"
@@ -73,6 +75,17 @@ core::Status ProjectEdits::SetEncoding(const project::PhraseId& id,
                                        project::EncodingChange change) {
   return Push(
       std::make_unique<SetEncodingCommand>(*editor_, id, std::move(change)));
+}
+
+core::Status ProjectEdits::SetEncodings(SetEncodingsCommand::Changes changes,
+                                        const QString& text) {
+  return Push(std::make_unique<SetEncodingsCommand>(*editor_,
+                                                    std::move(changes), text));
+}
+
+core::Status ProjectEdits::SetDefaultEncoder(
+    core::encoder::EncoderOptions options) {
+  return Push(std::make_unique<SetDefaultEncoderCommand>(*editor_, options));
 }
 
 core::Status ProjectEdits::Push(std::unique_ptr<ProjectCommand> command) {

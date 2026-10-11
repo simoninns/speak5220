@@ -31,6 +31,16 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `export format "c-header" is not supported yet (only "acorn-phrom")` | Only Acorn PHROM images can be exported so far |
 | `the project has no export presets: give --format` | `speak5220-cli export` without `--preset` or `--format` runs the project's presets, and there are none |
 
+## The encoder and Optimise
+
+| Message | Meaning |
+|---|---|
+| `cannot re-encode HELLO: the project would need 65 PHROMs, and its budget is 64` (Change Encoder Settings, Re-encode) | The new encoding is bigger and does not fit. The phrase keeps its settings and frames, and the form shows them again; with several phrases, none is changed. Choose settings that give fewer bytes, or make room |
+| `none of the phrases can be optimised: they are locked or have no audio` (Optimise) | Optimise needs a phrase's audio to try settings on, and locked phrases are never re-encoded |
+| `No better settings were found within the limits.` (Optimise) | No settings tried scored higher than the current ones while fitting the byte limit and the budget; or none fitted at all. Nothing changes. Raise the byte limit, or leave it off |
+| `Quality not measured` (encoder panel) | PESQ could not be measured: the encoding holds no sound, or the phrase is too short to compare |
+| A message titled **Encode HELLO** | The encoder refused the phrase's audio or settings, for the reason given; the phrase keeps its frames |
+
 ## Importing audio
 
 | Message | Meaning |
