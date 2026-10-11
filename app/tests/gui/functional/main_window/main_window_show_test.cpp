@@ -24,6 +24,7 @@ namespace {
 
 using testing::EncodedPhrase;
 using testing::FakeRecentFilesStore;
+using testing::FakeViewPreferences;
 using testing::MockDialogs;
 using ::testing::NiceMock;
 using testing::TestPlayback;
@@ -31,11 +32,12 @@ using testing::TestPlayback;
 TEST(MainWindowShowTest, BecomesVisibleWhenShown) {
   NiceMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
+  FakeViewPreferences preferences;
   core::InlineTaskRunner runner;
   TestPlayback playback;
   testing::TestEncoding encoding;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
-                    encoding.Tools());
+  MainWindow window(dialogs, recent, preferences, runner, playback.synth,
+                    playback.player, encoding.Tools());
   window.show();
   QApplication::processEvents();
   EXPECT_TRUE(window.isVisible());
@@ -44,11 +46,12 @@ TEST(MainWindowShowTest, BecomesVisibleWhenShown) {
 TEST(MainWindowShowTest, PaintsThePhraseListWithDividers) {
   NiceMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
+  FakeViewPreferences preferences;
   core::InlineTaskRunner runner;
   TestPlayback playback;
   testing::TestEncoding encoding;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
-                    encoding.Tools());
+  MainWindow window(dialogs, recent, preferences, runner, playback.synth,
+                    playback.player, encoding.Tools());
   ASSERT_TRUE(window.Document()
                   .Edits()
                   .InsertPhrases(

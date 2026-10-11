@@ -30,6 +30,7 @@
 #include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/recent_files.h"
+#include "gui/main_window/view_preferences.h"
 #include "gui/playback/audio_output.h"
 #include "gui/playback/player.h"
 #include "support/project_builder.h"
@@ -60,6 +61,14 @@ class FakeRecentFilesStore : public app::IRecentFilesStore {
   void Save(const QStringList& saved) override { paths = saved; }
 
   QStringList paths;
+};
+
+class FakeViewPreferences : public app::IViewPreferences {
+ public:
+  bool AdvancedSettingsShown() override { return advanced_shown; }
+  void SetAdvancedSettingsShown(bool shown) override { advanced_shown = shown; }
+
+  bool advanced_shown = false;
 };
 
 class MockAudioOutput : public app::IAudioOutput {

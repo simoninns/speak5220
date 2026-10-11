@@ -46,6 +46,7 @@ namespace fs = std::filesystem;
 using ::testing::_;
 using testing::AudioPhrase;
 using testing::FakeRecentFilesStore;
+using testing::FakeViewPreferences;
 using ::testing::HasSubstr;
 using testing::MockDialogs;
 using ::testing::Return;
@@ -123,11 +124,13 @@ class MainWindowProjectTest : public ::testing::Test {
   QTemporaryDir directory_;
   StrictMock<MockDialogs> dialogs_;
   FakeRecentFilesStore recent_;
+  FakeViewPreferences preferences_;
   core::InlineTaskRunner runner_;
   TestPlayback playback_;
   testing::TestEncoding encoding_;
-  MainWindow window_{dialogs_,        recent_,          runner_,
-                     playback_.synth, playback_.player, encoding_.Tools()};
+  MainWindow window_{dialogs_,         recent_,         preferences_,
+                     runner_,          playback_.synth, playback_.player,
+                     encoding_.Tools()};
 };
 
 TEST_F(MainWindowProjectTest, OpensAFixtureProject) {
@@ -152,7 +155,7 @@ TEST_F(MainWindowProjectTest, OpensAnUnpackedProjectThroughItsProjectYaml) {
 TEST_F(MainWindowProjectTest, FailedOpenIsReportedAndKeepsTheProject) {
   const QString missing = Temp(QStringLiteral("missing.s5proj"));
   recent_.paths = {missing};
-  MainWindow window(dialogs_, recent_, runner_, playback_.synth,
+  MainWindow window(dialogs_, recent_, preferences_, runner_, playback_.synth,
                     playback_.player, encoding_.Tools());
   EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Open Project"), _))
       .WillOnce([](const QString&, const QString& message) {
@@ -297,11 +300,12 @@ TEST(MainWindowThreadedImportTest, ImportsOnAThreadPool) {
   WriteTone(path, 44100, 0.3F);
   StrictMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
+  FakeViewPreferences preferences;
   core::ThreadPoolTaskRunner runner(2);
   TestPlayback playback;
   testing::TestEncoding encoding;
-  MainWindow window(dialogs, recent, runner, playback.synth, playback.player,
-                    encoding.Tools());
+  MainWindow window(dialogs, recent, preferences, runner, playback.synth,
+                    playback.player, encoding.Tools());
   window.ImportFiles({path}, 0);
   EXPECT_EQ(window.ImportsRunning(), 1);
   WaitForImports(window);

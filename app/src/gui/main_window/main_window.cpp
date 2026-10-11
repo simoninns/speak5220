@@ -50,11 +50,13 @@
 #include "core/util/task_runner.h"
 #include "core/util/version.h"
 #include "gui/encoder_panel/encoder_panel.h"
+#include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/main_window/status_text.h"
+#include "gui/main_window/view_preferences.h"
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/optimise/optimise_session.h"
 #include "gui/phrase_editor/phrase_details.h"
@@ -92,12 +94,14 @@ std::filesystem::path ToPath(const QString& text) {
 }  // namespace
 
 MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
+                       IViewPreferences& view_preferences,
                        core::ITaskRunner& runner, core::synth::ISynth& synth,
                        Player& player, const EncodingTools& tools,
                        QWidget* parent)
     : QMainWindow(parent),
       dialogs_(&dialogs),
       recent_store_(&recent_store),
+      view_preferences_(&view_preferences),
       runner_(&runner),
       synth_(&synth),
       player_(&player),
@@ -130,6 +134,12 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           [this](const project::PhraseId& id) { Optimise({id}); });
   connect(optimise_dialog_, &OptimiseDialog::Failed, this,
           &MainWindow::ShowError);
+  encoder_panel_->Form()->SetAdvancedShown(
+      view_preferences_->AdvancedSettingsShown());
+  connect(encoder_panel_->Form(), &EncoderSettingsForm::AdvancedShownChanged,
+          this, [this](bool shown) {
+            view_preferences_->SetAdvancedSettingsShown(shown);
+          });
 
   OnProjectChanged();
   UpdateTitle();

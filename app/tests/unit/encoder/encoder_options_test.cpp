@@ -87,6 +87,18 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
   EXPECT_EQ(EncoderOptionInfos().back().key, "compression");
 }
 
+TEST(EncoderOptionsTest, BasicOptionsAreTheOnesWithTheClearestEffect) {
+  std::vector<std::string_view> basic;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    if (!info.advanced) {
+      basic.push_back(info.field);
+    }
+  }
+  EXPECT_EQ(basic, (std::vector<std::string_view>{
+                       "target_rms", "repeat_lambda", "squelch_db",
+                       "pre_emphasis", "voicing_threshold", "compression"}));
+}
+
 TEST(EncoderOptionsTest, TypicalRangesLieWithinTheValidRanges) {
   for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
     if (info.type == EncoderOptionType::kBoolean) {

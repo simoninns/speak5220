@@ -18,6 +18,7 @@
 #include <QPushButton>
 #include <QString>
 #include <QStringList>
+#include <QToolButton>
 #include <QUndoStack>
 #include <algorithm>
 #include <optional>
@@ -48,6 +49,7 @@ using ::testing::_;
 using testing::AudioPhrase;
 using testing::EncodedPhrase;
 using testing::FakeRecentFilesStore;
+using testing::FakeViewPreferences;
 using testing::MockDialogs;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -69,11 +71,13 @@ class MainWindowTest : public ::testing::Test {
 
   StrictMock<MockDialogs> dialogs_;
   FakeRecentFilesStore recent_;
+  FakeViewPreferences preferences_;
   core::InlineTaskRunner runner_;
   TestPlayback playback_;
   testing::TestEncoding encoding_;
-  MainWindow window_{dialogs_,        recent_,          runner_,
-                     playback_.synth, playback_.player, encoding_.Tools()};
+  MainWindow window_{dialogs_,         recent_,         preferences_,
+                     runner_,          playback_.synth, playback_.player,
+                     encoding_.Tools()};
 };
 
 TEST_F(MainWindowTest, NewProjectIsUntitledAndUnmodified) {
@@ -112,6 +116,18 @@ TEST_F(MainWindowTest, SelectingAPhraseShowsItsEncoding) {
   EXPECT_TRUE(window_.Encoder()->ReEncodeButton()->isEnabled());
   window_.Panel()->Select({TestId(1), TestId(2)});
   EXPECT_FALSE(window_.Encoder()->ReEncodeButton()->isEnabled());
+}
+
+TEST_F(MainWindowTest, RemembersWhetherTheAdvancedSettingsAreShown) {
+  EXPECT_FALSE(window_.Encoder()->Form()->AdvancedShown());
+  window_.Encoder()->Form()->AdvancedButton()->click();
+  EXPECT_TRUE(preferences_.advanced_shown);
+
+  FakeViewPreferences shown;
+  shown.advanced_shown = true;
+  MainWindow window(dialogs_, recent_, shown, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.Encoder()->Form()->AdvancedShown());
 }
 
 TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {

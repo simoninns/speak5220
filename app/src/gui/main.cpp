@@ -30,6 +30,7 @@
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
 #include "gui/main_window/recent_files.h"
+#include "gui/main_window/view_preferences.h"
 #include "gui/playback/player.h"
 #include "gui/playback/qt_audio_output.h"
 #include "gui/theme/colour_scheme.h"
@@ -49,7 +50,8 @@ int main(int argc, char* argv[]) {
   namespace core = speak5220::core;
   QApplication application(argc, argv);
   QApplication::setApplicationName(ToQString(core::kApplicationName));
-  // Where QSettings keeps the preferences (the recent-file list).
+  // Where QSettings keeps the preferences (the recent-file list, the
+  // advanced encoder settings shown or not).
   QApplication::setOrganizationName(ToQString(core::kApplicationName));
   QApplication::setApplicationVersion(ToQString(core::Version()));
 
@@ -92,6 +94,7 @@ int main(int argc, char* argv[]) {
 
   speak5220::app::QtDialogs dialogs;
   speak5220::app::SettingsRecentFilesStore recent_files;
+  speak5220::app::SettingsViewPreferences view_preferences;
   core::ThreadPoolTaskRunner runner;
   core::synth::Synth synth;
   speak5220::app::QtAudioOutput audio_output;
@@ -113,8 +116,8 @@ int main(int argc, char* argv[]) {
       .anchor = &anchor,
       .clock = &clock,
       .optimiser_driver = &optimiser_driver};
-  speak5220::app::MainWindow window(dialogs, recent_files, runner, synth,
-                                    player, tools);
+  speak5220::app::MainWindow window(dialogs, recent_files, view_preferences,
+                                    runner, synth, player, tools);
   dialogs.SetParent(&window);
   window.show();
   if (!projects.isEmpty()) {

@@ -33,6 +33,11 @@ class OptionSlider;
 // phrase, the encoder's for the project). Rows that differ from the
 // baseline have a bold label and the button enabled.
 //
+// The basic options come first. Below them a button shows or hides the
+// advanced ones (EncoderOptionInfo::advanced), and says how many of those
+// differ from the baseline, so a hidden change is never missed; hidden
+// options still apply. The form starts with them hidden.
+//
 // Editors by type: a slider (OptionSlider) over the option's typical range
 // and step for real and whole numbers, with the value and unit beside it
 // and a tick at the baseline's value; a check box for on/off; for the
@@ -68,14 +73,31 @@ class EncoderSettingsForm : public QWidget {
   // Whether the row of `field` differs from the baseline.
   bool IsMarked(std::string_view field) const;
 
+  // Enables or disables the editors and reset buttons; the advanced button
+  // stays usable either way.
+  void SetEditable(bool editable);
+  bool IsEditable() const { return editable_; }
+
+  // Shows or hides the advanced options, without signalling
+  // AdvancedShownChanged().
+  void SetAdvancedShown(bool shown);
+  bool AdvancedShown() const;
+  // The button that shows and hides them.
+  QToolButton* AdvancedButton() const { return advanced_button_; }
+
  signals:
   // The user changed an option.
   void Edited();
+  // The user showed or hid the advanced options.
+  void AdvancedShownChanged(bool shown);
 
  private:
   struct Row {
     const core::encoder::EncoderOptionInfo* info = nullptr;
     QLabel* label = nullptr;
+    // The editor's cell: the slider, the check box, or the box holding
+    // a check box or chooser and a slider.
+    QWidget* editor = nullptr;
     OptionSlider* slider = nullptr;
     // The option's on/off check box, or the target peak's.
     QCheckBox* check = nullptr;
@@ -90,12 +112,17 @@ class EncoderSettingsForm : public QWidget {
   // Reads the row's editors into options_ and signals Edited().
   void OnEdited(const Row& row);
   void UpdateMarks();
+  // Shows the advanced rows if the button is down, and names how many of
+  // them are marked on the button.
+  void UpdateAdvanced();
 
   std::vector<Row> rows_;
+  QToolButton* advanced_button_;
   core::encoder::EncoderOptions options_;
   core::encoder::EncoderOptions baseline_;
   QString baseline_name_;
   bool loading_ = false;
+  bool editable_ = true;
 };
 
 }  // namespace speak5220::app

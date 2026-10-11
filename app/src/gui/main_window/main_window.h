@@ -29,6 +29,7 @@
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
+#include "gui/main_window/view_preferences.h"
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/playback/player.h"
 
@@ -56,7 +57,9 @@ class PhraseWaveforms;
 //
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
-// go through IDialogs, the recent-file list through IRecentFilesStore;
+// go through IDialogs, the recent-file list through IRecentFilesStore,
+// what the user chose to see (the advanced encoder settings) through
+// IViewPreferences;
 // imports, encoding and the rendering of encoded audio (through the
 // ISynth) run as background jobs on the ITaskRunner, their results coming
 // back to the GUI thread queued; the waveforms play through the Player;
@@ -67,9 +70,9 @@ class MainWindow : public QMainWindow {
 
  public:
   MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
-             core::ITaskRunner& runner, core::synth::ISynth& synth,
-             Player& player, const EncodingTools& tools,
-             QWidget* parent = nullptr);
+             IViewPreferences& view_preferences, core::ITaskRunner& runner,
+             core::synth::ISynth& synth, Player& player,
+             const EncodingTools& tools, QWidget* parent = nullptr);
   // Waits for background jobs still running.
   ~MainWindow() override;
   MainWindow(const MainWindow&) = delete;
@@ -158,6 +161,7 @@ class MainWindow : public QMainWindow {
 
   IDialogs* dialogs_;
   IRecentFilesStore* recent_store_;
+  IViewPreferences* view_preferences_;
   core::ITaskRunner* runner_;
   core::synth::ISynth* synth_;
   Player* player_;

@@ -204,6 +204,64 @@ TEST_F(EncoderSettingsFormTest, ValuesOutsideTheTypicalRangeWidenTheSlider) {
   EXPECT_DOUBLE_EQ(lambda->ValueAt(lambda->Slider()->maximum()), 300.0);
 }
 
+TEST_F(EncoderSettingsFormTest, HidesTheAdvancedOptionsUntilAsked) {
+  bool shown_signalled = false;
+  QObject::connect(&form_, &EncoderSettingsForm::AdvancedShownChanged,
+                   [&shown_signalled](bool shown) { shown_signalled = shown; });
+  EXPECT_FALSE(form_.AdvancedShown());
+  for (const EncoderOptionInfo& info : core::encoder::EncoderOptionInfos()) {
+    EXPECT_EQ(form_.Editor(info.field)->isVisibleTo(&form_), !info.advanced)
+        << info.field;
+  }
+  form_.AdvancedButton()->click();
+  EXPECT_TRUE(form_.AdvancedShown());
+  EXPECT_TRUE(shown_signalled);
+  for (const EncoderOptionInfo& info : core::encoder::EncoderOptionInfos()) {
+    EXPECT_TRUE(form_.Editor(info.field)->isVisibleTo(&form_)) << info.field;
+  }
+}
+
+TEST_F(EncoderSettingsFormTest, SettingWhetherAdvancedIsShownDoesNotSignal) {
+  int count = 0;
+  QObject::connect(&form_, &EncoderSettingsForm::AdvancedShownChanged,
+                   [&count](bool) { ++count; });
+  form_.SetAdvancedShown(true);
+  EXPECT_TRUE(form_.AdvancedShown());
+  EXPECT_TRUE(form_.Editor("gate_db")->isVisibleTo(&form_));
+  EXPECT_EQ(count, 0);
+}
+
+TEST_F(EncoderSettingsFormTest, AdvancedButtonCountsHiddenChanges) {
+  EXPECT_EQ(form_.AdvancedButton()->text(),
+            QStringLiteral("Advanced settings"));
+  EncoderOptions options;
+  options.target_rms = 25.0;  // basic, not counted
+  options.gate_db = 50.0;
+  options.quiet_pauses = false;
+  form_.SetOptions(options, {}, QStringLiteral("the project default"));
+  EXPECT_EQ(form_.AdvancedButton()->text(),
+            QStringLiteral("Advanced settings (2 changed)"));
+  form_.SetAdvancedShown(true);
+  form_.ResetButton("gate_db")->click();
+  EXPECT_EQ(form_.AdvancedButton()->text(),
+            QStringLiteral("Advanced settings (1 changed)"));
+}
+
+TEST_F(EncoderSettingsFormTest, NotEditableKeepsTheAdvancedButtonUsable) {
+  EncoderOptions options;
+  options.target_rms = 25.0;
+  form_.SetOptions(options, {}, QStringLiteral("the project default"));
+  form_.SetEditable(false);
+  EXPECT_FALSE(form_.Editor("target_rms")->isEnabled());
+  EXPECT_FALSE(form_.ResetButton("target_rms")->isEnabled());
+  EXPECT_TRUE(form_.AdvancedButton()->isEnabled());
+  form_.AdvancedButton()->click();
+  EXPECT_TRUE(form_.AdvancedShown());
+  form_.SetEditable(true);
+  EXPECT_TRUE(form_.Editor("target_rms")->isEnabled());
+  EXPECT_TRUE(form_.ResetButton("target_rms")->isEnabled());
+}
+
 TEST_F(EncoderSettingsFormTest, DrawsOffscreenWithTheTicks) {
   form_.resize(900, 300);
   QImage image(form_.size(), QImage::Format_ARGB32);

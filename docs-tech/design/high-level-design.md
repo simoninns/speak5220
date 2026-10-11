@@ -85,7 +85,8 @@ app/
       optimiser/                Optimiser (§17)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow, ProjectDocument, IDialogs, the
-                                recent-file list, the status bar's text
+                                recent-file list, the view preferences,
+                                the status bar's text
       phrase_list/              PhraseListModel, its delegate and panel
       phrase_editor/            PhraseDetails (name and description)
       encoder_panel/            EncoderPanel, EncoderSettingsForm,
@@ -298,7 +299,8 @@ Phase 2 task 7).
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test. `app/tests/gui/support/gui_mocks.h`
   has gMock mocks of `IDialogs` and `IAudioOutput`, an in-memory
-  `IRecentFilesStore`, a `FakeClock`, `TestPlayback` (a `Player` over a
+  `IRecentFilesStore` and `IViewPreferences`, a `FakeClock`,
+  `TestPlayback` (a `Player` over a
   mocked output, and a mocked synth, for windows not testing playback),
   `TestEncoding` (`EncodingTools` over a mocked encoder, metric and
   anchor, a fake clock and an inline runner), and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
@@ -328,7 +330,7 @@ Plan §2.2, with the names as built.
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `Squelch()`, `SquelchGain()`, `SquelchedSpans()` | **Implemented** (`core/dsp/squelch`): mutes stretches below a level relative to the loudest, for the `squelch_db` option (§8), and reports them for the waveform's shading (§16) |
-| `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
+| `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`, `IViewPreferences`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
 | `ProjectEdits` and the undo commands | **Implemented** (`gui/undo/`): one `QUndoCommand` per `IProjectEditor` operation (§15) |
@@ -458,7 +460,9 @@ the squelch (`squelch_db`, off by default) and quiet pauses
 does with quiet pauses off, which is how the reference data is compared
 (§13). `EncoderOptionInfos()` gives each one's key (the Python name, or
 `squelchDb` and `quietPauses` in its style), label, help text, type,
-range and default, for the GUI's settings form and for project files.
+range and default, for the GUI's settings form and for project files,
+and marks the options the GUI shows only with its advanced settings
+(`advanced`).
 The ranges are the application's own; Python had none.
 
 **Quiet pauses** (datasheet §12.2, "Silence inside an utterance rings";
@@ -745,7 +749,7 @@ The GUI's undo/redo wraps the same operations (§15).
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
-- Not yet: the GUI preferences for these options (Phase 12).
+- Not yet: the GUI preferences for these options (Phase 11).
 
 ---
 
@@ -1043,8 +1047,8 @@ is [`docs/application/user-manual/main-window.md`](../../docs/application/user-m
 **Structure.**
 
 ```
-MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player,
- │             EncodingTools (injected)
+MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
+ │             ISynth, Player, EncodingTools (injected)
  ├── ProjectDocument: Project + QUndoStack + ProjectEdits + path
  ├── PhraseListModel (reads a Project snapshot, edits through ProjectEdits)
  │    └── PhraseListPanel: QListView + PhraseListDelegate + buttons
@@ -1122,7 +1126,9 @@ MainWindow ── IDialogs, IRecentFilesStore, ITaskRunner, ISynth, Player,
   (`QtDialogs` uses `QFileDialog` and `QMessageBox`); the recent-file list
   (`RecentFiles`, at most eight, newest first) is kept through
   `IRecentFilesStore` (`SettingsRecentFilesStore`, `QSettings` under the
-  organisation and application name "Speak5220").
+  organisation and application name "Speak5220"). What the user chose to
+  see, so far whether the encoder panel shows its advanced settings, is
+  kept the same way through `IViewPreferences` (`SettingsViewPreferences`).
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
   (which use the model and the document) first and disconnects the
@@ -1417,7 +1423,17 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
 - The limiter's activity (`LevelStats`) comes from the encoder's details,
   so it is known only for encodings made in the session.
 
-**The settings form.** One row per `EncoderOptionInfo`, in two columns.
+**The settings form.** One row per `EncoderOptionInfo`, in two columns:
+first the six basic options (target RMS, repeat trade-off, squelch,
+pre-emphasis, voicing threshold, compression: the ones with the clearest
+effect on the sound or the size, among them four of the five options
+Optimise's grid searches, all but the voicing evidence), then a checkable `QToolButton`, then the eleven with
+`advanced` set, in the same grid so the columns line up. The advanced rows
+are hidden until the button is down; the button counts the advanced rows
+that differ from the baseline ("Advanced settings (2 changed)"), so a
+hidden change is never missed, and hidden options still apply.
+`SetEditable()` disables the rows but not the button. `MainWindow` sets
+the button from `IViewPreferences` and saves it when the user toggles it.
 `EncoderOptionInfo` gives each option a `unit` and a typical range and
 `step` (within its valid range), which the GUI's sliders use:
 `OptionSlider` is a `DefaultTickSlider` (a `QSlider` that paints a tick

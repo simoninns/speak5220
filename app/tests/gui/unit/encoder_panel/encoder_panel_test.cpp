@@ -333,7 +333,7 @@ TEST_F(EncoderPanelTest, ProjectDefaultsAreEditedAsOneStep) {
 
 TEST_F(EncoderPanelTest, LockedPhrasesShowTheirStatisticsOnly) {
   Show(3);
-  EXPECT_FALSE(panel_.Form()->isEnabled());
+  EXPECT_FALSE(panel_.Form()->IsEditable());
   EXPECT_FALSE(panel_.ReEncodeButton()->isEnabled());
   EXPECT_FALSE(panel_.OptimiseButton()->isEnabled());
   EXPECT_TRUE(panel_.StateLabel()->text().startsWith(QStringLiteral("Locked")));
@@ -352,7 +352,7 @@ TEST_F(EncoderPanelTest, OptimiseButtonAsksForThePhraseShown) {
 TEST_F(EncoderPanelTest, NothingShownDisablesThePhrasesControls) {
   panel_.ShowPhrase(project_, {});
   EXPECT_FALSE(panel_.ReEncodeButton()->isEnabled());
-  EXPECT_FALSE(panel_.Form()->isEnabled());
+  EXPECT_FALSE(panel_.Form()->IsEditable());
   EXPECT_EQ(panel_.StateLabel()->text(),
             QStringLiteral("Select one phrase to see its encoding"));
 }

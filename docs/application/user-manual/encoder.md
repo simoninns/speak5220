@@ -101,6 +101,21 @@ for single steps, Page Up and Page Down for larger ones. On/off options
 are check boxes; the target peak and the [squelch](#the-squelch) have a
 check box that turns them on, and the pre-emphasis a choice of chirp or
 first order, whose coefficient the slider beside it sets.
+
+The form first shows the six **basic settings**, the ones that change the
+sound or the size most clearly: the target RMS (loudness), the repeat
+trade-off (bytes against quality), the [squelch](#the-squelch), the
+pre-emphasis (brighter or more muffled), the voicing threshold (buzz
+against hiss on sounds between the two) and the compression (quiet
+syllables brought up). Click **Advanced settings** below them for the
+other eleven, which fine-tune the encoding or are switches whose default
+is nearly always right; click it again to hide them. Speak5220 remembers
+the choice. Hidden settings still apply: when any of them differ from the
+default, the button says how many, for example **Advanced settings (2
+changed)**, as it can after Optimise or with a project from elsewhere.
+The [option reference](../reference/encoder-options.md) says which
+options are which.
+
 **Settings for** chooses what the form edits:
 
 - **This phrase**: the phrase's settings. The ticks mark the project's

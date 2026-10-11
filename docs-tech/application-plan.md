@@ -94,7 +94,7 @@ Other source files carry the two SPDX lines in their own comment syntax:
   ctest --test-dir build/app --output-on-failure
   ```
 
-- In Phase 13, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
+- In Phase 12, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
   and a DMG (macOS). CMake stays the single build description. Nix supplies
   the dependencies on Linux. On Windows and macOS, CI installs Qt with
   `aqtinstall` and the other libraries with vcpkg (manifest mode, pinned
@@ -428,7 +428,7 @@ Warnings and errors are always logged, whichever level is selected.
 | `--log-file PATH` | Also writes the log to `PATH`, replacing any existing file |
 | `--no-console-log` | Turns console output off (needs `--log-file`) |
 
-The GUI also has these as preferences (Phase 12). A command-line option
+The GUI also has these as preferences (Phase 11). A command-line option
 overrides the preference for that run.
 
 **Implementation.**
@@ -508,8 +508,8 @@ Until Phase 8 the application measures quality with PESQ ("PESQ, until
 Phase 8" below). PESQ was designed for telephony codecs that preserve the
 waveform. The TMS5220 is a parametric vocoder, whose output does not follow
 the original's waveform or phase, so PESQ ranks its encodings poorly. Noise
-in pauses also skews it easily: Phase 11 found it rewarding encodings that
-reproduce breaths and room noise. Phase 8 replaces it with a set of
+in pauses also skews it easily: it rewards encodings that reproduce breaths
+and room noise (Phase 8, task 2). Phase 8 replaces it with a set of
 complementary objective measures, which compare the chip output with the
 original recording.
 
@@ -517,8 +517,8 @@ original recording.
 any measure is taken:
 
 1. **The original** is the phrase's source as the encoder sees it, squelched
-   when the squelch is on (Phase 11). It is resampled to 8 kHz if it is not
-   already (§3.1).
+   when the squelch is on (Phase 8, task 2). It is resampled to 8 kHz if it
+   is not already (§3.1).
 2. **The chip output** is the emulator's output for the encoding. Its DC
    offset is removed.
 3. **Both are band-limited** by the same filter, to the band the chip can
@@ -623,10 +623,10 @@ Method:
   that can be shown.
 - Batch: **Optimise all** runs over a selection of phrases.
 - The squelch is not searched, because scores against differently squelched
-  sources do not compare (Phase 11).
+  sources do not compare (Phase 8, task 2).
 
-**PESQ, until Phase 8.** Phases 3, 7 and 11 built PESQ and its quality scale,
-which Phase 8 removes:
+**PESQ, until Phase 8.** Phases 3 and 7 and the first task of Phase 8 built
+PESQ and its quality scale, which the rest of Phase 8 removes:
 
 - PESQ was measured as in `speechqual.py`: P.862 narrowband at 8 kHz, as
   P.862.1 MOS-LQO, with the reference the 8 kHz original and the degraded
@@ -641,7 +641,7 @@ which Phase 8 removes:
 - So the GUI showed the score with a **quality scale** relative to the
   phrase's own anchor score, `(score − 1.0) / (anchor − 1.0)`, on a bar
   running a quarter past the anchor, in bands from *Bad* to *As good as LPC
-  or better* (Phase 11).
+  or better* (Phase 8, task 1).
 
 ### 3.4 Encoding is cached, not authoritative
 
@@ -649,7 +649,7 @@ A phrase stores its **encoder settings** and **source audio**. The frames are
 a cache derived from them, saved in the project so a project opens instantly.
 The cache is invalidated by a hash of (source audio, settings, encoder
 version). A phrase can also be **locked**: frames imported from an existing PHROM
-image (Phase 12) are never re-encoded.
+image (Phase 11) are never re-encoded.
 
 ---
 
@@ -859,7 +859,10 @@ more speech than one PHROM (decision D4):
   components and the figures behind them** (§3.3, "Presenting quality to the
   user"), a settings form generated
   from `EncoderOptions` metadata (name, range, default, tooltip from
-  `usage.md`), and Re-encode, Optimise and Reset buttons. Changing a setting
+  `usage.md`), and Re-encode, Optimise and Reset buttons. The form shows the
+  basic settings, those with the clearest effect on the sound or the size;
+  the rest, which fine-tune, appear when the user asks for the advanced
+  settings, a choice remembered between sessions. Changing a setting
   re-encodes in the background after a short debounce.
 - **Undo/redo** (`QUndoStack`, in the GUI layer; §2.5) for add, remove,
   move, sort, rename, describe and settings changes.
@@ -869,7 +872,7 @@ more speech than one PHROM (decision D4):
   scheme, at start-up and when it changes. Widgets take their colours from
   the palette; colours of our own (warnings, the waveforms, frame kinds, the
   quality scale) have a light and a dark form, chosen in one place.
-  Preferences can override the scheme (Phase 12).
+  Preferences can override the scheme (Phase 11).
 
 ---
 
@@ -1344,18 +1347,87 @@ Depends on: Phase 6.
      files within the budget and any per-phrase limit; the timings are
      recorded.
 
-### Phase 8: Quality measures in place of PESQ
+### Phase 8: Pauses, breaths and quality measurement
 
-Depends on: Phase 7 and Phase 11 (its squelch and quiet pauses change what
-is scored, and its quality scale is replaced).
+Depends on: Phase 7.
+
+Listening to optimised encodings showed three problems: the quality
+scale treated the anchor as a ceiling that Optimise often beats; PESQ
+rewarded encodings that reproduce breaths and room noise; and on the chip
+a pause of silence frames buzzes. The squelch's pauses made the last one
+common. The chip's behaviour in pauses is measured on the bench
+([§12.2](../docs/technical/datasheet/authoring.md#122-when-a-frame-is-heard)).
+Tasks 1 to 4 deal with the pauses and breaths. They change what is scored,
+so they come before the rest.
 
 PESQ ranks the chip's encodings poorly and is skewed by noise in pauses
-(§3.3). This phase measures quality with complementary objective measures on
-speech-active frames, combines them into an overall score and a rating from
-*Poor* to *Good*, reassesses the default encoder settings against the new
-score, and removes PESQ.
+(§3.3). Tasks 5 to 14 measure quality with complementary objective measures
+on speech-active frames, combine them into an overall score and a rating
+from *Poor* to *Good*, reassess the default encoder settings against the new
+score, and remove PESQ. Task 13 removes the quality scale of task 1.
 
-1. **Libraries.** libfvad, SPTK 4, REAPER, WORLD and ViSQOL v3 (§2.4), in
+1. **The quality scale against the LPC reference.** The anchor (§3.3) is
+   a reference, not a ceiling. The score relative to it,
+   `(score − 1.0) / (anchor − 1.0)`, is placed on a bar that runs a
+   quarter past it (to 1.25), and the top band, *As good as LPC or
+   better* (*Best* in the bar), starts at the anchor. The text under the
+   bar names the anchor the *LPC reference*.
+   - **Acceptance:**
+     - unit tests of the relative score, the position, the clamping and
+       the bands; a score beyond the anchor shows how far, short of the
+       end of the bar;
+     - the band thresholds are recalibrated on the corpus's reference
+       encodings and on Optimise's results, and the table is recorded in
+       the HLD: with the defaults the typical encoding is *Good*.
+2. **The squelch.** An encoder option, `squelch_db`, off by default: the
+   source's stretches more than that many dB below its loudest sound
+   (breaths, room noise) are made silent, with a hold and soft edges, before
+   it is encoded. PESQ and the anchor are measured against the same
+   squelched source, in the encoder panel and in Optimise, so reproducing a
+   muted breath counts against an encoding. Optimise does not search it,
+   since scores against differently squelched sources do not compare. In
+   the settings form it is a slider with a check box, like the target peak.
+   - **Acceptance:**
+     - unit tests of the squelch (what it mutes and keeps, its hold, lead
+       and edges), of the encoder and Optimise scoring against the
+       squelched source, and of the panel measuring a new anchor for a new
+       squelch;
+     - while unset, it is left out of project files and of the settings
+       hash: existing projects save byte for byte as before and their
+       encodings stay current (the fixture round-trip test);
+     - the reference data is unchanged.
+3. **Squelch shading.** The stretches the squelch mutes are shaded on the
+   original waveform (dimmed and hatched, with a hover text), and the
+   pane's note gives the level. The shading follows the form as it is
+   edited, before the change is encoded.
+   - **Acceptance:** GUI unit tests of the view, the waveforms, the panel's
+     report of the squelch and the main window's wiring; the shading reads
+     in light and dark.
+4. **Quiet pauses.** Measure on the chip what a pause of silence frames
+   outputs, and quieten it in the encoder. An encoder option,
+   `quiet_pauses`, on by default, replaces the second silence frame of
+   every pause of three or more with a voiced frame at energy 1 with every
+   K at its index nearest zero, so the chip holds neutral K and the rest of
+   the pause is code 0. A repeat frame after such a pause is sent in full.
+   The encoder version changes, so existing encodings become stale; the
+   reference encoder has no such pass, so the reference data is compared
+   with the option off and does not change.
+   - **Acceptance:**
+     - captures on chip 1 of the same utterances with and without the
+       neutral frame: plain pauses buzz about 23 dB below the speech, and
+       after the neutral frame the pauses are at the bench's noise floor,
+       with the sound around them unchanged beyond take-to-take variation;
+       the captures are committed as evidence (p12-01 to p12-08) and the
+       datasheet's §12.2, §8.8 and Appendix B record the findings,
+       including where the emulator differs from the chip;
+     - unit tests of the pass (the pause lengths, the neutral frame, the
+       repeat rule and the case left alone) and of the encoder applying it;
+     - `corpus-check.sh`: all 972 reference encodings identical with the
+       option off; over the corpus with a 30 dB squelch, the size and PESQ
+       change are recorded in the HLD (PESQ unchanged within its noise);
+     - the fixtures' encodings are redone with the new version, and their
+       project files do not change.
+5. **Libraries.** libfvad, SPTK 4, REAPER, WORLD and ViSQOL v3 (§2.4), in
    the Nix dev shell and package (as derivations where nixpkgs lacks them),
    in vcpkg for Windows and macOS, and as Flatpak modules. ViSQOL is built
    with CMake from its sources, since upstream uses Bazel. Each is wrapped
@@ -1364,7 +1436,7 @@ score, and removes PESQ.
    - **Acceptance:** `nix build .#speak5220` succeeds; a manually started
      Windows and macOS run passes both lanes; functional tests call each
      adapter once on a short signal.
-2. **Reference data.** A script in `app/scripts/golden/` records, for a
+6. **Reference data.** A script in `app/scripts/golden/` records, for a
    corpus subset of original and chip-output pairs: the voice activity masks
    from py-webrtcvad (the original WebRTC code), ESTOI from pystoi, LSD from
    an independent NumPy implementation of §3.3's definition, the REAPER and
@@ -1372,65 +1444,65 @@ score, and removes PESQ.
    its command-line tool. The data replaces the PESQ and anchor scores in
    `app/golden/quality/`, with the user's agreement.
    - **Acceptance:** the data is committed and the script reproduces it.
-3. **Signal preparation and the voice activity mask.** The six steps of
+7. **Signal preparation and the voice activity mask.** The six steps of
    §3.3: resampling, DC removal, the shared band-limit, alignment by
    cross-correlation, level normalisation and the libfvad mask.
    - **Acceptance:** unit tests on synthetic signals: a known delay is
      recovered to the sample, DC is removed, the levels match, and tone
      bursts in silence are masked as speech and the silence is not;
      functional tests match the reference masks on the corpus subset.
-4. **Spectral envelope.** Mean LSD and the percentages of frames above 2 dB
+8. **Spectral envelope.** Mean LSD and the percentages of frames above 2 dB
    and 4 dB, from SPTK 4's LPC and cepstral analysis.
    - **Acceptance:** unit tests: identical signals give 0 dB, and a pair of
      known all-pole filters gives their computed distortion; frames outside
      the mask are not counted; functional tests are within ±0.01 dB of the
      reference values.
-5. **Pitch and voicing.** Gross pitch error, F0 RMSE in cents and voicing
+9. **Pitch and voicing.** Gross pitch error, F0 RMSE in cents and voicing
    decision error from REAPER, with Harvest selectable.
    - **Acceptance:** unit tests with a mocked `IPitchEstimator`: a 25-cent
      shift gives 25 cents, an octave error counts as gross and is left out
      of the RMSE, and voicing disagreements are counted; on synthetic pulse
      trains at 8 kHz both estimators find F0 within 1 %; functional tests
      match the reference tracks.
-6. **ESTOI.** The port of pystoi's ESTOI, with the voice activity mask
-   applied with its own frame removal (§3.3). Each stage cites its place in
-   pystoi and in Jensen and Taal's paper (AGENTS.md §4.3.6).
-   - **Acceptance:** unit tests per stage (the one-third-octave matrix, the
-     frame removal, the segment normalisation); functional tests are within
-     ±0.005 of pystoi on the corpus subset.
-7. **ViSQOL.** The speech mode at 16 kHz, without a machine-learned model,
-   behind `IPerceptualScore`. It is measured on request in the encoder
-   panel, and by the corpus scripts, but not by Optimise.
-   - **Acceptance:** functional tests are within ±0.01 of the reference
-     scores.
-8. **Overall score, rating and calibration.** The component scores, the
-   weighted geometric mean and the *Poor*, *Fair* and *Good* bands (§3.3).
-   They are calibrated on the corpus's reference encodings, on Optimise's
-   results and on the anchor vocoder's output, and checked by listening to
-   phrases from every band.
-   - **Acceptance:**
-     - unit tests of the mappings, the combination and the band boundaries;
-     - the end points, weights and thresholds, the listening check, and the
+10. **ESTOI.** The port of pystoi's ESTOI, with the voice activity mask
+    applied with its own frame removal (§3.3). Each stage cites its place in
+    pystoi and in Jensen and Taal's paper (AGENTS.md §4.3.6).
+    - **Acceptance:** unit tests per stage (the one-third-octave matrix, the
+      frame removal, the segment normalisation); functional tests are within
+      ±0.005 of pystoi on the corpus subset.
+11. **ViSQOL.** The speech mode at 16 kHz, without a machine-learned model,
+    behind `IPerceptualScore`. It is measured on request in the encoder
+    panel, and by the corpus scripts, but not by Optimise.
+    - **Acceptance:** functional tests are within ±0.01 of the reference
+      scores.
+12. **Overall score, rating and calibration.** The component scores, the
+    weighted geometric mean and the *Poor*, *Fair* and *Good* bands (§3.3).
+    They are calibrated on the corpus's reference encodings, on Optimise's
+    results and on the anchor vocoder's output, and checked by listening to
+    phrases from every band.
+    - **Acceptance:**
+      - unit tests of the mappings, the combination and the band boundaries;
+      - the end points, weights and thresholds, the listening check, and the
        rank agreement of the overall score with ViSQOL on the corpus are
        recorded in the HLD.
-9. **PESQ removed.** The overall score replaces PESQ everywhere: the
-   encoder panel (§3.3, "Presenting quality to the user"), Optimise's
-   objective and history table, the CLI's output, the cached quality in
-   `frames.yaml` (§4), `corpus-check.sh`, `benchmark.sh` and the user
-   documentation. The PESQ code, its tests, the anchor-relative quality
-   scale and the PESQ golden data are deleted. The anchor vocoder stays for
-   the calibration.
-   - **Acceptance:**
-     - no PESQ code or reference remains under `app/` or in
+13. **PESQ removed.** The overall score replaces PESQ everywhere: the
+    encoder panel (§3.3, "Presenting quality to the user"), Optimise's
+    objective and history table, the CLI's output, the cached quality in
+    `frames.yaml` (§4), `corpus-check.sh`, `benchmark.sh` and the user
+    documentation. The PESQ code, its tests, the anchor-relative quality
+    scale and the PESQ golden data are deleted. The anchor vocoder stays for
+    the calibration.
+    - **Acceptance:**
+      - no PESQ code or reference remains under `app/` or in
        `docs/application/`;
-     - GUI unit tests: the rating, the three components, the figures and
+      - GUI unit tests: the rating, the three components, the figures and
        the tooltip, readable with colour removed; the before and after
        during Optimise;
-     - optimiser unit tests with a mocked score; a functional test gets the
+      - optimiser unit tests with a mocked score; a functional test gets the
        same result with 1 and 8 threads;
-     - fixtures with `pesq` and `anchor` keys load, drop them and recompute
+      - fixtures with `pesq` and `anchor` keys load, drop them and recompute
        the quality; `mkdocs build --strict` passes.
-10. **Default encoder settings reassessed.** Optimise is run over the corpus
+14. **Default encoder settings reassessed.** Optimise is run over the corpus
     with the new score, with and without the squelch, and the best settings
     are studied across files. New defaults are chosen for the best median
     overall score, weighing the size change. They are agreed with the user
@@ -1518,82 +1590,9 @@ Depends on: Phase 9.
      [Appendix B](../docs/technical/datasheet/gaps.md#the-acorn-phrom-format-and-the-bbc-micro),
      which is updated only with the user's agreement (AGENTS.md §9.4).
 
-### Phase 11: Pauses, breaths and the quality scale
+### Phase 11: Polish
 
-Depends on: Phase 7.
-
-Listening to optimised encodings showed three problems: the quality
-scale treated the anchor as a ceiling that Optimise often beats; PESQ
-rewarded encodings that reproduce breaths and room noise; and on the chip
-a pause of silence frames buzzes. The squelch's pauses made the last one
-common. The chip's behaviour in pauses is measured on the bench
-([§12.2](../docs/technical/datasheet/authoring.md#122-when-a-frame-is-heard)).
-
-1. **The quality scale against the LPC reference.** The anchor (§3.3) is
-   a reference, not a ceiling. The score relative to it,
-   `(score − 1.0) / (anchor − 1.0)`, is placed on a bar that runs a
-   quarter past it (to 1.25), and the top band, *As good as LPC or
-   better* (*Best* in the bar), starts at the anchor. The text under the
-   bar names the anchor the *LPC reference*.
-   - **Acceptance:**
-     - unit tests of the relative score, the position, the clamping and
-       the bands; a score beyond the anchor shows how far, short of the
-       end of the bar;
-     - the band thresholds are recalibrated on the corpus's reference
-       encodings and on Optimise's results, and the table is recorded in
-       the HLD: with the defaults the typical encoding is *Good*.
-2. **The squelch.** An encoder option, `squelch_db`, off by default: the
-   source's stretches more than that many dB below its loudest sound
-   (breaths, room noise) are made silent, with a hold and soft edges, before
-   it is encoded. PESQ and the anchor are measured against the same
-   squelched source, in the encoder panel and in Optimise, so reproducing a
-   muted breath counts against an encoding. Optimise does not search it,
-   since scores against differently squelched sources do not compare. In
-   the settings form it is a slider with a check box, like the target peak.
-   - **Acceptance:**
-     - unit tests of the squelch (what it mutes and keeps, its hold, lead
-       and edges), of the encoder and Optimise scoring against the
-       squelched source, and of the panel measuring a new anchor for a new
-       squelch;
-     - while unset, it is left out of project files and of the settings
-       hash: existing projects save byte for byte as before and their
-       encodings stay current (the fixture round-trip test);
-     - the reference data is unchanged.
-3. **Squelch shading.** The stretches the squelch mutes are shaded on the
-   original waveform (dimmed and hatched, with a hover text), and the
-   pane's note gives the level. The shading follows the form as it is
-   edited, before the change is encoded.
-   - **Acceptance:** GUI unit tests of the view, the waveforms, the panel's
-     report of the squelch and the main window's wiring; the shading reads
-     in light and dark.
-4. **Quiet pauses.** Measure on the chip what a pause of silence frames
-   outputs, and quieten it in the encoder. An encoder option,
-   `quiet_pauses`, on by default, replaces the second silence frame of
-   every pause of three or more with a voiced frame at energy 1 with every
-   K at its index nearest zero, so the chip holds neutral K and the rest of
-   the pause is code 0. A repeat frame after such a pause is sent in full.
-   The encoder version changes, so existing encodings become stale; the
-   reference encoder has no such pass, so the reference data is compared
-   with the option off and does not change.
-   - **Acceptance:**
-     - captures on chip 1 of the same utterances with and without the
-       neutral frame: plain pauses buzz about 23 dB below the speech, and
-       after the neutral frame the pauses are at the bench's noise floor,
-       with the sound around them unchanged beyond take-to-take variation;
-       the captures are committed as evidence (p12-01 to p12-08) and the
-       datasheet's §12.2, §8.8 and Appendix B record the findings,
-       including where the emulator differs from the chip;
-     - unit tests of the pass (the pause lengths, the neutral frame, the
-       repeat rule and the case left alone) and of the encoder applying it;
-     - `corpus-check.sh`: all 972 reference encodings identical with the
-       option off; over the corpus with a 30 dB squelch, the size and PESQ
-       change are recorded in the HLD (PESQ unchanged within its noise);
-     - the fixtures' encodings are redone with the new version, and their
-       project files do not change.
-
-### Phase 12: Polish
-
-Depends on: Phase 11.
+Depends on: Phase 8.
 
 1. **Preferences.** Audio device, default encoder settings, the colour
    scheme (follow the desktop, light or dark; Phase 6 makes following the
@@ -1619,9 +1618,9 @@ Depends on: Phase 11.
    - **Acceptance:** every YAML key, encoder option, CLI option and export
      format is documented; `mkdocs build --strict` passes.
 
-### Phase 13: Cross-platform packaging and release
+### Phase 12: Cross-platform packaging and release
 
-Depends on: Phase 12.
+Depends on: Phase 11.
 
 1. **Flatpak.** A manifest on the KDE runtime (`org.kde.Platform` 6.x),
    with libsndfile, libsamplerate, libzip and yaml-cpp as modules where the
@@ -1711,7 +1710,7 @@ In short:
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | **The quality libraries.** ViSQOL is built with Bazel upstream and brings Abseil, protobuf and Armadillo, which may be hard to package for Nix, vcpkg and the Flatpak, and recent versions may lean on a machine-learned model in speech mode. REAPER and Harvest are mostly used on speech above 8 kHz and may track 8 kHz speech less well. The ESTOI port depends on matching pystoi's resampling. (This replaces the PESQ accuracy risk, which Phase 8 retires) | Phase 8, task 1 builds every library on all three platforms before the measures are written. ViSQOL is outside the overall score, so it can be left out, without changing the rating, if it cannot be packaged or cannot run without a model. Both pitch estimators are tested on 8 kHz speech in task 5, and the better one becomes the default. The ESTOI port follows pystoi's resampler, and is checked against it within ±0.005 |
+| R1 | **The quality libraries.** ViSQOL is built with Bazel upstream and brings Abseil, protobuf and Armadillo, which may be hard to package for Nix, vcpkg and the Flatpak, and recent versions may lean on a machine-learned model in speech mode. REAPER and Harvest are mostly used on speech above 8 kHz and may track 8 kHz speech less well. The ESTOI port depends on matching pystoi's resampling. (This replaces the PESQ accuracy risk, which Phase 8 retires) | Phase 8, task 5 builds every library on all three platforms before the measures are written. ViSQOL is outside the overall score, so it can be left out, without changing the rating, if it cannot be packaged or cannot run without a model. Both pitch estimators are tested on 8 kHz speech in task 9, and the better one becomes the default. The ESTOI port follows pystoi's resampler, and is checked against it within ±0.005 |
 | R2 | The C++ encoder drifts from Python through floating-point differences in near-tie decisions | Re-implement function by function with intermediate golden data; accept on frames plus PESQ, not bits alone (§3.2) |
 | R2a | The C++ emulator's restructuring (classes, observers) changes timing, for example the slot at which a host write lands or the order of events | Accept only on identical codes **and** events (§2.3); keep the slot-stepped design, and change structure, not order of evaluation |
 | R3 | The optimiser is too slow | A fast C++ encoder (Phase 2 target), parallel candidates, cached analysis shared between candidates where options do not affect it (pitch tracking is independent of the level options) |

@@ -31,6 +31,7 @@ namespace speak5220::app {
 namespace {
 
 using testing::FakeRecentFilesStore;
+using testing::FakeViewPreferences;
 using testing::MockDialogs;
 using ::testing::NiceMock;
 using testing::TestPlayback;
@@ -40,12 +41,13 @@ QString ProjectsDir() { return QStringLiteral(SPEAK5220_PROJECTS_DIR); }
 TEST(PhraseWaveformsRenderTest, DrawsAFixturePhraseLinedUpWithItsSource) {
   NiceMock<MockDialogs> dialogs;
   FakeRecentFilesStore recent;
+  FakeViewPreferences preferences;
   core::InlineTaskRunner runner;
   core::synth::Synth synth;
   TestPlayback playback;
   testing::TestEncoding encoding;
-  MainWindow window(dialogs, recent, runner, synth, playback.player,
-                    encoding.Tools());
+  MainWindow window(dialogs, recent, preferences, runner, synth,
+                    playback.player, encoding.Tools());
   window.resize(1200, 700);
   window.show();
   ASSERT_TRUE(window.OpenProject(ProjectsDir() +

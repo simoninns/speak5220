@@ -16,6 +16,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QSignalBlocker>
 #include <QString>
 #include <QToolButton>
 #include <QWidget>
@@ -25,6 +26,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/encoder/encoder_options.h"
 #include "core/util/number_text.h"
@@ -39,8 +41,8 @@ namespace encoder = core::encoder;
 using encoder::EncoderOptionInfo;
 using encoder::EncoderOptionType;
 
-// Rows per column: the 17 options in two columns.
-constexpr int kRowsPerColumn = 9;
+// Columns of options, in each of the basic and advanced groups.
+constexpr int kOptionColumns = 2;
 // Grid columns per option: label, editor, reset.
 constexpr int kColumnsPerOption = 3;
 // The pre-emphasis kinds in their chooser.
@@ -87,13 +89,37 @@ QString FormatValue(const EncoderOptionInfo& info, double value) {
 
 }  // namespace
 
-EncoderSettingsForm::EncoderSettingsForm(QWidget* parent) : QWidget(parent) {
+EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
+    : QWidget(parent), advanced_button_(new QToolButton(this)) {
   auto* grid = new QGridLayout(this);
   grid->setContentsMargins(0, 0, 0, 0);
   const auto infos = encoder::EncoderOptionInfos();
+  // The basic options first, then the advanced, each in metadata order.
+  std::vector<const EncoderOptionInfo*> ordered;
+  for (const bool advanced : {false, true}) {
+    for (const EncoderOptionInfo& info : infos) {
+      if (info.advanced == advanced) {
+        ordered.push_back(&info);
+      }
+    }
+  }
+  const int basic_count = static_cast<int>(std::ranges::count_if(
+      infos, [](const EncoderOptionInfo& info) { return !info.advanced; }));
+  const int basic_rows = (basic_count + kOptionColumns - 1) / kOptionColumns;
+  const int advanced_rows =
+      (static_cast<int>(infos.size()) - basic_count + kOptionColumns - 1) /
+      kOptionColumns;
+  // The button between the groups.
+  advanced_button_->setCheckable(true);
+  advanced_button_->setAutoRaise(true);
+  advanced_button_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  advanced_button_->setToolTip(
+      QStringLiteral("Show the settings that fine-tune the encoding"));
+  grid->addWidget(advanced_button_, basic_rows, 0, 1,
+                  kOptionColumns * kColumnsPerOption, Qt::AlignLeft);
   rows_.reserve(infos.size());
-  for (std::size_t i = 0; i < infos.size(); ++i) {
-    const EncoderOptionInfo& info = infos[i];
+  for (std::size_t i = 0; i < ordered.size(); ++i) {
+    const EncoderOptionInfo& info = *ordered[i];
     Row row;
     row.info = &info;
     const QString help = QStringLiteral("%1\nDefault: %2")
@@ -163,12 +189,18 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent) : QWidget(parent) {
               : help);
     }
     row.label->setBuddy(focus);
+    row.editor = editor;
     row.reset = new QToolButton(this);
     row.reset->setText(QStringLiteral("↺"));
     row.reset->setAutoRaise(true);
 
-    const int r = static_cast<int>(i) % kRowsPerColumn;
-    const int c = (static_cast<int>(i) / kRowsPerColumn) * kColumnsPerOption;
+    // Down the first column of its group, then the second.
+    const int index = static_cast<int>(i) - (info.advanced ? basic_count : 0);
+    // A row is in a group, so the group has at least one row.
+    const int group_rows =
+        std::max(1, info.advanced ? advanced_rows : basic_rows);
+    const int r = (info.advanced ? basic_rows + 1 : 0) + index % group_rows;
+    const int c = (index / group_rows) * kColumnsPerOption;
     grid->addWidget(row.label, r, c);
     grid->addWidget(editor, r, c + 1);
     grid->addWidget(row.reset, r, c + 2);
@@ -212,6 +244,10 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent) : QWidget(parent) {
       emit Edited();
     });
   }
+  connect(advanced_button_, &QToolButton::toggled, this, [this](bool shown) {
+    UpdateAdvanced();
+    emit AdvancedShownChanged(shown);
+  });
   SetOptions({}, {}, QStringLiteral("the default"));
 }
 
@@ -261,6 +297,26 @@ QToolButton* EncoderSettingsForm::ResetButton(std::string_view field) const {
 bool EncoderSettingsForm::IsMarked(std::string_view field) const {
   return encoder::EncoderOptionText(options_, field) !=
          encoder::EncoderOptionText(baseline_, field);
+}
+
+void EncoderSettingsForm::SetEditable(bool editable) {
+  editable_ = editable;
+  for (const Row& row : rows_) {
+    row.label->setEnabled(editable);
+    row.editor->setEnabled(editable);
+  }
+  // A reset button is enabled only where there is something to reset.
+  UpdateMarks();
+}
+
+void EncoderSettingsForm::SetAdvancedShown(bool shown) {
+  const QSignalBlocker blocker(advanced_button_);
+  advanced_button_->setChecked(shown);
+  UpdateAdvanced();
+}
+
+bool EncoderSettingsForm::AdvancedShown() const {
+  return advanced_button_->isChecked();
 }
 
 const EncoderSettingsForm::Row* EncoderSettingsForm::FindRow(
@@ -363,13 +419,36 @@ void EncoderSettingsForm::UpdateMarks() {
     QFont font = row.label->font();
     font.setBold(marked);
     row.label->setFont(font);
-    row.reset->setEnabled(marked);
+    row.reset->setEnabled(editable_ && marked);
     const std::string base = encoder::EncoderOptionText(baseline_, field);
     row.reset->setToolTip(
         QStringLiteral("Back to %1 (%2)").arg(baseline_name_, ToQString(base)));
     row.reset->setAccessibleName(
         QStringLiteral("Reset %1").arg(ToQString(row.info->label)));
   }
+  UpdateAdvanced();
+}
+
+void EncoderSettingsForm::UpdateAdvanced() {
+  const bool shown = advanced_button_->isChecked();
+  int marked = 0;
+  for (const Row& row : rows_) {
+    if (!row.info->advanced) {
+      continue;
+    }
+    for (QWidget* widget : {static_cast<QWidget*>(row.label), row.editor,
+                            static_cast<QWidget*>(row.reset)}) {
+      widget->setVisible(shown);
+    }
+    if (IsMarked(row.info->field)) {
+      ++marked;
+    }
+  }
+  advanced_button_->setArrowType(shown ? Qt::DownArrow : Qt::RightArrow);
+  advanced_button_->setText(
+      marked == 0
+          ? QStringLiteral("Advanced settings")
+          : QStringLiteral("Advanced settings (%1 changed)").arg(marked));
 }
 
 }  // namespace speak5220::app

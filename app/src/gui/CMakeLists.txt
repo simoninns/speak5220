@@ -17,6 +17,7 @@ add_library(
     main_window/project_document.cpp
     main_window/recent_files.cpp
     main_window/status_text.cpp
+    main_window/view_preferences.cpp
     optimise/optimise_dialog.cpp
     optimise/optimise_session.cpp
     phrase_editor/phrase_details.cpp

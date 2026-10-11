@@ -461,7 +461,7 @@ void EncoderPanel::UpdateView() {
   const bool has_phrase = !id_.empty();
   const bool editable = has_phrase && !locked_ && !audio_.empty();
   const bool encoding_shown = encodes_running_.contains(id_);
-  form_->setEnabled(scope_ == Scope::kProjectDefaults || editable);
+  form_->SetEditable(scope_ == Scope::kProjectDefaults || editable);
   // Re-encoding is offered only when there is something to redo: no
   // frames, frames out of date, or a change waiting to be applied.
   re_encode_->setEnabled(editable && !encoding_shown &&

@@ -122,6 +122,10 @@ struct EncoderOptionInfo {
   double typical_minimum = 0.0;
   double typical_maximum = 0.0;
   double step = 0.0;
+  // A fine adjustment, or a switch whose default is nearly always right:
+  // the GUI shows it only with its advanced settings. The others have the
+  // clearest effect on how a phrase sounds or how big it is.
+  bool advanced = false;
 };
 
 // One entry per EncoderOptions field, in the order of the struct.
