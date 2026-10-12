@@ -9,6 +9,7 @@
 
 #include "core/encoder/repeat_search.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <vector>
 
@@ -90,13 +91,16 @@ TEST(RepeatSearchTest, RunsAreAtMostEightFrames) {
   EXPECT_EQ(full, 2);
 }
 
-TEST(RepeatSearchTest, WithoutRepeatsEveryFrameIsFull) {
+TEST(RepeatSearchTest, ARunHoldsAtMostTheLongestRunOfRepeats) {
   RepeatSearch search;
-  EncoderOptions options;
-  options.repeats = false;
-  const std::vector<FrameFeatures> feats(3, Frame(true, 0.9));
-  EXPECT_EQ(Kinds(search.Plan(feats, options)),
-            (std::vector<PlanKind>{kVoiced, kVoiced, kVoiced}));
+  const std::vector<FrameFeatures> feats(kMaxRepeatRun + 2, Frame(true, 0.9));
+  const std::vector<PlanKind> kinds = Kinds(search.Plan(feats, {}));
+  EXPECT_EQ(std::ranges::count(kinds, kVoiced), 2);
+  int run = 0;
+  for (const PlanKind kind : kinds) {
+    run = kind == kRepeat ? run + 1 : 0;
+    EXPECT_LT(run, kMaxRepeatRun);
+  }
 }
 
 TEST(RepeatSearchTest, VoicingChangeStartsANewFullFrame) {

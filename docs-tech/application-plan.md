@@ -594,15 +594,16 @@ toolchain stays portable to Windows, macOS and the Flatpak.
 
 **Optimise** searches the encoder options in `EncoderOptions`:
 
-- `targetRms` or `targetPeak`;
-- `repeats` and `repeatLambda`;
+- `targetRms`;
+- `repeatLambda`;
 - `gateDb`;
 - `preEmphasis` (`chirp` or μ);
 - `window`, `lagWindowHz`;
 - `voicingThreshold`, `voicingEvidence`;
-- `iterations`;
-- `fadeUnvoiced`;
-- `levelAgc`, `compression`.
+- `levelAgc`.
+
+(The reference's `targetPeak`, `repeats`, `iterations`, `fadeUnvoiced` and
+`compression` were searched too until Phase 8 task 16 fixed them.)
 
 Method:
 
@@ -1544,6 +1545,25 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
         level falls, never across a change the chip does not interpolate,
         and never twice; the default and its text agree; the comparisons
         with the reference encoder keep the hold off.
+16. **Fewer encoder options** (added 2026-10-12). Fix the options that make
+    no difference worth keeping over the corpus, or repeat another option,
+    so the encoder is easier to understand: `target_peak` (unset),
+    `peak_limit` (120), `repeats` (on), `iterations` (5), `fade_unvoiced`
+    (on), `compression` (off) and `quiet_pauses` (on) are removed, leaving
+    11 options (HLD §8, "Options"). Optimise no longer searches them. A
+    project that still lists one opens, keeping the line as an unknown key.
+    The reference data's "loud" and "plain" option sets, which changed
+    them, are regenerated without them, and the reference's frames are
+    compared with their pauses quietened.
+    - **Acceptance:**
+      - each removed option's effect over the corpus, moved off its
+        default, is recorded in the HLD (§9, "Fixed options");
+      - the defaults' encodings, and so the fixtures' frames, do not
+        change;
+      - the encoder matches the regenerated reference data on the subset
+        and on the whole corpus;
+      - unit tests: the removed options are refused as unknown, and a
+        project that lists them opens and saves them back.
 
 ### Phase 9: Export: binary, C and audio
 

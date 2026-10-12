@@ -72,7 +72,10 @@ SUBSET = [
 ]
 
 # The option sets every corpus file is encoded with: the defaults, and
-# three fixed combinations that between them change every option.
+# three fixed combinations that between them change every option the
+# application has. The reference's other options (targetPeak, peakLimit,
+# repeats, iterations, fadeUnvoiced, compression) stay at their defaults,
+# at which the application fixes them.
 OPTION_SETS = {
     "default": {},
     "lean": {
@@ -82,19 +85,14 @@ OPTION_SETS = {
         "voicingEvidence": 0.0,
     },
     "loud": {
-        "targetPeak": 100.0,
+        "targetRms": 40.0,
         "levelAgc": 4.0,
-        "compression": 1.5,
-        "fadeUnvoiced": False,
     },
     "plain": {
-        "peakLimit": 110,
-        "repeats": False,
         "gateDb": 35.0,
         "window": 200,
         "lagWindowHz": 80.0,
         "voicingThreshold": 0.45,
-        "iterations": 3,
     },
 }
 

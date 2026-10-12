@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <map>
 #include <set>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -39,9 +40,17 @@ struct ReferenceEncoding {
 };
 
 // The reference encoder's defaults, tms5220enc.py DEFAULTS, written out:
-// four of them differ from EncoderOptions{}, and quiet_pauses and
-// resonance_hold_db, which the reference does not have, are off.
+// four of them differ from EncoderOptions{}, and resonance_hold_db, which
+// the reference does not have, is off. The encoder always quietens pauses,
+// which the reference does not: compare its frames with
+// ReferenceFrames().
 core::encoder::EncoderOptions ReferenceEncoderOptions();
+
+// A reference encoding's frames as the encoder gives them for the same
+// options: with its pauses quietened (encoder::QuietPauses()), which keeps
+// the frame count, so near-tie frames keep their indices.
+std::vector<core::lpc::Frame> ReferenceFrames(
+    std::span<const core::lpc::Frame> reference);
 
 // The option sets of option_sets.tsv, by name, as EncoderOptions over
 // ReferenceEncoderOptions().

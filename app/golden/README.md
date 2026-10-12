@@ -25,7 +25,7 @@ nix develop --command python3 app/scripts/golden/generate_golden.py --check
 | `emulator/phrases/` | Each phrase's packed bytes (`.bin`) and frame list (`.csv`): synthetic vectors and corpus phrases from public-domain and CC0 voices |
 | `packaging/acorn.bin`, `ti_indexed.bin` | Acorn PHROM and TI indexed images of the words in `words.tsv`, with their word tables (`*_table.tsv`) and the Acorn ASCII map (`acorn_ascii.tsv`) |
 | `packaging/wordNN.csv`, `wordNN_external.bin` | Each word's frames and its Speak External stream |
-| `encoder/option_sets.tsv` | The encoder option sets: the defaults and three fixed combinations that between them change every option, as JSON |
+| `encoder/option_sets.tsv` | The encoder option sets: the defaults and three fixed combinations that between them change every option the application has, as JSON (the reference's other options stay at their defaults, where the application fixes them) |
 | `encoder/frames/SET.tsv` | For each option set, every corpus file's frame count, near-tie frames (`-` for none) and packed frames (hex) |
 | `encoder/inputs/NAME.wav` | WAV copies of the corpus subset (public-domain and CC0 voices only) |
 | `encoder/intermediates/NAME.json` | `encodeDetailed()`'s intermediate values for each subset file, default options |

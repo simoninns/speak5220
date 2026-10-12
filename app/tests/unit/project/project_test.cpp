@@ -380,7 +380,7 @@ TEST(ProjectTest, SetEncodingThatWouldNeedA65thPhromKeepsThePrevious) {
   CachedEncoding bigger = *open.FindPhrase(TestId(200))->encoding;
   bigger.frames = testing::FramesPackingTo(2000);
   const StatusOr<EncodingChange> result = open.SetEncoding(
-      TestId(200), {.overrides = {{"repeats", "false"}}, .encoding = bigger});
+      TestId(200), {.overrides = {{"window", "200"}}, .encoding = bigger});
   EXPECT_EQ(result.GetStatus().Code(), StatusCode::kResourceExhausted);
   EXPECT_EQ(open, open_before);
 }

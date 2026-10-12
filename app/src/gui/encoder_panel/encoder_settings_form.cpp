@@ -55,19 +55,15 @@ constexpr std::string_view kRatioUnit = ":1";
 constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
 // What the optional options' and the coefficient's sliders show before
-// one is set: a moderate peak, a squelch under most breaths, the default
-// resonance hold, and the coefficient Optimise tries.
-constexpr double kUnsetPeak = 100.0;
+// one is set: a squelch under most breaths, the default resonance hold,
+// and the coefficient Optimise tries.
 constexpr double kUnsetSquelch = 30.0;
 constexpr double kUnsetResonanceHold = 14.0;
 constexpr double kUnsetMu = 0.9;
 
 // The slider's value for an optional option that is unset.
 double UnsetValue(std::string_view field) {
-  if (field == "squelch_db") {
-    return kUnsetSquelch;
-  }
-  return field == "resonance_hold_db" ? kUnsetResonanceHold : kUnsetPeak;
+  return field == "squelch_db" ? kUnsetSquelch : kUnsetResonanceHold;
 }
 
 QString ToQString(std::string_view text) {
@@ -146,11 +142,6 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
         row.slider = make_slider(this);
         editor = row.slider;
         focus = row.slider->Slider();
-        break;
-      case EncoderOptionType::kBoolean:
-        row.check = new QCheckBox(this);
-        editor = row.check;
-        focus = row.check;
         break;
       case EncoderOptionType::kOptionalReal: {
         auto* box = new QWidget(this);
@@ -275,10 +266,7 @@ QWidget* EncoderSettingsForm::Editor(std::string_view field) const {
   if (row->kind != nullptr) {
     return row->kind;
   }
-  if (row->slider != nullptr) {
-    return row->slider;
-  }
-  return row->check;
+  return row->slider;
 }
 
 OptionSlider* EncoderSettingsForm::Slider(std::string_view field) const {
@@ -346,10 +334,6 @@ void EncoderSettingsForm::ShowValue(const Row& row) {
       row.slider->SetDefault(number_of(baseline_));
       row.slider->SetValue(number_of(options_).value_or(0.0));
       break;
-    case EncoderOptionType::kBoolean:
-      row.check->setChecked(encoder::EncoderOptionText(options_, field) ==
-                            "true");
-      break;
     case EncoderOptionType::kOptionalReal: {
       const std::optional<double> value = number_of(options_);
       const std::optional<double> base = number_of(baseline_);
@@ -390,9 +374,6 @@ void EncoderSettingsForm::OnEdited(const Row& row) {
       break;
     case EncoderOptionType::kInteger:
       text = std::to_string(std::lround(row.slider->Value()));
-      break;
-    case EncoderOptionType::kBoolean:
-      text = row.check->isChecked() ? "true" : "false";
       break;
     case EncoderOptionType::kOptionalReal:
       row.slider->setEnabled(row.check->isChecked());

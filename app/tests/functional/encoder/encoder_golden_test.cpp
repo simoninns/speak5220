@@ -115,8 +115,9 @@ CorpusTally CheckCorpus(
       if (!result.IsOk()) {
         continue;
       }
-      const EncodingComparison cmp =
-          CompareEncoding(ref->second, result->frames);
+      ReferenceEncoding expected = ref->second;
+      expected.frames = ReferenceFrames(ref->second.frames);
+      const EncodingComparison cmp = CompareEncoding(expected, result->frames);
       ++tally.files;
       tally.identical += cmp.identical ? 1 : 0;
       tally.confined += (!cmp.identical && cmp.confined_to_near_ties) ? 1 : 0;
@@ -132,7 +133,7 @@ CorpusTally CheckCorpus(
       double score_difference = 0.0;
       if (!cmp.identical) {
         const auto mine = quality.Assess(wav->samples, result->frames);
-        const auto theirs = quality.Assess(wav->samples, ref->second.frames);
+        const auto theirs = quality.Assess(wav->samples, expected.frames);
         std::string failure = set_name;
         failure += '/';
         failure += stem;

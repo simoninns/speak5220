@@ -363,12 +363,14 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
     regenerated from the C++ itself, in its own commit that records the
     quality before and after. The quality data follows the encoder data it
     measures.
-  - **Options the reference does not have are compared off.** The encoder's
-    quiet pauses (on by default) are not in the Python encoder, so the
-    encoder data is compared with them off: the option sets are read over
-    `ReferenceEncoderOptions()` (`tests/support/encoder_golden.h`). An
-    improvement made that way, as a pass the reference lacks, leaves the
-    reference data as it is; it is tested by unit tests of its own.
+  - **What the reference does not have is compared off, or applied to
+    it.** The resonance hold is not in the Python encoder, so the encoder
+    data is compared with it off: the option sets are read over
+    `ReferenceEncoderOptions()` (`tests/support/encoder_golden.h`). Quiet
+    pauses, which the encoder always makes, are applied to the reference's
+    frames before they are compared (`ReferenceFrames()`). An improvement
+    made that way, as a pass the reference lacks, leaves the reference data
+    as it is; it is tested by unit tests of its own.
 
 **Small vectors belong in the test source.** A few dozen bytes, such as the
 Speech System User Guide's "ZERO" stream, the §8.8 multiplier examples or a

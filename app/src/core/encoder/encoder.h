@@ -100,9 +100,9 @@ OpeningTrim TrimFaintOpening(std::vector<PlanEntry>& plan,
 
 // IEncoder over injected stages, in the order of tms5220enc.py
 // encodeDetailed(): segment, track pitch, classify voicing, measure
-// features, plan, drop a faint opening, shape the levels, set the gain
-// (by RMS, or by a first pass for a target peak), set the energies, then
-// fades and the stop. Thread-safe if the stages are.
+// features, plan, drop a faint opening, hold resonant filters, shape the
+// levels, set the gain from the target RMS, set the energies, then fades,
+// the stop and quiet pauses. Thread-safe if the stages are.
 class Encoder : public IEncoder {
  public:
   // The stages must outlive the encoder.

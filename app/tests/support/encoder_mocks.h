@@ -84,7 +84,6 @@ class MockLevelSetter : public core::encoder::ILevelSetter {
   MOCK_METHOD(std::vector<int>, SetLevels,
               (std::span<const core::encoder::PlanEntry> plan,
                std::span<const double> levels, double gain,
-               const core::encoder::EncoderOptions& options,
                core::encoder::LevelStats* stats),
               (override));
 };

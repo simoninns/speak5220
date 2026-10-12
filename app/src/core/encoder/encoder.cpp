@@ -13,7 +13,6 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
-#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <span>
@@ -28,7 +27,6 @@
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_endings.h"
 #include "core/lpc/frame.h"
-#include "core/synth/reference_synthesizer.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
 
@@ -37,10 +35,6 @@ namespace {
 
 // A faint opening is more than this far below the loudest frame.
 constexpr double kFaintOpeningDb = -36.0;
-// The first pass for a target peak scales by RMS to this, with the peak
-// limit out of the way (a lattice value fits in 9 bits plus sign).
-constexpr double kPeakPassRms = 20.0;
-constexpr double kPeakPassLimit = 511.0;
 
 bool IsVoicedEntry(const PlanEntry& p) {
   return p.kind == PlanKind::kVoiced ||
@@ -159,16 +153,11 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
     return status;
   }
   log->debug(
-      "encoding {} samples: targetRms {}, targetPeak {}, peakLimit {}, "
-      "repeats {}, repeatLambda {}, gateDb {}, squelchDb {}, preEmphasis {}, "
-      "window {}, lagWindowHz {}, resonanceHoldDb {}, voicingThreshold {}, "
-      "voicingEvidence {}, "
-      "iterations {}, fadeUnvoiced {}, quietPauses {}, levelAgc {}, "
-      "compression {}",
-      samples.size(), options.target_rms,
-      options.target_peak.has_value() ? std::to_string(*options.target_peak)
-                                      : std::string("none"),
-      options.peak_limit, options.repeats, options.repeat_lambda,
+      "encoding {} samples: targetRms {}, repeatLambda {}, gateDb {}, "
+      "squelchDb {}, preEmphasis {}, window {}, lagWindowHz {}, "
+      "resonanceHoldDb {}, voicingThreshold {}, voicingEvidence {}, "
+      "levelAgc {}",
+      samples.size(), options.target_rms, options.repeat_lambda,
       options.gate_db,
       options.squelch_db.has_value() ? std::to_string(*options.squelch_db)
                                      : std::string("none"),
@@ -178,9 +167,7 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
       options.resonance_hold_db.has_value()
           ? std::to_string(*options.resonance_hold_db)
           : std::string("none"),
-      options.voicing_threshold, options.voicing_evidence, options.iterations,
-      options.fade_unvoiced, options.quiet_pauses, options.level_agc,
-      options.compression);
+      options.voicing_threshold, options.voicing_evidence, options.level_agc);
 
   // The squelched source, or the samples as given when there is no
   // squelch (without a copy).
@@ -235,37 +222,12 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
     }
   }
   const double in_rms = squares.empty() ? 1.0 : std::sqrt(dsp::Mean(squares));
-  EncoderOptions opts = options;
-  double gain = 0.0;
-  if (options.target_peak.has_value()) {
-    // Scale by RMS first, then rescale so the loudest peak meets the
-    // target.
-    EncoderOptions first_pass = options;
-    first_pass.peak_limit = kPeakPassLimit;
-    gain = kPeakPassRms / in_rms;
-    const std::vector<int> e =
-        level_setter_->SetLevels(plan, levels, gain, first_pass, nullptr);
-    const synth::ReferenceSynthesis out =
-        synth::ReferenceSynthesizer::Synthesize(
-            AddFades(ToFrames(plan, e), first_pass.fade_unvoiced));
-    int peak = 1;
-    for (const int c : out.codes) {
-      peak = std::max(peak, std::abs(c));
-    }
-    gain *= *options.target_peak / static_cast<double>(peak);
-    opts.peak_limit = std::min(options.peak_limit, *options.target_peak);
-    log->debug("encoder: first-pass peak {}, gain {:.6g}", peak, gain);
-  } else {
-    gain = options.target_rms / in_rms;
-  }
+  const double gain = options.target_rms / in_rms;
 
   LevelStats stats;
   std::vector<int> energies =
-      level_setter_->SetLevels(plan, levels, gain, opts, &stats);
-  result.frames = AddFades(ToFrames(plan, energies), opts.fade_unvoiced);
-  if (opts.quiet_pauses) {
-    result.frames = QuietPauses(result.frames);
-  }
+      level_setter_->SetLevels(plan, levels, gain, &stats);
+  result.frames = QuietPauses(AddFades(ToFrames(plan, energies)));
 
   EncodeDetails details;
   details.x = std::move(seg->x);

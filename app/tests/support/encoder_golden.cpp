@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <map>
 #include <set>
+#include <span>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -32,6 +33,7 @@
 
 #include "core/audio/sndfile_wav_io.h"
 #include "core/encoder/encoder_options.h"
+#include "core/encoder/frame_endings.h"
 #include "core/lpc/frame.h"
 #include "core/lpc/frame_codec.h"
 #include "core/util/status.h"
@@ -47,14 +49,6 @@ core::Status SetOption(EncoderOptions& options, const QString& key,
                        const QJsonValue& value) {
   if (key == "targetRms") {
     options.target_rms = value.toDouble();
-  } else if (key == "targetPeak") {
-    if (!value.isNull()) {
-      options.target_peak = value.toDouble();
-    }
-  } else if (key == "peakLimit") {
-    options.peak_limit = value.toDouble();
-  } else if (key == "repeats") {
-    options.repeats = value.toBool();
   } else if (key == "repeatLambda") {
     options.repeat_lambda = value.toDouble();
   } else if (key == "gateDb") {
@@ -72,14 +66,8 @@ core::Status SetOption(EncoderOptions& options, const QString& key,
     options.voicing_threshold = value.toDouble();
   } else if (key == "voicingEvidence") {
     options.voicing_evidence = value.toDouble();
-  } else if (key == "iterations") {
-    options.iterations = value.toInt();
-  } else if (key == "fadeUnvoiced") {
-    options.fade_unvoiced = value.toBool();
   } else if (key == "levelAgc") {
     options.level_agc = value.toDouble();
-  } else if (key == "compression") {
-    options.compression = value.toDouble();
   } else {
     return core::InvalidArgumentError("unknown encoder option " +
                                       key.toStdString());
@@ -107,9 +95,13 @@ EncoderOptions ReferenceEncoderOptions() {
   options.window = 240;
   options.voicing_evidence = 4.0;
   options.level_agc = 1.0;
-  options.quiet_pauses = false;
   options.resonance_hold_db.reset();
   return options;
+}
+
+std::vector<core::lpc::Frame> ReferenceFrames(
+    std::span<const core::lpc::Frame> reference) {
+  return core::encoder::QuietPauses(reference);
 }
 
 std::filesystem::path EncoderGoldenDir() {

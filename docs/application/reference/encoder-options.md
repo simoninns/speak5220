@@ -5,13 +5,19 @@ TMS5220 frames. The encoder reproduces the frames of the project's reference
 encoder (`investigation/encoder/tms5220enc.py`) exactly, so these options
 mean what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md). The
-exceptions are `squelch_db`, `quiet_pauses` and `resonance_hold_db`, which
-the reference does not have. Four defaults differ from the reference's, chosen because they
-give the best typical [quality rating](../user-manual/encoder.md#the-quality-rating)
-over a corpus of 243 recordings: `target_rms` 24 (the reference's is 20),
+exceptions are `squelch_db` and `resonance_hold_db`, which the reference
+does not have. Four defaults differ from the reference's, chosen because
+they give the best typical
+[quality rating](../user-manual/encoder.md#the-quality-rating) over a
+corpus of 243 recordings: `target_rms` 24 (the reference's is 20),
 `window` 256 (240), `voicing_evidence` 5 (4) and `level_agc` 1.25 (1).
-With the reference's values, and the squelch, quiet pauses and the
-resonance hold off, the encoder gives the reference's frames.
+
+The reference's other options are fixed at its defaults (below). The
+encoder also always gives pauses a quiet frame
+([quiet pauses](../user-manual/encoder.md#quiet-pauses)), which the
+reference does not. So with the reference's values, and the squelch and
+the resonance hold off, the encoder gives the reference's frames with
+their pauses quietened.
 
 Options are set in the [project file](project-file.md): `default_encoder`
 holds the project's values, every option written out, and a phrase's
@@ -20,12 +26,11 @@ keeps its settings, and its encodings, when a later version of Speak5220
 changes a default. In the main window they are set in the
 [encoder panel](../user-manual/encoder.md#the-settings), for a phrase or
 for the project, and [Optimise](../user-manual/encoder.md#optimise)
-searches them, all but `squelch_db`, `quiet_pauses` and
-`resonance_hold_db`.
+searches them, all but `squelch_db` and `resonance_hold_db`.
 
-The encoder panel shows six of them at first, the **basic** options:
-`target_rms`, `repeat_lambda`, `squelch_db`, `pre_emphasis`,
-`voicing_threshold` and `compression`. The rest, marked *Advanced* below,
+The encoder panel shows five of them at first, the **basic** options:
+`target_rms`, `repeat_lambda`, `squelch_db`, `pre_emphasis` and
+`voicing_threshold`. The rest, marked *Advanced* below,
 appear when the panel's advanced settings are shown
 ([the settings](../user-manual/encoder.md#the-settings)).
 Project files and the command line treat the two groups alike.
@@ -33,9 +38,6 @@ Project files and the command line treat the two groups alike.
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
 | `target_rms` | `targetRms` | RMS of the output over sounding frames, in DAC codes | Number | 24 | 1 to 100 | 5 to 50 codes, steps of 0.5 |
-| `target_peak` (*Advanced*) | `targetPeak` | If set, scale so the loudest output peak reaches this many codes, instead of using `target_rms` | Number, or `null` (unset) | Unset | 1 to 127 | 30 to 127 codes, steps of 1 |
-| `peak_limit` (*Advanced*) | `peakLimit` | No output code goes beyond this (the DAC's range is ±127) | Number | 120 | 1 to 127 | 60 to 127 codes, steps of 1 |
-| `repeats` (*Advanced*) | `repeats` | Send a frame whose coefficients barely change as an 11-bit repeat of the frame before | `true` or `false` | `true` | | |
 | `repeat_lambda` | `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 70 | 0 to 1000 | 0 to 300, steps of 5 |
 | `gate_db` (*Advanced*) | `gateDb` | Frames this many dB below the loudest frame become silence | Number | 45 | 10 to 90 | 20 to 70 dB, steps of 0.5 |
 | `squelch_db` | none (`squelchDb`) | If set, stretches of the recording this many dB below its loudest sound (breaths, room noise) are made silent before encoding, and the quality is measured against the squelched recording ([the squelch](../user-manual/encoder.md#the-squelch)) | Number, or `null` (unset) | Unset | 6 to 80 | 12 to 50 dB, steps of 1 |
@@ -45,19 +47,36 @@ Project files and the command line treat the two groups alike.
 | `resonance_hold_db` (*Advanced*) | none (`resonanceHoldDb`) | If set, where a fading voiced sound moves from a strongly resonant filter to one with more than this many dB less gain, the resonant filter is kept for one more frame, so the level does not drop suddenly with a pop ([the resonance hold](../user-manual/encoder.md#the-resonance-hold)) | Number, or `null` (unset) | 14 | 3 to 40 | 6 to 30 dB, steps of 0.5 |
 | `voicing_threshold` | `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.3 | 0 to 1 | 0.05 to 0.7, steps of 0.01 |
 | `voicing_evidence` (*Advanced*) | `voicingEvidence` | Weight of spectral tilt and zero crossings in the voicing decision; 0 uses periodicity alone | Number | 5 | 0 to 20 | 0 to 12, steps of 0.25 |
-| `iterations` (*Advanced*) | `iterations` | Closed-loop passes that adjust each frame's energy against the synthesised output | Whole number | 5 | 1 to 20 | 1 to 10 |
-| `fade_unvoiced` (*Advanced*) | `fadeUnvoiced` | Fade hiss out before a silence or the end (datasheet §12.2) | `true` or `false` | `true` | | |
-| `quiet_pauses` (*Advanced*) | none (`quietPauses`) | Start each pause of three or more silence frames with one quiet frame that settles the chip's filter, so the pause is silent instead of buzzing ([quiet pauses](../user-manual/encoder.md#quiet-pauses); datasheet §12.2) | `true` or `false` | `true` | | |
 | `level_agc` (*Advanced*) | `levelAgc` | Compression ratio of a slow (0.75 s) loudness envelope, which brings quiet words up; 1 is off | Number | 1.25 | 1 to 10 | 1 (off) to 6, steps of 0.05 |
-| `compression` | `compression` | Per-frame level compression ratio around the median level; 1 is off | Number | 1 | 1 to 10 | 1 (off) to 6, steps of 0.1 |
 
 The key is the option's name in project files. The second column is its
-name in the reference encoder and its documentation (`squelchDb`,
-`quietPauses` and `resonanceHoldDb`, which the reference does not have,
-are named in its style). The last column is
+name in the reference encoder and its documentation (`squelchDb` and
+`resonanceHoldDb`, which the reference does not have, are named in its
+style). The last column is
 what the [encoder panel](../user-manual/encoder.md#the-settings)'s
 slider covers: where useful values lie. Any value in the full range can
 be set in the project file, and the slider widens to show it.
+
+## Fixed settings
+
+The reference encoder has seven more options, which Speak5220 fixes at
+the values below. Changing them made no difference worth keeping over the
+corpus of 243 recordings, or did what another option already does:
+
+| Reference option | Fixed at | Why |
+|---|---|---|
+| `targetPeak` | Unset: the level is set by `target_rms` | A second way to set the loudness. A peak of 100 lowered the median score from 0.718 to 0.673 |
+| `peakLimit` | 120 | A safety limit within the DAC's ±127 |
+| `repeats` | On | `repeat_lambda` already sets how many repeat frames are used |
+| `iterations` | 5 passes | 3 or 8 passes moved no file's score by more than 0.02 |
+| `fadeUnvoiced` | On | Hiss fades out instead of stopping abruptly |
+| `compression` | Off | It lowered the score on average, and badly on some recordings; `level_agc` brings quiet words up better |
+| `quietPauses` (Speak5220's own) | On | Without it the chip buzzes faintly through every pause |
+
+A project saved before these were fixed may still list them. It opens
+as usual: the lines are kept, as a key Speak5220 does not know is kept
+([project file](project-file.md#keys-and-files-from-newer-versions)), but
+have no effect.
 
 Numbers are written with a `.` as the decimal point, whatever the
 computer's language settings. A value outside its range, or of the wrong

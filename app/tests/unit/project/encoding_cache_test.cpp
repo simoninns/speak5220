@@ -168,15 +168,15 @@ TEST(EncodingCacheTest, SettingsChangeReencodes) {
   EncodingCache cache(encoder);
   Project project = ProjectWith({CurrentPhrase(1, "A")});
   EXPECT_CALL(encoder,
-              Encode(_, _, Field(&encoder::EncoderOptions::repeats, false)))
+              Encode(_, _, Field(&encoder::EncoderOptions::window, 200)))
       .WillOnce(Return(ResultPackingTo(30)));
   StatusOr<EncodingChange> previous =
-      cache.ChangeSettings(project, TestId(1), {{"repeats", "false"}});
+      cache.ChangeSettings(project, TestId(1), {{"window", "200"}});
   ASSERT_TRUE(previous.IsOk());
   EXPECT_TRUE(previous->overrides.empty());
   EXPECT_EQ(previous->encoding->frames, FramesPackingTo(10));
   const Phrase& phrase = *project.FindPhrase(TestId(1));
-  EXPECT_EQ(phrase.encoder.at("repeats"), "false");
+  EXPECT_EQ(phrase.encoder.at("window"), "200");
   EXPECT_EQ(phrase.encoding->frames, FramesPackingTo(30));
   EXPECT_TRUE(
       *EncodingCache::IsCurrent(phrase, project.Settings().default_encoder));

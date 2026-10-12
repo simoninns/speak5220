@@ -137,9 +137,6 @@ void EmitUnknown(YAML::Emitter& out, const UnknownKeys& unknown) {
 void EmitOptionValue(YAML::Emitter& out, const EncoderOptionInfo& info,
                      const std::string& text) {
   switch (info.type) {
-    case EncoderOptionType::kBoolean:
-      EmitBool(out, text == "true");
-      return;
     case EncoderOptionType::kOptionalReal:
       if (text.empty() || text == encoder::kUnsetOptionText) {
         out << YAML::Null;

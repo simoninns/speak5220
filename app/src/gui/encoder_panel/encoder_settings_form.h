@@ -40,9 +40,9 @@ class OptionSlider;
 //
 // Editors by type: a slider (OptionSlider) over the option's typical range
 // and step for real and whole numbers, with the value and unit beside it
-// and a tick at the baseline's value; a check box for on/off; for the
-// target peak, a check box that turns it on and a slider; for the
-// pre-emphasis, a choice of chirp or first order, and a slider for the
+// and a tick at the baseline's value; for an option that can be off (the
+// squelch, the resonance hold), a check box that turns it on and a slider;
+// for the pre-emphasis, a choice of chirp or first order, and a slider for the
 // coefficient. Values the sliders cannot show exactly (off their steps)
 // are kept until that option is edited. GUI thread only.
 class EncoderSettingsForm : public QWidget {
@@ -60,14 +60,13 @@ class EncoderSettingsForm : public QWidget {
   // The options shown.
   const core::encoder::EncoderOptions& Options() const { return options_; }
 
-  // The editor of `field`: its slider, its check box, or for the
-  // pre-emphasis its kind chooser.
+  // The editor of `field`: its slider, or for the pre-emphasis its kind
+  // chooser.
   QWidget* Editor(std::string_view field) const;
-  // The slider of `field` (the coefficient's for the pre-emphasis), or
-  // nullptr for an on/off option.
+  // The slider of `field` (the coefficient's for the pre-emphasis).
   OptionSlider* Slider(std::string_view field) const;
-  // The check box that turns an optional option (target_peak,
-  // squelch_db) on; nullptr for other options.
+  // The check box that turns an optional option (squelch_db,
+  // resonance_hold_db) on; nullptr for other options.
   QCheckBox* OnBox(std::string_view field) const;
   QToolButton* ResetButton(std::string_view field) const;
   // Whether the row of `field` differs from the baseline.
@@ -95,11 +94,11 @@ class EncoderSettingsForm : public QWidget {
   struct Row {
     const core::encoder::EncoderOptionInfo* info = nullptr;
     QLabel* label = nullptr;
-    // The editor's cell: the slider, the check box, or the box holding
-    // a check box or chooser and a slider.
+    // The editor's cell: the slider, or the box holding a check box or
+    // chooser and a slider.
     QWidget* editor = nullptr;
     OptionSlider* slider = nullptr;
-    // The option's on/off check box, or the target peak's.
+    // The check box that turns an optional option on.
     QCheckBox* check = nullptr;
     QComboBox* kind = nullptr;
     QToolButton* reset = nullptr;

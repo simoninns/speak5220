@@ -51,10 +51,6 @@ TEST_F(EncoderSettingsFormTest, HasAnEditorOfTheRightKindForEveryOption) {
         EXPECT_NE(form_.Slider(info.field), nullptr) << info.field;
         EXPECT_NE(form_.OnBox(info.field), nullptr) << info.field;
         break;
-      case EncoderOptionType::kBoolean:
-        EXPECT_NE(qobject_cast<QCheckBox*>(editor), nullptr) << info.field;
-        EXPECT_EQ(form_.Slider(info.field), nullptr) << info.field;
-        break;
       case EncoderOptionType::kPreEmphasis:
         EXPECT_NE(qobject_cast<QComboBox*>(editor), nullptr) << info.field;
         EXPECT_NE(form_.Slider(info.field), nullptr) << info.field;
@@ -71,9 +67,9 @@ TEST_F(EncoderSettingsFormTest, SlidersShowTheValueWithItsUnit) {
   EXPECT_EQ(form_.Slider("gate_db")->Text(), QStringLiteral("45 dB"));
   EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("32 ms"));
   EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.3"));
-  EXPECT_EQ(form_.Slider("compression")->Text(), QStringLiteral("off"));
-  form_.Slider("compression")->MoveTo(2.5);
-  EXPECT_EQ(form_.Slider("compression")->Text(), QStringLiteral("2.5:1"));
+  EXPECT_EQ(form_.Slider("level_agc")->Text(), QStringLiteral("1.25:1"));
+  form_.Slider("level_agc")->MoveTo(1.0);
+  EXPECT_EQ(form_.Slider("level_agc")->Text(), QStringLiteral("off"));
 }
 
 TEST_F(EncoderSettingsFormTest, SlidersCoverTheTypicalRange) {
@@ -98,12 +94,12 @@ TEST_F(EncoderSettingsFormTest, TickMarksTheBaselinesValue) {
 TEST_F(EncoderSettingsFormTest, ShowsOptionsWithoutSignalling) {
   EncoderOptions options;
   options.target_rms = 18.5;
-  options.repeats = false;
+  options.resonance_hold_db.reset();
   options.window = 200;
   form_.SetOptions(options, {}, QStringLiteral("the project default"));
   EXPECT_EQ(edits_, 0);
   EXPECT_DOUBLE_EQ(form_.Slider("target_rms")->Value(), 18.5);
-  EXPECT_FALSE(qobject_cast<QCheckBox*>(form_.Editor("repeats"))->isChecked());
+  EXPECT_FALSE(form_.OnBox("resonance_hold_db")->isChecked());
   EXPECT_DOUBLE_EQ(form_.Slider("window")->Value(), 200.0);
   EXPECT_EQ(form_.Options(), options);
 }
@@ -114,8 +110,8 @@ TEST_F(EncoderSettingsFormTest, MovingASliderSignalsAndChangesTheOptions) {
   EXPECT_DOUBLE_EQ(form_.Options().gate_db, 50.0);
   form_.Slider("window")->MoveTo(200.0);
   EXPECT_EQ(form_.Options().window, 200);
-  qobject_cast<QCheckBox*>(form_.Editor("fade_unvoiced"))->setChecked(false);
-  EXPECT_FALSE(form_.Options().fade_unvoiced);
+  form_.OnBox("resonance_hold_db")->setChecked(false);
+  EXPECT_FALSE(form_.Options().resonance_hold_db.has_value());
   EXPECT_EQ(edits_, 3);
 }
 
@@ -144,16 +140,17 @@ TEST_F(EncoderSettingsFormTest, ResetButtonPutsAnOptionBackToTheBaseline) {
   EXPECT_FALSE(form_.IsMarked("target_rms"));
 }
 
-TEST_F(EncoderSettingsFormTest, TargetPeakIsTurnedOnByItsCheckBox) {
-  EXPECT_FALSE(form_.OnBox("target_peak")->isChecked());
-  EXPECT_FALSE(form_.Slider("target_peak")->isEnabled());
-  form_.OnBox("target_peak")->setChecked(true);
-  ASSERT_TRUE(form_.Options().target_peak.has_value());
-  EXPECT_DOUBLE_EQ(*form_.Options().target_peak, 100.0);
-  form_.Slider("target_peak")->MoveTo(90.0);
-  EXPECT_DOUBLE_EQ(*form_.Options().target_peak, 90.0);
-  form_.OnBox("target_peak")->setChecked(false);
-  EXPECT_FALSE(form_.Options().target_peak.has_value());
+TEST_F(EncoderSettingsFormTest, ResonanceHoldIsTurnedOffByItsCheckBox) {
+  EXPECT_TRUE(form_.OnBox("resonance_hold_db")->isChecked());
+  EXPECT_TRUE(form_.Slider("resonance_hold_db")->isEnabled());
+  form_.OnBox("resonance_hold_db")->setChecked(false);
+  EXPECT_FALSE(form_.Options().resonance_hold_db.has_value());
+  EXPECT_FALSE(form_.Slider("resonance_hold_db")->isEnabled());
+  form_.OnBox("resonance_hold_db")->setChecked(true);
+  ASSERT_TRUE(form_.Options().resonance_hold_db.has_value());
+  EXPECT_DOUBLE_EQ(*form_.Options().resonance_hold_db, 14.0);
+  form_.Slider("resonance_hold_db")->MoveTo(20.0);
+  EXPECT_DOUBLE_EQ(*form_.Options().resonance_hold_db, 20.0);
 }
 
 TEST_F(EncoderSettingsFormTest, SquelchIsTurnedOnByItsCheckBox) {
@@ -237,7 +234,7 @@ TEST_F(EncoderSettingsFormTest, AdvancedButtonCountsHiddenChanges) {
   EncoderOptions options;
   options.target_rms = 25.0;  // basic, not counted
   options.gate_db = 50.0;
-  options.quiet_pauses = false;
+  options.lag_window_hz = 40.0;
   form_.SetOptions(options, {}, QStringLiteral("the project default"));
   EXPECT_EQ(form_.AdvancedButton()->text(),
             QStringLiteral("Advanced settings (2 changed)"));

@@ -131,14 +131,7 @@ std::vector<lpc::Frame> GuardK510(std::span<const lpc::Frame> frames) {
   return out;
 }
 
-std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames,
-                                 bool fade_unvoiced) {
-  std::vector<lpc::Frame> out;
-  if (!fade_unvoiced) {
-    out = GuardK510(frames);
-    out.push_back(lpc::Frame::Stop());
-    return out;
-  }
+std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames) {
   std::vector<lpc::Frame> faded;
   const std::size_t nfr = frames.size();
   std::size_t i = 0;
@@ -166,7 +159,7 @@ std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames,
     }
     ++i;
   }
-  out = GuardK510(faded);
+  std::vector<lpc::Frame> out = GuardK510(faded);
   out.push_back(lpc::Frame::Stop());
   return out;
 }

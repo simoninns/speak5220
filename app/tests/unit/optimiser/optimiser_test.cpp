@@ -139,24 +139,6 @@ TEST(OptimiserTest, TriesTheStartThenTheGridAroundIt) {
   EXPECT_EQ(targets, (std::set<double>{20.0, 24.0, 28.0}));
 }
 
-TEST(OptimiserTest, VariesTheTargetPeakWhenTheStartSetsOne) {
-  FakeSearch search;
-  EncoderOptions start;
-  start.target_peak = 100.0;
-  const StatusOr<OptimiseResult> result = search.Run(RequestFrom(start));
-  ASSERT_TRUE(result.IsOk());
-  std::set<double> peaks;
-  std::set<double> rms;
-  for (const Candidate& c : result->history) {
-    if (c.stage == SearchStage::kGrid) {
-      peaks.insert(c.options.target_peak.value_or(0.0));
-      rms.insert(c.options.target_rms);
-    }
-  }
-  EXPECT_EQ(peaks, (std::set<double>{84.0, 100.0, 116.0}));
-  EXPECT_EQ(rms, (std::set<double>{24.0}));
-}
-
 // The squelch changes what encodings are scored against, so it is kept
 // from the start, and every candidate is scored against the source as
 // the start squelches it.
@@ -418,7 +400,7 @@ TEST(OptimiserTest, OptionsStayInRangeAndShort) {
   // Pushes every option towards its upper end.
   search.score = [](const EncoderOptions& o) {
     return o.target_rms + o.gate_db + o.voicing_threshold + o.level_agc +
-           o.compression + o.window + o.lag_window_hz;
+           o.window + o.lag_window_hz;
   };
   const StatusOr<OptimiseResult> result = search.Run(RequestFrom());
   ASSERT_TRUE(result.IsOk());

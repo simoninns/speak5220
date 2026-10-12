@@ -86,7 +86,7 @@ TEST(LevelSetterTest, OutputLevelsPastTheEndAreZero) {
   EXPECT_EQ(out.peak[1], 0);
 }
 
-TEST(LevelSetterTest, ShapingIsOffWithoutGainControlOrCompression) {
+TEST(LevelSetterTest, ShapingIsOffWithoutGainControl) {
   dsp::PocketFft fft;
   LevelSetter setter(fft);
   EncoderOptions options;
@@ -94,21 +94,6 @@ TEST(LevelSetterTest, ShapingIsOffWithoutGainControlOrCompression) {
   const std::vector<double> levels = {0.1, 0.01, 0.05};
   const std::vector<PlanEntry> plan = {Voiced(), Voiced(), {}};
   EXPECT_EQ(setter.ShapeLevels(levels, plan, options), levels);
-}
-
-TEST(LevelSetterTest, CompressionDividesDecibelsAroundTheMedian) {
-  dsp::PocketFft fft;
-  LevelSetter setter(fft);
-  EncoderOptions options;
-  options.level_agc = 1.0;
-  options.compression = 2.0;
-  const std::vector<double> levels = {1.0, 0.01, 0.5};
-  const std::vector<PlanEntry> plan = {Voiced(), Voiced(), {}};
-  const std::vector<double> out = setter.ShapeLevels(levels, plan, options);
-  // Sounding levels 0 and -40 dB, median -20: they become -10 and -30.
-  EXPECT_NEAR(out[0], std::pow(10.0, -0.5), kTolerance);
-  EXPECT_NEAR(out[1], std::pow(10.0, -1.5), kTolerance);
-  EXPECT_NEAR(out[2], 0.5, kTolerance);  // silence is left alone
 }
 
 TEST(LevelSetterTest, SlowGainControlLeavesASteadyLevelAlone) {
@@ -136,11 +121,10 @@ TEST(LevelSetterTest, SlowGainControlBringsAQuietStretchUp) {
   EXPECT_LT(out[10], 0.2);
 }
 
+// No output code beyond 120 (tms5220enc.py's peakLimit, fixed).
 TEST(LevelSetterTest, SetLevelsKeepsSilenceAndRespectsThePeakLimit) {
   dsp::PocketFft fft;
   LevelSetter setter(fft);
-  EncoderOptions options;
-  options.peak_limit = 40.0;
   std::vector<PlanEntry> plan(6, Voiced(PlanKind::kRepeat));
   plan[0] = Voiced();
   plan[3] = {};
@@ -148,7 +132,7 @@ TEST(LevelSetterTest, SetLevelsKeepsSilenceAndRespectsThePeakLimit) {
   const std::vector<double> levels(6, 0.1);
   LevelStats stats;
   const std::vector<int> energies =
-      setter.SetLevels(plan, levels, 500.0, options, &stats);
+      setter.SetLevels(plan, levels, 2000.0, &stats);
   ASSERT_EQ(energies.size(), 6U);
   EXPECT_EQ(energies[3], 0);
   EXPECT_EQ(stats.sounding, 5);
@@ -157,12 +141,12 @@ TEST(LevelSetterTest, SetLevelsKeepsSilenceAndRespectsThePeakLimit) {
     EXPECT_LE(energies[j], 14);
   }
   const synth::ReferenceSynthesis out = synth::ReferenceSynthesizer::Synthesize(
-      AddFades(ToFrames(plan, energies), options.fade_unvoiced));
+      AddFades(ToFrames(plan, energies)));
   int peak = 0;
   for (const int c : out.codes) {
     peak = std::max(peak, std::abs(c));
   }
-  EXPECT_LE(peak, 40);
+  EXPECT_LE(peak, 120);
   EXPECT_EQ(out.wrapped_samples, 0);
 }
 
@@ -172,10 +156,8 @@ TEST(LevelSetterTest, LouderTargetGivesHigherEnergies) {
   const std::vector<PlanEntry> plan = {Voiced(), Voiced(PlanKind::kRepeat),
                                        Voiced(PlanKind::kRepeat)};
   const std::vector<double> levels(3, 0.1);
-  const std::vector<int> quiet =
-      setter.SetLevels(plan, levels, 20.0, {}, nullptr);
-  const std::vector<int> loud =
-      setter.SetLevels(plan, levels, 200.0, {}, nullptr);
+  const std::vector<int> quiet = setter.SetLevels(plan, levels, 20.0, nullptr);
+  const std::vector<int> loud = setter.SetLevels(plan, levels, 200.0, nullptr);
   EXPECT_LT(quiet[1], loud[1]);
 }
 

@@ -437,15 +437,13 @@ stages over `PocketFft`.
 | `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
 | `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix |
 | `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
-| `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control and compression; open-loop energies, closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the peak limiter and the safety net |
+| `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the peak limiter at 120 and the safety net |
 
 Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`),
-sets the gain (by `targetRms`, or by a first pass with the limit at 511 for
-`targetPeak`), and turns the plan and energies into frames with
-`frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`, from
-`_toFrames()`, `_guardK510()` and `_addFades()`), and last, with
-`quiet_pauses`, `QuietPauses()` (below), which the reference does not
-have. Before the levels are set, with `resonance_hold_db`, it holds
+sets the gain from `target_rms`, and turns the plan and energies into
+frames with `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`,
+from `_toFrames()`, `_guardK510()` and `_addFades()`), and last quietens
+the pauses (`QuietPauses()`, below), which the reference does not do. Before the levels are set, with `resonance_hold_db`, it holds
 resonant filters through a fade (`HoldResonantFilters()`, in
 `repeat_search`; below), which the reference does not have either. The quantisers
 (`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
@@ -462,20 +460,27 @@ the plan, the shaped levels, the energies and the limiter's statistics.
 `Encode()` refuses a rate other than 8000 Hz, a non-finite sample, and
 options outside their ranges (`ValidateEncoderOptions()`).
 
-**Options.** `EncoderOptions` has the 15 options of `tms5220enc.py`
-`DEFAULTS`, and three the reference does not have: the squelch
-(`squelch_db`, off by default), quiet pauses (`quiet_pauses`, on by
-default) and the resonance hold (`resonance_hold_db`, 14 dB by default). Its defaults are the reference's but for four chosen on the
-corpus for the overall quality score (§9, "Default settings"):
-`target_rms` 24, `window` 256, `voicing_evidence` 5 and `level_agc` 1.25.
-The reference data is compared with the reference's own defaults written
-out, quiet pauses and the resonance hold off (`ReferenceEncoderOptions()`
-in the test support, §13), so it does not depend on the application's.
-`EncoderOptionInfos()` gives each one's key (the Python name, or
-`squelchDb`, `quietPauses` and `resonanceHoldDb` in its style), label, help text, type,
-range and default, for the GUI's settings form and for project files,
-and marks the options the GUI shows only with its advanced settings
-(`advanced`).
+**Options.** `EncoderOptions` has 9 of the 15 options of `tms5220enc.py`
+`DEFAULTS`, and two the reference does not have: the squelch
+(`squelch_db`, off by default) and the resonance hold
+(`resonance_hold_db`, 14 dB by default). The reference's other six are
+fixed at its defaults, since moving them made no difference worth keeping
+over the corpus or did what another option does (§9, "Fixed options"):
+`targetPeak` unset (the level comes from `target_rms`), `peakLimit` 120
+(`kPeakLimit`, in `level_setter`), `repeats` on (`kMaxRepeatRun`),
+`iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on and `compression` 1
+(off). Quiet pauses, once an option, are always on. The defaults are the
+reference's but for four chosen on the corpus for the overall quality
+score (§9, "Default settings"): `target_rms` 24, `window` 256,
+`voicing_evidence` 5 and `level_agc` 1.25. The reference data is compared
+with the reference's own defaults written out and the resonance hold off
+(`ReferenceEncoderOptions()` in the test support, §13), and with the
+reference's frames with their pauses quietened (`ReferenceFrames()`), so
+it does not depend on the application's defaults. `EncoderOptionInfos()`
+gives each one's key (the Python name, or `squelchDb` and
+`resonanceHoldDb` in its style), label, help text, type, range and
+default, for the GUI's settings form and for project files, and marks the
+options the GUI shows only with its advanced settings (`advanced`).
 The ranges are the application's own; Python had none.
 
 **Quiet pauses** (datasheet §12.2, "Silence inside an utterance rings";
@@ -507,7 +512,9 @@ repeat of an unvoiced frame, whose K5–K10 zeroing no full frame can give,
 is left alone. Over the 243 corpus files with a 30 dB squelch, 110 have
 such pauses (288 in all); the encodings grow by 1.7%, and PESQ (the
 measure then) was unchanged within its noise (median change +0.0003; 53
-files higher, 48 lower). Optimise does not search it.
+files higher, 48 lower). It was an option, on by default, until the
+options were reduced (§9, "Fixed options"); the score cannot hear the
+buzz, and turning it off only brings the buzz back.
 
 **The resonance hold** (datasheet §8.7). A high voice can make the LPC
 fit lock onto a harmonic: a voiced frame with K1 near −1 and K2 near +1,
@@ -575,9 +582,12 @@ the reference's order of floating-point operations where that is cheap:
 - On all 243 corpus files with the four option sets in
   `app/golden/encoder/option_sets.tsv`, the frames are identical to the
   Python reference's for every encoding (972 of 972), against the
-  criterion of 99%. The option sets are taken over
-  `ReferenceEncoderOptions()` (the defaults with quiet pauses and the
-  resonance hold off), since the reference has neither. No near-tie frames are needed: at a relative disturbance
+  criterion of 99%, again after the "loud" and "plain" sets were
+  regenerated without the fixed options (§9, "Fixed options"). The option
+  sets are taken over `ReferenceEncoderOptions()` (the defaults with the
+  resonance hold off), and the reference's frames are compared with their
+  pauses quietened (`ReferenceFrames()`), since the reference has neither.
+  No near-tie frames are needed: at a relative disturbance
   of 1e-9 the reference changes no frame on any file (§13).
 - Every intermediate value of the corpus subset agrees with the reference
   to a relative 1e-9.
@@ -719,8 +729,8 @@ the envelope and ESTOI; for pitch the anchor is no reference, since its
 own pitch tracker is cruder than the encoder's (its median voicing error
 is 10 %), so the best tenth of the default encodings is used. The poor
 ends are round values just beyond the worst 1 % of the encodings (the four
-reference option sets, the application's defaults and Optimise's
-results: 4.30 dB, 49.7 %, 107 cents, 25.4 %, 0.578), except the gross
+reference option sets as they were then, the application's defaults and
+Optimise's results: 4.30 dB, 49.7 %, 107 cents, 25.4 %, 0.578), except the gross
 pitch error, whose worst 1 % (96 %, encodings an octave out) is capped at
 half the voiced frames.
 
@@ -809,6 +819,48 @@ neither pops nor their absence, so the threshold was chosen by ear on
 
 16 dB would only just catch `cfch_small.wav`'s second pop (16.7 dB), so
 14 dB was taken. The hold costs no measurable time: encoding the corpus took 0.0109 s per second of speech with it and 0.0110 without (one core).
+
+**Fixed options** (2026-10-12; §8, "Options"). To make the encoder easier
+to understand, each option was moved off its default, one at a time, and
+the corpus scored (`OptionsCorpusCheck`; the defaults, with the
+resonance hold at 14 dB, give a median of 0.718, a mean of 0.7091 and
+100,358 bytes). Where Optimise left an option at its default on 208 or
+more of the 243 files, or does not search it, and moving it changed
+little or did what another option does, it was fixed at the reference's
+default, agreed with the user:
+
+| Option | Fixed at | Moved to | Files changed | Mean score change | Files up / down by over 0.02 (worst) | Total size |
+|---|---|---|---|---|---|---|
+| `iterations` | 5 | 3; 8 | 82; 20 | +0.0005; −0.0001 | 0 / 0; 0 / 1 (−0.02) | 100,352; 100,346 bytes |
+| `fadeUnvoiced` | On | Off | 64 | −0.0003 | 0 / 0 | 100,335 bytes |
+| `quiet_pauses` | On | Off | 108 | +0.0007 | 2 / 0 | 98,831 bytes |
+| `peakLimit` | 120 | 127; 100 | 188; 234 | +0.0025; −0.0115 | 9 / 2; 5 / 56 | 100,360; 100,348 bytes |
+| `compression` | 1 (off) | 1.25 | 242 | −0.0053 | 42 / 67 (−0.89) | 101,528 bytes |
+| `repeats` | On | Off | 243 | +0.0142 | 75 / 9 | 121,946 bytes (+21 %) |
+| `targetPeak` | Unset | 100 | 241 | −0.0426 (median 0.673) | 6 / 168 | 99,054 bytes |
+
+The score does not hear what fading hiss and quiet pauses are for (an
+abrupt end, a buzz on the chip), so those are on. Turning repeats off is
+what a higher `repeat_lambda` does more gently (140 gives a mean change
+of +0.0103 at 111,912 bytes), and `targetPeak` is a second way to set the
+level. The options kept each move 20 files or more by over 0.02 when
+moved by a step (for example `window` 224: 13 up, 46 down; `gate_db` 50:
+54 up, 43 down; `voicing_evidence` 3: 1 up, 24 down), and Optimise moves
+them on many files. The defaults' encodings are unchanged. The reference
+data's "loud" and "plain" sets, which changed the fixed options, were
+regenerated without them ("loud" sets `targetRms` 40 in place of
+`targetPeak` 100, so it still reaches the limiter), and the reference's
+frames are compared with their pauses quietened.
+
+Optimise, which searched `targetPeak`, `repeats`, `iterations`,
+`fadeUnvoiced` and `compression` too, was run over the corpus again
+(limit: each file's default size). From the defaults with the resonance
+hold, its best scores' median is 0.773 (Good / Fair / Poor 189 / 52 / 2,
+98,441 bytes), against 0.777 (191 / 50 / 2, 98,816 bytes) from the
+defaults before the hold and with every option searched; the hold alone
+lowers the starting median by 0.002. It tries a median of 268 candidates
+per file instead of 310, and takes 1.69 s per second of speech on 16
+threads instead of 1.72.
 
 ---
 
@@ -942,7 +994,8 @@ tests read only these files and never run anything in `investigation/`.
   - `frames/SET.tsv`: for each option set, every corpus file's frame count,
     near-tie frames and packed frames;
   - `option_sets.tsv`: the default set, and three fixed sets that between
-    them change every option.
+    them change every option the application has ("loud" and "plain"
+    regenerated without the fixed options, §9, "Fixed options").
 - **Near-tie frames.** A frame is a near tie if its coding changes when the
   input is disturbed at the level of floating-point noise. The script
   encodes each file as given and three times disturbed (scaled by 1 + 1e-9;
@@ -1555,19 +1608,17 @@ the phrase's options and is in two stages:
 1. **Grid.** The start, then the Cartesian product, around it, of the
    pre-emphasis (the start's, and the other kind: chirp, or first order
    with μ 0.9, the reference data's "lean" value), the voicing threshold
-   (±0.05), the voicing evidence (±2), the repeat trade-off (×0.5, ×2;
-   left out with repeats off) and the target RMS (±4; the target peak,
-   ±16, when the start sets one): 162 points.
+   (±0.05), the voicing evidence (±2), the repeat trade-off (×0.5, ×2)
+   and the target RMS (±4): 162 points.
 2. **Coordinate descent** from the best so far. Each round proposes one
-   step down and one up along every searched option (the target, repeat
-   trade-off, silence gate, pre-emphasis μ, window, lag window, voicing
-   threshold and evidence, level passes, slow gain control, compression)
-   and the other setting of each switch (repeats, fade, the pre-emphasis
-   kind), and evaluates them together. It moves to the best if its
+   step down and one up along every searched option (the target RMS,
+   repeat trade-off, silence gate, pre-emphasis μ, window, lag window,
+   voicing threshold and evidence, slow gain control) and the other
+   pre-emphasis kind, and evaluates them together. It moves to the best if its
    objective is higher than the current one's; otherwise every step is
    halved, down to its smallest, and the search ends when no step can be
    halved. Values are rounded to a few decimals (whole numbers for the
-   window and passes) so the options' text stays short, and kept within
+   window) so the options' text stays short, and kept within
    their ranges. Plan §3.3 mentions Nelder–Mead as an alternative for the
    continuous options; plain coordinate steps suffice so far.
 
@@ -1627,11 +1678,11 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
   so it is known only for encodings made in the session.
 
 **The settings form.** One row per `EncoderOptionInfo`, in two columns:
-first the six basic options (target RMS, repeat trade-off, squelch,
-pre-emphasis, voicing threshold, compression: the ones with the clearest
-effect on the sound or the size, among them four of the five options
-Optimise's grid searches, all but the voicing evidence), then a checkable `QToolButton`, then the eleven with
-`advanced` set, in the same grid so the columns line up. The advanced rows
+first the five basic options (target RMS, repeat trade-off, squelch,
+pre-emphasis, voicing threshold: the ones with the clearest effect on the
+sound or the size, among them four of the five options Optimise's grid
+searches, all but the voicing evidence), then a checkable `QToolButton`,
+then the six with `advanced` set, in the same grid so the columns line up. The advanced rows
 are hidden until the button is down; the button counts the advanced rows
 that differ from the baseline ("Advanced settings (2 changed)"), so a
 hidden change is never missed, and hidden options still apply.
@@ -1645,8 +1696,8 @@ unit beside it, all of one width so the sliders line up (the analysis
 window in milliseconds; a ratio reads "off" at 1). Its positions are the
 typical range in steps; a value outside it widens the range to include
 it, and a value off the steps is shown exactly and kept until the slider
-moves. Real and whole-number options get a slider; switches a
-`QCheckBox`; the target peak a check box and a slider; the pre-emphasis
+moves. Real and whole-number options get a slider; the optional ones
+(the squelch, the resonance hold) a check box and a slider; the pre-emphasis
 a chirp/first-order chooser and a slider for μ. Values are read back
 through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
 options it was given and changes only the edited one.

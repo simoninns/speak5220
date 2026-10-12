@@ -29,7 +29,7 @@ using enum EncoderOptionType;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
+constexpr std::array<EncoderOptionInfo, 11> kInfos = {{
     {.key = "targetRms",
      .field = "target_rms",
      .label = "Target RMS",
@@ -42,47 +42,6 @@ constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
      .typical_minimum = 5.0,
      .typical_maximum = 50.0,
      .step = 0.5},
-    {.key = "targetPeak",
-     .field = "target_peak",
-     .label = "Target peak",
-     .help = "If set, scale so the loudest output peak reaches this many "
-             "codes, instead of using the target RMS.",
-     .type = kOptionalReal,
-     .minimum = 1.0,
-     .maximum = 127.0,
-     .default_text = "",
-     .unit = "codes",
-     .typical_minimum = 30.0,
-     .typical_maximum = 127.0,
-     .step = 1.0,
-     .advanced = true},
-    {.key = "peakLimit",
-     .field = "peak_limit",
-     .label = "Peak limit",
-     .help = "No output code goes beyond this (the DAC's range is +-127).",
-     .type = kReal,
-     .minimum = 1.0,
-     .maximum = 127.0,
-     .default_text = "120",
-     .unit = "codes",
-     .typical_minimum = 60.0,
-     .typical_maximum = 127.0,
-     .step = 1.0,
-     .advanced = true},
-    {.key = "repeats",
-     .field = "repeats",
-     .label = "Repeat frames",
-     .help = "Send a frame whose coefficients barely change as an 11-bit "
-             "repeat of the frame before.",
-     .type = kBoolean,
-     .minimum = 0.0,
-     .maximum = 1.0,
-     .default_text = "true",
-     .unit = "",
-     .typical_minimum = 0.0,
-     .typical_maximum = 1.0,
-     .step = 1.0,
-     .advanced = true},
     {.key = "repeatLambda",
      .field = "repeat_lambda",
      .label = "Repeat trade-off",
@@ -208,48 +167,6 @@ constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
      .typical_maximum = 12.0,
      .step = 0.25,
      .advanced = true},
-    {.key = "iterations",
-     .field = "iterations",
-     .label = "Level passes",
-     .help = "Closed-loop passes that adjust each frame's energy against "
-             "the synthesised output.",
-     .type = kInteger,
-     .minimum = 1.0,
-     .maximum = 20.0,
-     .default_text = "5",
-     .unit = "passes",
-     .typical_minimum = 1.0,
-     .typical_maximum = 10.0,
-     .step = 1.0,
-     .advanced = true},
-    {.key = "fadeUnvoiced",
-     .field = "fade_unvoiced",
-     .label = "Fade unvoiced endings",
-     .help = "Fade hiss out before a silence or the stop.",
-     .type = kBoolean,
-     .minimum = 0.0,
-     .maximum = 1.0,
-     .default_text = "true",
-     .unit = "",
-     .typical_minimum = 0.0,
-     .typical_maximum = 1.0,
-     .step = 1.0,
-     .advanced = true},
-    {.key = "quietPauses",
-     .field = "quiet_pauses",
-     .label = "Quiet pauses",
-     .help = "Make the second frame of each pause of three or more "
-             "silent frames a quiet frame that settles the chip's filter. "
-             "Without it the chip buzzes faintly through the pause.",
-     .type = kBoolean,
-     .minimum = 0.0,
-     .maximum = 1.0,
-     .default_text = "true",
-     .unit = "",
-     .typical_minimum = 0.0,
-     .typical_maximum = 1.0,
-     .step = 1.0,
-     .advanced = true},
     {.key = "levelAgc",
      .field = "level_agc",
      .label = "Slow gain control",
@@ -264,19 +181,6 @@ constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
      .typical_maximum = 6.0,
      .step = 0.05,
      .advanced = true},
-    {.key = "compression",
-     .field = "compression",
-     .label = "Compression",
-     .help = "Per-frame level compression ratio around the median level. "
-             "1 is off.",
-     .type = kReal,
-     .minimum = 1.0,
-     .maximum = 10.0,
-     .default_text = "1",
-     .unit = ":1",
-     .typical_minimum = 1.0,
-     .typical_maximum = 6.0,
-     .step = 0.1},
 }};
 
 // The fields of each type, by name, for SetEncoderOption() and
@@ -289,18 +193,13 @@ struct IntegerField {
   std::string_view field;
   int EncoderOptions::* member;
 };
-struct BooleanField {
-  std::string_view field;
-  bool EncoderOptions::* member;
-};
 struct OptionalRealField {
   std::string_view field;
   std::optional<double> EncoderOptions::* member;
 };
 
-constexpr std::array<RealField, 9> kRealFields = {{
+constexpr std::array<RealField, 7> kRealFields = {{
     {.field = "target_rms", .member = &EncoderOptions::target_rms},
-    {.field = "peak_limit", .member = &EncoderOptions::peak_limit},
     {.field = "repeat_lambda", .member = &EncoderOptions::repeat_lambda},
     {.field = "gate_db", .member = &EncoderOptions::gate_db},
     {.field = "lag_window_hz", .member = &EncoderOptions::lag_window_hz},
@@ -308,19 +207,11 @@ constexpr std::array<RealField, 9> kRealFields = {{
      .member = &EncoderOptions::voicing_threshold},
     {.field = "voicing_evidence", .member = &EncoderOptions::voicing_evidence},
     {.field = "level_agc", .member = &EncoderOptions::level_agc},
-    {.field = "compression", .member = &EncoderOptions::compression},
 }};
-constexpr std::array<IntegerField, 2> kIntegerFields = {{
+constexpr std::array<IntegerField, 1> kIntegerFields = {{
     {.field = "window", .member = &EncoderOptions::window},
-    {.field = "iterations", .member = &EncoderOptions::iterations},
 }};
-constexpr std::array<BooleanField, 3> kBooleanFields = {{
-    {.field = "repeats", .member = &EncoderOptions::repeats},
-    {.field = "fade_unvoiced", .member = &EncoderOptions::fade_unvoiced},
-    {.field = "quiet_pauses", .member = &EncoderOptions::quiet_pauses},
-}};
-constexpr std::array<OptionalRealField, 3> kOptionalRealFields = {{
-    {.field = "target_peak", .member = &EncoderOptions::target_peak},
+constexpr std::array<OptionalRealField, 2> kOptionalRealFields = {{
     {.field = "squelch_db", .member = &EncoderOptions::squelch_db},
     {.field = "resonance_hold_db",
      .member = &EncoderOptions::resonance_hold_db},
@@ -428,12 +319,6 @@ Status SetEncoderOption(EncoderOptions& options, std::string_view field,
       updated.*MemberOf(kIntegerFields, field) = static_cast<int>(*value);
       break;
     }
-    case kBoolean:
-      if (text != "true" && text != "false") {
-        return WrongType(field, "true or false", text);
-      }
-      updated.*MemberOf(kBooleanFields, field) = text == "true";
-      break;
     case kOptionalReal:
       if (text.empty() || text == kUnsetOptionText) {
         (updated.*MemberOf(kOptionalRealFields, field)).reset();
@@ -471,8 +356,6 @@ std::string EncoderOptionText(const EncoderOptions& options,
       return FormatNumber(options.*MemberOf(kRealFields, field));
     case kInteger:
       return std::to_string(options.*MemberOf(kIntegerFields, field));
-    case kBoolean:
-      return options.*MemberOf(kBooleanFields, field) ? "true" : "false";
     case kOptionalReal: {
       const std::optional<double>& value =
           options.*MemberOf(kOptionalRealFields, field);

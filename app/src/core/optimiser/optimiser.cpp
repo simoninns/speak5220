@@ -22,6 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -45,12 +46,9 @@ using encoder::EncoderOptions;
 constexpr int kSampleRate = 8000;
 constexpr double kBitsPerKilobit = 1000.0;
 
-// The options the search moves along (plan §3.3). The target is the RMS,
-// or the peak when the start sets one.
+// The options the search moves along (plan §3.3).
 enum class Axis {
   kTargetRms,
-  kTargetPeak,
-  kRepeats,
   kRepeatLambda,
   kGateDb,
   kPreEmphasis,
@@ -58,14 +56,11 @@ enum class Axis {
   kLagWindowHz,
   kVoicingThreshold,
   kVoicingEvidence,
-  kIterations,
-  kFadeUnvoiced,
   kLevelAgc,
-  kCompression,
 };
 
-// How the descent steps along an axis. Switches (booleans, and the kind of
-// pre-emphasis) have no step: each round tries the other setting.
+// How the descent steps along an axis. The kind of pre-emphasis has no
+// step: each round tries the other kind.
 struct AxisSteps {
   Axis axis;
   // The first step, and the smallest; values are rounded to `decimals`
@@ -78,9 +73,8 @@ struct AxisSteps {
 // The descent's axes, in the order their moves are tried (and so their
 // indices, which break ties). Steps of about a tenth of each option's
 // useful range, refined to a few percent.
-constexpr std::array<AxisSteps, 13> kDescentAxes = {{
+constexpr std::array<AxisSteps, 9> kDescentAxes = {{
     {.axis = Axis::kTargetRms, .step = 2.0, .min_step = 0.5, .decimals = 2},
-    {.axis = Axis::kRepeats, .step = 0.0, .min_step = 0.0, .decimals = 0},
     {.axis = Axis::kRepeatLambda, .step = 20.0, .min_step = 5.0, .decimals = 1},
     {.axis = Axis::kGateDb, .step = 5.0, .min_step = 1.25, .decimals = 2},
     {.axis = Axis::kPreEmphasis, .step = 0.04, .min_step = 0.01, .decimals = 3},
@@ -94,22 +88,14 @@ constexpr std::array<AxisSteps, 13> kDescentAxes = {{
      .step = 1.0,
      .min_step = 0.25,
      .decimals = 2},
-    {.axis = Axis::kIterations, .step = 1.0, .min_step = 1.0, .decimals = 0},
-    {.axis = Axis::kFadeUnvoiced, .step = 0.0, .min_step = 0.0, .decimals = 0},
     {.axis = Axis::kLevelAgc, .step = 0.5, .min_step = 0.125, .decimals = 3},
-    {.axis = Axis::kCompression, .step = 0.5, .min_step = 0.125, .decimals = 3},
 }};
-
-// The target peak's steps, used in place of the target RMS's.
-constexpr AxisSteps kTargetPeakSteps = {
-    .axis = Axis::kTargetPeak, .step = 8.0, .min_step = 2.0, .decimals = 2};
 
 // The grid (plan §3.3, step 1), around the start.
 constexpr double kGridVoicingThreshold = 0.05;
 constexpr double kGridVoicingEvidence = 2.0;
 constexpr double kGridRepeatLambdaFactor = 2.0;
 constexpr double kGridTargetRms = 4.0;
-constexpr double kGridTargetPeak = 16.0;
 // The first-order coefficient the grid and the descent try in place of the
 // chirp pre-emphasis: the "lean" option set's (TESTING.md's reference
 // data).
@@ -119,10 +105,6 @@ std::string_view FieldOf(Axis axis) {
   switch (axis) {
     case Axis::kTargetRms:
       return "target_rms";
-    case Axis::kTargetPeak:
-      return "target_peak";
-    case Axis::kRepeats:
-      return "repeats";
     case Axis::kRepeatLambda:
       return "repeat_lambda";
     case Axis::kGateDb:
@@ -137,14 +119,8 @@ std::string_view FieldOf(Axis axis) {
       return "voicing_threshold";
     case Axis::kVoicingEvidence:
       return "voicing_evidence";
-    case Axis::kIterations:
-      return "iterations";
-    case Axis::kFadeUnvoiced:
-      return "fade_unvoiced";
     case Axis::kLevelAgc:
       return "level_agc";
-    case Axis::kCompression:
-      return "compression";
   }
   return {};
 }
@@ -155,8 +131,6 @@ double ValueOf(const EncoderOptions& options, Axis axis) {
   switch (axis) {
     case Axis::kTargetRms:
       return options.target_rms;
-    case Axis::kTargetPeak:
-      return options.target_peak.value_or(0.0);
     case Axis::kRepeatLambda:
       return options.repeat_lambda;
     case Axis::kGateDb:
@@ -171,15 +145,8 @@ double ValueOf(const EncoderOptions& options, Axis axis) {
       return options.voicing_threshold;
     case Axis::kVoicingEvidence:
       return options.voicing_evidence;
-    case Axis::kIterations:
-      return options.iterations;
     case Axis::kLevelAgc:
       return options.level_agc;
-    case Axis::kCompression:
-      return options.compression;
-    case Axis::kRepeats:
-    case Axis::kFadeUnvoiced:
-      break;
   }
   return 0.0;
 }
@@ -196,9 +163,6 @@ EncoderOptions WithValue(EncoderOptions options, Axis axis, double value,
   switch (axis) {
     case Axis::kTargetRms:
       options.target_rms = value;
-      break;
-    case Axis::kTargetPeak:
-      options.target_peak = value;
       break;
     case Axis::kRepeatLambda:
       options.repeat_lambda = value;
@@ -221,17 +185,8 @@ EncoderOptions WithValue(EncoderOptions options, Axis axis, double value,
     case Axis::kVoicingEvidence:
       options.voicing_evidence = value;
       break;
-    case Axis::kIterations:
-      options.iterations = static_cast<int>(value);
-      break;
     case Axis::kLevelAgc:
       options.level_agc = value;
-      break;
-    case Axis::kCompression:
-      options.compression = value;
-      break;
-    case Axis::kRepeats:
-    case Axis::kFadeUnvoiced:
       break;
   }
   return options;
@@ -255,16 +210,6 @@ std::string KeyOf(const EncoderOptions& options) {
     key += ';';
   }
   return key;
-}
-
-// The descent's axes for a start: the target peak in place of the RMS if
-// the start sets one.
-std::vector<AxisSteps> DescentAxesFor(const EncoderOptions& start) {
-  std::vector<AxisSteps> axes(kDescentAxes.begin(), kDescentAxes.end());
-  if (start.target_peak.has_value()) {
-    axes.front() = kTargetPeakSteps;
-  }
-  return axes;
 }
 
 // Each grid option's values, the start's first.
@@ -294,10 +239,6 @@ std::vector<EncoderOptions> GridAround(const EncoderOptions& start) {
       },
       [](const EncoderOptions& o) -> Variants {
         constexpr int kDecimals = 1;
-        if (!o.repeats) {
-          // The trade-off does nothing without repeats.
-          return {o};
-        }
         return {
             o,
             WithValue(o, Axis::kRepeatLambda,
@@ -307,13 +248,6 @@ std::vector<EncoderOptions> GridAround(const EncoderOptions& start) {
       },
       [](const EncoderOptions& o) -> Variants {
         constexpr int kDecimals = 2;
-        if (o.target_peak.has_value()) {
-          return {o,
-                  WithValue(o, Axis::kTargetPeak,
-                            *o.target_peak - kGridTargetPeak, kDecimals),
-                  WithValue(o, Axis::kTargetPeak,
-                            *o.target_peak + kGridTargetPeak, kDecimals)};
-        }
         return {o,
                 WithValue(o, Axis::kTargetRms, o.target_rms - kGridTargetRms,
                           kDecimals),
@@ -335,37 +269,19 @@ std::vector<EncoderOptions> GridAround(const EncoderOptions& start) {
   return points;
 }
 
-// One step down and one up along an axis from `options`, or the other
-// setting of a switch.
+// One step down and one up along an axis from `options`; for the
+// pre-emphasis, also the other kind.
 std::vector<EncoderOptions> MovesAlong(const EncoderOptions& options,
                                        const AxisSteps& steps, double step) {
-  switch (steps.axis) {
-    case Axis::kRepeats: {
-      EncoderOptions moved = options;
-      moved.repeats = !moved.repeats;
-      return {moved};
+  if (steps.axis == Axis::kPreEmphasis) {
+    if (options.pre_emphasis.chirp) {
+      return {OtherPreEmphasis(options)};
     }
-    case Axis::kFadeUnvoiced: {
-      EncoderOptions moved = options;
-      moved.fade_unvoiced = !moved.fade_unvoiced;
-      return {moved};
-    }
-    case Axis::kPreEmphasis:
-      if (options.pre_emphasis.chirp) {
-        return {OtherPreEmphasis(options)};
-      }
-      return {WithValue(options, steps.axis, options.pre_emphasis.mu - step,
-                        steps.decimals),
-              WithValue(options, steps.axis, options.pre_emphasis.mu + step,
-                        steps.decimals),
-              OtherPreEmphasis(options)};
-    case Axis::kRepeatLambda:
-      if (!options.repeats) {
-        return {};
-      }
-      break;
-    default:
-      break;
+    return {WithValue(options, steps.axis, options.pre_emphasis.mu - step,
+                      steps.decimals),
+            WithValue(options, steps.axis, options.pre_emphasis.mu + step,
+                      steps.decimals),
+            OtherPreEmphasis(options)};
   }
   const double value = ValueOf(options, steps.axis);
   return {WithValue(options, steps.axis, value - step, steps.decimals),
@@ -447,7 +363,7 @@ StatusOr<OptimiseResult> Optimiser::Run(const OptimiseRequest& request,
   const auto log = Logger(kLogModuleOptimiser);
   const bool higher_is_better =
       metric_->Direction() == quality::MetricDirection::kHigherIsBetter;
-  const std::vector<AxisSteps> axes = DescentAxesFor(request.start);
+  const std::span<const AxisSteps> axes = kDescentAxes;
   const std::vector<EncoderOptions> grid = GridAround(request.start);
   const int expected = std::min(
       request.plan.max_evaluations,

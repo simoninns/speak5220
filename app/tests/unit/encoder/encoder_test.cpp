@@ -14,7 +14,6 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <limits>
 #include <numbers>
 #include <optional>
@@ -25,7 +24,6 @@
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_endings.h"
 #include "core/lpc/frame.h"
-#include "core/synth/reference_synthesizer.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -38,7 +36,6 @@ using ::testing::_;
 using ::testing::DoubleNear;
 using ::testing::ElementsAre;
 using ::testing::Eq;
-using ::testing::Field;
 using ::testing::InSequence;
 using ::testing::Return;
 using ::testing::StrictMock;
@@ -107,14 +104,13 @@ TEST_F(EncoderTest, RunsStagesInOrderWithTheOptions) {
     // in RMS = sqrt((0.01 + 0.04) / 2); gain = 30 / that.
     const double gain = 30.0 / std::sqrt(0.025);
     EXPECT_CALL(level_setter_,
-                SetLevels(_, ElementsAre(0.1, 0.2), DoubleNear(gain, 1e-9),
-                          Eq(options), _))
+                SetLevels(_, ElementsAre(0.1, 0.2), DoubleNear(gain, 1e-9), _))
         .WillOnce(Return(std::vector<int>{10, 9}));
   }
   const auto result = encoder_.Encode(samples_, 8000, options);
   ASSERT_TRUE(result.IsOk()) << result.GetStatus().ToString();
   EXPECT_EQ(result->frames,
-            AddFades(ToFrames(plan, std::vector<int>{10, 9}), true));
+            QuietPauses(AddFades(ToFrames(plan, std::vector<int>{10, 9}))));
   ASSERT_TRUE(result->details.has_value());
   EXPECT_EQ(result->details->energies, (std::vector<int>{10, 9}));
   EXPECT_EQ(result->details->centres, (std::vector<int>{222, 422}));
@@ -135,7 +131,7 @@ TEST_F(EncoderTest, RejectsNonFiniteSamples) {
 
 TEST_F(EncoderTest, RejectsOptionsOutOfRange) {
   EncoderOptions options;
-  options.iterations = 0;
+  options.window = 0;
   EXPECT_EQ(encoder_.Encode(samples_, 8000, options).GetStatus().Code(),
             StatusCode::kOutOfRange);
 }
@@ -183,44 +179,6 @@ TEST_F(EncoderTest, AllSilentPlanGivesALoneStop) {
   const auto result = encoder_.Encode(samples_, 8000, {});
   ASSERT_TRUE(result.IsOk());
   EXPECT_EQ(result->frames, (std::vector<lpc::Frame>{lpc::Frame::Stop()}));
-}
-
-TEST_F(EncoderTest, TargetPeakScalesByAFirstPassPeak) {
-  EncoderOptions options;
-  options.target_peak = 100.0;
-  const std::vector<PlanEntry> plan = {VoicedEntry(), VoicedEntry()};
-  EXPECT_CALL(analyser_, Segment(_, _)).WillOnce(Return(TwoFrames()));
-  EXPECT_CALL(pitch_tracker_, Track(_, _)).WillOnce(Return(PitchTrack{}));
-  EXPECT_CALL(voicing_classifier_, Classify(_, _))
-      .WillOnce(Return(std::vector<FrameVoicing>(2)));
-  EXPECT_CALL(analyser_, Features(_, _, _))
-      .WillOnce(Return(FeaturesWithLevels(0.1, 0.1)));
-  EXPECT_CALL(repeat_search_, Plan(_, _)).WillOnce(Return(plan));
-  EXPECT_CALL(level_setter_, ShapeLevels(_, _, _))
-      .WillOnce(Return(std::vector<double>{0.1, 0.1}));
-  const std::vector<int> first_energies = {10, 10};
-  const synth::ReferenceSynthesis first =
-      synth::ReferenceSynthesizer::Synthesize(
-          AddFades(ToFrames(plan, first_energies), true));
-  int peak = 1;
-  for (const int c : first.codes) {
-    peak = std::max(peak, std::abs(c));
-  }
-  const double first_gain = 20.0 / 0.1;
-  {
-    InSequence order;
-    EXPECT_CALL(level_setter_,
-                SetLevels(_, _, DoubleNear(first_gain, 1e-9),
-                          Field(&EncoderOptions::peak_limit, 511.0), nullptr))
-        .WillOnce(Return(first_energies));
-    EXPECT_CALL(level_setter_,
-                SetLevels(_, _, DoubleNear(first_gain * 100.0 / peak, 1e-9),
-                          Field(&EncoderOptions::peak_limit, 100.0), _))
-        .WillOnce(Return(std::vector<int>{9, 9}));
-  }
-  const auto result = encoder_.Encode(samples_, 8000, options);
-  ASSERT_TRUE(result.IsOk()) << result.GetStatus().ToString();
-  EXPECT_NEAR(result->details->gain, first_gain * 100.0 / peak, 1e-9);
 }
 
 TEST(TrimFaintOpeningTest, SkipsLeadingSilence) {
@@ -310,14 +268,13 @@ TEST(EncoderQuietPausesTest, QuietensThePausesOfTheFramesItWouldGive) {
   std::copy(x.begin() + 1000, x.begin() + 3500, gap.begin());
   x = gap;
   x.insert(x.end(), gap.begin(), gap.begin() + 3500);
-  EncoderOptions off;
-  off.quiet_pauses = false;
-  const auto plain = MakeEncoder()->Encode(x, 8000, off);
-  const auto quiet = MakeEncoder()->Encode(x, 8000, {});
-  ASSERT_TRUE(plain.IsOk());
-  ASSERT_TRUE(quiet.IsOk());
-  EXPECT_EQ(quiet->frames, QuietPauses(plain->frames));
-  EXPECT_NE(quiet->frames, plain->frames);
+  const auto result = MakeEncoder()->Encode(x, 8000, {});
+  ASSERT_TRUE(result.IsOk());
+  ASSERT_TRUE(result->details.has_value());
+  const std::vector<lpc::Frame> plain =
+      AddFades(ToFrames(result->details->plan, result->details->energies));
+  EXPECT_EQ(result->frames, QuietPauses(plain));
+  EXPECT_NE(result->frames, plain);
 }
 
 }  // namespace

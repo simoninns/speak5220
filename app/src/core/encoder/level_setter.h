@@ -26,20 +26,19 @@ class ILevelSetter {
  public:
   virtual ~ILevelSetter() = default;
 
-  // The frame levels after the optional slow gain control and compression
-  // (options.level_agc, options.compression), on sounding frames only.
+  // The frame levels after the optional slow gain control
+  // (options.level_agc), on sounding frames only.
   virtual std::vector<double> ShapeLevels(std::span<const double> levels,
                                           std::span<const PlanEntry> plan,
                                           const EncoderOptions& options) = 0;
 
   // One energy index per plan entry (0 for silence), aiming each sounding
   // frame's output level at levels[j] x gain codes, with no output code
-  // beyond options.peak_limit and no lattice wrap. `stats`, if not null,
-  // receives what the limiter changed.
+  // beyond 120 and no lattice wrap. `stats`, if not null, receives what the
+  // limiter changed.
   virtual std::vector<int> SetLevels(std::span<const PlanEntry> plan,
                                      std::span<const double> levels,
-                                     double gain, const EncoderOptions& options,
-                                     LevelStats* stats) = 0;
+                                     double gain, LevelStats* stats) = 0;
 };
 
 // The output RMS in codes of the filter of reflection coefficients
@@ -64,13 +63,14 @@ struct OutputLevels {
 OutputLevels MeasureOutputLevels(std::span<const int> codes, int frames,
                                  int peak_half = 100);
 
-// ILevelSetter as tms5220enc.py _shapeLevels() and _setLevels(): an
-// open-loop energy from each frame's gain; up to options.iterations
-// closed-loop passes through the reference synthesiser, moving each frame
-// 70% of the way to its target in dB and keeping the best pass; frames far
-// too loud even at energy 1 made silent; then a limiter that lowers frames
-// whose peak is over the limit, and a safety net that lowers everything
-// until nothing wraps. Thread-safe if the IFft is.
+// ILevelSetter as tms5220enc.py _shapeLevels() and _setLevels() with its
+// default iterations, peakLimit and compression: an open-loop energy from
+// each frame's gain; up to five closed-loop passes through the reference
+// synthesiser, moving each frame 70% of the way to its target in dB and
+// keeping the best pass; frames far too loud even at energy 1 made silent;
+// then a limiter that lowers frames whose peak is over 120, and a safety
+// net that lowers everything until nothing wraps. Thread-safe if the IFft
+// is.
 class LevelSetter : public ILevelSetter {
  public:
   // `fft` must outlive the level setter.
@@ -81,7 +81,6 @@ class LevelSetter : public ILevelSetter {
                                   const EncoderOptions& options) override;
   std::vector<int> SetLevels(std::span<const PlanEntry> plan,
                              std::span<const double> levels, double gain,
-                             const EncoderOptions& options,
                              LevelStats* stats) override;
 
  private:

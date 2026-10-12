@@ -158,8 +158,8 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   encoded.description = "Greeting, recorded 2026-10-10 \xc2\xb7 caf\xc3\xa9";
   encoded.encoder = {{"target_rms", "18"},
                      {"pre_emphasis", "0.9375"},
-                     {"target_peak", "none"},
-                     {"repeats", "false"}};
+                     {"squelch_db", "none"},
+                     {"resonance_hold_db", "20"}};
   encoded.encoding->quality =
       CachedQuality{.measures_version = quality::kMeasuresVersion,
                     .lsd_db = 3.25,
@@ -181,7 +181,7 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   settings.name = "My PHROM";
   settings.header_strings = {"(C)2026 Simon Inns", "My PHROM", "1.00"};
   settings.ascii_map = {{'A', "HELLO"}, {' ', "NO"}, {':', "O'CLOCK"}};
-  settings.default_encoder.target_peak = 100.0;
+  settings.default_encoder.squelch_db = 30.0;
   settings.default_encoder.voicing_threshold = 0.35;
   settings.phroms = {{.number = 2,
                       .header_strings = {"(C)2026 Simon Inns", "Second", "1"},
@@ -253,17 +253,17 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
   ASSERT_TRUE(
       project
           .SetEncoding(TestId(1), {.overrides = {{"target_rms", "18"},
-                                                 {"repeats", "false"},
+                                                 {"window", "200"},
                                                  {"pre_emphasis", "chirp"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    target_peak: null\n"));
-  EXPECT_THAT(yaml, HasSubstr("    repeats: true\n"));
+  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    repeat_lambda: 70\n"));
+  EXPECT_THAT(yaml, HasSubstr("    window: 256\n"));
   EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.3\n"));
   EXPECT_THAT(yaml, HasSubstr("    encoder:\n      target_rms: 18\n"
-                              "      repeats: false\n"
-                              "      pre_emphasis: \"chirp\"\n"));
+                              "      pre_emphasis: \"chirp\"\n"
+                              "      window: 200\n"));
 }
 
 // Every option is written, so a project never depends on the defaults:
@@ -272,8 +272,8 @@ TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
   Project project = ProjectWith({AudioPhrase(1, "A")});
   const std::string defaults = ProjectYamlOf(project);
   EXPECT_THAT(defaults, HasSubstr("    gate_db: 45\n    squelch_db: null\n"));
-  EXPECT_THAT(defaults, HasSubstr("    fade_unvoiced: true\n"
-                                  "    quiet_pauses: true\n"));
+  EXPECT_THAT(defaults, HasSubstr("    voicing_evidence: 5\n"
+                                  "    level_agc: 1.25\n"));
   EXPECT_THAT(defaults, HasSubstr("    lag_window_hz: 60\n"
                                   "    resonance_hold_db: 14\n"));
   ProjectSettings settings = project.Settings();
@@ -477,7 +477,7 @@ TEST_F(ProjectSerializerTest, LoadsAProjectListingEveryOption) {
 
 // A project lists every encoder option, so changing a default never
 // changes it; one that does not, such as one saved before the squelch and
-// quiet pauses were always written, is refused.
+// the resonance hold were always written, is refused.
 TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
   const std::string head = "format: \"speak5220-project\"\nversion: 1\n";
   const StatusOr<Project> bare = Load(WithProjectYaml(head));
@@ -488,15 +488,32 @@ TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
 
   std::string older = MinimalProjectYaml();
   for (const std::string line :
-       {"    squelch_db: none\n", "    quiet_pauses: true\n"}) {
+       {"    squelch_db: none\n", "    resonance_hold_db: 14\n"}) {
     ASSERT_NE(older.find(line), std::string::npos) << line;
     older.erase(older.find(line), line.size());
   }
   const StatusOr<Project> loaded = Load(WithProjectYaml(older));
   ASSERT_FALSE(loaded.IsOk());
   EXPECT_THAT(loaded.GetStatus().Message(),
-              HasSubstr("does not list squelch_db, quiet_pauses"));
+              HasSubstr("does not list squelch_db, resonance_hold_db"));
   EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("cannot be opened"));
+}
+
+// Options the encoder now fixes (encoder_options_test.cpp) are no longer
+// options: a project that lists them opens, and keeps them as it keeps any
+// key it does not know.
+TEST_F(ProjectSerializerTest, OpensAProjectThatListsAFixedOption) {
+  const std::string yaml =
+      MinimalProjectYaml() +
+      "    quiet_pauses: true\n    compression: 1\n"
+      "phrases:\n" +
+      PhraseYaml(1, "    encoder:\n      repeats: false\n");
+  const StatusOr<Project> loaded = Load(WithProjectYaml(yaml));
+  ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
+  EXPECT_TRUE(loaded->Phrases().front().encoder.empty());
+  const std::string saved = ProjectYamlOf(*loaded);
+  EXPECT_THAT(saved, HasSubstr("    quiet_pauses: true\n    compression: 1\n"));
+  EXPECT_THAT(saved, HasSubstr("      repeats: false\n"));
 }
 
 TEST_F(ProjectSerializerTest, ChecksTheTypeOfEveryValue) {
@@ -522,8 +539,8 @@ TEST_F(ProjectSerializerTest, ChecksTheTypeOfEveryValue) {
        "project.default_encoder.target_rms must not be quoted"},
       {head + "project:\n  default_encoder:\n    target_rms: 500\n",
        "target_rms is 500"},
-      {head + "project:\n  default_encoder:\n    repeats: 1\n",
-       "repeats must be true or false"},
+      {head + "project:\n  default_encoder:\n    window: 240.5\n",
+       "window must be a whole number"},
       {head + "project:\n  ascii_map: {\"AB\": \"X\"}\n",
        "each key is one character"},
       {head + "project:\n  header_strings: \"one\"\n",

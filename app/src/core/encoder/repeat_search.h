@@ -33,7 +33,7 @@ class IRepeatSearch {
   virtual ~IRepeatSearch() = default;
 
   // One plan entry per frame of `features`, without trailing silence.
-  // Uses options.repeats and options.repeat_lambda.
+  // Uses options.repeat_lambda.
   virtual std::vector<PlanEntry> Plan(std::span<const FrameFeatures> features,
                                       const EncoderOptions& options) = 0;
 };

@@ -38,10 +38,9 @@ std::vector<lpc::Frame> GuardK510(std::span<const lpc::Frame> frames);
 // Fades unvoiced sound before silence and before the end (§12.2), each
 // fade frame an unvoiced repeat at about a third of the energy before,
 // replacing following silence frames (or appended at the end); then
-// applies GuardK510() and adds the stop. With fade_unvoiced false, only
-// the guard and the stop. Re-implements tms5220enc.py _addFades().
-std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames,
-                                 bool fade_unvoiced);
+// applies GuardK510() and adds the stop. Re-implements tms5220enc.py
+// _addFades(), with fadeUnvoiced on, its default.
+std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames);
 
 // The pauses QuietPauses() quietens: this many silence frames or more.
 // The neutral frame must have a silence frame on each side (below).

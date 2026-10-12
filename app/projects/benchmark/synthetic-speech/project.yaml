@@ -6,9 +6,6 @@ project:
   ascii_map: {}
   default_encoder:
     target_rms: 20
-    target_peak: null
-    peak_limit: 120
-    repeats: true
     repeat_lambda: 70
     gate_db: 45
     squelch_db: null
@@ -18,11 +15,7 @@ project:
     resonance_hold_db: null
     voicing_threshold: 0.3
     voicing_evidence: 4
-    iterations: 5
-    fade_unvoiced: true
-    quiet_pauses: true
     level_agc: 1
-    compression: 1
 phrases:
   - id: "a1ba4f2a-a9bd-4556-bfed-9f7dd3856c1d"
     name: "SHORT"

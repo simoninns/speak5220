@@ -39,7 +39,7 @@ project:
     "1": "ONE,WON"
   default_encoder:
     target_rms: 24
-    target_peak: null
+    repeat_lambda: 70
     squelch_db: null
     pre_emphasis: "chirp"
     # ... every encoder option, each one required

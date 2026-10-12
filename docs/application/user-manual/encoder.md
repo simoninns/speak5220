@@ -26,8 +26,8 @@ From the top:
     bytes they pack to, and the bits per second of speech (each frame is
     25 ms); the share of each kind of frame; and the loudest code the
     chip's output reaches (its DAC's range is ±127). What the limiter did
-    (frames whose energy was lowered to stay under `peak_limit`, and
-    frames made silent) is known only for encodings made in this session.
+    (frames whose energy was lowered to keep every code within ±120,
+    and frames made silent) is known only for encodings made in this session.
 - **The quality rating** (below).
 - **The settings** (below).
 - **Re-encode** (Encode for a phrase with no frames) encodes the phrase
@@ -101,19 +101,18 @@ under each slider marks the default, so an option moved from it is easy
 to see. A slider covers the range where useful values lie (the reference
 gives each one); a value outside it, from the project file or Optimise,
 widens the slider to include it. Click a slider and use the arrow keys
-for single steps, Page Up and Page Down for larger ones. On/off options
-are check boxes; the target peak and the [squelch](#the-squelch) have a
-check box that turns them on, and the pre-emphasis a choice of chirp or
-first order, whose coefficient the slider beside it sets.
+for single steps, Page Up and Page Down for larger ones. The
+[squelch](#the-squelch) and the [resonance hold](#the-resonance-hold)
+have a check box that turns them on or off, and the pre-emphasis a choice
+of chirp or first order, whose coefficient the slider beside it sets.
 
-The form first shows the six **basic settings**, the ones that change the
-sound or the size most clearly: the target RMS (loudness), the repeat
+The form first shows the five **basic settings**, the ones that change
+the sound or the size most clearly: the target RMS (loudness), the repeat
 trade-off (bytes against quality), the [squelch](#the-squelch), the
-pre-emphasis (brighter or more muffled), the voicing threshold (buzz
-against hiss on sounds between the two) and the compression (quiet
-syllables brought up). Click **Advanced settings** below them for the
-other eleven, which fine-tune the encoding or are switches whose default
-is nearly always right; click it again to hide them. Speak5220 remembers
+pre-emphasis (brighter or more muffled) and the voicing threshold (buzz
+against hiss on sounds between the two). Click **Advanced settings** below
+them for the other six, which fine-tune the encoding; click it again to
+hide them. Speak5220 remembers
 the choice. Hidden settings still apply: when any of them differ from the
 default, the button says how many, for example **Advanced settings (2
 changed)**, as it can after Optimise or with a project from elsewhere.
@@ -184,25 +183,21 @@ code or two either side of zero, and the chip turns that into a faint buzz
 at about the pitch of the voice, roughly 23 dB below the speech, for the
 whole pause (datasheet §12.2, measured on the chip).
 
-**Quiet pauses**, on by default, settles the filter: in every pause of
-three silence frames or more, the second becomes one voiced frame at the
+So the encoder always settles the filter: in every pause of three
+silence frames or more, the second becomes one voiced frame at the
 lowest energy with neutral filter settings, and the rest of the pause is
 then truly silent. The first frame of the pause is left alone, so the
 sound before it fades out as it did. It costs 46 bits a pause, a few
 percent of a phrase with pauses. Shorter pauses are left as they are:
-they ring for at most 50 ms. Optimise leaves the setting as it is.
-
-The [squelch](#the-squelch) makes long pauses common, so leave quiet
-pauses on unless the frames must match another encoder's exactly. Phrases
-encoded before quiet pauses existed are shown as *stale*; re-encode them
-(**Phrase > Re-encode**) to quieten their pauses.
+they ring for at most 50 ms. The [squelch](#the-squelch) makes long
+pauses common.
 
 !!! warning "The pauses you hear in the window are not the chip's"
     The waveforms and **Listen** play the emulator, and at this level, a
     code or two, the emulator cannot be trusted: how the chip rounds its
     smallest values is not known (datasheet §8.8). A pause can buzz on the
     chip and be silent in the window, or the other way round. Measured on
-    a real TMS5220, a pause with quiet pauses on was silent every time, even
+    a real TMS5220, a pause quietened this way was silent every time, even
     where the window plays a faint whine in it (datasheet §12.2). Judge
     the pauses on a real chip, not by ear in the window.
 

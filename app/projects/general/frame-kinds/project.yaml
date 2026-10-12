@@ -6,9 +6,6 @@ project:
   ascii_map: {}
   default_encoder:
     target_rms: 20
-    target_peak: null
-    peak_limit: 120
-    repeats: true
     repeat_lambda: 70
     gate_db: 45
     squelch_db: null
@@ -18,11 +15,7 @@ project:
     resonance_hold_db: null
     voicing_threshold: 0.3
     voicing_evidence: 4
-    iterations: 5
-    fade_unvoiced: true
-    quiet_pauses: true
     level_agc: 1
-    compression: 1
 phrases:
   - id: "a5a072da-45e0-4203-8aeb-0468e9c80c39"
     name: "EVERY KIND"

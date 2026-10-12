@@ -144,15 +144,13 @@ using ProgressCallback = std::function<void(const OptimiseResult& so_far,
 //  1. The start, then a coarse grid around it over the options with the
 //     most effect: pre-emphasis (the start's and the other kind),
 //     voicing threshold (+-0.05), voicing evidence (+-2), repeat
-//     trade-off (x0.5, x2; not when repeats are off) and the target RMS
-//     (+-4; the target peak, +-16, when the start sets one).
+//     trade-off (x0.5, x2) and the target RMS (+-4).
 //  2. Coordinate descent from the best so far: each round tries one step
-//     down and one up along every searched option (target, repeats,
-//     repeat trade-off, silence gate, pre-emphasis, window, lag window,
-//     voicing threshold and evidence, level passes, fade, slow gain
-//     control, compression), and moves to the best if it improves on the
-//     current options; otherwise the steps are halved, and the search
-//     ends when they reach their smallest.
+//     down and one up along every searched option (target RMS, repeat
+//     trade-off, silence gate, pre-emphasis, window, lag window, voicing
+//     threshold and evidence, slow gain control), and moves to the best
+//     if it improves on the current options; otherwise the steps are
+//     halved, and the search ends when they reach their smallest.
 //
 // The squelch is never searched: it changes what the encodings are
 // scored against, so scores with different squelches do not compare.

@@ -56,8 +56,14 @@ constexpr double kEnvelopeFloor = 1e-18;
 constexpr double kMinimumLevel = 1e-6;
 constexpr double kSettledDb = 1.5;
 constexpr double kStepFraction = 0.7;
+// The closed loop's passes (tms5220enc.py DEFAULTS "iterations"): more
+// change no corpus file's score by more than 0.02 (HLD §8, "Options").
+constexpr int kLevelPasses = 5;
 // A frame this many times too loud at energy 1 becomes silence.
 constexpr double kTooLoud = 4.0;
+// No output code beyond this (tms5220enc.py DEFAULTS "peakLimit"),
+// within the DAC's +-127.
+constexpr double kPeakLimit = 120.0;
 // The limiter's passes, its peak window, and dB per energy step.
 constexpr int kLimiterPasses = 30;
 constexpr int kLimiterPeakHalf = 110;
@@ -128,11 +134,9 @@ int MaxAbs(std::span<const int> codes) {
 }
 
 synth::ReferenceSynthesis Render(std::span<const PlanEntry> plan,
-                                 std::span<const int> energies,
-                                 const EncoderOptions& options) {
-  const std::vector<lpc::Frame> frames =
-      AddFades(ToFrames(plan, energies), options.fade_unvoiced);
-  return synth::ReferenceSynthesizer::Synthesize(frames);
+                                 std::span<const int> energies) {
+  return synth::ReferenceSynthesizer::Synthesize(
+      AddFades(ToFrames(plan, energies)));
 }
 
 }  // namespace
@@ -217,7 +221,6 @@ std::vector<double> LevelSetter::ShapeLevels(std::span<const double> levels,
                                              const EncoderOptions& options) {
   assert(levels.size() == plan.size());
   const double agc = options.level_agc;
-  const double comp = options.compression;
   const std::size_t n = plan.size();
   std::vector<bool> s(n);
   bool any = false;
@@ -226,51 +229,35 @@ std::vector<double> LevelSetter::ShapeLevels(std::span<const double> levels,
     any = any || s[j];
   }
   std::vector<double> out(levels.begin(), levels.end());
-  if ((agc == 1.0 && comp == 1.0) || !any) {
+  if (agc == 1.0 || !any) {
     return out;
   }
   std::vector<double> db(n);
   for (std::size_t j = 0; j < n; ++j) {
     db[j] = 20.0 * std::log10(std::max(levels[j], kLevelFloor));
   }
-  const auto sounding = [&](const std::vector<double>& v) {
-    std::vector<double> picked;
-    for (std::size_t j = 0; j < n; ++j) {
-      if (s[j]) {
-        picked.push_back(v[j]);
-      }
-    }
-    return picked;
-  };
-  if (agc != 1.0) {
-    const std::vector<double> w = dsp::InnerHannWindow(kAgcFrames);
-    std::vector<double> power(n);
-    std::vector<double> mask(n);
-    for (std::size_t j = 0; j < n; ++j) {
-      power[j] = s[j] ? std::pow(10.0, db[j] / 10.0) : 0.0;
-      mask[j] = s[j] ? 1.0 : 0.0;
-    }
-    const std::vector<double> num = Smoothed(power, w);
-    const std::vector<double> den = Smoothed(mask, w);
-    std::vector<double> env(n);
-    for (std::size_t j = 0; j < n; ++j) {
-      env[j] =
-          10.0 * std::log10(std::max(num[j] / std::max(den[j], kLevelFloor),
-                                     kEnvelopeFloor));
-    }
-    const double ref = dsp::Median(sounding(env));
-    for (std::size_t j = 0; j < n; ++j) {
-      if (s[j]) {
-        db[j] = db[j] - ((env[j] - ref) * (1.0 - (1.0 / agc)));
-      }
+  const std::vector<double> w = dsp::InnerHannWindow(kAgcFrames);
+  std::vector<double> power(n);
+  std::vector<double> mask(n);
+  for (std::size_t j = 0; j < n; ++j) {
+    power[j] = s[j] ? std::pow(10.0, db[j] / 10.0) : 0.0;
+    mask[j] = s[j] ? 1.0 : 0.0;
+  }
+  const std::vector<double> num = Smoothed(power, w);
+  const std::vector<double> den = Smoothed(mask, w);
+  std::vector<double> env(n);
+  std::vector<double> sounding_env;
+  for (std::size_t j = 0; j < n; ++j) {
+    env[j] = 10.0 * std::log10(std::max(num[j] / std::max(den[j], kLevelFloor),
+                                        kEnvelopeFloor));
+    if (s[j]) {
+      sounding_env.push_back(env[j]);
     }
   }
-  if (comp != 1.0) {
-    const double ref = dsp::Median(sounding(db));
-    for (std::size_t j = 0; j < n; ++j) {
-      if (s[j]) {
-        db[j] = ref + ((db[j] - ref) / comp);
-      }
+  const double ref = dsp::Median(sounding_env);
+  for (std::size_t j = 0; j < n; ++j) {
+    if (s[j]) {
+      db[j] = db[j] - ((env[j] - ref) * (1.0 - (1.0 / agc)));
     }
   }
   for (std::size_t j = 0; j < n; ++j) {
@@ -281,9 +268,7 @@ std::vector<double> LevelSetter::ShapeLevels(std::span<const double> levels,
 
 std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
                                         std::span<const double> levels,
-                                        double gain,
-                                        const EncoderOptions& options,
-                                        LevelStats* stats) {
+                                        double gain, LevelStats* stats) {
   assert(levels.size() == plan.size());
   const auto log = Logger(kLogModuleEncoder);
   const auto nfr = static_cast<int>(plan.size());
@@ -313,8 +298,8 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   std::vector<int> best;
   std::vector<double> err(n);
   std::vector<double> abs_err;
-  for (int it = 0; it < options.iterations; ++it) {
-    const synth::ReferenceSynthesis out = Render(plan, energies, options);
+  for (int it = 0; it < kLevelPasses; ++it) {
+    const synth::ReferenceSynthesis out = Render(plan, energies);
     const OutputLevels lev = MeasureOutputLevels(out.codes, nfr);
     abs_err.clear();
     for (std::size_t j = 0; j < n; ++j) {
@@ -330,7 +315,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
       best_score = score;
       best = energies;
     }
-    if (it == options.iterations - 1) {
+    if (it == kLevelPasses - 1) {
       break;
     }
     std::vector<int> next = energies;
@@ -352,7 +337,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   // Frames that are far too loud even at index 1 become silence.
   int silenced = 0;
   {
-    const synth::ReferenceSynthesis out = Render(plan, energies, options);
+    const synth::ReferenceSynthesis out = Render(plan, energies);
     const OutputLevels lev = MeasureOutputLevels(out.codes, nfr);
     for (std::size_t j = 1; j < n; ++j) {
       if (sounding[j] && energies[j] == 1 &&
@@ -365,9 +350,9 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   const std::vector<int> before_limit = energies;
 
   // Peak and wrap limiting.
-  const double limit = options.peak_limit;
+  const double limit = kPeakLimit;
   for (int pass = 0; pass < kLimiterPasses; ++pass) {
-    const synth::ReferenceSynthesis out = Render(plan, energies, options);
+    const synth::ReferenceSynthesis out = Render(plan, energies);
     const OutputLevels lev =
         MeasureOutputLevels(out.codes, nfr, kLimiterPeakHalf);
     std::vector<std::size_t> over;
@@ -409,7 +394,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   // Safety net: lower everything until no code exceeds the limit and
   // nothing wraps.
   for (int pass = 0; pass < kSafetyPasses; ++pass) {
-    const synth::ReferenceSynthesis out = Render(plan, energies, options);
+    const synth::ReferenceSynthesis out = Render(plan, energies);
     if (out.wrapped_samples == 0 && MaxAbs(out.codes) <= limit) {
       break;
     }

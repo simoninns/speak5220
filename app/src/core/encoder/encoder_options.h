@@ -38,20 +38,14 @@ struct PreEmphasis {
 // Everything that controls an encoding. The defaults are those of
 // tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence and
 // level_agc, chosen for the best median quality score on the corpus (HLD
-// §9), and quiet_pauses, on, and resonance_hold_db, 14, which the
-// reference does not have. Projects
-// list every option (plan §4), so changing a default never changes a
-// project's encodings. Each field's range and help text are in
+// §9), and resonance_hold_db, 14, which the reference does not have. The
+// reference's other options are fixed at its defaults (HLD §8, "Options").
+// Projects list every option (plan §4), so changing a default never
+// changes a project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
   // RMS of the output over sounding frames, in codes.
   double target_rms = 24.0;
-  // If set, scale so the loudest output peak is this instead of target_rms.
-  std::optional<double> target_peak;
-  // No output code beyond this (the DAC's range is +-127).
-  double peak_limit = 120.0;
-  // Use repeat frames.
-  bool repeats = true;
   // Bits a repeat run may trade per dB of prediction error.
   double repeat_lambda = 70.0;
   // Frames this many dB below the loudest are silence.
@@ -76,18 +70,8 @@ struct EncoderOptions {
   double voicing_threshold = 0.3;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
   double voicing_evidence = 5.0;
-  // Closed-loop energy passes.
-  int iterations = 5;
-  // Fade unvoiced sound before a stop or silence (§12.2).
-  bool fade_unvoiced = true;
-  // Start each pause of two or more silence frames with a neutral voiced
-  // frame, so the chip's filter does not ring through it (§12.2,
-  // QuietPauses()). Not in the reference encoder.
-  bool quiet_pauses = true;
   // Slow gain control ratio over about 0.75 s (1: off).
   double level_agc = 1.25;
-  // Per-frame level compression ratio (1: off).
-  double compression = 1.0;
 
   friend bool operator==(const EncoderOptions& a,
                          const EncoderOptions& b) = default;
@@ -97,9 +81,7 @@ struct EncoderOptions {
 enum class EncoderOptionType {
   kReal,
   kInteger,
-  kBoolean,
-  // A real value that may also be unset (target_peak, squelch_db,
-  // resonance_hold_db).
+  // A real value that may also be unset (squelch_db, resonance_hold_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
   kPreEmphasis,
@@ -129,12 +111,12 @@ struct EncoderOptionInfo {
   // Where useful values lie, within minimum..maximum, and the step
   // between them: what the GUI's sliders offer (a value outside, from a
   // project file or Optimise, widens the slider). For kPreEmphasis, of
-  // mu; unused for kBoolean.
+  // mu.
   double typical_minimum = 0.0;
   double typical_maximum = 0.0;
   double step = 0.0;
-  // A fine adjustment, or a switch whose default is nearly always right:
-  // the GUI shows it only with its advanced settings. The others have the
+  // A fine adjustment whose default is nearly always right: the GUI shows
+  // it only with its advanced settings. The others have the
   // clearest effect on how a phrase sounds or how big it is.
   bool advanced = false;
 };
@@ -150,12 +132,12 @@ Status ValidateEncoderOptions(const EncoderOptions& options);
 // nullptr.
 const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
-// The text for an unset optional option (target_peak, squelch_db).
+// The text for an unset optional option (squelch_db, resonance_hold_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
 
 // Sets one option from text, as a user types it or a project file holds
-// it: a number ("18", "0.35"), "true" or "false", "chirp" or a number for
-// pre_emphasis, and a number or "none" for target_peak and squelch_db.
+// it: a number ("18", "0.35"), "chirp" or a number for pre_emphasis, and
+// a number or "none" for squelch_db and resonance_hold_db.
 // Numbers use '.' as the decimal point, whatever the locale. Fails,
 // leaving `options` unchanged, for an unknown field, text of the wrong
 // type, a fractional value for a whole-number option, or a value outside
@@ -164,7 +146,7 @@ Status SetEncoderOption(EncoderOptions& options, std::string_view field,
                         std::string_view text);
 
 // The text of one option, which SetEncoderOption() reads back to the same
-// value: the shortest exact number, "true"/"false", "chirp", or "none".
+// value: the shortest exact number, "chirp", or "none".
 // Returns an empty string for an unknown field.
 std::string EncoderOptionText(const EncoderOptions& options,
                               std::string_view field);

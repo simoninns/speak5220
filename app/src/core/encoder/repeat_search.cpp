@@ -93,8 +93,8 @@ SegmentChoice SegmentCost(std::span<const QuantisedFrame> run, std::size_t a,
 }
 
 // The cheapest split of one run of same-voicing frames into segments of at
-// most max_run frames. Re-implements tms5220enc.py _repeatRun().
-void PlanRun(std::span<const QuantisedFrame> run, double lambda, int max_run,
+// most kMaxRepeatRun frames. Re-implements tms5220enc.py _repeatRun().
+void PlanRun(std::span<const QuantisedFrame> run, double lambda,
              std::vector<PlanEntry>& plan) {
   const std::size_t n = run.size();
   std::vector<double> cost(n + 1, std::numeric_limits<double>::infinity());
@@ -102,7 +102,7 @@ void PlanRun(std::span<const QuantisedFrame> run, double lambda, int max_run,
   std::vector<std::size_t> back(n + 1, 0);
   std::vector<std::vector<int>> k_of(n + 1);
   for (std::size_t e = 1; e <= n; ++e) {
-    const auto reach = static_cast<std::size_t>(max_run);
+    const auto reach = static_cast<std::size_t>(kMaxRepeatRun);
     const std::size_t from = e > reach ? e - reach : 0;
     for (std::size_t st = from; st < e; ++st) {
       SegmentChoice choice = SegmentCost(run, st, e, lambda);
@@ -155,7 +155,6 @@ std::vector<PlanEntry> RepeatSearch::Plan(
     info.emplace_back(std::move(q));
   }
 
-  const int max_run = options.repeats ? kMaxRepeatRun : 1;
   std::vector<PlanEntry> plan;
   std::vector<QuantisedFrame> run;
   std::size_t j = 0;
@@ -171,7 +170,7 @@ std::vector<PlanEntry> RepeatSearch::Plan(
       run.push_back(info[j]);
       ++j;
     }
-    PlanRun(run, options.repeat_lambda, max_run, plan);
+    PlanRun(run, options.repeat_lambda, plan);
   }
   while (!plan.empty() && plan.back().kind == PlanKind::kSilence) {
     plan.pop_back();

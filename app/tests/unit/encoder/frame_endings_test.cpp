@@ -73,12 +73,12 @@ TEST(FrameEndingsTest, GuardKeepsSilenceBeforeFirstVoicedFrameSounding) {
                           Frame::Voiced(9, 30, kK10Array), Frame::Silence()}));
 }
 
-TEST(FrameEndingsTest, WithoutFadesOnlyGuardAndStopAreAdded) {
-  const std::vector<Frame> frames = {Frame::Voiced(9, 30, kK10Array),
-                                     Frame::Unvoiced(10, kK4Array)};
+TEST(FrameEndingsTest, VoicedEndGetsOnlyTheStop) {
+  const std::vector<Frame> frames = {Frame::Unvoiced(10, kK4Array),
+                                     Frame::Voiced(9, 30, kK10Array)};
   std::vector<Frame> expected = frames;
   expected.push_back(Frame::Stop());
-  EXPECT_EQ(AddFades(frames, false), expected);
+  EXPECT_EQ(AddFades(frames), expected);
 }
 
 TEST(FrameEndingsTest, UnvoicedEndFadesInThirdsBeforeTheStop) {
@@ -86,7 +86,7 @@ TEST(FrameEndingsTest, UnvoicedEndFadesInThirdsBeforeTheStop) {
   // (index 4) in dB; 4/3 is nearest 1 (index 1), which ends the fade.
   const std::vector<Frame> frames = {Frame::Voiced(9, 30, kK10Array),
                                      Frame::Unvoiced(10, kK4Array)};
-  EXPECT_EQ(AddFades(frames, true),
+  EXPECT_EQ(AddFades(frames),
             (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
                                 Frame::Unvoiced(10, kK4Array),
                                 Frame::Repeat(7, 0), Frame::Repeat(4, 0),
@@ -98,7 +98,7 @@ TEST(FrameEndingsTest, FadeReplacesFollowingSilenceOnly) {
       Frame::Voiced(9, 30, kK10Array), Frame::Unvoiced(10, kK4Array),
       Frame::Silence(), Frame::Voiced(9, 30, kK10Array)};
   EXPECT_EQ(
-      AddFades(frames, true),
+      AddFades(frames),
       (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
                           Frame::Unvoiced(10, kK4Array), Frame::Repeat(7, 0),
                           Frame::Voiced(9, 30, kK10Array), Frame::Stop()}));
@@ -107,7 +107,7 @@ TEST(FrameEndingsTest, FadeReplacesFollowingSilenceOnly) {
 TEST(FrameEndingsTest, QuietUnvoicedEndNeedsNoFade) {
   const std::vector<Frame> frames = {Frame::Voiced(9, 30, kK10Array),
                                      Frame::Unvoiced(2, kK4Array)};
-  EXPECT_EQ(AddFades(frames, true),
+  EXPECT_EQ(AddFades(frames),
             (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
                                 Frame::Unvoiced(2, kK4Array), Frame::Stop()}));
 }

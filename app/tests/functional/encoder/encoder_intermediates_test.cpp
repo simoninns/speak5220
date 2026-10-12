@@ -8,6 +8,7 @@
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
  */
 
+#include <QByteArray>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -19,7 +20,6 @@
 #include <filesystem>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -35,6 +35,7 @@
 #include "core/encoder/quantiser.h"
 #include "core/encoder/repeat_search.h"
 #include "core/encoder/voicing_classifier.h"
+#include "core/lpc/frame.h"
 #include "core/lpc/frame_codec.h"
 #include "gtest/gtest.h"
 #include "support/encoder_golden.h"
@@ -338,7 +339,7 @@ TEST_P(EncoderIntermediatesTest, LevelsMatchReference) {
   core::encoder::LevelSetter setter(fft_);
   core::encoder::LevelStats stats;
   EXPECT_EQ(setter.SetLevels(final_plan, final_levels, enc["gain"].toDouble(),
-                             options_, &stats),
+                             &stats),
             JsonInts(enc["energies"].toArray()));
   EXPECT_EQ(stats.silenced, enc["silenced"].toInt());
   EXPECT_EQ(stats.limited, enc["limited"].toInt());
@@ -353,17 +354,14 @@ TEST_P(EncoderIntermediatesTest, EncodingMatchesReference) {
   ASSERT_TRUE(result.IsOk()) << result.GetStatus().ToString();
   ASSERT_TRUE(result->details.has_value());
   const QJsonObject enc = ref_["encode"].toObject();
-  const auto packed = core::lpc::FrameCodec::Pack(result->frames);
-  ASSERT_TRUE(packed.IsOk());
-  std::string hex;
-  for (const std::uint8_t b : *packed) {
-    constexpr std::string_view kDigits = "0123456789abcdef";
-    hex += kDigits[b >> 4];
-    hex += kDigits[b & 0xF];
-  }
-  EXPECT_EQ(hex, enc["frames_hex"].toString().toStdString());
-  EXPECT_EQ(static_cast<int>(result->frames.size()),
-            enc["frame_count"].toInt());
+  const QByteArray packed =
+      QByteArray::fromHex(enc["frames_hex"].toString().toLatin1());
+  const std::vector<core::lpc::Frame> reference =
+      core::lpc::FrameCodec::Parse(
+          std::vector<std::uint8_t>(packed.begin(), packed.end()))
+          .frames;
+  EXPECT_EQ(static_cast<int>(reference.size()), enc["frame_count"].toInt());
+  EXPECT_EQ(result->frames, ReferenceFrames(reference));
   ExpectClose(enc["gain"].toDouble(), result->details->gain, "gain");
   EXPECT_EQ(result->details->plan, PlanOf(enc["plan"].toArray()));
   EXPECT_EQ(result->details->energies, JsonInts(enc["energies"].toArray()));
