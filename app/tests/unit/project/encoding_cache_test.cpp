@@ -76,13 +76,32 @@ TEST(EncodingCacheTest, HashDependsOnAudioOptionsAndVersion) {
                                               encoder::kEncoderVersion));
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, defaults, "0.0.1"));
   encoder::EncoderOptions squelched;
-  squelched.squelch_db = 30.0;
+  squelched.preprocess.squelch_db = 30.0;
   const std::string squelched_hash =
       EncodingCache::SettingsHash(audio, squelched, encoder::kEncoderVersion);
   EXPECT_NE(hash, squelched_hash);
-  squelched.squelch_db = 24.0;
+  squelched.preprocess.squelch_db = 24.0;
   EXPECT_NE(squelched_hash, EncodingCache::SettingsHash(
                                 audio, squelched, encoder::kEncoderVersion));
+}
+
+// Every option counts, the preprocessing's as much as the encoder's.
+TEST(EncodingCacheTest, PreprocessingAndEncoderOptionsBothCount) {
+  const encoder::EncoderOptions defaults;
+  const std::vector<float> silence;
+  const std::string hash =
+      EncodingCache::SettingsHash(silence, defaults, encoder::kEncoderVersion);
+  encoder::EncoderOptions smoothed = defaults;
+  smoothed.voicing_min_run = 3;
+  encoder::EncoderOptions tilted = defaults;
+  tilted.preprocess.treble_tilt = 0.4;
+  encoder::EncoderOptions cut = defaults;
+  cut.preprocess.bass_cut_hz = 200.0;
+  for (const encoder::EncoderOptions& options : {smoothed, tilted, cut}) {
+    EXPECT_NE(
+        EncodingCache::SettingsHash(silence, options, encoder::kEncoderVersion),
+        hash);
+  }
 }
 
 TEST(EncodingCacheTest, PhraseWithoutAnEncodingIsNotCurrent) {

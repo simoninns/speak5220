@@ -12,6 +12,7 @@
 
 #include <spdlog/fmt/fmt.h>
 
+#include <cstdint>
 #include <set>
 #include <string>
 #include <string_view>
@@ -21,8 +22,10 @@
 #include "core/packaging/acorn_phrom.h"
 #include "core/packaging/phrom_image.h"
 #include "core/packaging/speak_external_stream.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
@@ -38,6 +41,7 @@ using testing::AudioPhrase;
 using testing::EncodedPhrase;
 using testing::LockedPhrase;
 using testing::ProjectWith;
+using testing::TestId;
 
 // Two PHROMs: A and B fill most of the first, C goes in the second.
 Project TwoPhroms() {
@@ -408,13 +412,18 @@ TEST_F(ProjectWavExportTest, EncodedIsTheSpeakerPinAt16Bits) {
       lpc::FrameCodec::Pack(project.Phrases()[0].encoding->frames);
   ASSERT_TRUE(packed.IsOk());
   synth::SynthResult spoken;
-  // 200 codes is beyond SPEAKER's +127, so it is clipped.
+  // 200 codes is beyond SPEAKER's +127, so it is clipped; every code goes
+  // through the DAC's uneven steps (synth::DacOutput()).
   spoken.samples = {-64, 0, 64 * 10, 64 * 200};
   EXPECT_CALL(synth_, Synthesize(::testing::ElementsAreArray(*packed),
                                  synth::SynthPath::kVsm))
       .WillOnce(::testing::Return(spoken));
-  const std::vector<float> expected = {-64 / 32768.0F, 0.0F, 640 / 32768.0F,
-                                       (64 * 127) / 32768.0F};
+  std::vector<float> expected;
+  for (const std::int16_t v :
+       synth::PinSamples(synth::OutputPin::kSpeaker, spoken.samples)) {
+    expected.push_back(static_cast<float>(v) / 32768.0F);
+  }
+  ASSERT_EQ(expected.back(), (64 * 127) / 32768.0F);
   EXPECT_CALL(codec_, Encode(::testing::ElementsAreArray(expected), 8000,
                              audio::WavOutputFormat::kPcm16))
       .WillOnce(::testing::Return(std::vector<std::uint8_t>{1, 2, 3}));
@@ -444,6 +453,52 @@ TEST_F(ProjectWavExportTest, OriginalIsTheSourceAt24Bits) {
   ASSERT_TRUE(files.IsOk()) << files.GetStatus().ToString();
   ASSERT_EQ(files->size(), 1U);
   EXPECT_EQ((*files)[0], (ExportedFile{.name = "src_B.wav", .bytes = {9}}));
+}
+
+// "preprocessed" is the source as each phrase's options preprocess it:
+// the project's defaults, and a phrase's own overrides.
+TEST_F(ProjectWavExportTest, PreprocessedIsTheSourceAsTheEncoderTakesIt) {
+  // Long enough for the bass cut.
+  Phrase longer = AudioPhrase(2, "B");
+  longer.audio.resize(400);
+  for (std::size_t i = 0; i < longer.audio.size(); ++i) {
+    longer.audio[i] = (i % 7 == 0) ? 0.5F : -0.1F;
+  }
+  Project project = ProjectWith({AudioPhrase(1, "A"), longer});
+  ProjectSettings settings = project.Settings();
+  settings.default_encoder.preprocess.treble_tilt = 0.4;
+  ASSERT_TRUE(project.SetSettings(settings).IsOk());
+  ASSERT_TRUE(
+      project.SetEncoding(TestId(2), {.overrides = {{"bass_cut_hz", "200"}}})
+          .IsOk());
+  for (int i = 0; i < 2; ++i) {
+    const Phrase& phrase = project.Phrases()[static_cast<std::size_t>(i)];
+    preprocess::PreprocessOptions options{.treble_tilt = 0.4};
+    if (i == 1) {
+      options.bass_cut_hz = 200.0;
+    }
+    const std::vector<double> samples =
+        preprocess::Preprocess(
+            std::vector<double>(phrase.audio.begin(), phrase.audio.end()),
+            options)
+            .samples;
+    EXPECT_CALL(codec_, Encode(::testing::ElementsAreArray(std::vector<float>(
+                                   samples.begin(), samples.end())),
+                               8000, audio::WavOutputFormat::kPcm24))
+        .WillOnce(::testing::Return(
+            std::vector<std::uint8_t>{static_cast<std::uint8_t>(i)}));
+  }
+  const StatusOr<std::vector<ExportedFile>> files = RunExport(
+      project, {.name = "p", .format = "wav", .audio = "preprocessed"}, "pre",
+      Tools());
+  ASSERT_TRUE(files.IsOk()) << files.GetStatus().ToString();
+  ASSERT_EQ(files->size(), 2U);
+  EXPECT_EQ((*files)[1], (ExportedFile{.name = "pre_B.wav", .bytes = {1}}));
+  // Like the original, it needs no current encoding.
+  EXPECT_TRUE(
+      CheckEncodingsCurrent(
+          project, {.name = "p", .format = "wav", .audio = "preprocessed"})
+          .IsOk());
 }
 
 TEST_F(ProjectWavExportTest, OriginalRefusesAPhraseWithNoAudio) {

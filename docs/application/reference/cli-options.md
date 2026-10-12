@@ -28,7 +28,7 @@ no command, `speak5220-cli` prints its name and version.
 | `new` | `PROJECT` | `--name`, `--output` | Creates an empty project. Fails if `PROJECT` exists |
 | `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
 | `encode` | `PROJECT` | `--force`, `--output` | Encodes the phrases whose frames are out of date, and saves |
-| `export` | `PROJECT` | `--output` (required), `--preset`, or `--format` with `--phrase`, `--layout`, `--licence`, `--audio` | Writes exported files into the `--output` directory. Every phrase exported must be encoded with its current settings, except for the original audio |
+| `export` | `PROJECT` | `--output` (required), `--preset`, or `--format` with `--phrase`, `--layout`, `--licence`, `--audio` | Writes exported files into the `--output` directory. Every phrase exported must be encoded with its current settings, except for the original or preprocessed audio |
 
 ## Command options
 
@@ -44,7 +44,7 @@ no command, `speak5220-cli` prints its name and version.
 | `--phrase` | a phrase name | `export --format` | Exports only this phrase; may be given more than once. Default: every phrase |
 | `--layout` | `separate` or `concatenated` | `export --format acorn-phrom` | One 16 KB file per PHROM (`NAME_1.bin`, `NAME_2.bin`, ...; the default), or all PHROMs in one file (`NAME.bin`) |
 | `--licence` | an SPDX licence identifier | `export --format c-header-phrom` or `c-header-speak-external` | The licence written in the header (default `GPL-3.0-or-later`) |
-| `--audio` | `encoded` or `original` | `export --format wav` | The chip's output (the default), or the phrase's 8 kHz source |
+| `--audio` | `encoded`, `original` or `preprocessed` | `export --format wav` | The chip's output (the default), the phrase's 8 kHz source, or that source with the phrase's [preprocessing](../user-manual/encoder.md#preprocessing) |
 
 ## Logging
 

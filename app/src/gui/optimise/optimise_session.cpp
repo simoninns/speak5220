@@ -24,6 +24,7 @@
 
 #include "core/encoder/encoder_options.h"
 #include "core/optimiser/optimiser.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
@@ -193,10 +194,11 @@ core::Status OptimiseSession::Start(const project::Project& project,
               project::EncodingCache::MakeEncoding(
                   phrase.audio, result.best->options, run->best_frames);
           // The search kept only the best's score; its figures are
-          // measured once more, against the source as it squelched it.
+          // measured once more, against the source as it aimed at it.
           if (core::StatusOr<core::quality::QualityAssessment> quality =
                   tools.quality->Assess(
-                      core::encoder::SquelchedSource(source, *options),
+                      core::preprocess::Preprocess(source, options->preprocess)
+                          .samples,
                       run->best_frames);
               quality.IsOk()) {
             encoding.quality = core::quality::ToCachedQuality(*quality);

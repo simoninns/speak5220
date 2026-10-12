@@ -5,7 +5,7 @@ programs that drive the TMS5220 themselves, as WAV files, or as a BBC
 Micro disc. Export
 writes the frames the project holds, so every phrase exported must be
 encoded with its current settings first. The only exception is a WAV export
-of the original audio. The byte layout of each format is in the
+of the original or preprocessed audio. The byte layout of each format is in the
 [export formats](../reference/export-formats.md) reference.
 
 ## The formats
@@ -15,7 +15,7 @@ of the original audio. The byte layout of each format is in the
 | **Acorn PHROM images** | One 16 KB image per PHROM the phrases fill, as separate files or one concatenated file | A PHROM in a BBC Micro's speech system, or an emulator (datasheet §12.8) |
 | **C header, PHROM images** | One `.h` file with each image as an array, and a table of every phrase's PHROM, word number, offset and length | Firmware that reads PHROM images from its own memory |
 | **C header, Speak External streams** | One `.h` file with each phrase's bytes as an array, ready to write to the chip with Speak External, with its length and a table | Firmware that speaks phrases with Speak External (datasheet §12.9) |
-| **WAV audio** | One WAV file per phrase: the chip's output (16-bit, 8 kHz) or the phrase's 8 kHz original (24-bit) | Listening, comparing, or using the sound elsewhere |
+| **WAV audio** | One WAV file per phrase: the chip's output (16-bit, 8 kHz), or the phrase's 8 kHz original or [preprocessed](encoder.md#preprocessing) recording (24-bit) | Listening, comparing, or using the sound elsewhere |
 | **BBC Micro disc** | One double-sided DFS disc image (`.dsd`) holding the phrases of up to 8 PHROMs and a player program | Speaking the phrases on a BBC Micro with the speech system; see [BBC Micro disc](bbc-disc.md) |
 
 The PHROM images, and the PHROM header, hold the phrases in PHROM order:
@@ -27,7 +27,8 @@ numbers can differ from the whole project's.
 
 The encoded WAV audio is what the chip's SPEAKER pin gives through the
 VSM path, as the encoded waveform shows it with the Audio menu at its
-defaults: no output filter, and loud samples clipped by the DAC. Its
+defaults: no output filter, and each sample through the DAC, which
+clips loud samples and has the real DAC's uneven steps. Its
 length is the chip's whole output for the phrase, from the first frame
 until the output has been quiet for a while.
 
@@ -41,7 +42,7 @@ until the output has been quiet for a while.
 | Phrases | **All phrases**, or **Selected phrases**: those selected in the phrase list when the dialog opened |
 | Layout | Acorn PHROM images: **One file per PHROM** (`NAME_1.bin`, `NAME_2.bin`, ...) or **All PHROMs in one file** (`NAME.bin`) |
 | Licence | C headers: the SPDX licence identifier written at the top of the header. Empty for `GPL-3.0-or-later` |
-| Audio | WAV: **Encoded** (the chip's output) or **Original** (the 8 kHz source) |
+| Audio | WAV: **Encoded** (the chip's output), **Original** (the 8 kHz source) or **Preprocessed** (the source as the phrase's [preprocessing](encoder.md#preprocessing) prepares it for the encoder) |
 | Name | What the files are named after: `NAME.h`, `NAME_1.bin`, `NAME_HELLO.wav`. It starts as the project file's name |
 | Folder | Where the files are written. **Browse...** chooses it. It starts as the project's folder, then the last folder exported to |
 

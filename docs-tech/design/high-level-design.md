@@ -23,13 +23,14 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
 | `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
+| `s5core`: `preprocess/` (the squelch, bass cut and treble tilt before encoding, and their presets) | Implemented (§8, plan Phase 11) |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality, BBC BASIC II tokenisations, output hashes) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`, `bbc/`, `benchmark/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original (or preprocessed) and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
@@ -84,6 +85,8 @@ app/
                                 SOS/FIR filters and their constants,
                                 NumPy-ordered sums and windows, LPC analysis,
                                 the squelch
+      preprocess/               Preprocess(), PreprocessOptions and the
+                                presets (§8)
       encoder/                  Encoder and its stages, EncoderOptions (§8)
       quality/                  the quality measures, the adapters over
                                 libfvad and SPTK, the overall score,
@@ -339,7 +342,7 @@ Plan §2.2, with the names as built.
 | `Tms5220`, `Tms6100`, `ChipDriver` | **Implemented** (`core/emulator/`): §7 |
 | `Synth` (`ISynth`) | **Implemented** (`core/synth/synth`): §7 |
 | `ReferenceSynthesizer` | **Implemented** (`core/synth/reference_synthesizer`): the encoder's reference-algorithm synthesiser (`synthesize()` in the Python), which matches the emulator's VSM path |
-| `OutputPin`, `PinSamples()`, `ClippedSamples()` | **Implemented** (`core/synth/output_pin`): the encoded audio from the SPEAKER pin, each code clipped to the DAC's −128…+127 (`emulator::kDacMin`, `kDacMax`), or from the I/O pin's unclipped 10-bit codes, for listening and display only (§16) |
+| `OutputPin`, `PinSamples()`, `ClippedSamples()` | **Implemented** (`core/synth/output_pin`): the encoded audio from the SPEAKER pin, each code clipped to the DAC's −128…+127 (`emulator::kDacMin`, `kDacMax`) and converted by `DacOutput()` with the DAC's measured bit weights (datasheet §8.2, Table 8-2; the step between −1 and 0 is about six steps), or from the I/O pin's unclipped 10-bit codes, for listening and display only (§16) |
 | `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's |
 | `CHeader` | **Implemented** (`core/packaging/c_header`): PHROM images or Speak External streams as a C header (§18) |
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
@@ -357,6 +360,7 @@ Plan §2.2, with the names as built.
 | `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
+| `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the squelch, bass cut and treble tilt that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `QualityAssessor` (`IQualityAssessor`), `OverallQualityMetric` (`IQualityMetric`), `ScoreQuality()` | **Implemented** (`core/quality/`): the quality measures, the overall score and the rating (§9) |
 | `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best overall quality score, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
@@ -439,6 +443,32 @@ sink and observer mocked.
 `tms5220enc.py`'s `encodeDetailed()` function by function; each C++
 function's comment names its Python original.
 
+**Three stages** (plan Phase 11). A phrase is shown and measured as the
+original recording, the **preprocessed** recording made from it, and the
+encoding of that. `core/preprocess/` holds the preprocessing, which the
+reference does not have: `PreprocessOptions` (`squelch_db`,
+`bass_cut_hz`, `treble_tilt`, all off by default) and `Preprocess()`,
+which squelches the original (`dsp::Squelch()`), then cuts its bass
+(`ButterworthHighPass()`, an order-2 Butterworth high-pass designed as
+`scipy.signal.butter()` does, run forwards and backwards: −6 dB at the
+cut, 24 dB per octave below it), then lifts its treble (1 − μz⁻¹). It
+returns two signals: `samples`, the preprocessed recording, and
+`voicing`, the squelched recording before the filters.
+`PreprocessPresets()` gives the GUI's presets, *None* and *BBC Micro*
+(200 Hz, 0.4; §9, "Voicing and source shaping, from Acorn's PHROM"), and
+`MatchingPreset()` the preset some options match. Everything that
+measures an encoding (the quality measures in the GUI, Optimise, the
+corpus checks) compares it with `Preprocess(...).samples`.
+
+The preprocessing options are part of `EncoderOptions`, as its
+`preprocess` member, so a phrase's settings stay one value: one set of
+defaults, one set of overrides, one settings hash and one undoable step.
+`EncoderOptionInfos()` marks each option's stage (`OptionStage`), which
+the settings form, the project file and the documentation group by.
+`IEncoder::Encode()` takes the original and preprocesses it itself, so
+every caller encodes the same way; the stages work on the preprocessed
+recording as below.
+
 **Stages.** `Encoder` (`IEncoder`) composes five injected stages, in the
 order of `encodeDetailed()`. `MakeEncoder()` returns one with the standard
 stages over `PocketFft`.
@@ -447,7 +477,7 @@ stages over `PocketFft`.
 |---|---|---|
 | `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
 | `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
-| `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix |
+| `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix. `SmoothVoicingRuns()`, which the reference does not have, then removes islands shorter than `voicing_min_run` frames (below) |
 | `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
 | `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the peak limiter at 120 and the safety net |
 
@@ -457,9 +487,21 @@ frames with `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`,
 from `_toFrames()`, `_guardK510()` and `_addFades()`), and last quietens
 the pauses (`QuietPauses()`, below), which the reference does not do. Before the levels are set, with `resonance_hold_db`, it holds
 resonant filters through a fade (`HoldResonantFilters()`, in
-`repeat_search`; below), which the reference does not have either. The quantisers
+`repeat_search`; below), which the reference does not have either. Two
+more steps the reference does not have come between the voicing and the
+features. `SmoothVoicingRuns()` gives a run of voiced or unvoiced frames
+shorter than `voicing_min_run`, with the other kind on both sides, its
+neighbours' voicing: unvoiced islands first, with the mean of the
+neighbours' periods, then voiced islands. The segmentation, pitch and
+voicing are found in the preprocessed recording before its filters
+(`voicing`); with `bass_cut_hz` or `treble_tilt` set, the preprocessed
+recording (`samples`) is segmented again, and the features take its
+high-passed signal, gate and loudest level, while the extent, the frame
+centres, the pitch and the voicing stay as before. Brightening the
+recording first and finding the voicing in it made 70% of one phrase's
+frames unvoiced, heard as noise on a BBC Micro. The quantisers
 (`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
-fixed filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
+filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
 `encoder_filters`.
 
 The plan names four stage interfaces. `IFrameAnalyser` is a fifth, so the
@@ -473,26 +515,32 @@ the plan, the shaped levels, the energies and the limiter's statistics.
 options outside their ranges (`ValidateEncoderOptions()`).
 
 **Options.** `EncoderOptions` has 9 of the 15 options of `tms5220enc.py`
-`DEFAULTS`, and two the reference does not have: the squelch
-(`squelch_db`, off by default) and the resonance hold
-(`resonance_hold_db`, 14 dB by default). The reference's other six are
+`DEFAULTS`, and five the reference does not have: the three
+preprocessing options (`preprocess`, above, all off by default), the
+resonance hold (`resonance_hold_db`, 14 dB by default) and the voicing
+smoothing (`voicing_min_run`, 2 frames by default). The reference's other six are
 fixed at its defaults, since moving them made no difference worth keeping
 over the corpus or did what another option does (§9, "Fixed options"):
 `targetPeak` unset (the level comes from `target_rms`), `peakLimit` 120
 (`kPeakLimit`, in `level_setter`), `repeats` on (`kMaxRepeatRun`),
 `iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on and `compression` 1
 (off). Quiet pauses, once an option, are always on. The defaults are the
-reference's but for four chosen on the corpus for the overall quality
-score (§9, "Default settings"): `target_rms` 24, `window` 256,
-`voicing_evidence` 5 and `level_agc` 1.25. The reference data is compared
-with the reference's own defaults written out and the resonance hold off
+reference's but for five (§9, "Default settings"): `target_rms` 24,
+`window` 256, `voicing_evidence` 5 and `level_agc` 1.25, chosen on the
+corpus for the overall quality score, and `voicing_threshold` 0.4, chosen
+with `voicing_min_run` against Acorn's PHROM. The reference data is
+compared with the reference's own defaults written out (`voicing_threshold`
+0.3 among them) and the options it does not have off
 (`ReferenceEncoderOptions()` in the test support, §13), and with the
 reference's frames with their pauses quietened (`ReferenceFrames()`), so
 it does not depend on the application's defaults. `EncoderOptionInfos()`
-gives each one's key (the Python name, or `squelchDb` and
-`resonanceHoldDb` in its style), label, help text, type, range and
-default, for the GUI's settings form and for project files, and marks the
-options the GUI shows only with its advanced settings (`advanced`).
+gives each one's key (the Python name, or one in its style, such as
+`squelchDb`, for an option it does not have), label, help text, type,
+range and default, for the GUI's settings form and for project files,
+its stage (`stage`), and marks the encoder options the GUI shows only
+with its advanced settings (`advanced`). An option that a value turns
+off names it (`off_text`: `treble_tilt` 0, `voicing_min_run` 1), for the
+GUI to show as "off". The preprocessing options come first.
 The ranges are the application's own; Python had none.
 
 **Quiet pauses** (datasheet §12.2, "Silence inside an utterance rings";
@@ -556,13 +604,14 @@ Optimise does not search it.
 
 **The squelch.** Breaths and room noise 20 to 35 dB down sit above the
 encoder's 45 dB gate, so the encoder reproduces them; PESQ, the measure
-when the squelch was added, even rewarded it. When `squelch_db` is set, `SquelchedSource()` (`dsp::Squelch()`)
-mutes the source's stretches more than that many dB below its loudest
+when the squelch was added, even rewarded it. When `squelch_db` is set,
+the preprocessing's first step (`dsp::Squelch()`) mutes the source's
+stretches more than that many dB below its loudest
 10 ms block (blocks every 2.5 ms), keeping 60 ms after the sound and
 10 ms before it so word endings and onsets survive, with 5 ms ramps so
 the cut makes no click. The encoder applies it before its first stage,
-and every measurement against the source uses the same squelched source:
-`MeasureFrames()` and the `Optimiser`'s candidates. The quality measures
+and every measurement against the source uses the same preprocessed
+source: `MeasureFrames()` and the `Optimiser`'s candidates. The quality measures
 leave out what their voice activity mask does not count as speech, so a
 muted breath is not asked of an encoding. The squelch is not searched by
 Optimise, since scores against differently squelched sources do not
@@ -642,8 +691,8 @@ the project caches the figures with each encoding (§14, §17).
 
 **Preparing the signals** (plan §3.3's six steps, as fixed in Phase 8):
 
-1. The original is the source as given to the encoder (squelched when the
-   squelch is on), at 8 kHz.
+1. The original is the source as the encoder aims at it: the phrase's
+   recording preprocessed (`Preprocess()`, §8), at 8 kHz.
 2. The chip's output is spoken through the VSM path and placed against the
    source by `RenderEncodedAudio()`, with its idle code taken as 0, which
    removes the chip's DC offset.
@@ -815,6 +864,62 @@ against 0.0105, one core). Optimise from them took 5 % longer (1.72 s per
 second of speech on 16 threads, against 1.64), trying a median of 310
 candidates against 294.
 
+**Voicing and source shaping, from Acorn's PHROM** (2026-10-12; §8).
+Encoded phrases sounded rougher and noisier than Acorn's own PHROM phrases
+on every playback path. Acorn's phrases were re-encoded from the chip's
+output (bench captures of 164 words of PHROM A, which the chip can
+reproduce exactly), so their frames are the ground truth for that audio:
+the encoder scored a median of 0.890 on them, against 0.668 on the ARCTIC
+recordings, so the method is sound, but it changed between voiced and
+unvoiced 3.8 times a second where the PHROM does 1.6, and called 14.6 %
+of the PHROM's voiced audio unvoiced (40 % of that inside vowels: bursts
+of hiss). Raising `voicing_threshold` and removing short islands of
+voicing (`SmoothVoicingRuns()`) moved it towards the PHROM:
+
+| On Acorn's PHROM, re-encoded | Voicing changes per second | Unvoiced frames | Median score (worst tenth) |
+|---|---|---|---|
+| The PHROM's own frames | 1.6 | 19 % | — |
+| `voicing_threshold` 0.3 (old default) | 3.8 | 30 % | 0.890 (0.588) |
+| 0.4 | 3.2 | 26 % | 0.915 (0.670) |
+| 0.4, `voicing_min_run` 2 (the defaults) | 2.7 | 27 % | 0.928 (0.695) |
+| 0.4, `voicing_min_run` 3 | 2.2 | 26 % | 0.934 (0.739) |
+
+Over the corpus of 243 recordings (`OptionsCorpusCheck`):
+
+| Option set | Median, mean score | 10th percentile | Good / Poor | Files up / down by over 0.005 | Total size |
+|---|---|---|---|---|---|
+| Old defaults (0.3, smoothing off) | 0.718, 0.709 | 0.577 | 138 / 9 | — | 100,358 bytes |
+| `voicing_threshold` 0.4 | 0.724, 0.712 | 0.584 | 141 / 9 | 61 / 37 | 101,239 bytes |
+| 0.4, `voicing_min_run` 2 (the defaults) | 0.722, 0.712 | 0.584 | 140 / 9 | 65 / 49 | 101,566 bytes |
+| 0.4, `voicing_min_run` 3 | 0.714, 0.706 | 0.577 | 131 / 10 | 65 / 91 | 102,351 bytes |
+| 0.4, smoothing off, `bass_cut_hz` 200, `treble_tilt` 0.4 (scored against the preprocessed source) | 0.709, 0.704 | 0.581 | 128 / 9 | 95 / 127 | 102,072 bytes |
+
+So `voicing_threshold` became 0.4 and `voicing_min_run` 2, agreed with
+the user: 3 comes nearer the PHROM but lowers more corpus scores than it
+raises. The reference data is unchanged, since it is compared with the
+reference's 0.3 and the smoothing off (§13).
+
+The source shaping copies what the PHROM's frames show of how Acorn's
+phrases were made. Their long-term spectrum, against the ARCTIC recordings
+of a similar voice, has about 11 dB less at 125 Hz and up to 5 dB more
+treble (a fit: an order-2 high-pass at 200 Hz and 1 − 0.4z⁻¹, 3.7 dB RMS
+residual), and their vowels are driven at a median energy of 55 against
+23. A BBC Micro's speech path cuts the bass (279 Hz, first order;
+measured on a BBC Micro to within about 1 dB, §16), so speech that keeps it is
+quieter there, and its quiet frames are mostly the DAC's −1 to 0 step
+(§16, datasheet §8.2). On the ARCTIC phrases, 200 Hz and 0.4 cut the
+quiet frames (energy 4 or less) from 25 % to 15 % and raised the vowels
+above 300 Hz by about 1 dB. A first try that shaped the source before the
+whole encoder turned 70 % of the frames unvoiced (the brighter sound
+fooled the voicing), hence pitch and voicing from the source before the
+filters. The bass cut and tilt are off by default: they score a little
+lower against their own target, and are for a small speaker, not for
+every use. They are offered as the *BBC Micro* preprocessing preset (§8,
+"Three stages"). They were first encoder options, scored against a
+source the GUI did not show, so making a phrase clearer on a BBC Micro
+seemed to lower its score; the preprocessing stage (plan Phase 11) makes
+what the score compares against visible and audible.
+
 **The resonance hold** (2026-10-12; §8). Thresholds of 8 to 20 dB were
 scored over the corpus with the other defaults; the score measures
 neither pops nor their absence, so the threshold was chosen by ear on
@@ -965,7 +1070,7 @@ The GUI's undo/redo wraps the same operations (§15).
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
-- Not yet: the GUI preferences for these options (Phase 11).
+- Not yet: the GUI preferences for these options (Phase 12).
 
 ---
 
@@ -1121,8 +1226,9 @@ budget then stays inside it whatever is done to it.
 
 **Encoding cache** (plan §3.4). `EncodingCache::SettingsHash()` is the
 SHA-256 of the encoder version, every option's text in
-`EncoderOptionInfos()` order (the options in effect, so an override equal
-to a new default keeps an encoding current), and the audio's 24-bit codes.
+`EncoderOptionInfos()` order, the preprocessing's and the encoder's (the
+options in effect, so an override equal to a new default keeps an
+encoding current), and the audio's 24-bit codes.
 `IsCurrent()` compares it, and the version, with the stored encoding; a
 locked phrase is always current. `ChangeSettings()` encodes with the new
 overrides and stores them through `SetEncoding()`, which refuses a result
@@ -1175,14 +1281,23 @@ gives the same values as before.
 - **Versions.** `format` must be `speak5220-project`; `version` is migrated
   by `MigrateProjectDocument()` through `ProjectMigrationSteps()` (none yet:
   version 1 is the first), and a newer version is refused.
+- **Two options mappings** (plan Phase 11). The options of each stage
+  (`EncoderOptionInfo::stage`) are written in their own mapping:
+  `project.default_preprocess` and `project.default_encoder`, and a
+  phrase's `preprocess` and `encoder` overrides, which are one
+  `EncoderOverrides` map in memory, split by stage when written.
+  `ReadOptionsMapping()` refuses an option in the other stage's mapping,
+  naming the mapping it belongs under, and keeps unknown keys per
+  mapping (`default_preprocess_unknown`, `preprocess_unknown`).
 - **Every option listed.** After the rest of the file is read,
   `CheckEveryOptionListed()` refuses a project whose
-  `project.default_encoder` is missing or lacks an option, naming the
-  missing ones. Before the application's first release the format
-  changed without a new version (plan Phase 8, task 14): the squelch and
-  quiet pauses were left out while at their defaults, and are now always
-  written, so a project saved before is refused rather than read with
-  whatever the defaults have become.
+  `project.default_preprocess` or `project.default_encoder` is missing or
+  lacks an option of its stage, naming the missing ones. Before the
+  application's first release the format changes without a new version
+  (plan Phase 8, task 14, and Phase 11): the squelch and quiet pauses
+  were once left out while at their defaults, and the preprocessing
+  options were once in `default_encoder`, so a project saved before is
+  refused rather than read with whatever the defaults have become.
 - Phrase ids must be canonical lower-case UUIDs before they are used as
   paths.
 
@@ -1365,8 +1480,9 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   (`RecentFiles`, at most eight, newest first) is kept through
   `IRecentFilesStore` (`SettingsRecentFilesStore`, `QSettings` under the
   organisation and application name "Speak5220"). What the user chose to
-  see and hear (whether the encoder panel shows its advanced settings, and
-  the output filter chosen in the **Audio > Output Filter** menu, by its
+  see and hear (whether the encoder panel shows its advanced settings,
+  whether the top waveform shows the preprocessed recording, and the
+  output filter chosen in the **Audio > Output Filter** menu, by its
   `OutputFilterInfo::key`, and the pin chosen in **Audio > Chip Output**,
   by its `OutputPinInfo::key`) is kept the same way through
   `IViewPreferences` (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()`
@@ -1478,13 +1594,28 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   level gain. The original is never filtered.
 - **Output pin.** The encoded audio is taken from the SPEAKER pin by
   default (`PhraseWaveforms::SetOutputPin()`): `PinSamples()` clips each
-  code to the DAC's range before the level gain, as the chip clips before
-  its analogue output, and the note gives `ClippedSamples()` when any are
+  code to the DAC's range and converts it with the DAC's measured steps
+  (`DacOutput()`) before the level gain, as the chip does before its
+  analogue output, and the note gives `ClippedSamples()` when any are
   clipped. With the I/O pin the 10-bit codes are shown and played
   unclipped, and the note says so. The level gain is measured on the
   unclipped codes, so it is the same for both pins. A change redraws as
-  for the filter. The quality measure, the encoder and exports always use
-  the unclipped codes.
+  for the filter. The quality measure and the encoder always use the
+  unclipped codes; a WAV export always uses the SPEAKER pin.
+- **Checked on a BBC Micro** (2026-10-12). A BBC Micro Model B with the
+  speech system was recorded at its speaker pins playing a disc of test
+  phrases (a 200 Hz tone, buzz, noise, energy and pitch steps, silence,
+  and encodings), against bench captures of the same streams. With the
+  recorder's low-cut off, the response matched the BBC Micro filter to
+  within about 1 dB from 100 Hz to 2 kHz, and fell 2.9 dB by 3.15 kHz, as
+  the DAC's held samples do; so the filter stayed as it is. The energy
+  steps showed the DAC's −1 to 0 step: steps whose codes cross it (2, 3,
+  5 and 7) came out 4 to 11 dB louder than with an ideal DAC. With
+  `DacOutput()` the BBC playback chain matches the recorded steps to
+  within about 1 dB from step 2 up (step 1 is under the BBC's noise
+  floor), against 5.5 dB RMS before. That BBC Micro's chip ran at
+  601 kHz, 6 % low (its clock is set by a trimmer); its pitch steps fell
+  exactly on Table 8-5's periods at that clock.
 - **Shared time axis.** The panes are stacked with equal stretch, so the
   views are the same size. Both scroll over the union of their content extents, and each
   view's `AxisChanged()` sets the same axis on the other (a flag stops the
@@ -1495,21 +1626,37 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   zoom and fit buttons and the scroll bar act on the original's view (the
   encoded view's when there is no original), and the other follows; the
   scroll bar follows either view.
-- **Squelch shading.** `EncoderPanel::ShownSquelch()` is the squelch the
-  phrase shown would be encoded with as the form has it, edits not yet
-  applied included (in the defaults scope, the form's defaults under the
-  phrase's overrides; none for no phrase, a locked one or one without
-  audio). `UpdateView()` emits `SquelchChanged()` when it changes, and the
-  main window passes it to `PhraseWaveforms::SetSquelch()`, so the shading
-  follows the slider at once, before the 600 ms debounce. `PhraseWaveforms`
-  finds the stretches `encoder::SquelchedSpans()` lowers (gain under 1)
-  when the squelch or the phrase changes, gives them to the original's
-  `WaveformView::SetShading()`, and sets the original pane's note
-  ("squelch 30 dB: shaded stretches are muted", or that nothing is quiet
-  enough). The view veils them with the base colour at alpha 170 over the
-  waveform, so it is dimmed, not hidden, and hatches them with the
-  palette's Mid colour, so they read without colour; hovering says they
-  are squelched. The audio shown and played is the recording as imported.
+- **Original or preprocessed** (plan Phase 11). The top pane shows the
+  original or the preprocessed recording, as two exclusive buttons in its
+  heading choose (`WaveformPane::AddHeadingWidget()`;
+  `SetPreprocessedShown()`, signalled by `PreprocessedShownChanged()` and
+  kept by the main window in `IViewPreferences`). Its title and play
+  button name what it shows, and it plays what it shows
+  (`TopSamples()`). `EncoderPanel::ShownPreprocessing()` is the
+  preprocessing the phrase shown would be encoded with as the form has
+  it, edits not yet applied included (in the defaults scope, the form's
+  defaults under the phrase's overrides; none for no phrase, a locked one
+  or one without audio). `UpdateView()` emits `PreprocessingChanged()`
+  when it changes, and the main window passes it to
+  `PhraseWaveforms::SetPreprocessing()`, so the pane follows the sliders
+  at once, before the 600 ms debounce. `UpdatePreprocessed()` runs
+  `Preprocess()` again (milliseconds for a phrase), scaled down to full
+  scale if a treble tilt takes it past (`preprocessed_gain_`, named in the
+  note); switching or a new preprocessing redraws the pane keeping its
+  extent and axis (`RedrawTop()`) and stops the top pane's playback. The
+  encoded pane's heading is given the buttons' height
+  (`SetMinimumHeadingHeight()`), so the two views stay the same height.
+- **Squelch shading.** On the original, `PhraseWaveforms` finds the
+  stretches `preprocess::SquelchedSpans()` lowers (gain under 1) when the
+  squelch or the phrase changes, gives them to the original's
+  `WaveformView::SetShading()`, and sets the pane's note ("squelch 30 dB:
+  shaded stretches are muted", or that nothing is quiet enough). The view
+  veils them with the base colour at alpha 170 over the waveform, so it
+  is dimmed, not hidden, and hatches them with the palette's Mid colour,
+  so they read without colour; hovering says they are squelched. On the
+  preprocessed recording they are silent, and the note names the
+  preprocessing instead ("squelch 30 dB, bass cut 200 Hz, treble tilt
+  0.4").
 - **Play start.** A click asks for the marker at that source sample;
   `PhraseWaveforms` rounds and limits it to the audio and applies
   `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
@@ -1639,8 +1786,9 @@ the phrase's options and is in two stages:
    their ranges. Plan §3.3 mentions Nelder–Mead as an alternative for the
    continuous options; plain coordinate steps suffice so far.
 
-The squelch is never varied: every candidate keeps the start's, and is
-scored against the source squelched by it, computed once per search.
+The preprocessing is never varied: every candidate keeps the start's,
+and is scored against the source preprocessed by it, computed once per
+search.
 
 At most 400 evaluations and 10 rounds (`SearchPlan`). Options already tried
 are not tried again (keyed by every option's text). Each candidate is
@@ -1678,7 +1826,7 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
 - For a phrase, the change becomes `OverridesFor(defaults, options)` and
   an encoding job on the `ITaskRunner`: `EncodePhrase()` encodes, then
   `MeasureFrames()` assesses the quality (`IQualityAssessor`) against the
-  source as the phrase's squelch leaves it (`SquelchedSource()`), and
+  source as the phrase's preprocessing leaves it (`Preprocess()`), and
   finds the peak code (the frames spoken through
   the shared, cached `ISynth`, which the waveforms then reuse). The result
   comes back queued and is stored with `SetEncoding()`, the quality's
@@ -1694,12 +1842,17 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
 - The limiter's activity (`LevelStats`) comes from the encoder's details,
   so it is known only for encodings made in the session.
 
-**The settings form.** One row per `EncoderOptionInfo`, in two columns:
-first the five basic options (target RMS, repeat trade-off, squelch,
-pre-emphasis, voicing threshold: the ones with the clearest effect on the
-sound or the size, among them four of the five options Optimise's grid
-searches, all but the voicing evidence), then a checkable `QToolButton`,
-then the six with `advanced` set, in the same grid so the columns line up. The advanced rows
+**The settings form.** One row per `EncoderOptionInfo`, in two columns,
+in three groups, each under a heading row of one grid so the columns
+line up: the preprocessing options under "Preprocessing", with a chooser
+of `PreprocessPresets()` and "Custom" (`PresetBox()`); the encoder's four
+basic options under "Encoder" (target RMS, repeat trade-off,
+pre-emphasis, voicing threshold: the ones with the clearest effect on
+the sound or the size, among them four of the five options Optimise's
+grid searches, all but the voicing evidence); then a checkable
+`QToolButton` and the seven with `advanced` set. Choosing a preset sets
+`options_.preprocess` and signals `Edited()` once if that changes it;
+after any change the chooser shows `MatchingPreset()`, or "Custom". The advanced rows
 are hidden until the button is down; the button counts the advanced rows
 that differ from the baseline ("Advanced settings (2 changed)"), so a
 hidden change is never missed, and hidden options still apply.
@@ -1714,7 +1867,7 @@ window in milliseconds; a ratio reads "off" at 1). Its positions are the
 typical range in steps; a value outside it widens the range to include
 it, and a value off the steps is shown exactly and kept until the slider
 moves. Real and whole-number options get a slider; the optional ones
-(the squelch, the resonance hold) a check box and a slider; the pre-emphasis
+(the squelch, the bass cut, the resonance hold) a check box and a slider; the pre-emphasis
 a chirp/first-order chooser and a slider for μ. Values are read back
 through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
 options it was given and changes only the edited one.
@@ -1826,9 +1979,10 @@ stale frames, or a change waiting.
   step; the defaults scope; a refused change; the quality stored with
   the encoding, and cached quality shown without measuring; the rating's
   text, components, figures, tooltip and marks; the squelch turned on by
-  its check box, and a squelched phrase measured against its squelched
-  source; the squelch
-  reported as the form has it and shaded on the original waveform; the mark's contrast with every band in light and dark;
+  its check box; a phrase measured against its preprocessed source (the
+  squelch, and the BBC Micro preset); the preprocessing reported as the
+  form has it, shown on the waveform and shaded on the original; the
+  preset chooser; Reset restoring both sections; the mark's contrast with every band in light and dark;
 - GUI unit tests of Optimise with inline runners: accepting is one
   undoable step, Optimise all runs in list order and leaves out locked
   phrases, the history, the byte limit, and cancelling leaves the
@@ -1870,7 +2024,7 @@ RunExport(project, preset, base, ExportTools)
 `name`, `format`, `scope`, and as the format needs them `phrases` (scope
 `selected`), `layout` (`acorn-phrom`), `licence` (the C headers) and
 `audio` (`wav`). The serializer writes only the keys that are set; the
-format version stays 1, since older files read unchanged and an older
+presets did not need a new format version, since older files read unchanged and an older
 Speak5220 keeps the new keys as unknown keys. `CheckExportPreset()`
 refuses an unknown format or scope, a bad value, and an option the format
 does not take, so a mistyped preset fails rather than being half applied.
@@ -1902,7 +2056,8 @@ takes, for the dialog and the checks.
   else does, so names cannot clash whatever the phrases are called. There
   is no date (below).
 - **WAV.** `encoded`: the packed frames spoken through `ISynth`'s VSM
-  path, each sample through `PinSamples(kSpeaker)` (the DAC's clipping),
+  path, each sample through `PinSamples(kSpeaker)` (the DAC's clipping and
+  measured steps),
   as 16-bit PCM at 8 kHz: the encoded waveform with the Audio menu at its
   defaults. `original`: the phrase's audio as held, 24-bit, so it
   round-trips exactly. Both go through `IWavCodec` into bytes, so

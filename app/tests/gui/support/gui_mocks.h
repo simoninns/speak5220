@@ -71,6 +71,8 @@ class FakeViewPreferences : public app::IViewPreferences {
  public:
   bool AdvancedSettingsShown() override { return advanced_shown; }
   void SetAdvancedSettingsShown(bool shown) override { advanced_shown = shown; }
+  bool PreprocessedShown() override { return preprocessed_shown; }
+  void SetPreprocessedShown(bool shown) override { preprocessed_shown = shown; }
   core::dsp::OutputFilter ChosenOutputFilter() override { return filter; }
   void SetOutputFilter(core::dsp::OutputFilter chosen) override {
     filter = chosen;
@@ -79,6 +81,7 @@ class FakeViewPreferences : public app::IViewPreferences {
   void SetOutputPin(core::synth::OutputPin chosen) override { pin = chosen; }
 
   bool advanced_shown = false;
+  bool preprocessed_shown = false;
   core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
 };

@@ -40,6 +40,7 @@ inline constexpr std::string_view kLayoutSeparate = "separate";
 inline constexpr std::string_view kLayoutConcatenated = "concatenated";
 inline constexpr std::string_view kAudioEncoded = "encoded";
 inline constexpr std::string_view kAudioOriginal = "original";
+inline constexpr std::string_view kAudioPreprocessed = "preprocessed";
 // The licence of a generated C header when the preset names none.
 inline constexpr std::string_view kDefaultCHeaderLicence = "GPL-3.0-or-later";
 
@@ -127,11 +128,14 @@ StatusOr<std::vector<bbc::BbcDiscPhrom>> BuildBbcDiscPhroms(
 // - wav: "<base>_<identifier>.wav" per phrase, with the phrase's C
 //   identifier (plan §4). "encoded" is the chip's SPEAKER output through
 //   the VSM path, 16-bit at 8 kHz; "original" the phrase's 8 kHz source,
-//   24-bit, as the project holds it.
+//   24-bit, as the project holds it; "preprocessed" that source
+//   preprocessed by the phrase's options (preprocess::Preprocess()),
+//   24-bit, clipped at full scale.
 // - bbc-dsd: "<base>.dsd", the BBC Micro disc (BuildBbcDiscPhroms(),
 //   bbc::BbcDisc), titled with the project's name.
 // Fails as CheckExportBase(), CheckExportPreset() and PhrasesInScope(), for a
-// phrase with no frames (or no source audio, for "original"), as
+// phrase with no frames (or no source audio, for "original" and
+// "preprocessed"), as
 // BuildAcornPhroms() and BuildBbcDiscPhroms(), and for wav without `tools`.
 // Speaking phrases takes milliseconds per second of speech, so a WAV export is
 // not run on the GUI thread. Thread-safe if the tools are.

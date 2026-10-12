@@ -23,6 +23,7 @@
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
 #include "core/lpc/frame_codec.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/quality/cached_quality.h"
@@ -41,8 +42,10 @@ EncodingFacts MeasureFrames(const EncodingTools& tools,
                             const core::encoder::EncoderOptions& options,
                             const std::vector<core::lpc::Frame>& frames) {
   EncodingFacts facts;
-  const std::vector<double> source = core::encoder::SquelchedSource(
-      std::vector<double>(audio.begin(), audio.end()), options);
+  const std::vector<double> source =
+      core::preprocess::Preprocess(
+          std::vector<double>(audio.begin(), audio.end()), options.preprocess)
+          .samples;
   if (core::StatusOr<core::quality::QualityAssessment> quality =
           tools.quality->Assess(source, frames);
       quality.IsOk()) {

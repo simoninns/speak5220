@@ -53,8 +53,8 @@ class EncodingCache {
   explicit EncodingCache(encoder::IEncoder& encoder);
 
   // The SHA-256 identifying an encoding's inputs: the encoder version,
-  // every option's text in EncoderOptionInfos() order, and the audio's
-  // 24-bit codes. Pure.
+  // every option's text in EncoderOptionInfos() order (the preprocessing's
+  // and the encoder's), and the audio's 24-bit codes. Pure.
   static std::string SettingsHash(std::span<const float> audio,
                                   const encoder::EncoderOptions& options,
                                   std::string_view encoder_version);

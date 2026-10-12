@@ -16,6 +16,7 @@
 #include <string>
 #include <string_view>
 
+#include "core/preprocess/preprocess.h"
 #include "core/util/status.h"
 
 namespace speak5220::core::encoder {
@@ -35,25 +36,28 @@ struct PreEmphasis {
   friend bool operator==(const PreEmphasis& a, const PreEmphasis& b) = default;
 };
 
-// Everything that controls an encoding. The defaults are those of
-// tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence and
-// level_agc, chosen for the best median quality score on the corpus (HLD
-// §9), and resonance_hold_db, 14, which the reference does not have. The
-// reference's other options are fixed at its defaults (HLD §8, "Options").
+// Everything that controls a phrase's encoding: how its recording is
+// preprocessed (preprocess, applied by preprocess::Preprocess() before the
+// encoder's stages) and the encoder's own options. The defaults are those of
+// tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence,
+// level_agc and voicing_threshold, chosen for the best median quality
+// score on the corpus (HLD §9), and the options the reference does not
+// have: resonance_hold_db, 14, and voicing_min_run, 2, with no
+// preprocessing. The reference's other options are fixed at its defaults
+// (HLD §8, "Options").
 // Projects list every option (plan §4), so changing a default never
 // changes a project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
+  // The preprocessing: the squelch, the bass cut and the treble tilt. Not
+  // in the reference encoder.
+  preprocess::PreprocessOptions preprocess;
   // RMS of the output over sounding frames, in codes.
   double target_rms = 24.0;
   // Bits a repeat run may trade per dB of prediction error.
   double repeat_lambda = 70.0;
   // Frames this many dB below the loudest are silence.
   double gate_db = 45.0;
-  // If set, the source is squelched first (dsp::Squelch()): stretches this
-  // many dB below its loudest sound, such as breaths, are made silent
-  // before they are encoded or scored against (SquelchedSource()).
-  std::optional<double> squelch_db;
   // Voiced analysis pre-emphasis.
   PreEmphasis pre_emphasis;
   // Analysis window, in samples (32 ms).
@@ -67,9 +71,15 @@ struct EncoderOptions {
   // heard on the corpus at little cost to its score (HLD §9).
   std::optional<double> resonance_hold_db = 14.0;
   // CMNDF level at which voiced and unvoiced cost the same.
-  double voicing_threshold = 0.3;
+  double voicing_threshold = 0.4;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
   double voicing_evidence = 5.0;
+  // Runs of voiced or unvoiced frames shorter than this, between runs of
+  // the other kind, take their neighbours' voicing (SmoothVoicingRuns());
+  // 1 is off. Not in the reference encoder; 2, which removes one-frame
+  // islands, brings the voicing nearer Acorn's PHROM's at no cost on the
+  // corpus (HLD §9).
+  int voicing_min_run = 2;
   // Slow gain control ratio over about 0.75 s (1: off).
   double level_agc = 1.25;
 
@@ -77,11 +87,20 @@ struct EncoderOptions {
                          const EncoderOptions& b) = default;
 };
 
+// The stage an option belongs to (plan Phase 11): the preprocessing of the
+// recording, whose result an encoding is measured against, or the
+// encoder.
+enum class OptionStage {
+  kPreprocess,
+  kEncoder,
+};
+
 // How an option is edited.
 enum class EncoderOptionType {
   kReal,
   kInteger,
-  // A real value that may also be unset (squelch_db, resonance_hold_db).
+  // A real value that may also be unset (squelch_db, bass_cut_hz,
+  // resonance_hold_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
   kPreEmphasis,
@@ -98,6 +117,7 @@ struct EncoderOptionInfo {
   std::string_view field;
   std::string_view label;
   std::string_view help;
+  OptionStage stage = OptionStage::kEncoder;
   EncoderOptionType type = EncoderOptionType::kReal;
   // The valid range, inclusive; for kPreEmphasis, the range of mu.
   double minimum = 0.0;
@@ -119,9 +139,14 @@ struct EncoderOptionInfo {
   // it only with its advanced settings. The others have the
   // clearest effect on how a phrase sounds or how big it is.
   bool advanced = false;
+  // The value at which the option has no effect, as EncoderOptionText()
+  // gives it, which the GUI shows as "off"; empty for an option that has
+  // none, or one that can be unset (kOptionalReal) instead.
+  std::string_view off_text = {};
 };
 
-// One entry per EncoderOptions field, in the order of the struct.
+// One entry per option, in the order of the struct: the preprocessing
+// options first.
 std::span<const EncoderOptionInfo> EncoderOptionInfos();
 
 // Checks every option against its range. The encoder refuses options that
@@ -132,12 +157,13 @@ Status ValidateEncoderOptions(const EncoderOptions& options);
 // nullptr.
 const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
-// The text for an unset optional option (squelch_db, resonance_hold_db).
+// The text for an unset optional option (squelch_db, bass_cut_hz,
+// resonance_hold_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
 
 // Sets one option from text, as a user types it or a project file holds
 // it: a number ("18", "0.35"), "chirp" or a number for pre_emphasis, and
-// a number or "none" for squelch_db and resonance_hold_db.
+// a number or "none" for squelch_db, bass_cut_hz and resonance_hold_db.
 // Numbers use '.' as the decimal point, whatever the locale. Fails,
 // leaving `options` unchanged, for an unknown field, text of the wrong
 // type, a fractional value for a whole-number option, or a value outside

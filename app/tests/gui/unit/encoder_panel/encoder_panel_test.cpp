@@ -29,6 +29,7 @@
 
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/quality/cached_quality.h"
@@ -158,7 +159,8 @@ TEST_F(EncoderPanelTest, ASettingChangeReEncodesOnceAfterTheDebounce) {
   EXPECT_EQ(stack_.count(), 1);
 }
 
-TEST_F(EncoderPanelTest, SquelchedPhraseIsMeasuredAgainstItsSquelchedSource) {
+// The quality is measured against the recording as preprocessed.
+TEST_F(EncoderPanelTest, PhraseIsMeasuredAgainstItsPreprocessedSource) {
   // Loud, then 60 dB quieter, half a second each.
   core::project::Phrase breath = AudioPhrase(4, "BREATH");
   breath.audio.assign(8000, 0.5F);
@@ -180,26 +182,33 @@ TEST_F(EncoderPanelTest, SquelchedPhraseIsMeasuredAgainstItsSquelchedSource) {
 
   panel_.Form()->OnBox("squelch_db")->setChecked(true);
   Tick(EncoderPanel::kDebounceMs);
-  EncoderOptions squelched;
-  squelched.squelch_db = 30.0;
-  const std::vector<double> expected =
-      core::encoder::SquelchedSource(source, squelched);
-  ASSERT_NE(expected, source);
-  EXPECT_EQ(measured, expected);
+  const std::vector<double> squelched =
+      core::preprocess::Preprocess(source, {.squelch_db = 30.0}).samples;
+  ASSERT_NE(squelched, source);
+  EXPECT_EQ(measured, squelched);
 
   panel_.Form()->OnBox("squelch_db")->setChecked(false);
   Tick(EncoderPanel::kDebounceMs);
   EXPECT_EQ(measured, source);
+
+  // The BBC Micro preset: a bass cut and a treble tilt.
+  panel_.Form()->PresetBox()->activated(1);
+  Tick(EncoderPanel::kDebounceMs);
+  EXPECT_EQ(measured,
+            core::preprocess::Preprocess(
+                source, core::preprocess::PreprocessPresets()[1].options)
+                .samples);
 }
 
-TEST_F(EncoderPanelTest, ReportsTheSquelchAsTheFormHasIt) {
+TEST_F(EncoderPanelTest, ReportsThePreprocessingAsTheFormHasIt) {
   std::vector<std::optional<double>> reported;
-  QObject::connect(&panel_, &EncoderPanel::SquelchChanged,
-                   [&reported](std::optional<double> squelch) {
-                     reported.push_back(squelch);
-                   });
+  QObject::connect(
+      &panel_, &EncoderPanel::PreprocessingChanged,
+      [&reported](const core::preprocess::PreprocessOptions& options) {
+        reported.push_back(options.squelch_db);
+      });
   Show(2);
-  EXPECT_EQ(panel_.ShownSquelch(), std::nullopt);
+  EXPECT_EQ(panel_.ShownPreprocessing(), core::preprocess::PreprocessOptions{});
   EXPECT_TRUE(reported.empty());
   // At once, before the change is applied, so the waveform can show it.
   panel_.Form()->OnBox("squelch_db")->setChecked(true);
@@ -208,16 +217,19 @@ TEST_F(EncoderPanelTest, ReportsTheSquelchAsTheFormHasIt) {
   EXPECT_EQ(reported.back(), 24.0);
   Tick(EncoderPanel::kDebounceMs);
   EXPECT_EQ(reported.size(), 2U);
+  Slider("treble_tilt")->MoveTo(0.4);
+  EXPECT_EQ(panel_.ShownPreprocessing().treble_tilt, 0.4);
+  EXPECT_EQ(reported.size(), 3U);
 
   // The project's defaults do not change a squelch the phrase sets.
   panel_.SetScope(EncoderPanel::Scope::kProjectDefaults);
   panel_.Form()->OnBox("squelch_db")->setChecked(true);
-  EXPECT_EQ(panel_.ShownSquelch(), 24.0);
+  EXPECT_EQ(panel_.ShownPreprocessing().squelch_db, 24.0);
   panel_.SetScope(EncoderPanel::Scope::kPhrase);
 
   // A locked phrase is never encoded, so it has none.
   Show(3);
-  EXPECT_EQ(panel_.ShownSquelch(), std::nullopt);
+  EXPECT_EQ(panel_.ShownPreprocessing(), core::preprocess::PreprocessOptions{});
   EXPECT_EQ(reported.back(), std::nullopt);
 }
 
@@ -289,14 +301,18 @@ TEST_F(EncoderPanelTest, CachedQualityIsShownWithoutMeasuring) {
   EXPECT_EQ(panel_.Quality()->Text(), QStringLiteral("Poor · 0.30"));
 }
 
+// Reset puts both the preprocessing and the encoder's options back.
 TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {
+  const core::project::EncoderOverrides overrides = {{"target_rms", "18"},
+                                                     {"treble_tilt", "0.4"}};
   ASSERT_TRUE(project_
-                  .SetEncoding(TestId(1), {.overrides = {{"target_rms", "18"}},
+                  .SetEncoding(TestId(1), {.overrides = overrides,
                                            .encoding = Phrase(1).encoding})
                   .IsOk());
   Show(1);
   EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 18.0);
   EXPECT_TRUE(panel_.Form()->IsMarked("target_rms"));
+  EXPECT_TRUE(panel_.Form()->IsMarked("treble_tilt"));
   ASSERT_TRUE(panel_.ResetButton()->isEnabled());
   EXPECT_CALL(encoding_.encoder,
               Encode(_, kSampleRate, Field(&EncoderOptions::target_rms, 24.0)))
@@ -305,12 +321,13 @@ TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {
   QCoreApplication::processEvents();
   EXPECT_TRUE(Phrase(1).encoder.empty());
   EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 24.0);
+  EXPECT_DOUBLE_EQ(Slider("treble_tilt")->Value(), 0.0);
+  EXPECT_EQ(panel_.Form()->PresetBox()->currentIndex(), 0);
   EXPECT_FALSE(panel_.ResetButton()->isEnabled());
   // One step, undone as one.
   ASSERT_EQ(stack_.count(), 1);
   stack_.undo();
-  EXPECT_EQ(Phrase(1).encoder,
-            (core::project::EncoderOverrides{{"target_rms", "18"}}));
+  EXPECT_EQ(Phrase(1).encoder, overrides);
 }
 
 TEST_F(EncoderPanelTest, ShowingAnotherPhraseAppliesAPendingChange) {

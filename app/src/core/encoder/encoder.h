@@ -17,7 +17,6 @@
 #include <string_view>
 #include <vector>
 
-#include "core/dsp/squelch.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_analyser.h"
@@ -72,10 +71,12 @@ class IEncoder {
  public:
   virtual ~IEncoder() = default;
 
-  // Encodes `samples` (-1..1) at `sample_rate`, which must be 8000 (the
-  // import pipeline resamples, plan §3.1). Fails for another rate, for
-  // non-finite samples or for options outside their ranges. Input with no
-  // sound gives a lone stop frame.
+  // Encodes `samples` (-1..1), a phrase's original recording, at
+  // `sample_rate`, which must be 8000 (the import pipeline resamples, plan
+  // §3.1): preprocessed by options.preprocess (preprocess::Preprocess()),
+  // then encoded. Fails for another rate, for non-finite samples or for
+  // options outside their ranges. Input with no sound gives a lone stop
+  // frame.
   virtual StatusOr<EncodeResult> Encode(std::span<const double> samples,
                                         int sample_rate,
                                         const EncoderOptions& options) = 0;
@@ -98,11 +99,13 @@ struct OpeningTrim {
 OpeningTrim TrimFaintOpening(std::vector<PlanEntry>& plan,
                              std::span<const double> levels);
 
-// IEncoder over injected stages, in the order of tms5220enc.py
-// encodeDetailed(): segment, track pitch, classify voicing, measure
-// features, plan, drop a faint opening, hold resonant filters, shape the
-// levels, set the gain from the target RMS, set the energies, then fades,
-// the stop and quiet pauses. Thread-safe if the stages are.
+// IEncoder over injected stages, after the preprocessing, in the order of
+// tms5220enc.py encodeDetailed(): segment, track pitch, classify voicing
+// (then smooth short runs of it), measure features (from the preprocessed
+// recording; the rest from it before its bass cut and treble tilt), plan, drop
+// a faint opening, hold resonant filters, shape the levels, set the gain from
+// the target RMS, set the energies, then fades, the stop and quiet pauses.
+// Thread-safe if the stages are.
 class Encoder : public IEncoder {
  public:
   // The stages must outlive the encoder.
@@ -121,19 +124,6 @@ class Encoder : public IEncoder {
   IRepeatSearch* repeat_search_;
   ILevelSetter* level_setter_;
 };
-
-// The source an encoding is made from and scored against: `samples` (8
-// kHz) squelched when options.squelch_db is set (dsp::Squelch()), else a
-// copy. The encoder applies it itself; whatever measures an encoding
-// against its source (the quality measures) applies it to the source first,
-// so breaths muted for the encoder are not asked of it. Pure; O(n).
-std::vector<double> SquelchedSource(std::span<const double> samples,
-                                    const EncoderOptions& options);
-
-// The stretches of `samples` (8 kHz) that SquelchedSource() lowers, for
-// showing what the squelch mutes; none without a squelch. Pure; O(n).
-std::vector<dsp::SampleSpan> SquelchedSpans(std::span<const double> samples,
-                                            const EncoderOptions& options);
 
 // An IEncoder with the standard stages over pocketfft: the encoder the
 // application uses. Stateless between calls; thread-safe.

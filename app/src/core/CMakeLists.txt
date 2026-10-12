@@ -36,6 +36,7 @@ add_library(
     lpc/frame_codec.cpp
     lpc/frame_statistics.cpp
     optimiser/optimiser.cpp
+    preprocess/preprocess.cpp
     packaging/acorn_phrom.cpp
     packaging/c_header.cpp
     packaging/speak_external_stream.cpp

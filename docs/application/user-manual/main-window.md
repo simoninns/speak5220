@@ -113,7 +113,8 @@ encoded audio is heard and shown through: **None** (the default) or
 
 **Audio > Chip Output** chooses which of the chip's pins the encoded audio
 is taken from: **SPEAKER (8-bit DAC)** (the default), whose DAC clips
-loud samples, or **I/O (10-bit codes)**, unclipped. See
+loud samples and has the real DAC's uneven steps, or **I/O (10-bit
+codes)**, unclipped. See
 [chip output](waveforms.md#chip-output).
 
 The window remembers both choices for next time.

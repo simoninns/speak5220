@@ -11,6 +11,8 @@
 #include "core/encoder/voicing_classifier.h"
 
 #include <cstddef>
+#include <string>
+#include <string_view>
 #include <vector>
 
 #include "core/encoder/encoder_types.h"
@@ -99,6 +101,62 @@ TEST(VoicingClassifierTest, OctaveFixStaysWithinPitchRange) {
   const std::vector<int> centres = {0, 200, 400, 600, 800};
   EXPECT_EQ(c.Classify(TrackOf(periods), centres)[2].period, 100.0);
   EXPECT_EQ(c.Classify(TrackOf(high), centres)[2].period, 85.0);
+}
+
+// The voicing of each frame, as a string: V voiced, U unvoiced.
+std::vector<FrameVoicing> Voicing(std::string_view kinds) {
+  std::vector<FrameVoicing> v;
+  for (const char c : kinds) {
+    v.push_back({.voiced = c == 'V', .period = c == 'V' ? 80.0 : 0.0});
+  }
+  return v;
+}
+
+std::string Kinds(const std::vector<FrameVoicing>& v) {
+  std::string s;
+  for (const FrameVoicing& f : v) {
+    s += f.voiced ? 'V' : 'U';
+  }
+  return s;
+}
+
+TEST(SmoothVoicingRunsTest, FillsShortUnvoicedIslandsWithTheMeanPeriod) {
+  std::vector<FrameVoicing> v = Voicing("VVVUUVVV");
+  v[2].period = 70.0;
+  v[5].period = 90.0;
+  SmoothVoicingRuns(v, 3);
+  EXPECT_EQ(Kinds(v), "VVVVVVVV");
+  EXPECT_EQ(v[3].period, 80.0);
+  EXPECT_EQ(v[4].period, 80.0);
+}
+
+TEST(SmoothVoicingRunsTest, MakesShortVoicedIslandsUnvoiced) {
+  std::vector<FrameVoicing> v = Voicing("UUUVVUUU");
+  SmoothVoicingRuns(v, 3);
+  EXPECT_EQ(Kinds(v), "UUUUUUUU");
+  EXPECT_EQ(v[3].period, 0.0);
+}
+
+TEST(SmoothVoicingRunsTest, KeepsRunsAsLongAsTheMinimumAndRunsAtTheEnds) {
+  std::vector<FrameVoicing> v = Voicing("UVVVUUUVU");
+  SmoothVoicingRuns(v, 3);
+  // The voiced run of 3 stays; the lone V before the last U is an island,
+  // but the U after it is a run at the end, so it stays too.
+  EXPECT_EQ(Kinds(v), "UVVVUUUUU");
+}
+
+TEST(SmoothVoicingRunsTest, UnvoicedIslandsGoFirst) {
+  // The lone U is filled first, so the voiced run around it is long enough
+  // to stay.
+  std::vector<FrameVoicing> v = Voicing("UUUVUVUUU");
+  SmoothVoicingRuns(v, 3);
+  EXPECT_EQ(Kinds(v), "UUUVVVUUU");
+}
+
+TEST(SmoothVoicingRunsTest, MinimumOfOneChangesNothing) {
+  std::vector<FrameVoicing> v = Voicing("VUVUV");
+  SmoothVoicingRuns(v, 1);
+  EXPECT_EQ(Kinds(v), "VUVUV");
 }
 
 }  // namespace

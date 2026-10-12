@@ -408,24 +408,26 @@ void EncoderPanel::LoadForm() {
   }
 }
 
-std::optional<double> EncoderPanel::ShownSquelch() const {
+core::preprocess::PreprocessOptions EncoderPanel::ShownPreprocessing() const {
   if (id_.empty() || locked_ || audio_.empty()) {
-    return std::nullopt;
+    return {};
   }
   if (scope_ == Scope::kPhrase) {
-    return form_->Options().squelch_db;
+    return form_->Options().preprocess;
   }
   // The form holds the project's defaults; the phrase may set its own.
   const core::StatusOr<EncoderOptions> options =
       project::EffectiveEncoderOptions(form_->Options(), overrides_);
-  return options.IsOk() ? options->squelch_db : std::nullopt;
+  return options.IsOk() ? options->preprocess
+                        : core::preprocess::PreprocessOptions{};
 }
 
 void EncoderPanel::UpdateView() {
-  if (const std::optional<double> squelch = ShownSquelch();
-      squelch != shown_squelch_) {
-    shown_squelch_ = squelch;
-    emit SquelchChanged(squelch);
+  if (const core::preprocess::PreprocessOptions preprocessing =
+          ShownPreprocessing();
+      preprocessing != shown_preprocessing_) {
+    shown_preprocessing_ = preprocessing;
+    emit PreprocessingChanged(preprocessing);
   }
   const bool has_phrase = !id_.empty();
   const bool editable = has_phrase && !locked_ && !audio_.empty();

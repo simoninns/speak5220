@@ -40,6 +40,15 @@ class VoicingClassifier : public IVoicingClassifier {
                                      std::span<const int> centres) override;
 };
 
+// Removes short islands of voicing: a run of frames shorter than
+// `min_run` with runs of the other kind on both sides takes their kind.
+// Unvoiced islands go first, each given the mean of its neighbours'
+// periods; then voiced islands become unvoiced. Runs at either end are
+// kept, and `min_run` 1 or less changes nothing. Not in the reference
+// encoder: on Acorn's PHROM it brings the encoder's voicing nearer the
+// PHROM's own (HLD §9). O(n).
+void SmoothVoicingRuns(std::span<FrameVoicing> voicing, int min_run);
+
 }  // namespace speak5220::core::encoder
 
 #endif  // SPEAK5220_CORE_ENCODER_VOICING_CLASSIFIER_H_

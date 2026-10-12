@@ -32,6 +32,7 @@
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
 #include "core/lpc/frame_statistics.h"
+#include "core/preprocess/preprocess.h"
 #include "core/quality/quality_metric.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -379,10 +380,10 @@ StatusOr<OptimiseResult> Optimiser::Run(const OptimiseRequest& request,
     return cancel != nullptr && cancel->load(std::memory_order_relaxed);
   };
 
-  // What the candidates are scored against: the source squelched as the
-  // encoder squelches it (no axis changes the squelch).
+  // What the candidates are scored against: the source preprocessed as
+  // the encoder does it (no axis changes the preprocessing).
   const std::vector<double> reference =
-      encoder::SquelchedSource(request.source, request.start);
+      preprocess::Preprocess(request.source, request.start.preprocess).samples;
 
   // Encodes, checks and measures one candidate (on a worker).
   auto evaluate = [this, &request, &reference, higher_is_better,

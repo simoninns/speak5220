@@ -152,10 +152,11 @@ using ProgressCallback = std::function<void(const OptimiseResult& so_far,
 //     if it improves on the current options; otherwise the steps are
 //     halved, and the search ends when they reach their smallest.
 //
-// The squelch is never searched: it changes what the encodings are
-// scored against, so scores with different squelches do not compare.
-// Every candidate keeps the start's, and is scored against the source
-// squelched by it (encoder::SquelchedSource()).
+// The preprocessing (options.preprocess) is never searched: it changes
+// what the encodings are scored against, so scores with different ones do
+// not compare. Every candidate keeps the start's, and is scored against
+// the source preprocessed by it (preprocess::Preprocess()). Nor is
+// voicing_min_run, or the resonance hold.
 //
 // Candidates over the budget or the limit are kept in the history but
 // never chosen; they are not measured. Options already tried are not

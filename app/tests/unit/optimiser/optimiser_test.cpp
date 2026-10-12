@@ -22,6 +22,7 @@
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
+#include "core/preprocess/preprocess.h"
 #include "core/quality/quality_metric.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -139,17 +140,19 @@ TEST(OptimiserTest, TriesTheStartThenTheGridAroundIt) {
   EXPECT_EQ(targets, (std::set<double>{20.0, 24.0, 28.0}));
 }
 
-// The squelch changes what encodings are scored against, so it is kept
-// from the start, and every candidate is scored against the source as
-// the start squelches it.
-TEST(OptimiserTest, KeepsTheSquelchAndScoresAgainstTheSquelchedSource) {
+// The preprocessing changes what encodings are scored against, so it is
+// kept from the start, and every candidate is scored against the source
+// as the start preprocesses it.
+TEST(OptimiserTest, KeepsThePreprocessingAndScoresAgainstItsResult) {
   FakeSearch search;
   // Loud, then 60 dB quieter.
   std::vector<double> source(8000, 0.5);
   std::fill(source.begin() + 4000, source.end(), 0.0005);
   EncoderOptions start;
-  start.squelch_db = 30.0;
-  const std::vector<double> squelched = encoder::SquelchedSource(source, start);
+  start.preprocess.squelch_db = 30.0;
+  start.preprocess.treble_tilt = 0.4;
+  const std::vector<double> squelched =
+      preprocess::Preprocess(source, start.preprocess).samples;
   int unsquelched = 0;
   ON_CALL(search.Metric(), Measure(_, _))
       .WillByDefault([&](std::span<const double> reference,
@@ -166,7 +169,7 @@ TEST(OptimiserTest, KeepsTheSquelchAndScoresAgainstTheSquelchedSource) {
   ASSERT_TRUE(result.IsOk());
   EXPECT_EQ(unsquelched, 0);
   for (const Candidate& c : result->history) {
-    EXPECT_EQ(c.options.squelch_db, 30.0);
+    EXPECT_EQ(c.options.preprocess, start.preprocess);
   }
 }
 

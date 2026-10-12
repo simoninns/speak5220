@@ -1,9 +1,9 @@
 /*
  * File:        phrase_waveforms.h
  * Module:      waveform
- * Purpose:     The phrase editor's two waveform panes, original and
- *              encoded: rendering, linked time axes, the play-start marker
- *              and playback
+ * Purpose:     The phrase editor's two waveform panes, the source
+ *              (original or preprocessed) and the encoded audio: rendering,
+ *              linked time axes, the play-start marker and playback
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -21,6 +21,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/lpc/frame.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
 #include "core/synth/output_pin.h"
@@ -40,10 +41,18 @@ namespace speak5220::app {
 class WaveformPane;
 class WaveformView;
 
-// Plan §5 and Phase 6: the original audio above the encoded audio, the
-// same height, with one scroll bar and one row of controls under both:
-// play or pause each (labelled Original and Encoded), reset the play
-// start, Frame grid, zoom out, zoom in and fit.
+// Plan §5, Phase 6 and Phase 11: the source audio above the encoded audio,
+// the same height, with one scroll bar and one row of controls under both:
+// play or pause each (labelled with the pane's name), reset the play start,
+// Frame grid, zoom out, zoom in and fit.
+//
+// - The top pane shows the original recording or the recording
+//   preprocessed (SetPreprocessing(), preprocess::Preprocess()), as the
+//   Original and Preprocessed buttons in its heading choose
+//   (SetPreprocessedShown()); it plays what it shows. The preprocessed
+//   recording is what the encoder aims at and the quality is measured
+//   against. Where the preprocessing would take it past full scale, it is
+//   shown and played scaled down to fit, and the pane's note says so.
 //
 // - The encoded audio is the cached frames spoken through the emulator
 //   and lined up with the original (RenderEncodedAudio()), in the
@@ -61,10 +70,11 @@ class WaveformView;
 //   (EncodedAudio::level_gain), which the encoded pane's note gives in
 //   dB: the chip's output is about 15 dB quieter than a normalised
 //   recording, which would make the two hard to compare.
-// - With a squelch (SetSquelch()), the stretches it mutes are shaded on
-//   the original audio (encoder::SquelchedSpans()), and the original
-//   pane's note gives its level, so what will be left out of the encoding
-//   and of the quality measure can be seen before encoding.
+// - With a squelch, the stretches it mutes are shaded on the original
+//   audio (preprocess::SquelchedSpans()), and the pane's note gives its
+//   level, so what will be left out of the encoding and of the quality
+//   measure can be seen before encoding. On the preprocessed audio they
+//   are silent, and the note names the preprocessing.
 // - With an output filter (SetOutputFilter()), the encoded audio is shown
 //   through it (core::dsp::FilterSamples()), as that computer's audio
 //   stage would deliver it, and the encoded pane's note names it; the
@@ -98,10 +108,17 @@ class PhraseWaveforms : public QWidget {
   void ShowPhrase(const core::project::Phrase* phrase,
                   const QString& encoded_note = QString());
 
-  // The squelch of the phrase shown, in dB, or none: as the encoder
-  // panel's settings have it, changes not yet applied included.
-  void SetSquelch(std::optional<double> squelch_db);
-  std::optional<double> Squelch() const { return squelch_db_; }
+  // The preprocessing of the phrase shown: as the encoder panel's
+  // settings have it, changes not yet applied included. None at first.
+  void SetPreprocessing(const core::preprocess::PreprocessOptions& options);
+  const core::preprocess::PreprocessOptions& Preprocessing() const {
+    return preprocessing_;
+  }
+  // Whether the top pane shows the preprocessed recording rather than the
+  // original; false at first. Changing it keeps the zoom, and stops the
+  // top pane's playback. Does not signal PreprocessedShownChanged().
+  void SetPreprocessedShown(bool shown);
+  bool PreprocessedShown() const { return preprocessed_shown_; }
 
   // The audio stage the encoded audio is shown through; none at first.
   // Changing it redraws the encoded audio, keeping the zoom.
@@ -113,6 +130,9 @@ class PhraseWaveforms : public QWidget {
   core::synth::OutputPin Pin() const { return pin_; }
 
   WaveformPane* OriginalPane() const { return original_; }
+  // The buttons in the top pane's heading that choose what it shows.
+  QToolButton* OriginalButton() const { return show_original_; }
+  QToolButton* PreprocessedButton() const { return show_preprocessed_; }
   WaveformPane* EncodedPane() const { return encoded_; }
   QScrollBar* ScrollBar() const { return scroll_bar_; }
   // The play/pause button of a pane.
@@ -142,6 +162,8 @@ class PhraseWaveforms : public QWidget {
   void RenderFinished();
   // Moving the play start or playing failed.
   void Failed(const QString& title, const QString& message);
+  // The user chose what the top pane shows.
+  void PreprocessedShownChanged(bool shown);
 
  protected:
   // Redraws the play/pause icons in the new palette's colours.
@@ -163,8 +185,15 @@ class PhraseWaveforms : public QWidget {
   void RedrawEncoded();
   // The encoded pane's note: the level match, then the given note.
   void UpdateEncodedNote();
-  // The shading of the squelched stretches and the original pane's note.
-  void UpdateShading();
+  // Makes the preprocessed recording of audio_ again.
+  void UpdatePreprocessed();
+  // The samples the top pane shows and plays.
+  const std::vector<float>& TopSamples() const;
+  // Shows TopSamples() in the top pane again, keeping the zoom, with its
+  // title, shading and note.
+  void RedrawTop();
+  // The top pane's title, play button, shading and note.
+  void UpdateTopLabels();
   // Sets both views' extents for new contents (the union of the two) and
   // fits both to it.
   void UpdateExtents();
@@ -187,6 +216,8 @@ class PhraseWaveforms : public QWidget {
   core::ITaskRunner* runner_;
   WaveformPane* original_;
   WaveformPane* encoded_;
+  QToolButton* show_original_;
+  QToolButton* show_preprocessed_;
   QScrollBar* scroll_bar_;
   QToolButton* play_original_;
   QToolButton* play_encoded_;
@@ -210,7 +241,12 @@ class PhraseWaveforms : public QWidget {
   int encoded_clipped_ = 0;
   // The note given with the phrase (such as "stale").
   QString encoded_note_;
-  std::optional<double> squelch_db_;
+  core::preprocess::PreprocessOptions preprocessing_;
+  bool preprocessed_shown_ = false;
+  // audio_ preprocessed, scaled by preprocessed_gain_ (at most 1) so it
+  // stays within full scale.
+  std::vector<float> preprocessed_;
+  double preprocessed_gain_ = 1.0;
   core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin_ = core::synth::OutputPin::kSpeaker;
   bool original_shows_pause_ = false;

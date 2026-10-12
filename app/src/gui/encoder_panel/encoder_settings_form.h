@@ -27,16 +27,20 @@ namespace speak5220::app {
 
 class OptionSlider;
 
-// Plan §5: one row per EncoderOptionInfos() entry, in two columns: its
-// label (the help text and default as the tooltip), an editor, and a
-// button that puts it back to the baseline (the project's defaults for a
-// phrase, the encoder's for the project). Rows that differ from the
-// baseline have a bold label and the button enabled.
+// Plan §5 and Phase 11: one row per EncoderOptionInfos() entry, in two
+// columns: its label (the help text and default as the tooltip), an
+// editor, and a button that puts it back to the baseline (the project's
+// defaults for a phrase, the encoder's for the project). Rows that differ
+// from the baseline have a bold label and the button enabled.
 //
-// The basic options come first. Below them a button shows or hides the
-// advanced ones (EncoderOptionInfo::advanced), and says how many of those
-// differ from the baseline, so a hidden change is never missed; hidden
-// options still apply. The form starts with them hidden.
+// The preprocessing options come first, under a "Preprocessing" heading
+// with a chooser of its presets (preprocess::PreprocessPresets()), which
+// shows "Custom" when the options match none; choosing a preset sets them.
+// The encoder's basic options follow under an "Encoder" heading. Below
+// them a button shows or hides the advanced ones
+// (EncoderOptionInfo::advanced), and says how many of those differ from
+// the baseline, so a hidden change is never missed; hidden options still
+// apply. The form starts with them hidden.
 //
 // Editors by type: a slider (OptionSlider) over the option's typical range
 // and step for real and whole numbers, with the value and unit beside it
@@ -65,7 +69,7 @@ class EncoderSettingsForm : public QWidget {
   QWidget* Editor(std::string_view field) const;
   // The slider of `field` (the coefficient's for the pre-emphasis).
   OptionSlider* Slider(std::string_view field) const;
-  // The check box that turns an optional option (squelch_db,
+  // The check box that turns an optional option (squelch_db, bass_cut_hz,
   // resonance_hold_db) on; nullptr for other options.
   QCheckBox* OnBox(std::string_view field) const;
   QToolButton* ResetButton(std::string_view field) const;
@@ -83,6 +87,9 @@ class EncoderSettingsForm : public QWidget {
   bool AdvancedShown() const;
   // The button that shows and hides them.
   QToolButton* AdvancedButton() const { return advanced_button_; }
+  // The preprocessing presets' chooser: one item per preset, then
+  // "Custom".
+  QComboBox* PresetBox() const { return preset_box_; }
 
  signals:
   // The user changed an option.
@@ -111,11 +118,17 @@ class EncoderSettingsForm : public QWidget {
   // Reads the row's editors into options_ and signals Edited().
   void OnEdited(const Row& row);
   void UpdateMarks();
+  // Sets the preprocessing options to the preset at `index` of the
+  // chooser, and signals Edited() if that changes them.
+  void OnPresetChosen(int index);
+  // Shows the preset the preprocessing options match, or Custom.
+  void UpdatePreset();
   // Shows the advanced rows if the button is down, and names how many of
   // them are marked on the button.
   void UpdateAdvanced();
 
   std::vector<Row> rows_;
+  QComboBox* preset_box_;
   QToolButton* advanced_button_;
   core::encoder::EncoderOptions options_;
   core::encoder::EncoderOptions baseline_;

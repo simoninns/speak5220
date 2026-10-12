@@ -1,9 +1,10 @@
 /*
  * File:        phrase_waveforms.cpp
  * Module:      waveform
- * Purpose:     The phrase editor's two waveform panes, original and
- *              encoded: rendering, the shared time axis and controls, the
- *              play-start marker and playback
+ * Purpose:     The phrase editor's two waveform panes, the source
+ *              (original or preprocessed) and the encoded audio: rendering,
+ *              the shared time axis and controls, the play-start marker
+ *              and playback
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -18,6 +19,7 @@
 #include <QMetaObject>
 #include <QScrollBar>
 #include <QString>
+#include <QStringList>
 #include <QToolButton>
 #include <QVBoxLayout>
 #include <QWidget>
@@ -31,14 +33,14 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/dsp/squelch.h"
-#include "core/encoder/encoder.h"
-#include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
 #include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/logging.h"
+#include "core/util/number_text.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gui/playback/playback_icon.h"
@@ -64,6 +66,32 @@ QToolButton* MakeButton(const QString& text, const QString& tip,
   button->setAccessibleName(tip);
   button->setAutoRaise(true);
   return button;
+}
+
+// One of the checkable buttons that choose what the top pane shows.
+QToolButton* MakeChoiceButton(const QString& text, const QString& tip,
+                              QWidget* parent) {
+  QToolButton* button = MakeButton(text, tip, parent);
+  button->setCheckable(true);
+  button->setAutoExclusive(true);
+  return button;
+}
+
+// The preprocessing in words, for the top pane's note: "squelch 30 dB,
+// bass cut 200 Hz, treble tilt 0.4".
+QString DescribePreprocessing(
+    const core::preprocess::PreprocessOptions& options) {
+  QStringList parts;
+  if (options.squelch_db.has_value()) {
+    parts << QStringLiteral("squelch %1 dB").arg(*options.squelch_db);
+  }
+  if (options.bass_cut_hz.has_value()) {
+    parts << QStringLiteral("bass cut %1 Hz").arg(*options.bass_cut_hz);
+  }
+  if (options.treble_tilt > 0.0) {
+    parts << QStringLiteral("treble tilt %1").arg(options.treble_tilt);
+  }
+  return parts.join(QStringLiteral(", "));
 }
 
 // A play/pause button labelled with its pane's name beside the icon.
@@ -107,6 +135,15 @@ PhraseWaveforms::PhraseWaveforms(ProjectEdits& edits, Player& player,
       runner_(&runner),
       original_(new WaveformPane(QStringLiteral("Original (8 kHz)"), this)),
       encoded_(new WaveformPane(QStringLiteral("Encoded"), this)),
+      show_original_(MakeChoiceButton(
+          QStringLiteral("Original"),
+          QStringLiteral("Show and play the original recording"), this)),
+      show_preprocessed_(MakeChoiceButton(
+          QStringLiteral("Preprocessed"),
+          QStringLiteral("Show and play the recording as preprocessed: what "
+                         "the encoder aims at and the quality is measured "
+                         "against"),
+          this)),
       scroll_bar_(new QScrollBar(Qt::Horizontal, this)),
       play_original_(MakePlayButton(QStringLiteral("Original"), this)),
       play_encoded_(MakePlayButton(QStringLiteral("Encoded"), this)),
@@ -123,6 +160,22 @@ PhraseWaveforms::PhraseWaveforms(ProjectEdits& edits, Player& player,
   grid_->setChecked(true);
   grid_->setToolTip(
       QStringLiteral("Show the 25 ms frames on the encoded pane"));
+
+  show_original_->setChecked(true);
+  original_->AddHeadingWidget(show_original_);
+  original_->AddHeadingWidget(show_preprocessed_);
+  // The two views keep the same height.
+  encoded_->SetMinimumHeadingHeight(
+      std::max(show_original_->sizeHint().height(),
+               show_preprocessed_->sizeHint().height()));
+  connect(show_original_, &QToolButton::clicked, this, [this] {
+    SetPreprocessedShown(false);
+    emit PreprocessedShownChanged(false);
+  });
+  connect(show_preprocessed_, &QToolButton::clicked, this, [this] {
+    SetPreprocessedShown(true);
+    emit PreprocessedShownChanged(true);
+  });
 
   SetPlaying(PlaybackSource::kOriginal, false);
   SetPlaying(PlaybackSource::kEncoded, false);
@@ -199,12 +252,13 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     player_->Stop();
     id_.clear();
     audio_.clear();
+    UpdatePreprocessed();
     frames_.clear();
     encoded_shown_ = false;
     const QString none = QStringLiteral("Select one phrase to see it");
     original_->View()->Clear(none);
     encoded_->View()->Clear(none);
-    UpdateShading();
+    UpdateTopLabels();
     play_original_->setEnabled(false);
     play_encoded_->setEnabled(false);
     reset_->setEnabled(false);
@@ -219,6 +273,7 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     id_ = phrase->id;
     // A phrase's audio never changes once imported (plan §3.1).
     audio_ = phrase->audio;
+    UpdatePreprocessed();
     if (audio_.empty()) {
       original_->View()->Clear(
           QStringLiteral("No source audio: the phrase is made of frames "
@@ -226,10 +281,10 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     } else {
       // Not followed: UpdateExtents() fits both panes together.
       following_ = true;
-      original_->View()->SetSamples(audio_, 0);
+      original_->View()->SetSamples(TopSamples(), 0);
       following_ = false;
     }
-    UpdateShading();
+    UpdateTopLabels();
     play_original_->setEnabled(!audio_.empty());
     reset_->setEnabled(!audio_.empty());
     frames_.clear();
@@ -286,7 +341,7 @@ void PhraseWaveforms::PlayPause(PlaybackSource source) {
   }
   core::Status status = core::OkStatus();
   if (source == PlaybackSource::kOriginal) {
-    status = player_->Play(source, ToPcm16(audio_), play_start_);
+    status = player_->Play(source, ToPcm16(TopSamples()), play_start_);
   } else if (encoded_shown_) {
     // The same sound as the play start, or the beginning for a phrase
     // with no source audio.
@@ -488,11 +543,79 @@ void PhraseWaveforms::UpdateEncodedNote() {
   encoded_->SetNote(parts.join(QStringLiteral(" · ")));
 }
 
-void PhraseWaveforms::SetSquelch(std::optional<double> squelch_db) {
-  if (squelch_db != squelch_db_) {
-    squelch_db_ = squelch_db;
-    UpdateShading();
+void PhraseWaveforms::SetPreprocessing(
+    const core::preprocess::PreprocessOptions& options) {
+  if (options == preprocessing_) {
+    return;
   }
+  preprocessing_ = options;
+  UpdatePreprocessed();
+  if (preprocessed_shown_) {
+    // The audio being played is no longer what the pane shows.
+    if (player_->State() != PlaybackState::kStopped &&
+        player_->Source() == PlaybackSource::kOriginal) {
+      player_->Stop();
+    }
+    RedrawTop();
+  } else {
+    UpdateTopLabels();
+  }
+}
+
+void PhraseWaveforms::SetPreprocessedShown(bool shown) {
+  show_original_->setChecked(!shown);
+  show_preprocessed_->setChecked(shown);
+  if (shown == preprocessed_shown_) {
+    return;
+  }
+  preprocessed_shown_ = shown;
+  if (player_->State() != PlaybackState::kStopped &&
+      player_->Source() == PlaybackSource::kOriginal) {
+    player_->Stop();
+  }
+  RedrawTop();
+}
+
+void PhraseWaveforms::UpdatePreprocessed() {
+  preprocessed_.clear();
+  preprocessed_gain_ = 1.0;
+  if (audio_.empty()) {
+    return;
+  }
+  const std::vector<double> samples =
+      core::preprocess::Preprocess(
+          std::vector<double>(audio_.begin(), audio_.end()), preprocessing_)
+          .samples;
+  double peak = 0.0;
+  for (const double v : samples) {
+    peak = std::max(peak, std::abs(v));
+  }
+  if (peak > 1.0) {
+    preprocessed_gain_ = 1.0 / peak;
+  }
+  preprocessed_.reserve(samples.size());
+  for (const double v : samples) {
+    preprocessed_.push_back(static_cast<float>(v * preprocessed_gain_));
+  }
+}
+
+const std::vector<float>& PhraseWaveforms::TopSamples() const {
+  return preprocessed_shown_ ? preprocessed_ : audio_;
+}
+
+void PhraseWaveforms::RedrawTop() {
+  if (!audio_.empty()) {
+    // The same length as before, so the same extent and zoom.
+    WaveformView* view = original_->View();
+    const TimeExtent extent = view->Extent();
+    const TimeAxis axis = view->Axis();
+    following_ = true;
+    view->SetSamples(TopSamples(), 0);
+    view->SetExtent(extent);
+    view->SetAxis(axis);
+    following_ = false;
+  }
+  UpdateTopLabels();
 }
 
 void PhraseWaveforms::SetOutputFilter(core::dsp::OutputFilter filter) {
@@ -525,30 +648,46 @@ void PhraseWaveforms::RedrawEncoded() {
   UpdateEncodedNote();
 }
 
-void PhraseWaveforms::UpdateShading() {
-  if (audio_.empty() || !squelch_db_.has_value()) {
+void PhraseWaveforms::UpdateTopLabels() {
+  const QString name = preprocessed_shown_ ? QStringLiteral("Preprocessed")
+                                           : QStringLiteral("Original");
+  original_->SetTitle(QStringLiteral("%1 (8 kHz)").arg(name));
+  play_original_->setText(name);
+  if (audio_.empty()) {
     original_->View()->SetShading({});
     original_->SetNote(QString());
     return;
   }
-  core::encoder::EncoderOptions options;
-  options.squelch_db = squelch_db_;
-  const std::vector<double> samples(audio_.begin(), audio_.end());
+  QStringList notes;
   std::vector<TimeExtent> shading;
-  for (const core::dsp::SampleSpan& span :
-       core::encoder::SquelchedSpans(samples, options)) {
-    shading.push_back({.begin = static_cast<double>(span.begin),
-                       .end = static_cast<double>(span.end)});
+  if (preprocessed_shown_) {
+    const QString what = DescribePreprocessing(preprocessing_);
+    notes << (what.isEmpty()
+                  ? QStringLiteral("no preprocessing: the same as the original")
+                  : what);
+    if (preprocessed_gain_ < 1.0) {
+      notes << QStringLiteral("scaled by %1 dB to fit")
+                   .arg(kDecibelsPerDecade * std::log10(preprocessed_gain_), 0,
+                        'f', 1);
+    }
+  } else if (preprocessing_.squelch_db.has_value()) {
+    const std::vector<double> samples(audio_.begin(), audio_.end());
+    for (const core::dsp::SampleSpan& span :
+         core::preprocess::SquelchedSpans(samples, preprocessing_)) {
+      shading.push_back({.begin = static_cast<double>(span.begin),
+                         .end = static_cast<double>(span.end)});
+    }
+    const QString level =
+        QString::fromStdString(core::FormatNumber(*preprocessing_.squelch_db));
+    notes << (shading.empty()
+                  ? QStringLiteral(
+                        "squelch %1 dB: nothing is quiet enough to mute")
+                        .arg(level)
+                  : QStringLiteral("squelch %1 dB: shaded stretches are muted")
+                        .arg(level));
   }
-  const QString level = QString::fromStdString(
-      core::encoder::EncoderOptionText(options, "squelch_db"));
-  original_->SetNote(
-      shading.empty()
-          ? QStringLiteral("squelch %1 dB: nothing is quiet enough to mute")
-                .arg(level)
-          : QStringLiteral("squelch %1 dB: shaded stretches are muted")
-                .arg(level));
   original_->View()->SetShading(std::move(shading));
+  original_->SetNote(notes.join(QStringLiteral(" · ")));
 }
 
 QToolButton* PhraseWaveforms::PlayButton(PlaybackSource source) const {

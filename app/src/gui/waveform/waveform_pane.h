@@ -13,6 +13,7 @@
 #include <QString>
 #include <QWidget>
 
+class QHBoxLayout;
 class QLabel;
 
 namespace speak5220::app {
@@ -30,12 +31,22 @@ class WaveformPane : public QWidget {
 
   WaveformView* View() const { return view_; }
 
+  // The title, which also names the view for accessibility.
+  void SetTitle(const QString& title);
+  QString Title() const;
   // A note beside the title, such as "stale"; empty for none.
   void SetNote(const QString& note);
   QString Note() const;
+  // Puts `widget` at the right of the heading, owned by the pane.
+  void AddHeadingWidget(QWidget* widget);
+  // Makes the heading at least `height` pixels high, so this pane's view
+  // can be the same height as one whose heading holds taller widgets.
+  void SetMinimumHeadingHeight(int height);
 
  private:
+  QLabel* title_;
   QLabel* note_;
+  QHBoxLayout* heading_;
   WaveformView* view_;
 };
 

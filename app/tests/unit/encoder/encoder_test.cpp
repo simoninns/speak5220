@@ -24,6 +24,7 @@
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_endings.h"
 #include "core/lpc/frame.h"
+#include "core/preprocess/preprocess.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -144,12 +145,13 @@ TEST_F(EncoderTest, NoSoundGivesALoneStop) {
   EXPECT_FALSE(result->details.has_value());
 }
 
+// The stages are given the recording preprocessed: here, squelched.
 TEST_F(EncoderTest, StagesWorkOnTheSquelchedSource) {
   // Loud, then 60 dB quieter, half a second each.
   std::vector<double> samples(8000, 0.5);
   std::fill(samples.begin() + 4000, samples.end(), 0.0005);
   EncoderOptions options;
-  options.squelch_db = 30.0;
+  options.preprocess.squelch_db = 30.0;
   std::vector<double> seen;
   EXPECT_CALL(analyser_, Segment(_, _))
       .WillOnce([&seen](std::span<const double> x,
@@ -158,13 +160,87 @@ TEST_F(EncoderTest, StagesWorkOnTheSquelchedSource) {
         return std::nullopt;
       });
   ASSERT_TRUE(encoder_.Encode(samples, 8000, options).IsOk());
-  EXPECT_EQ(seen, SquelchedSource(samples, options));
+  EXPECT_EQ(seen, preprocess::Preprocess(samples, options.preprocess).voicing);
   EXPECT_EQ(seen.back(), 0.0);
 }
 
-TEST(SquelchedSourceTest, IsACopyWithoutASquelch) {
-  const std::vector<double> samples = {0.5, 0.0005, -0.25};
-  EXPECT_EQ(SquelchedSource(samples, {}), samples);
+// Short voicing runs are smoothed before the features are measured.
+TEST_F(EncoderTest, SmoothsShortVoicingRunsBeforeTheFeatures) {
+  EncoderOptions options;
+  options.voicing_min_run = 3;
+  Segmentation seg = TwoFrames();
+  seg.centres = {222, 422, 622, 822, 1022};
+  const std::vector<FrameVoicing> voicing = {{.voiced = true, .period = 80.0},
+                                             {.voiced = true, .period = 80.0},
+                                             {.voiced = false, .period = 0.0},
+                                             {.voiced = true, .period = 80.0},
+                                             {.voiced = true, .period = 80.0}};
+  std::vector<FrameVoicing> measured;
+  EXPECT_CALL(analyser_, Segment(_, _)).WillOnce(Return(seg));
+  EXPECT_CALL(pitch_tracker_, Track(_, _)).WillOnce(Return(PitchTrack{}));
+  EXPECT_CALL(voicing_classifier_, Classify(_, _)).WillOnce(Return(voicing));
+  EXPECT_CALL(analyser_, Features(_, _, _))
+      .WillOnce([&measured](const Segmentation&,
+                            std::span<const FrameVoicing> v,
+                            const EncoderOptions&) {
+        measured.assign(v.begin(), v.end());
+        return std::vector<FrameFeatures>(5);
+      });
+  EXPECT_CALL(repeat_search_, Plan(_, _))
+      .WillOnce(Return(std::vector<PlanEntry>{}));
+  ASSERT_TRUE(encoder_.Encode(samples_, 8000, options).IsOk());
+  ASSERT_EQ(measured.size(), 5U);
+  EXPECT_TRUE(measured[2].voiced);
+  EXPECT_EQ(measured[2].period, 80.0);
+}
+
+// With the recording filtered by its preprocessing, the extent, pitch and
+// voicing come from it before the filters; the spectra, levels and gate
+// from the preprocessed recording.
+TEST_F(EncoderTest, PreprocessedSourceGivesTheSpectraAndLevels) {
+  EncoderOptions options;
+  options.preprocess.bass_cut_hz = 200.0;
+  Segmentation whole = TwoFrames();
+  Segmentation shaped = TwoFrames();
+  shaped.x = std::vector<double>(800, 0.05);
+  shaped.gate = 0.0005;
+  shaped.loud = 0.1;
+  shaped.centres = {999};
+  std::vector<double> tracked;
+  Segmentation measured;
+  {
+    InSequence order;
+    EXPECT_CALL(analyser_, Segment(_, _)).WillOnce(Return(whole));
+    EXPECT_CALL(pitch_tracker_, Track(_, _))
+        .WillOnce([&tracked](std::span<const double> x, const EncoderOptions&) {
+          tracked.assign(x.begin(), x.end());
+          return PitchTrack{};
+        });
+    EXPECT_CALL(voicing_classifier_, Classify(_, _))
+        .WillOnce(Return(std::vector<FrameVoicing>(2)));
+    EXPECT_CALL(analyser_, Segment(_, _))
+        .WillOnce([&](std::span<const double> x, const EncoderOptions&) {
+          EXPECT_EQ(
+              std::vector<double>(x.begin(), x.end()),
+              preprocess::Preprocess(samples_, options.preprocess).samples);
+          return std::optional<Segmentation>(shaped);
+        });
+    EXPECT_CALL(analyser_, Features(_, _, _))
+        .WillOnce([&measured](const Segmentation& s,
+                              std::span<const FrameVoicing>,
+                              const EncoderOptions&) {
+          measured = s;
+          return std::vector<FrameFeatures>(2);
+        });
+    EXPECT_CALL(repeat_search_, Plan(_, _))
+        .WillOnce(Return(std::vector<PlanEntry>{}));
+  }
+  ASSERT_TRUE(encoder_.Encode(samples_, 8000, options).IsOk());
+  EXPECT_EQ(tracked, whole.x);
+  EXPECT_EQ(measured.x, shaped.x);
+  EXPECT_EQ(measured.gate, shaped.gate);
+  EXPECT_EQ(measured.loud, shaped.loud);
+  EXPECT_EQ(measured.centres, whole.centres);
 }
 
 TEST_F(EncoderTest, AllSilentPlanGivesALoneStop) {

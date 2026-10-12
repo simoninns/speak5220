@@ -4,17 +4,21 @@ project:
   name: "Synthetic speech"
   header_strings: ["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]
   ascii_map: {}
+  default_preprocess:
+    squelch_db: null
+    bass_cut_hz: null
+    treble_tilt: 0
   default_encoder:
     target_rms: 20
     repeat_lambda: 70
     gate_db: 45
-    squelch_db: null
     pre_emphasis: "chirp"
     window: 240
     lag_window_hz: 60
     resonance_hold_db: null
     voicing_threshold: 0.3
     voicing_evidence: 4
+    voicing_min_run: 1
     level_agc: 1
 phrases:
   - id: "a1ba4f2a-a9bd-4556-bfed-9f7dd3856c1d"

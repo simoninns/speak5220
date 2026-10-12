@@ -2,7 +2,8 @@
  * File:        voicing_classifier.cpp
  * Module:      encoder
  * Purpose:     Each frame's voicing and period from the pitch track, with
- *              octave errors corrected against its neighbours
+ *              octave errors corrected against its neighbours and short
+ *              islands of voicing removed
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -87,6 +88,36 @@ std::vector<FrameVoicing> VoicingClassifier::Classify(
     }
   }
   return out;
+}
+
+void SmoothVoicingRuns(std::span<FrameVoicing> voicing, int min_run) {
+  const auto n = static_cast<std::ptrdiff_t>(voicing.size());
+  // Unvoiced islands first, so that a voiced island between two of them
+  // is judged with them already filled.
+  for (const bool island_voiced : {false, true}) {
+    std::ptrdiff_t i = 0;
+    while (i < n) {
+      std::ptrdiff_t j = i;
+      while (j < n && voicing[static_cast<std::size_t>(j)].voiced ==
+                          voicing[static_cast<std::size_t>(i)].voiced) {
+        ++j;
+      }
+      const bool inner = i > 0 && j < n;
+      if (inner && j - i < min_run &&
+          voicing[static_cast<std::size_t>(i)].voiced == island_voiced) {
+        const double period =
+            island_voiced
+                ? 0.0
+                : 0.5 * (voicing[static_cast<std::size_t>(i - 1)].period +
+                         voicing[static_cast<std::size_t>(j)].period);
+        for (std::ptrdiff_t k = i; k < j; ++k) {
+          voicing[static_cast<std::size_t>(k)] = {.voiced = !island_voiced,
+                                                  .period = period};
+        }
+      }
+      i = j;
+    }
+  }
 }
 
 }  // namespace speak5220::core::encoder

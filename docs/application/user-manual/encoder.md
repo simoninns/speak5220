@@ -6,6 +6,20 @@ panel**: what its frames add up to, how good they sound, and the
 settings they are made with. **Optimise** searches those settings for
 the best quality the project has room for.
 
+A phrase is made in three stages:
+
+1. **The original**: the recording as imported, never changed.
+2. **The preprocessed recording**: the original with the
+   [preprocessing](#preprocessing) applied (a squelch, a bass cut, a
+   treble tilt), or the original itself when there is none.
+3. **The encoding**: the frames the encoder makes from the preprocessed
+   recording.
+
+The quality is measured between the last two: how close the encoding is
+to what it was asked to make. The top [waveform](waveforms.md) shows the
+original or the preprocessed recording, as you choose, so you can see
+and hear what the encoding is aiming at.
+
 ## The encoder panel
 
 From the top:
@@ -40,7 +54,8 @@ From the top:
 
 ## The quality rating
 
-The encoded speech is compared with the original on the frames that hold
+The encoded speech is compared with the preprocessed recording (the
+original, when there is no preprocessing) on the frames that hold
 speech. Silence, pauses, breaths and clicks are left out, found by a
 voice activity detector. Three things are measured:
 
@@ -93,26 +108,31 @@ meanwhile.
 
 ## The settings
 
-One row per [encoder option](../reference/encoder-options.md), in two
-columns. Hover over a label for what the option does and its default.
+One row per [option](../reference/encoder-options.md), in two columns,
+in two sections: **Preprocessing** (with its [preset](#presets)
+chooser) and **Encoder**. Hover over a label for what the option does and its default.
 Numbers are set with sliders, with the value and its unit beside them
-(`24 codes`, `45 dB`, `32 ms`; the ratios read `off` at 1). A small tick
+(`24 codes`, `45 dB`, `32 ms`; the ratios read `off` at 1, and the
+treble tilt and the shortest voicing run read `off` at 0 and 1). A small tick
 under each slider marks the default, so an option moved from it is easy
 to see. A slider covers the range where useful values lie (the reference
 gives each one); a value outside it, from the project file or Optimise,
 widens the slider to include it. Click a slider and use the arrow keys
 for single steps, Page Up and Page Down for larger ones. The
-[squelch](#the-squelch) and the [resonance hold](#the-resonance-hold)
-have a check box that turns them on or off, and the pre-emphasis a choice
-of chirp or first order, whose coefficient the slider beside it sets.
+[squelch](#the-squelch), the [bass cut](#bass-cut-and-treble-tilt) and
+the [resonance hold](#the-resonance-hold) have a check box that turns
+them on or off, and the pre-emphasis a choice of chirp or first order,
+whose coefficient the slider beside it sets.
 
-The form first shows the five **basic settings**, the ones that change
-the sound or the size most clearly: the target RMS (loudness), the repeat
-trade-off (bytes against quality), the [squelch](#the-squelch), the
-pre-emphasis (brighter or more muffled) and the voicing threshold (buzz
-against hiss on sounds between the two). Click **Advanced settings** below
-them for the other six, which fine-tune the encoding; click it again to
-hide them. Speak5220 remembers
+The **Preprocessing** section always shows its three settings: the
+[squelch](#the-squelch), and the [bass cut and treble
+tilt](#bass-cut-and-treble-tilt). The **Encoder** section first shows
+its four **basic settings**, the ones that change the sound or the size
+most clearly: the target RMS (loudness), the repeat trade-off (bytes
+against quality), the pre-emphasis (brighter or more muffled) and the
+voicing threshold (buzz against hiss on sounds between the two). Click
+**Advanced settings** below them for the other seven, which fine-tune the
+encoding; click it again to hide them. Speak5220 remembers
 the choice. Hidden settings still apply: when any of them differ from the
 default, the button says how many, for example **Advanced settings (2
 changed)**, as it can after Optimise or with a project from elsewhere.
@@ -144,14 +164,45 @@ A new encoding that would take the project past its 64 PHROMs is not
 stored: a message says so, and the form shows the phrase's settings again
 (see [troubleshooting](troubleshooting.md#the-encoder-and-optimise)).
 
-## The squelch
+## Preprocessing
+
+The preprocessing prepares the recording for the chip before it is
+encoded. It is off by default, so the encoder takes the original as it
+is. It is set in the **Preprocessing** section of the settings, for a
+phrase or for the project's defaults like any other setting.
+
+- The quality is measured against the preprocessed recording, which is
+  what the encoding aims at. So a preprocessing that suits the speaker
+  the phrases will be played on is not counted against the encoding, and
+  scores made with different preprocessing do not compare. Optimise keeps
+  the phrase's preprocessing as it is.
+- Click **Preprocessed** above the top waveform to see and hear the
+  recording as preprocessed, and **Original** to go back
+  ([the original and the preprocessed
+  recording](waveforms.md#the-original-and-the-preprocessed-recording)).
+  The original is never changed.
+- **Export** can write the preprocessed recordings as WAV files
+  ([export](export.md)).
+
+### Presets
+
+**Preset** at the top of the section sets all three settings at once:
+
+| Preset | Squelch | Bass cut | Treble tilt | For |
+|---|---|---|---|---|
+| None | off | off | off | The recording as it is |
+| BBC Micro | off | 200 Hz | 0.4 | Phrases played on a BBC Micro's small speaker, balanced like Acorn's own |
+
+Choosing a preset replaces the three settings; the encoder's settings
+are left as they are. When the settings match no preset, for example
+after moving a slider, the chooser shows **Custom**.
+
+### The squelch
 
 **Squelch**, off by default, makes the quiet stretches of the recording
-silent before it is encoded: everything more than the set number of dB
-below the recording's loudest sound, such as breaths, lip noise and room
-noise. Tick its check box to turn it on (it starts at `30 dB`). The
-quality is then measured against the squelched recording, so muted
-breaths are not asked of the encoding.
+silent: everything more than the set number of dB below the recording's
+loudest sound, such as breaths, lip noise and room noise. Tick its check
+box to turn it on (it starts at `30 dB`).
 
 - A lower number squelches more: `20 dB` mutes anything a tenth as loud
   as the loudest sound; `40 dB` only sounds a hundredth as loud.
@@ -160,19 +211,57 @@ breaths are not asked of the encoding.
   onsets are not clipped. Loudness alone cannot tell a breath from a soft
   *h* or a trailing *s*, though: if a word loses its ending, raise the
   number.
-- Changing the squelch changes what the quality is measured against, so
-  scores made with different squelches do not compare. Optimise keeps
-  the phrase's squelch as it is.
 - The squelch is not the **Silence gate**, which only decides which
   frames of the encoding are silent (45 dB below the loudest frame by
-  default) and leaves the quality measured against the whole recording.
+  default) and does not change the preprocessed recording.
 
-The stretches the squelch mutes are [shaded on the original
-waveform](waveforms.md#the-squelch), and the shading follows the slider as
+On the original waveform the stretches the squelch mutes are
+[shaded](waveforms.md#the-squelch), and the shading follows the slider as
 it moves, so the level can be set by eye: breaths are often 25 to 35 dB
 below the loudest sound, so a breath that `30 dB` leaves unshaded may
-need `25 dB` or less. The recording itself is not changed: the waveform
-shows and plays it as imported.
+need `25 dB` or less. On the preprocessed recording they are silent.
+
+### Bass cut and treble tilt
+
+**Bass cut** and **Treble tilt**, both off by default, make the
+recording brighter: its bass cut below the set frequency (24 dB per
+octave below it), and its treble lifted. The speech then has less of its
+energy in the bass, where a small speaker such as a BBC Micro's gives
+little back and where the chip's loudest peaks come from, and more in
+the band where speech is understood. The encoded sound can be played
+louder for the same peaks.
+
+Acorn's own phrases, a voice that TI recorded and encoded, have this
+balance: compared with a natural recording of a similar voice, they have
+about 11 dB less at 125 Hz and a few dB more treble. **Bass cut** at
+`200 Hz` and **Treble tilt** at `0.4`, the **BBC Micro** preset, come
+close to it.
+
+The encoder takes the encoding's spectra and loudness from the
+preprocessed recording. It still finds the pitch and the voicing (buzz
+or hiss) in the recording before its bass cut and treble tilt, since
+brightening would make voiced sounds look like hiss.
+
+## Voicing smoothing
+
+A voiced sound (a vowel's buzz) and an unvoiced one (an *s*'s hiss) sound
+very different on the chip, and a frame or two of hiss inside a vowel, or
+of buzz inside a hiss, is heard as roughness. **Shortest voicing run**, an
+advanced setting at `2 frames` by default, gives any run of voiced or
+unvoiced frames shorter than that, with the other kind on both sides,
+the voicing of its neighbours. A lone unvoiced frame in a vowel becomes
+voiced, at the pitch around it; a lone voiced frame in a hiss becomes
+unvoiced. Runs at the start and end of a phrase are kept. `1` turns it
+off.
+
+So by default a single frame of the other kind is smoothed away. On
+Acorn's own phrases, this and the voicing threshold of `0.4` bring the
+encoder's voicing nearer the phrases' own: re-encoded by Speak5220, they
+change between buzz and hiss 2.7 times a second instead of 3.8 (the
+phrases themselves: 1.6), and score 0.928 instead of 0.890. `3 frames`
+comes nearer still (2.2 times a second), but over the corpus of 243
+recordings it lowers more scores than it raises, so it is not the
+default.
 
 ## Quiet pauses
 
@@ -250,9 +339,10 @@ Before it starts, two limits can be set:
 
 Whatever the limits, a result that would take the project past its 64
 PHROMs is never chosen. Optimise does not change the
-[squelch](#the-squelch): each phrase keeps its own, and its encodings are
-scored against its squelched recording. Each phrase is checked with the earlier phrases'
-results in place, so the results fit together.
+[preprocessing](#preprocessing): each phrase keeps its own, and its
+encodings are scored against its preprocessed recording. Each phrase is
+checked with the earlier phrases' results in place, so the results fit
+together.
 
 **Start** begins the search. While it runs, the window shows:
 

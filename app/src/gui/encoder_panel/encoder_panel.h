@@ -22,6 +22,7 @@
 
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/synth/synth.h"
@@ -114,10 +115,10 @@ class EncoderPanel : public QWidget {
   QPushButton* OptimiseButton() const { return optimise_; }
   QPushButton* ResetButton() const { return reset_; }
 
-  // The squelch the phrase shown would be encoded with, as the form has
-  // it, changes not yet applied included: for showing what it mutes. None
-  // for no phrase, a locked one or one without audio.
-  std::optional<double> ShownSquelch() const;
+  // The preprocessing the phrase shown would be encoded with, as the form
+  // has it, changes not yet applied included: for showing the recording
+  // preprocessed. None for no phrase, a locked one or one without audio.
+  core::preprocess::PreprocessOptions ShownPreprocessing() const;
 
  signals:
   // The Optimise button: optimise the phrase shown.
@@ -126,8 +127,8 @@ class EncoderPanel : public QWidget {
   void Failed(const QString& title, const QString& message);
   // An encoding or a measurement finished.
   void JobFinished();
-  // The squelch of the phrase shown changed (ShownSquelch()).
-  void SquelchChanged(std::optional<double> squelch_db);
+  // The preprocessing of the phrase shown changed (ShownPreprocessing()).
+  void PreprocessingChanged(const core::preprocess::PreprocessOptions& options);
 
  private:
   // What a phrase's frames have been measured to be.
@@ -189,8 +190,8 @@ class EncoderPanel : public QWidget {
   Scope pending_scope_ = Scope::kPhrase;
   core::encoder::EncoderOptions pending_options_;
 
-  // The squelch last given by SquelchChanged().
-  std::optional<double> shown_squelch_;
+  // The preprocessing last given by PreprocessingChanged().
+  core::preprocess::PreprocessOptions shown_preprocessing_;
 
   int jobs_running_ = 0;
   int next_job_ = 0;

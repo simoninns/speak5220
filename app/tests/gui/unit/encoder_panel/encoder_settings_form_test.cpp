@@ -15,8 +15,10 @@
 #include <QImage>
 #include <QString>
 #include <QToolButton>
+#include <string_view>
 
 #include "core/encoder/encoder_options.h"
+#include "core/preprocess/preprocess.h"
 #include "gtest/gtest.h"
 #include "gui/encoder_panel/option_slider.h"
 
@@ -66,7 +68,12 @@ TEST_F(EncoderSettingsFormTest, SlidersShowTheValueWithItsUnit) {
   EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("24 codes"));
   EXPECT_EQ(form_.Slider("gate_db")->Text(), QStringLiteral("45 dB"));
   EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("32 ms"));
-  EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.3"));
+  EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.4"));
+  EXPECT_EQ(form_.Slider("voicing_min_run")->Text(),
+            QStringLiteral("2 frames"));
+  EXPECT_EQ(form_.Slider("treble_tilt")->Text(), QStringLiteral("off"));
+  form_.Slider("voicing_min_run")->MoveTo(1.0);
+  EXPECT_EQ(form_.Slider("voicing_min_run")->Text(), QStringLiteral("off"));
   EXPECT_EQ(form_.Slider("level_agc")->Text(), QStringLiteral("1.25:1"));
   form_.Slider("level_agc")->MoveTo(1.0);
   EXPECT_EQ(form_.Slider("level_agc")->Text(), QStringLiteral("off"));
@@ -157,12 +164,12 @@ TEST_F(EncoderSettingsFormTest, SquelchIsTurnedOnByItsCheckBox) {
   EXPECT_FALSE(form_.OnBox("squelch_db")->isChecked());
   EXPECT_FALSE(form_.Slider("squelch_db")->isEnabled());
   form_.OnBox("squelch_db")->setChecked(true);
-  ASSERT_TRUE(form_.Options().squelch_db.has_value());
-  EXPECT_DOUBLE_EQ(*form_.Options().squelch_db, 30.0);
+  ASSERT_TRUE(form_.Options().preprocess.squelch_db.has_value());
+  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.squelch_db, 30.0);
   form_.Slider("squelch_db")->MoveTo(24.0);
-  EXPECT_DOUBLE_EQ(*form_.Options().squelch_db, 24.0);
+  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.squelch_db, 24.0);
   form_.OnBox("squelch_db")->setChecked(false);
-  EXPECT_FALSE(form_.Options().squelch_db.has_value());
+  EXPECT_FALSE(form_.Options().preprocess.squelch_db.has_value());
   EXPECT_EQ(form_.OnBox("target_rms"), nullptr);
 }
 
@@ -242,6 +249,68 @@ TEST_F(EncoderSettingsFormTest, AdvancedButtonCountsHiddenChanges) {
   form_.ResetButton("gate_db")->click();
   EXPECT_EQ(form_.AdvancedButton()->text(),
             QStringLiteral("Advanced settings (1 changed)"));
+}
+
+// The preprocessing options are always shown, under their own heading;
+// the advanced button counts only the encoder's.
+TEST_F(EncoderSettingsFormTest, PreprocessingOptionsAreAlwaysShown) {
+  for (const std::string_view field :
+       {"squelch_db", "bass_cut_hz", "treble_tilt"}) {
+    EXPECT_TRUE(form_.Editor(field)->isVisibleTo(&form_)) << field;
+  }
+  EncoderOptions options;
+  options.preprocess.treble_tilt = 0.4;
+  form_.SetOptions(options, {}, QStringLiteral("the project default"));
+  EXPECT_EQ(form_.AdvancedButton()->text(),
+            QStringLiteral("Advanced settings"));
+}
+
+// Choosing a preset sets the preprocessing options and signals once; the
+// chooser shows the preset the options match, or Custom.
+TEST_F(EncoderSettingsFormTest, PresetChooserSetsAndShowsThePreprocessing) {
+  QComboBox* presets = form_.PresetBox();
+  ASSERT_EQ(presets->count(), 3);
+  EXPECT_EQ(presets->itemText(0), QStringLiteral("None"));
+  EXPECT_EQ(presets->itemText(1), QStringLiteral("BBC Micro"));
+  EXPECT_EQ(presets->itemText(2), QStringLiteral("Custom"));
+  EXPECT_EQ(presets->currentIndex(), 0);
+
+  presets->setCurrentIndex(1);
+  emit presets->activated(1);
+  EXPECT_EQ(edits_, 1);
+  EXPECT_EQ(form_.Options().preprocess,
+            (core::preprocess::PreprocessOptions{.bass_cut_hz = 200.0,
+                                                 .treble_tilt = 0.4}));
+  EXPECT_TRUE(form_.OnBox("bass_cut_hz")->isChecked());
+  EXPECT_DOUBLE_EQ(form_.Slider("treble_tilt")->Value(), 0.4);
+  EXPECT_TRUE(form_.IsMarked("treble_tilt"));
+  // The encoder's options are left as they were.
+  EXPECT_EQ(form_.Options().target_rms, 24.0);
+
+  // Choosing it again changes nothing, and so does not signal.
+  emit presets->activated(1);
+  EXPECT_EQ(edits_, 1);
+
+  // Editing an option makes it a custom set; Custom keeps it.
+  form_.Slider("treble_tilt")->MoveTo(0.5);
+  EXPECT_EQ(presets->currentIndex(), 2);
+  emit presets->activated(2);
+  EXPECT_EQ(form_.Options().preprocess.treble_tilt, 0.5);
+  EXPECT_EQ(presets->currentIndex(), 2);
+
+  // Options shown from outside choose their preset too, without
+  // signalling.
+  const int edits = edits_;
+  form_.SetOptions({}, {}, QStringLiteral("the project default"));
+  EXPECT_EQ(presets->currentIndex(), 0);
+  EXPECT_EQ(edits_, edits);
+}
+
+TEST_F(EncoderSettingsFormTest, NotEditableDisablesThePresetChooser) {
+  form_.SetEditable(false);
+  EXPECT_FALSE(form_.PresetBox()->isEnabled());
+  form_.SetEditable(true);
+  EXPECT_TRUE(form_.PresetBox()->isEnabled());
 }
 
 TEST_F(EncoderSettingsFormTest, NotEditableKeepsTheAdvancedButtonUsable) {

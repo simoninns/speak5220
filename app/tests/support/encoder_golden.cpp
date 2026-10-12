@@ -95,7 +95,9 @@ EncoderOptions ReferenceEncoderOptions() {
   options.window = 240;
   options.voicing_evidence = 4.0;
   options.level_agc = 1.0;
+  options.voicing_threshold = 0.3;
   options.resonance_hold_db.reset();
+  options.voicing_min_run = 1;
   return options;
 }
 

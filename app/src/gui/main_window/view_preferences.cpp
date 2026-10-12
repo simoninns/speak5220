@@ -30,6 +30,15 @@ void SettingsViewPreferences::SetAdvancedSettingsShown(bool shown) {
   settings_.setValue(QString::fromLatin1(kAdvancedSettingsKey), shown);
 }
 
+bool SettingsViewPreferences::PreprocessedShown() {
+  return settings_.value(QString::fromLatin1(kPreprocessedShownKey), false)
+      .toBool();
+}
+
+void SettingsViewPreferences::SetPreprocessedShown(bool shown) {
+  settings_.setValue(QString::fromLatin1(kPreprocessedShownKey), shown);
+}
+
 core::dsp::OutputFilter SettingsViewPreferences::ChosenOutputFilter() {
   const std::string key = settings_.value(QString::fromLatin1(kOutputFilterKey))
                               .toString()

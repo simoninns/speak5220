@@ -37,10 +37,13 @@ project:
   ascii_map:
     " ": "(TONE 1)"
     "1": "ONE,WON"
+  default_preprocess:
+    squelch_db: null
+    bass_cut_hz: 200
+    treble_tilt: 0.4
   default_encoder:
     target_rms: 24
     repeat_lambda: 70
-    squelch_db: null
     pre_emphasis: "chirp"
     # ... every encoder option, each one required
   phroms:
@@ -56,6 +59,8 @@ phrases:
       channels: 2
       duration: 0.51
       sha256: "4efae645c896..."
+    preprocess:
+      squelch_db: 30
     encoder:
       gate_db: 40
     locked: false
@@ -78,7 +83,7 @@ exports:
 |---|---|---|
 | `format` | String | Always `"speak5220-project"`. A file with any other value is not opened |
 | `version` | Whole number | The format version, 1. A project from a newer version of Speak5220 is refused rather than misread; older versions are upgraded when opened |
-| `project` | Mapping | The project settings, below. Required, for `default_encoder`; the other settings are optional and take their defaults |
+| `project` | Mapping | The project settings, below. Required, for `default_preprocess` and `default_encoder`; the other settings are optional and take their defaults |
 | `phrases` | List | The phrases, in PHROM order: the order of this list is the order of the words in the PHROMs (datasheet §12.8) |
 | `exports` | List | The export presets, below |
 
@@ -89,7 +94,8 @@ exports:
 | `name` | String | The file name, for a project made by `speak5220-cli new` | The project's name |
 | `header_strings` | List of strings | `["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]` | The strings in each PHROM's header. Each PHROM gets its number appended to the second string (`"My PHROM 2"`). Together, with a null after each, they must fit in 54 bytes, and they must be ASCII; the BBC Micro expects the first to start `(C)` |
 | `ascii_map` | Mapping | Empty | The "ASCII associated" words: each key is one printable ASCII character, each value a phrase name. A PHROM includes only the entries whose phrase it holds |
-| `default_encoder` | Mapping | Required | The options every phrase is encoded with, unless it sets its own. Every [encoder option](encoder-options.md) must be listed, an unset one as `null`, so a project never depends on the defaults: a later version of Speak5220 that changes one does not change the project's encodings. A project that does not list them all, such as one saved by a development version before this rule, is not opened, and the message names the missing options |
+| `default_preprocess` | Mapping | Required | The [preprocessing](encoder-options.md#preprocessing) every phrase's recording gets before it is encoded, unless the phrase sets its own: `squelch_db`, `bass_cut_hz` and `treble_tilt`, every one listed, as in `default_encoder` |
+| `default_encoder` | Mapping | Required | The options every phrase is encoded with, unless it sets its own. Every [encoder option](encoder-options.md#encoder) must be listed, an unset one as `null`, so a project never depends on the defaults: a later version of Speak5220 that changes one does not change the project's encodings. A project that does not list them all, such as one saved by a development version before this rule, is not opened, and the message names the missing options. A preprocessing option here is refused, with a message saying it belongs under `default_preprocess` (and an encoder option under `default_preprocess` likewise) |
 | `phroms` | List | Empty | Header strings for single PHROMs: `number` (from 1) and `header_strings`, which replace the project's strings in that PHROM |
 
 ### phrases
@@ -100,7 +106,8 @@ exports:
 | `name` | String | Required | The phrase name: the word's name in the PHROM. See the rules below |
 | `description` | String | `""` | Free text (UTF-8), kept only in the project |
 | `source` | Mapping | None | Where the audio came from, below. Every phrase that is not locked has one |
-| `encoder` | Mapping | Empty | The [encoder options](encoder-options.md) this phrase sets for itself. Options it does not list follow `default_encoder`, also when that changes |
+| `preprocess` | Mapping | Empty | The [preprocessing options](encoder-options.md#preprocessing) this phrase sets for itself. Options it does not list follow `default_preprocess`, also when that changes |
+| `encoder` | Mapping | Empty | The [encoder options](encoder-options.md#encoder) this phrase sets for itself. Options it does not list follow `default_encoder`, also when that changes |
 | `locked` | `true` or `false` | `false` | A locked phrase is never re-encoded: its frames are its content |
 | `play_start` | Whole number | 0 | Where playback starts, in samples of the 8 kHz audio: from 0 to the audio's length. Set by clicking in a [waveform](../user-manual/waveforms.md#the-play-start) |
 
@@ -142,7 +149,7 @@ is refused when it runs, with a message naming it.
 | `phrases` | List of strings | With scope `"selected"` only: the names of the phrases to export, at least one. They are exported in the project's list order, whatever the order here. A name the project does not have is refused when the preset runs |
 | `layout` | String | `acorn-phrom` only: `"separate"` (one 16 KB file per PHROM, `NAME_1.bin`, `NAME_2.bin`, ...; the default) or `"concatenated"` (one file, `NAME.bin`) |
 | `licence` | String | The C headers only: the [SPDX](https://spdx.org/licenses/) licence identifier, or expression, written in the header: letters, digits, spaces and `. + - ( )`. Default `"GPL-3.0-or-later"` |
-| `audio` | String | `wav` only: `"encoded"` (the chip's output; the default) or `"original"` (the phrase's 8 kHz source) |
+| `audio` | String | `wav` only: `"encoded"` (the chip's output; the default), `"original"` (the phrase's 8 kHz source) or `"preprocessed"` (that source with the phrase's [preprocessing](../user-manual/encoder.md#preprocessing)) |
 
 ## frames.yaml
 
@@ -170,7 +177,7 @@ quality:
 | Key | Type | Meaning |
 |---|---|---|
 | `encoder_version` | String | The version of the encoder that made the frames |
-| `settings_hash` | String | A SHA-256 of the audio, the encoder options in effect and the encoder version. When it no longer matches, the encoding is out of date and `speak5220-cli encode` redoes it. Empty for frames that were not encoded by Speak5220 |
+| `settings_hash` | String | A SHA-256 of the audio, the preprocessing and encoder options in effect and the encoder version. When it no longer matches, the encoding is out of date and `speak5220-cli encode` redoes it. Empty for frames that were not encoded by Speak5220 |
 | `frames` | List | One flow mapping per frame, ending in a stop frame |
 | `quality` | Mapping | Optional: the quality measured with the encoding (below) |
 
@@ -183,7 +190,8 @@ opened.
 
 The `quality` mapping holds the [quality rating](../user-manual/encoder.md#the-quality-rating)'s
 figures, as the encoder panel and Optimise measured them against the
-phrase's recording (squelched, if the phrase is):
+phrase's [preprocessed](../user-manual/encoder.md#preprocessing)
+recording:
 
 | Key | Type | Meaning |
 |---|---|---|

@@ -40,9 +40,10 @@ struct ReferenceEncoding {
 };
 
 // The reference encoder's defaults, tms5220enc.py DEFAULTS, written out:
-// four of them differ from EncoderOptions{}, and resonance_hold_db, which
-// the reference does not have, is off. The encoder always quietens pauses,
-// which the reference does not: compare its frames with
+// five of them differ from EncoderOptions{}, and the options the reference
+// does not have are off (resonance_hold_db unset, voicing_min_run 1;
+// bass_cut_hz and treble_tilt are off by default). The encoder always quietens
+// pauses, which the reference does not: compare its frames with
 // ReferenceFrames().
 core::encoder::EncoderOptions ReferenceEncoderOptions();
 

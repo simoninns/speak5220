@@ -67,10 +67,10 @@ core::StatusOr<MeasuredEncoding> EncodePhrase(
     const EncodingTools& tools, core::synth::ISynth& synth,
     std::span<const float> audio, const core::encoder::EncoderOptions& options);
 
-// Measures `frames` made from `audio`: the quality, against the source
-// squelched by `options` (encoder::SquelchedSource()) as the encoder
-// squelched it, and the peak code. Unknown values stay unset. On a worker
-// thread.
+// Measures `frames` made from `audio`: the quality, against `audio`
+// preprocessed by `options` (preprocess::Preprocess()) as the encoder
+// aimed at it, and the peak code. Unknown values stay unset. On a
+// worker thread.
 EncodingFacts MeasureFrames(const EncodingTools& tools,
                             core::synth::ISynth& synth,
                             std::span<const float> audio,

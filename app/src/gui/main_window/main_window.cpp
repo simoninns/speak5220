@@ -135,8 +135,12 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           &MainWindow::OnSelectionChanged);
   connect(waveforms_, &PhraseWaveforms::Failed, this, &MainWindow::ShowError);
   connect(encoder_panel_, &EncoderPanel::Failed, this, &MainWindow::ShowError);
-  connect(encoder_panel_, &EncoderPanel::SquelchChanged, waveforms_,
-          &PhraseWaveforms::SetSquelch);
+  connect(encoder_panel_, &EncoderPanel::PreprocessingChanged, waveforms_,
+          &PhraseWaveforms::SetPreprocessing);
+  waveforms_->SetPreprocessedShown(view_preferences_->PreprocessedShown());
+  connect(
+      waveforms_, &PhraseWaveforms::PreprocessedShownChanged, this,
+      [this](bool shown) { view_preferences_->SetPreprocessedShown(shown); });
   connect(encoder_panel_, &EncoderPanel::OptimiseRequested, this,
           [this](const project::PhraseId& id) { Optimise({id}); });
   connect(optimise_dialog_, &OptimiseDialog::Failed, this,

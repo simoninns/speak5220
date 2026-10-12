@@ -38,10 +38,11 @@ inline constexpr int kProjectSampleRate = 8000;
 // by an older version keeps what a newer one added (plan §4).
 using UnknownKeys = std::vector<std::pair<std::string, std::string>>;
 
-// The encoder options a phrase sets for itself, over the project's
-// defaults: field name (EncoderOptionInfo::field) to text, as
-// SetEncoderOption() reads it. Only the options given here differ from the
-// defaults; the rest follow the project's defaults when those change.
+// The options a phrase sets for itself, over the project's defaults, of
+// both stages (the preprocessing's and the encoder's): field name
+// (EncoderOptionInfo::field) to text, as SetEncoderOption() reads it. Only
+// the options given here differ from the defaults; the rest follow the
+// project's defaults when those change.
 using EncoderOverrides = std::map<std::string, std::string>;
 
 // Files of a phrase's directory, or of the project, that this version
@@ -124,9 +125,10 @@ struct Phrase {
   // The source at kProjectSampleRate, mono, on the 24-bit grid
   // (audio::QuantiseToPcm24()). Empty when there is no source.
   std::vector<float> audio;
-  // Options set for this phrase alone, and unknown keys of its encoder
-  // mapping.
+  // Options set for this phrase alone, and unknown keys of its preprocess
+  // and encoder mappings.
   EncoderOverrides encoder;
+  UnknownKeys preprocess_unknown;
   UnknownKeys encoder_unknown;
   // A locked phrase is never re-encoded (plan §3.4).
   bool locked = false;

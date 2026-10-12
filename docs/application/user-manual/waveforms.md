@@ -4,14 +4,18 @@ Below the name and description, the [main window](main-window.md) shows
 the selected phrase as two waveforms, one above the other:
 
 - **Original (8 kHz)**: the phrase's audio as stored in the project,
-  after resampling to 8 kHz (see [importing audio](projects.md#importing-audio)).
+  after resampling to 8 kHz (see [importing audio](projects.md#importing-audio)),
+  or **Preprocessed (8 kHz)**: that audio as the phrase's
+  [preprocessing](encoder.md#preprocessing) prepares it for the encoder
+  ([below](#the-original-and-the-preprocessed-recording)).
 - **Encoded**: what a TMS5220 makes of the phrase's frames.
   The frames are spoken by the emulated chip as a PHROM word is spoken
   (datasheet §12.7): loaded into a speech ROM and started with Speak.
 
 The two are the same height. Under both are a scroll bar and one row of
-controls: a play button for each pane, labelled **Original** and
-**Encoded**, then the play-start reset, Frame grid and the zoom
+controls: a play button for each pane, labelled with what it shows
+(**Original** or **Preprocessed**, and **Encoded**), then the play-start
+reset, Frame grid and the zoom
 controls. With several
 phrases selected, or none, the panes are empty.
 
@@ -21,6 +25,28 @@ phrases selected, or none, the panes are empty.
     the [encoder panel](encoder.md) below. Frames made with other settings
     are still shown, marked **stale** beside the pane's title, until the
     phrase is re-encoded.
+
+## The original and the preprocessed recording
+
+The two buttons at the right of the top pane's title choose what it
+shows and plays:
+
+- **Original**: the recording as imported, the default.
+- **Preprocessed**: the recording as the phrase's
+  [preprocessing](encoder.md#preprocessing) prepares it: what the
+  encoder aims at, and what the quality is measured against. The note
+  beside the title names the preprocessing, for example *bass cut 200 Hz,
+  treble tilt 0.4*, or says *no preprocessing: the same as the
+  original*.
+
+Switching keeps the zoom and the play start, and stops the top pane if
+it is playing. The preprocessed recording follows the settings as they
+are moved, before the change is encoded. A treble tilt can take loud
+sounds past full scale; the preprocessed recording is then shown and
+played scaled down to fit, and the note says by how much (*scaled by
+−2.0 dB to fit*). Only the display and playback are scaled: the encoder's
+level comes from its own target RMS. Speak5220 remembers the choice
+between sessions.
 
 ## The squelch
 
@@ -32,7 +58,7 @@ Hovering over a shaded stretch says it is squelched. The shading follows
 the squelch's slider as it moves, before the change is encoded, so the
 level can be set by eye: low enough to cover the breaths, not so low
 that it eats into the words. The original still shows and plays the
-recording as imported.
+recording as imported; the preprocessed recording is silent there.
 
 ## Lining up the two
 
@@ -60,16 +86,24 @@ change; the frames, and anything exported, are as the chip makes them.
 The chip gives the same sound on two pins. Its **I/O** pin sends each
 sample as a 10-bit code, −512 to +511. Its **SPEAKER** pin drives a DAC
 that takes only 8 bits, so it clips every code to −128 to +127: loud
-speech that goes past that range is flattened at the top and bottom. Most
-computers play the SPEAKER pin, but the sound can also be regenerated from
-the I/O pin's codes. Choose which under **Audio > Chip Output**:
+speech that goes past that range is flattened at the top and bottom. The
+DAC's steps are also uneven
+([datasheet §8.2](../../technical/datasheet/dac-and-audio.md#82-da-conversion)):
+the step between codes −1 and 0, where all eight of its input bits
+change, is about six normal steps. Quiet sound, which keeps crossing
+between −1 and 0, is coarsened by that step into a gritty hiss once an
+audio stage such as the BBC Micro's removes the offset. Most computers
+play the SPEAKER pin, but the sound can also be regenerated from the I/O
+pin's codes. Choose which under **Audio > Chip Output**:
 
 | Pin | What you see and hear |
 |---|---|
-| SPEAKER (8-bit DAC) | Each code clipped to −128 to +127, the default. If any samples are clipped, the note beside the encoded pane's title says how many, for example **12 samples clipped by the DAC** |
+| SPEAKER (8-bit DAC) | Each code clipped to −128 to +127 and converted with the DAC's measured steps, the default. If any samples are clipped, the note beside the encoded pane's title says how many, for example **12 samples clipped by the DAC** |
 | I/O (10-bit codes) | The codes unclipped. The note says **I/O pin, 10-bit** |
 
-Only the clipping is modelled, not the uneven steps of the real DAC. The
+The DAC's steps are those measured on one chip (the datasheet's
+Table 8-2). Each chip's are a little different: one BBC Micro measured
+through its audio stage had a step of about seven between −1 and 0. The
 level match above is measured on the unclipped codes, so it is the same
 for both pins. Like the output filter below, the choice changes the
 encoded pane and the encoded audio played in the main window and in the

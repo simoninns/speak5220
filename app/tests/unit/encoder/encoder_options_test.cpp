@@ -18,14 +18,16 @@
 #include <utility>
 #include <vector>
 
+#include "core/preprocess/preprocess.h"
 #include "core/util/status.h"
 #include "gtest/gtest.h"
 
 namespace speak5220::core::encoder {
 namespace {
 
-// tms5220enc.py DEFAULTS, but for four chosen on the corpus (HLD §9).
-TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFourChosenOnes) {
+// tms5220enc.py DEFAULTS, but for five chosen on the corpus and Acorn's
+// PHROM (HLD §9).
+TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
   const EncoderOptions o;
   EXPECT_EQ(o.target_rms, 24.0);
   EXPECT_EQ(o.repeat_lambda, 70.0);
@@ -33,9 +35,90 @@ TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFourChosenOnes) {
   EXPECT_EQ(o.pre_emphasis, PreEmphasis::Chirp());
   EXPECT_EQ(o.window, 256);
   EXPECT_EQ(o.lag_window_hz, 60.0);
-  EXPECT_EQ(o.voicing_threshold, 0.3);
+  EXPECT_EQ(o.voicing_threshold, 0.4);
   EXPECT_EQ(o.voicing_evidence, 5.0);
   EXPECT_EQ(o.level_agc, 1.25);
+}
+
+// Not in the reference encoder: short voicing runs are smoothed by
+// default, and there is no preprocessing (HLD §9).
+TEST(EncoderOptionsTest, VoicingRunsAreSmoothedAndNothingIsPreprocessed) {
+  const EncoderOptions o;
+  EXPECT_EQ(o.voicing_min_run, 2);
+  EXPECT_EQ(o.preprocess, preprocess::PreprocessOptions{});
+}
+
+// The options whose value can turn them off name it, for the GUI to show
+// as "off".
+TEST(EncoderOptionsTest, OptionsWithAnOffValueNameIt) {
+  std::vector<std::string_view> named;
+  EncoderOptions off;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    if (!info.off_text.empty()) {
+      named.push_back(info.field);
+      ASSERT_TRUE(SetEncoderOption(off, info.field, info.off_text).IsOk())
+          << info.field;
+    }
+  }
+  EXPECT_EQ(named,
+            (std::vector<std::string_view>{"treble_tilt", "voicing_min_run"}));
+  EXPECT_EQ(off.preprocess.treble_tilt, 0.0);
+  EXPECT_EQ(off.voicing_min_run, 1);
+}
+
+// The squelch, the bass cut and the treble tilt are the preprocessing's
+// (plan Phase 11), listed first; the rest are the encoder's.
+TEST(EncoderOptionsTest, PreprocessingOptionsComeFirst) {
+  std::vector<std::string_view> preprocessing;
+  bool encoder_seen = false;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    if (info.stage == OptionStage::kPreprocess) {
+      EXPECT_FALSE(encoder_seen) << info.field;
+      EXPECT_FALSE(info.advanced) << info.field;
+      preprocessing.push_back(info.field);
+    } else {
+      encoder_seen = true;
+    }
+  }
+  EXPECT_EQ(preprocessing, (std::vector<std::string_view>{
+                               "squelch_db", "bass_cut_hz", "treble_tilt"}));
+}
+
+// Each preprocessing option sets its field of EncoderOptions::preprocess.
+TEST(EncoderOptionsTest, PreprocessingOptionsSetThePreprocessing) {
+  EncoderOptions o;
+  ASSERT_TRUE(SetEncoderOption(o, "squelch_db", "30").IsOk());
+  ASSERT_TRUE(SetEncoderOption(o, "bass_cut_hz", "200").IsOk());
+  ASSERT_TRUE(SetEncoderOption(o, "treble_tilt", "0.4").IsOk());
+  EXPECT_EQ(o.preprocess,
+            (preprocess::PreprocessOptions{
+                .squelch_db = 30.0, .bass_cut_hz = 200.0, .treble_tilt = 0.4}));
+  EXPECT_EQ(EncoderOptionText(o, "bass_cut_hz"), "200");
+  EXPECT_EQ(EncoderOptionText(o, "treble_tilt"), "0.4");
+}
+
+// Every preset is valid.
+TEST(EncoderOptionsTest, PreprocessPresetsAreValid) {
+  for (const preprocess::PreprocessPreset& preset :
+       preprocess::PreprocessPresets()) {
+    EncoderOptions o;
+    o.preprocess = preset.options;
+    EXPECT_TRUE(ValidateEncoderOptions(o).IsOk()) << preset.name;
+  }
+}
+
+TEST(EncoderOptionsTest, NewOptionsAreCheckedAgainstTheirRanges) {
+  EncoderOptions o;
+  EXPECT_TRUE(SetEncoderOption(o, "bass_cut_hz", "200").IsOk());
+  EXPECT_EQ(o.preprocess.bass_cut_hz, 200.0);
+  EXPECT_FALSE(SetEncoderOption(o, "bass_cut_hz", "20").IsOk());
+  EXPECT_TRUE(SetEncoderOption(o, "treble_tilt", "0.4").IsOk());
+  EXPECT_EQ(o.preprocess.treble_tilt, 0.4);
+  EXPECT_FALSE(SetEncoderOption(o, "treble_tilt", "0.99").IsOk());
+  EXPECT_TRUE(SetEncoderOption(o, "voicing_min_run", "4").IsOk());
+  EXPECT_EQ(o.voicing_min_run, 4);
+  EXPECT_FALSE(SetEncoderOption(o, "voicing_min_run", "0").IsOk());
+  EXPECT_FALSE(SetEncoderOption(o, "voicing_min_run", "2.5").IsOk());
 }
 
 // The reference's options that made no difference on the corpus, or
@@ -71,7 +154,7 @@ TEST(EncoderOptionsTest, ResonanceHoldIsOnByDefault) {
 // The squelch is not in the reference encoder, and is off by default: it
 // did not raise the score on the corpus (HLD §9).
 TEST(EncoderOptionsTest, SquelchIsOffByDefault) {
-  EXPECT_FALSE(EncoderOptions{}.squelch_db.has_value());
+  EXPECT_FALSE(EncoderOptions{}.preprocess.squelch_db.has_value());
 }
 
 // The GUI shows default_text and resets to EncoderOptions{}, so they must
@@ -108,20 +191,20 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
     EXPECT_FALSE(info.help.empty()) << info.key;
     EXPECT_LE(info.minimum, info.maximum) << info.key;
   }
-  EXPECT_EQ(keys.size(), 11U);
-  EXPECT_EQ(EncoderOptionInfos().front().key, "targetRms");
+  EXPECT_EQ(keys.size(), 14U);
+  EXPECT_EQ(EncoderOptionInfos().front().key, "squelchDb");
   EXPECT_EQ(EncoderOptionInfos().back().key, "levelAgc");
 }
 
 TEST(EncoderOptionsTest, BasicOptionsAreTheOnesWithTheClearestEffect) {
   std::vector<std::string_view> basic;
   for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
-    if (!info.advanced) {
+    if (info.stage == OptionStage::kEncoder && !info.advanced) {
       basic.push_back(info.field);
     }
   }
   EXPECT_EQ(basic, (std::vector<std::string_view>{"target_rms", "repeat_lambda",
-                                                  "squelch_db", "pre_emphasis",
+                                                  "pre_emphasis",
                                                   "voicing_threshold"}));
 }
 
@@ -151,9 +234,9 @@ TEST(EncoderOptionsTest, RejectsValuesOutsideTheirRange) {
 
 TEST(EncoderOptionsTest, ChecksSquelchOnlyWhenSet) {
   EncoderOptions o;
-  o.squelch_db = 30.0;
+  o.preprocess.squelch_db = 30.0;
   EXPECT_TRUE(ValidateEncoderOptions(o).IsOk());
-  o.squelch_db = 2.0;
+  o.preprocess.squelch_db = 2.0;
   EXPECT_FALSE(ValidateEncoderOptions(o).IsOk());
   EXPECT_FALSE(SetEncoderOption(o, "squelch_db", "100").IsOk());
 }
@@ -162,11 +245,11 @@ TEST(EncoderOptionsTest, SetsAndReadsTheSquelchAsText) {
   EncoderOptions o;
   EXPECT_EQ(EncoderOptionText(o, "squelch_db"), "none");
   ASSERT_TRUE(SetEncoderOption(o, "squelch_db", "24").IsOk());
-  EXPECT_EQ(o.squelch_db, 24.0);
+  EXPECT_EQ(o.preprocess.squelch_db, 24.0);
   EXPECT_EQ(o.resonance_hold_db, 14.0);
   EXPECT_EQ(EncoderOptionText(o, "squelch_db"), "24");
   ASSERT_TRUE(SetEncoderOption(o, "squelch_db", "none").IsOk());
-  EXPECT_FALSE(o.squelch_db.has_value());
+  EXPECT_FALSE(o.preprocess.squelch_db.has_value());
 }
 
 TEST(EncoderOptionsTest, ChecksPreEmphasisCoefficientOnlyWhenNotChirp) {
@@ -213,11 +296,11 @@ TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
 TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
   EncoderOptions options;
   EXPECT_EQ(EncoderOptionText(options, "target_rms"), "24");
-  EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.3");
+  EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.4");
   EXPECT_EQ(EncoderOptionText(options, "window"), "256");
   EXPECT_EQ(EncoderOptionText(options, "squelch_db"), "none");
   EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "chirp");
-  options.squelch_db = 30.0;
+  options.preprocess.squelch_db = 30.0;
   options.pre_emphasis = PreEmphasis::FirstOrder(0.9375);
   EXPECT_EQ(EncoderOptionText(options, "squelch_db"), "30");
   EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "0.9375");
@@ -231,9 +314,9 @@ TEST(EncoderOptionsTest, SetsEachTypeFromText) {
   ASSERT_TRUE(SetEncoderOption(options, "window", "200").IsOk());
   EXPECT_EQ(options.window, 200);
   ASSERT_TRUE(SetEncoderOption(options, "squelch_db", "40").IsOk());
-  EXPECT_EQ(options.squelch_db, 40.0);
+  EXPECT_EQ(options.preprocess.squelch_db, 40.0);
   ASSERT_TRUE(SetEncoderOption(options, "squelch_db", "none").IsOk());
-  EXPECT_FALSE(options.squelch_db.has_value());
+  EXPECT_FALSE(options.preprocess.squelch_db.has_value());
   ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "0.9").IsOk());
   EXPECT_EQ(options.pre_emphasis, PreEmphasis::FirstOrder(0.9));
   ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "chirp").IsOk());

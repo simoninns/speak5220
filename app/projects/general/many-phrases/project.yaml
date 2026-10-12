@@ -8,17 +8,21 @@ project:
     "1": "ONE,WON"
     "2": "2- (TWEN-)"
     "7": "SEVEN"
+  default_preprocess:
+    squelch_db: null
+    bass_cut_hz: null
+    treble_tilt: 0
   default_encoder:
     target_rms: 20
     repeat_lambda: 70
     gate_db: 45
-    squelch_db: null
     pre_emphasis: "chirp"
     window: 240
     lag_window_hz: 60
     resonance_hold_db: null
     voicing_threshold: 0.3
     voicing_evidence: 4
+    voicing_min_run: 1
     level_agc: 1
 phrases:
   - id: "5519feec-6244-462b-8f7c-051904f4487e"

@@ -133,7 +133,8 @@ const QCommandLineOption& LicenceOption() {
 const QCommandLineOption& AudioOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("audio"),
-      QStringLiteral("export --format wav: encoded (default) or original."),
+      QStringLiteral("export --format wav: encoded (default), original or "
+                     "preprocessed."),
       QStringLiteral("audio"));
   return kOption;
 }
@@ -352,7 +353,7 @@ int RunExport(const QCommandLineParser& parser, const QStringList& arguments) {
     return Usage(
         "usage: speak5220-cli export PROJECT --output DIR [--preset NAME]... "
         "| [--format FORMAT [--phrase NAME]... [--layout LAYOUT] "
-        "[--licence SPDX] [--audio encoded|original]]");
+        "[--licence SPDX] [--audio encoded|original|preprocessed]]");
   }
   if (parser.isSet(FormatOption()) && parser.isSet(PresetOption())) {
     return Usage("give --preset or --format, not both");

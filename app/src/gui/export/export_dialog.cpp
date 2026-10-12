@@ -94,6 +94,8 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
                       ToQString(project::kAudioEncoded));
   audio_box_->addItem(QStringLiteral("Original (the 8 kHz source)"),
                       ToQString(project::kAudioOriginal));
+  audio_box_->addItem(QStringLiteral("Preprocessed (what the encoder aims at)"),
+                      ToQString(project::kAudioPreprocessed));
 
   name_edit_->setToolTip(
       QStringLiteral("The exported files are named from this"));

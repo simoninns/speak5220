@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "core/dsp/output_filter.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/quality/encoded_audio.h"
 #include "core/synth/output_pin.h"
@@ -141,7 +142,7 @@ TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
   EXPECT_TRUE(Original()->Shading().empty());
   EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
 
-  waveforms_.SetSquelch(30.0);
+  waveforms_.SetPreprocessing({.squelch_db = 30.0});
   ASSERT_THAT(Original()->Shading(), SizeIs(1));
   const TimeExtent shaded = Original()->Shading().front();
   // Inside the quiet half, after the hold, to the end.
@@ -152,22 +153,99 @@ TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
   EXPECT_TRUE(Encoded()->Shading().empty());
 
   // Too low a squelch to mute anything says so.
-  waveforms_.SetSquelch(70.0);
+  waveforms_.SetPreprocessing({.squelch_db = 70.0});
   EXPECT_TRUE(Original()->Shading().empty());
   EXPECT_EQ(waveforms_.OriginalPane()->Note(),
             QStringLiteral("squelch 70 dB: nothing is quiet enough to mute"));
 
   // Another phrase is shaded by the same squelch; none clears it.
-  waveforms_.SetSquelch(30.0);
+  waveforms_.SetPreprocessing({.squelch_db = 30.0});
   const Phrase other = EncodedPhrase(2, "OTHER", 50);
   waveforms_.ShowPhrase(&other);
   QCoreApplication::processEvents();
   EXPECT_TRUE(Original()->Shading().empty());
   ShowPhrase();
   EXPECT_THAT(Original()->Shading(), SizeIs(1));
-  waveforms_.SetSquelch(std::nullopt);
+  waveforms_.SetPreprocessing({});
   EXPECT_TRUE(Original()->Shading().empty());
   EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+}
+
+// The top pane shows and plays the original or the preprocessed
+// recording, keeping its zoom, and follows a change of preprocessing.
+TEST_F(PhraseWaveformsTest, TopPaneShowsAndPlaysTheChosenRecording) {
+  ShowPhrase();
+  EXPECT_FALSE(waveforms_.PreprocessedShown());
+  EXPECT_TRUE(waveforms_.OriginalButton()->isChecked());
+  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
+            QStringLiteral("Original (8 kHz)"));
+  Original()->ZoomIn();
+  const TimeAxis zoomed = Original()->Axis();
+
+  // With no preprocessing, the preprocessed recording is the original.
+  std::vector<bool> chosen;
+  QObject::connect(&waveforms_, &PhraseWaveforms::PreprocessedShownChanged,
+                   [&chosen](bool shown) { chosen.push_back(shown); });
+  waveforms_.PreprocessedButton()->click();
+  EXPECT_EQ(chosen, std::vector<bool>{true});
+  EXPECT_TRUE(waveforms_.PreprocessedShown());
+  EXPECT_FALSE(waveforms_.OriginalButton()->isChecked());
+  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
+            QStringLiteral("Preprocessed (8 kHz)"));
+  EXPECT_EQ(waveforms_.PlayButton(PlaybackSource::kOriginal)->text(),
+            QStringLiteral("Preprocessed"));
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+            QStringLiteral("no preprocessing: the same as the original"));
+  EXPECT_EQ(Original()->Axis(), zoomed);
+
+  // A treble tilt of 0.4 takes the steady 0.1 to 0.06.
+  waveforms_.SetPreprocessing({.treble_tilt = 0.4});
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+            QStringLiteral("treble tilt 0.4"));
+  std::vector<std::int16_t> played;
+  EXPECT_CALL(playback_.output, Start(_, Player::kSampleRate))
+      .WillOnce(DoAll(SaveArg<0>(&played), Return(core::OkStatus())));
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  ASSERT_THAT(played, SizeIs(kAudioSamples - kPlayStart));
+  EXPECT_NEAR(played.front(), 0.06 * 32768.0, 2.0);
+  EXPECT_EQ(Original()->Axis(), zoomed);
+
+  // A change of preprocessing stops the audio it no longer matches, and
+  // so does choosing the original again.
+  waveforms_.SetPreprocessing({.treble_tilt = 0.2});
+  EXPECT_EQ(playback_.player.State(), PlaybackState::kStopped);
+  waveforms_.SetPreprocessedShown(false);
+  EXPECT_EQ(chosen.size(), 1U);
+  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
+            QStringLiteral("Original (8 kHz)"));
+  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+}
+
+// Preprocessing that would go past full scale is shown and played scaled
+// down to fit, and the note says by how much.
+TEST_F(PhraseWaveformsTest, PreprocessedRecordingIsScaledToFit) {
+  for (std::size_t i = 0; i < phrase_.audio.size(); ++i) {
+    phrase_.audio[i] = i % 2 == 0 ? 0.9F : -0.9F;
+  }
+  ShowPhrase();
+  waveforms_.SetPreprocessedShown(true);
+  // 0.9 x 1.4 is 2.0 dB over full scale.
+  waveforms_.SetPreprocessing({.treble_tilt = 0.4});
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+            QStringLiteral("treble tilt 0.4 · scaled by -2.0 dB to fit"));
+}
+
+// With the original shown, a squelch is shaded; on the preprocessed
+// recording the muted stretches are silent and the note names it.
+TEST_F(PhraseWaveformsTest, SquelchIsShadedOnTheOriginalOnly) {
+  std::fill(phrase_.audio.begin() + (kAudioSamples / 2), phrase_.audio.end(),
+            0.0001F);
+  ShowPhrase();
+  waveforms_.SetPreprocessing({.squelch_db = 30.0});
+  EXPECT_THAT(Original()->Shading(), SizeIs(1));
+  waveforms_.SetPreprocessedShown(true);
+  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_EQ(waveforms_.OriginalPane()->Note(), QStringLiteral("squelch 30 dB"));
 }
 
 TEST_F(PhraseWaveformsTest, PanesShowTheSameSoundAtTheSamePlace) {

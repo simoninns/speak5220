@@ -10,6 +10,7 @@
 
 #include "core/bbc/bbc_disc.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -91,8 +92,10 @@ Bytes FileOf(const Bytes& side, const std::string& name) {
 
 TEST(BbcDiscTest, PhromDataIsTheStreamsInOrder) {
   const Bytes data = BbcDisc::PhromData(Phrom("P", 2)).Value();
-  Bytes expected(9, 0xA0);
-  expected.insert(expected.end(), 10, 0xA1);
+  // Filled in place: GCC 15 at -O3 wrongly reports insert() growing a
+  // 9-byte vector as writing past it (-Warray-bounds).
+  Bytes expected(9 + 10, 0xA1);
+  std::fill_n(expected.begin(), 9, 0xA0);
   EXPECT_EQ(data, expected);
 }
 

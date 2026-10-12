@@ -55,8 +55,9 @@ struct ExportPreset {
   // For C headers: the SPDX licence identifier of the generated file;
   // empty for GPL-3.0-or-later.
   std::string licence = {};
-  // For WAV: "encoded" (the chip's output) or "original" (the 8 kHz
-  // source); empty for "encoded".
+  // For WAV: "encoded" (the chip's output), "original" (the 8 kHz
+  // source) or "preprocessed" (the source as the encoder takes it); empty
+  // for "encoded".
   std::string audio = {};
   UnknownKeys unknown = {};
 
@@ -75,8 +76,10 @@ struct ProjectSettings {
   // associated" entries. An entry whose phrase is not in a PHROM is left
   // out of that PHROM.
   std::map<char, std::string> ascii_map;
-  // The options every phrase starts from; unknown keys of that mapping.
+  // The options every phrase starts from, of both stages; unknown keys of
+  // the default_preprocess and default_encoder mappings.
   encoder::EncoderOptions default_encoder;
+  UnknownKeys default_preprocess_unknown;
   UnknownKeys default_encoder_unknown;
   // Per-PHROM header strings, by PHROM number.
   std::vector<PhromHeader> phroms;

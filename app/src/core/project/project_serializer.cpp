@@ -158,6 +158,18 @@ void EmitOptionValue(YAML::Emitter& out, const EncoderOptionInfo& info,
   }
 }
 
+// The mappings of each stage's options (plan Phase 11): in the project's
+// defaults, and in a phrase.
+std::string_view DefaultsKey(encoder::OptionStage stage) {
+  return stage == encoder::OptionStage::kPreprocess ? "default_preprocess"
+                                                    : "default_encoder";
+}
+std::string_view PhraseKey(encoder::OptionStage stage) {
+  return stage == encoder::OptionStage::kPreprocess ? "preprocess" : "encoder";
+}
+constexpr std::array<encoder::OptionStage, 2> kStages = {
+    encoder::OptionStage::kPreprocess, encoder::OptionStage::kEncoder};
+
 void BeginDocument(YAML::Emitter& out) {
   out.SetIndent(2);
   out.SetNullFormat(YAML::LowerNull);
@@ -184,15 +196,22 @@ void EmitSettings(YAML::Emitter& out, const ProjectSettings& settings) {
   }
   out << YAML::EndMap;
   // Every option, so the project never depends on the defaults.
-  out << YAML::Key << "default_encoder" << YAML::Value << YAML::BeginMap;
-  for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
-    out << YAML::Key << std::string(info.field) << YAML::Value;
-    EmitOptionValue(
-        out, info,
-        encoder::EncoderOptionText(settings.default_encoder, info.field));
+  for (const encoder::OptionStage stage : kStages) {
+    out << YAML::Key << std::string(DefaultsKey(stage)) << YAML::Value
+        << YAML::BeginMap;
+    for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+      if (info.stage == stage) {
+        out << YAML::Key << std::string(info.field) << YAML::Value;
+        EmitOptionValue(
+            out, info,
+            encoder::EncoderOptionText(settings.default_encoder, info.field));
+      }
+    }
+    EmitUnknown(out, stage == encoder::OptionStage::kPreprocess
+                         ? settings.default_preprocess_unknown
+                         : settings.default_encoder_unknown);
+    out << YAML::EndMap;
   }
-  EmitUnknown(out, settings.default_encoder_unknown);
-  out << YAML::EndMap;
   if (!settings.phroms.empty()) {
     out << YAML::Key << "phroms" << YAML::Value << YAML::BeginSeq;
     for (const PhromHeader& phrom : settings.phroms) {
@@ -234,17 +253,30 @@ void EmitPhrase(YAML::Emitter& out, const Phrase& phrase) {
     EmitUnknown(out, source.unknown);
     out << YAML::EndMap;
   }
-  if (!phrase.encoder.empty() || !phrase.encoder_unknown.empty()) {
-    out << YAML::Key << "encoder" << YAML::Value << YAML::BeginMap;
-    // In the order of EncoderOptionInfos(), as in default_encoder.
+  for (const encoder::OptionStage stage : kStages) {
+    const UnknownKeys& unknown = stage == encoder::OptionStage::kPreprocess
+                                     ? phrase.preprocess_unknown
+                                     : phrase.encoder_unknown;
+    const bool overridden =
+        std::ranges::any_of(phrase.encoder, [stage](const auto& entry) {
+          const EncoderOptionInfo* info =
+              encoder::FindEncoderOption(entry.first);
+          return info != nullptr && info->stage == stage;
+        });
+    if (!overridden && unknown.empty()) {
+      continue;
+    }
+    out << YAML::Key << std::string(PhraseKey(stage)) << YAML::Value
+        << YAML::BeginMap;
+    // In the order of EncoderOptionInfos(), as in the defaults.
     for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
       const auto found = phrase.encoder.find(std::string(info.field));
-      if (found != phrase.encoder.end()) {
+      if (info.stage == stage && found != phrase.encoder.end()) {
         out << YAML::Key << std::string(info.field) << YAML::Value;
         EmitOptionValue(out, info, found->second);
       }
     }
-    EmitUnknown(out, phrase.encoder_unknown);
+    EmitUnknown(out, unknown);
     out << YAML::EndMap;
   }
   out << YAML::Key << "locked" << YAML::Value;
@@ -548,16 +580,24 @@ StatusOr<std::string> ReadOptionText(const YAML::Node& node,
   return node.Scalar();
 }
 
-// Reads an encoder mapping: known options through `apply`, other keys kept.
+// Reads the options mapping of `stage`: its options through `apply`,
+// unknown keys kept. An option of the other stage is refused, naming the
+// mapping it belongs in (`other_key`).
 template <typename Apply>
-Status ReadEncoderMapping(const YAML::Node& node, const Where& where,
-                          UnknownKeys& unknown, Apply apply) {
+Status ReadOptionsMapping(const YAML::Node& node, const Where& where,
+                          encoder::OptionStage stage,
+                          std::string_view other_key, UnknownKeys& unknown,
+                          Apply apply) {
   return ForEachEntry(
       node, where, [&](const std::string& key, const YAML::Node& value) {
         const EncoderOptionInfo* info = encoder::FindEncoderOption(key);
         if (info == nullptr) {
           unknown.emplace_back(key, NodeText(value));
           return OkStatus();
+        }
+        if (info->stage != stage) {
+          return where.Key(key).Error(
+              fmt::format("belongs under {}", other_key));
         }
         StatusOr<std::string> text =
             ReadOptionText(value, *info, where.Key(key));
@@ -571,30 +611,34 @@ Status ReadEncoderMapping(const YAML::Node& node, const Where& where,
       });
 }
 
-// Fails unless project.default_encoder lists every encoder option (plan
-// §4), as projects saved before the defaults last changed do not.
+// Fails unless project.default_preprocess and project.default_encoder
+// list every option of their stage (plan §4), as projects saved before the
+// options last changed do not.
 Status CheckEveryOptionListed(const YAML::Node& root, const Where& where) {
-  const Where at = where.Key("project").Key("default_encoder");
   const YAML::Node settings = root["project"];
-  const YAML::Node options = settings.IsDefined() && settings.IsMap()
-                                 ? settings["default_encoder"]
-                                 : YAML::Node();
-  if (!options.IsDefined() || !options.IsMap()) {
-    return at.Error("is missing: a project lists every encoder option");
-  }
-  std::string missing;
-  for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
-    if (!options[std::string(info.field)].IsDefined()) {
-      missing += missing.empty() ? "" : ", ";
-      missing += info.field;
+  for (const encoder::OptionStage stage : kStages) {
+    const std::string key(DefaultsKey(stage));
+    const Where at = where.Key("project").Key(key);
+    const YAML::Node options =
+        settings.IsDefined() && settings.IsMap() ? settings[key] : YAML::Node();
+    if (!options.IsDefined() || !options.IsMap()) {
+      return at.Error("is missing: a project lists every option");
     }
-  }
-  if (!missing.empty()) {
-    return at.Error(fmt::format(
-        "does not list {}: a project lists every encoder option, so this "
-        "one was saved by an earlier development version of Speak5220 and "
-        "cannot be opened",
-        missing));
+    std::string missing;
+    for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+      if (info.stage == stage &&
+          !options[std::string(info.field)].IsDefined()) {
+        missing += missing.empty() ? "" : ", ";
+        missing += info.field;
+      }
+    }
+    if (!missing.empty()) {
+      return at.Error(fmt::format(
+          "does not list {}: a project lists every option, so this one was "
+          "saved by an earlier development version of Speak5220 and cannot "
+          "be opened",
+          missing));
+    }
   }
   return OkStatus();
 }
@@ -635,9 +679,15 @@ Status ReadSettings(const YAML::Node& node, const Where& where,
                 settings.ascii_map[character.front()] = *std::move(word);
                 return OkStatus();
               });
-        } else if (key == "default_encoder") {
-          return ReadEncoderMapping(
-              value, at, settings.default_encoder_unknown,
+        } else if (key == "default_preprocess" || key == "default_encoder") {
+          const bool preprocess = key == "default_preprocess";
+          return ReadOptionsMapping(
+              value, at,
+              preprocess ? encoder::OptionStage::kPreprocess
+                         : encoder::OptionStage::kEncoder,
+              preprocess ? "default_encoder" : "default_preprocess",
+              preprocess ? settings.default_preprocess_unknown
+                         : settings.default_encoder_unknown,
               [&](const std::string& field, const std::string& text) {
                 return encoder::SetEncoderOption(settings.default_encoder,
                                                  field, text);
@@ -747,9 +797,15 @@ Status ReadPhrase(const YAML::Node& node, const Where& where, Phrase& phrase) {
                 return source_status;
               }
               phrase.source = std::move(source);
-            } else if (key == "encoder") {
-              return ReadEncoderMapping(
-                  value, at, phrase.encoder_unknown,
+            } else if (key == "preprocess" || key == "encoder") {
+              const bool preprocess = key == "preprocess";
+              return ReadOptionsMapping(
+                  value, at,
+                  preprocess ? encoder::OptionStage::kPreprocess
+                             : encoder::OptionStage::kEncoder,
+                  preprocess ? "encoder" : "preprocess",
+                  preprocess ? phrase.preprocess_unknown
+                             : phrase.encoder_unknown,
                   [&](const std::string& field, const std::string& text) {
                     // Checked on its own here; Project checks it against
                     // the defaults.

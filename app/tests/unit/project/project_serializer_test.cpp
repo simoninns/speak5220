@@ -128,22 +128,34 @@ std::string PhraseFile(int n, std::string_view name) {
   return "phrases/" + TestId(n) + "/" + std::string(name);
 }
 
-// Every encoder option at its default, as default_encoder's entries in a
-// hand-written project.yaml, which must list them all.
-std::string EveryOptionYaml() {
+// Every option of `stage` at its default, as the entries of its mapping
+// (default_preprocess or default_encoder) in a hand-written project.yaml,
+// which must list them all.
+std::string EveryOptionYaml(encoder::OptionStage stage) {
   std::string yaml;
   for (const encoder::EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
-    yaml += "    " + std::string(info.field) + ": " +
-            encoder::EncoderOptionText(encoder::EncoderOptions{}, info.field) +
-            "\n";
+    if (info.stage == stage) {
+      yaml +=
+          "    " + std::string(info.field) + ": " +
+          encoder::EncoderOptionText(encoder::EncoderOptions{}, info.field) +
+          "\n";
+    }
   }
   return yaml;
 }
 
+// Both options mappings, every option at its default; default_encoder
+// last, so entries added after it go into it.
+std::string EveryOptionYaml() {
+  return "  default_preprocess:\n" +
+         EveryOptionYaml(encoder::OptionStage::kPreprocess) +
+         "  default_encoder:\n" +
+         EveryOptionYaml(encoder::OptionStage::kEncoder);
+}
+
 // The head of a hand-written project.yaml that loads as Project().
 std::string MinimalProjectYaml() {
-  return "format: \"speak5220-project\"\nversion: 1\nproject:\n"
-         "  default_encoder:\n" +
+  return "format: \"speak5220-project\"\nversion: 1\nproject:\n" +
          EveryOptionYaml();
 }
 
@@ -181,7 +193,7 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   settings.name = "My PHROM";
   settings.header_strings = {"(C)2026 Simon Inns", "My PHROM", "1.00"};
   settings.ascii_map = {{'A', "HELLO"}, {' ', "NO"}, {':', "O'CLOCK"}};
-  settings.default_encoder.squelch_db = 30.0;
+  settings.default_encoder.preprocess.squelch_db = 30.0;
   settings.default_encoder.voicing_threshold = 0.35;
   settings.phroms = {{.number = 2,
                       .header_strings = {"(C)2026 Simon Inns", "Second", "1"},
@@ -301,31 +313,39 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
   EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    repeat_lambda: 70\n"));
   EXPECT_THAT(yaml, HasSubstr("    window: 256\n"));
   EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
-  EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.3\n"));
+  EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.4\n"));
   EXPECT_THAT(yaml, HasSubstr("    encoder:\n      target_rms: 18\n"
                               "      pre_emphasis: \"chirp\"\n"
                               "      window: 200\n"));
 }
 
 // Every option is written, so a project never depends on the defaults:
-// the squelch, unset, as null.
+// the preprocessing's under default_preprocess, the squelch, unset, as
+// null; the encoder's under default_encoder.
 TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
   Project project = ProjectWith({AudioPhrase(1, "A")});
   const std::string defaults = ProjectYamlOf(project);
-  EXPECT_THAT(defaults, HasSubstr("    gate_db: 45\n    squelch_db: null\n"));
+  EXPECT_THAT(defaults, HasSubstr("  default_preprocess:\n"
+                                  "    squelch_db: null\n"
+                                  "    bass_cut_hz: null\n"
+                                  "    treble_tilt: 0\n"
+                                  "  default_encoder:\n"
+                                  "    target_rms: 24\n"));
   EXPECT_THAT(defaults, HasSubstr("    voicing_evidence: 5\n"
+                                  "    voicing_min_run: 2\n"
                                   "    level_agc: 1.25\n"));
   EXPECT_THAT(defaults, HasSubstr("    lag_window_hz: 60\n"
                                   "    resonance_hold_db: 14\n"));
   ProjectSettings settings = project.Settings();
-  settings.default_encoder.squelch_db = 30.0;
+  settings.default_encoder.preprocess.squelch_db = 30.0;
   ASSERT_TRUE(project.SetSettings(settings).IsOk());
   ASSERT_TRUE(
       project.SetEncoding(TestId(1), {.overrides = {{"squelch_db", "none"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("    gate_db: 45\n    squelch_db: 30\n"));
-  EXPECT_THAT(yaml, HasSubstr("    encoder:\n      squelch_db: null\n"));
+  EXPECT_THAT(yaml, HasSubstr("  default_preprocess:\n    squelch_db: 30\n"));
+  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      squelch_db: null\n"));
+  EXPECT_THAT(yaml, Not(HasSubstr("    encoder:\n")));
   const StatusOr<Project> loaded = Load(Save(project));
   ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
   EXPECT_EQ(*loaded, project);
@@ -412,8 +432,11 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "project:\n"
       "  name: \"P\"\n"
       "  theme: \"dark\"\n"
+      "  default_preprocess:\n" +
+      EveryOptionYaml(encoder::OptionStage::kPreprocess) +
+      "    future_filter: 3\n"
       "  default_encoder:\n" +
-      EveryOptionYaml() +
+      EveryOptionYaml(encoder::OptionStage::kEncoder) +
       "    future_option: 7\n"
       "  phroms:\n"
       "    - number: 1\n"
@@ -428,6 +451,9 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "      file: \"a.wav\"\n"
       "      rate: 8000\n"
       "      bits: 24\n"
+      "    preprocess:\n"
+      "      squelch_db: 30\n"
+      "      new_filter: 2\n"
       "    encoder:\n"
       "      gate_db: 40\n"
       "      new_thing: \"on\"\n"
@@ -457,9 +483,13 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_EQ(phrase.unknown, (UnknownKeys{{"rating", "5"}}));
   EXPECT_EQ(phrase.source->unknown, (UnknownKeys{{"bits", "24"}}));
   EXPECT_EQ(phrase.encoder_unknown, (UnknownKeys{{"new_thing", "\"on\""}}));
+  EXPECT_EQ(phrase.preprocess_unknown, (UnknownKeys{{"new_filter", "2"}}));
   EXPECT_EQ(phrase.encoder.at("gate_db"), "40");
+  EXPECT_EQ(phrase.encoder.at("squelch_db"), "30");
   EXPECT_EQ(loaded->Settings().default_encoder_unknown,
             (UnknownKeys{{"future_option", "7"}}));
+  EXPECT_EQ(loaded->Settings().default_preprocess_unknown,
+            (UnknownKeys{{"future_filter", "3"}}));
   EXPECT_EQ(phrase.extra_files.at("notes.txt"), Bytes("phrase notes"));
   EXPECT_EQ(loaded->Contents().extra_files.at("README.txt"),
             Bytes("project notes"));
@@ -471,6 +501,9 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_THAT(yaml, HasSubstr("future_root: {a: [1, \"2\"], b: null}"));
   EXPECT_THAT(yaml, HasSubstr("  theme: \"dark\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    future_option: 7\n"));
+  EXPECT_THAT(yaml, HasSubstr("    treble_tilt: 0\n    future_filter: 3\n"));
+  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      squelch_db: 30\n"
+                              "      new_filter: 2\n    encoder:\n"));
   EXPECT_THAT(yaml, HasSubstr("      colour: \"NO\"\n"));
   EXPECT_THAT(yaml, HasSubstr("      bits: 24\n"));
   EXPECT_THAT(yaml, HasSubstr("      new_thing: \"on\"\n"));
@@ -525,19 +558,45 @@ TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
   ASSERT_FALSE(bare.IsOk());
   EXPECT_EQ(bare.GetStatus().Code(), StatusCode::kDataLoss);
   EXPECT_THAT(bare.GetStatus().Message(),
-              HasSubstr("project.default_encoder is missing"));
+              HasSubstr("project.default_preprocess is missing"));
 
-  std::string older = MinimalProjectYaml();
-  for (const std::string line :
-       {"    squelch_db: none\n", "    resonance_hold_db: 14\n"}) {
-    ASSERT_NE(older.find(line), std::string::npos) << line;
-    older.erase(older.find(line), line.size());
+  // Each mapping is checked for its own options.
+  const std::vector<std::pair<std::vector<std::string>, std::string>> cases = {
+      {{"    squelch_db: none\n", "    treble_tilt: 0\n"},
+       "project.default_preprocess does not list squelch_db, treble_tilt"},
+      {{"    resonance_hold_db: 14\n", "    voicing_min_run: 2\n"},
+       "project.default_encoder does not list resonance_hold_db, "
+       "voicing_min_run"},
+  };
+  for (const auto& [lines, message] : cases) {
+    std::string older = MinimalProjectYaml();
+    for (const std::string& line : lines) {
+      ASSERT_NE(older.find(line), std::string::npos) << line;
+      older.erase(older.find(line), line.size());
+    }
+    const StatusOr<Project> loaded = Load(WithProjectYaml(older));
+    ASSERT_FALSE(loaded.IsOk());
+    EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr(message));
+    EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("cannot be opened"));
   }
-  const StatusOr<Project> loaded = Load(WithProjectYaml(older));
-  ASSERT_FALSE(loaded.IsOk());
-  EXPECT_THAT(loaded.GetStatus().Message(),
-              HasSubstr("does not list squelch_db, resonance_hold_db"));
-  EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("cannot be opened"));
+}
+
+// An option belongs in its own stage's mapping: a preprocessing option
+// under default_encoder, or an encoder option under a phrase's
+// preprocess, is refused, naming where it belongs.
+TEST_F(ProjectSerializerTest, RefusesAnOptionInTheOtherStagesMapping) {
+  const StatusOr<Project> defaults =
+      Load(WithProjectYaml(MinimalProjectYaml() + "    bass_cut_hz: 200\n"));
+  ASSERT_FALSE(defaults.IsOk());
+  EXPECT_THAT(defaults.GetStatus().Message(),
+              HasSubstr("project.default_encoder.bass_cut_hz belongs under "
+                        "default_preprocess"));
+  const StatusOr<Project> phrase = Load(
+      WithProjectYaml(MinimalProjectYaml() + "phrases:\n" +
+                      PhraseYaml(1, "    preprocess:\n      gate_db: 40\n")));
+  ASSERT_FALSE(phrase.IsOk());
+  EXPECT_THAT(phrase.GetStatus().Message(),
+              HasSubstr("gate_db belongs under encoder"));
 }
 
 // Options the encoder now fixes (encoder_options_test.cpp) are no longer

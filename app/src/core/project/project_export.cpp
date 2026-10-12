@@ -31,6 +31,7 @@
 #include "core/packaging/acorn_phrom.h"
 #include "core/packaging/c_header.h"
 #include "core/packaging/speak_external_stream.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/c_identifier.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrom_allocator.h"
@@ -228,11 +229,34 @@ StatusOr<std::vector<float>> EncodedSamples(synth::ISynth& synth,
   return samples;
 }
 
+// Whether a WAV export of `audio` writes the phrases' source audio
+// ("original" or "preprocessed"), not their encodings.
+bool IsSourceAudio(std::string_view audio) {
+  return audio == kAudioOriginal || audio == kAudioPreprocessed;
+}
+
+// The phrase's source preprocessed by its options, as the encoder takes it.
+StatusOr<std::vector<float>> PreprocessedSamples(
+    const encoder::EncoderOptions& defaults, const Phrase& phrase) {
+  StatusOr<encoder::EncoderOptions> options =
+      EffectiveEncoderOptions(defaults, phrase.encoder);
+  if (!options.IsOk()) {
+    return options.GetStatus();
+  }
+  const std::vector<double> samples =
+      preprocess::Preprocess(
+          std::vector<double>(phrase.audio.begin(), phrase.audio.end()),
+          options->preprocess)
+          .samples;
+  return std::vector<float>(samples.begin(), samples.end());
+}
+
 StatusOr<std::vector<ExportedFile>> WavFiles(
-    const ExportPreset& preset, std::span<const Phrase* const> phrases,
-    std::string_view base, const ExportTools& tools) {
-  const bool original = preset.audio == kAudioOriginal;
-  if (tools.wav_codec == nullptr || (!original && tools.synth == nullptr)) {
+    const Project& project, const ExportPreset& preset,
+    std::span<const Phrase* const> phrases, std::string_view base,
+    const ExportTools& tools) {
+  const bool source = IsSourceAudio(preset.audio);
+  if (tools.wav_codec == nullptr || (!source && tools.synth == nullptr)) {
     return FailedPreconditionError(
         "WAV export needs the chip and a WAV writer");
   }
@@ -243,14 +267,24 @@ StatusOr<std::vector<ExportedFile>> WavFiles(
   for (std::size_t i = 0; i < phrases.size(); ++i) {
     const Phrase& phrase = *phrases[i];
     StatusOr<std::vector<std::uint8_t>> bytes = std::vector<std::uint8_t>{};
-    if (original) {
+    if (source) {
       if (phrase.audio.empty()) {
-        return FailedPreconditionError(fmt::format(
-            "{} has no source audio, so its original cannot be exported",
-            phrase.name));
+        return FailedPreconditionError(
+            fmt::format("{} has no source audio, so its {} cannot be exported",
+                        phrase.name, preset.audio));
       }
-      bytes = tools.wav_codec->Encode(phrase.audio, kProjectSampleRate,
-                                      audio::WavOutputFormat::kPcm24);
+      if (preset.audio == kAudioOriginal) {
+        bytes = tools.wav_codec->Encode(phrase.audio, kProjectSampleRate,
+                                        audio::WavOutputFormat::kPcm24);
+      } else {
+        StatusOr<std::vector<float>> samples =
+            PreprocessedSamples(project.Settings().default_encoder, phrase);
+        if (!samples.IsOk()) {
+          return samples.GetStatus();
+        }
+        bytes = tools.wav_codec->Encode(*samples, kProjectSampleRate,
+                                        audio::WavOutputFormat::kPcm24);
+      }
     } else {
       StatusOr<std::vector<float>> samples =
           EncodedSamples(*tools.synth, phrase);
@@ -352,10 +386,10 @@ Status CheckExportPreset(const ExportPreset& preset) {
       return status;
     }
   } else if (!preset.audio.empty() && preset.audio != kAudioEncoded &&
-             preset.audio != kAudioOriginal) {
+             !IsSourceAudio(preset.audio)) {
     return InvalidArgumentError(
-        fmt::format(R"(WAV audio "{}" is not "{}" or "{}")", preset.audio,
-                    kAudioEncoded, kAudioOriginal));
+        fmt::format(R"(WAV audio "{}" is not "{}", "{}" or "{}")", preset.audio,
+                    kAudioEncoded, kAudioOriginal, kAudioPreprocessed));
   }
   return OkStatus();
 }
@@ -563,7 +597,7 @@ StatusOr<std::vector<ExportedFile>> RunExport(const Project& project,
   } else if (preset.format == kBbcDiscFormat) {
     files = BbcDiscFiles(project, *phrases, base);
   } else {
-    files = WavFiles(preset, *phrases, base, tools);
+    files = WavFiles(project, preset, *phrases, base, tools);
   }
   if (files.IsOk()) {
     Logger(kLogModuleExport)
@@ -615,14 +649,14 @@ StatusOr<std::vector<std::string>> ExportFileNames(const Project& project,
     }
     return names;
   }
-  const bool original =
-      preset.format == kWavFormat && preset.audio == kAudioOriginal;
+  const bool source =
+      preset.format == kWavFormat && IsSourceAudio(preset.audio);
   for (const Phrase* phrase : *phrases) {
-    if (original) {
+    if (source) {
       if (phrase->audio.empty()) {
-        return FailedPreconditionError(fmt::format(
-            "{} has no source audio, so its original cannot be exported",
-            phrase->name));
+        return FailedPreconditionError(
+            fmt::format("{} has no source audio, so its {} cannot be exported",
+                        phrase->name, preset.audio));
       }
     } else if (StatusOr<const std::vector<lpc::Frame>*> frames =
                    FramesOf(*phrase);
@@ -643,7 +677,7 @@ StatusOr<std::vector<std::string>> ExportFileNames(const Project& project,
 
 Status CheckEncodingsCurrent(const Project& project,
                              const ExportPreset& preset) {
-  if (preset.format == kWavFormat && preset.audio == kAudioOriginal) {
+  if (preset.format == kWavFormat && IsSourceAudio(preset.audio)) {
     return OkStatus();
   }
   StatusOr<std::vector<const Phrase*>> phrases =

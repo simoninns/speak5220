@@ -12,6 +12,7 @@
 
 #include <QAction>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "core/dsp/output_filter.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/synth/output_pin.h"
@@ -187,12 +189,36 @@ TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {
   WaveformView* original = window_.Waveforms()->OriginalPane()->View();
   EXPECT_TRUE(original->Shading().empty());
   window_.Encoder()->Form()->OnBox("squelch_db")->setChecked(true);
-  EXPECT_EQ(window_.Waveforms()->Squelch(), 30.0);
+  EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, 30.0);
   EXPECT_FALSE(original->Shading().empty());
   // Selecting several phrases shows none, and so no squelch.
   window_.Panel()->Select({TestId(1), TestId(2)});
-  EXPECT_EQ(window_.Waveforms()->Squelch(), std::nullopt);
+  EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, std::nullopt);
   EXPECT_TRUE(original->Shading().empty());
+}
+
+// What the top waveform pane shows is remembered between sessions.
+TEST_F(MainWindowTest, RemembersWhetherThePreprocessedRecordingIsShown) {
+  EXPECT_FALSE(window_.Waveforms()->PreprocessedShown());
+  window_.Waveforms()->PreprocessedButton()->click();
+  EXPECT_TRUE(preferences_.preprocessed_shown);
+  window_.Waveforms()->OriginalButton()->click();
+  EXPECT_FALSE(preferences_.preprocessed_shown);
+
+  FakeViewPreferences shown;
+  shown.preprocessed_shown = true;
+  MainWindow window(dialogs_, recent_, shown, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.Waveforms()->PreprocessedShown());
+}
+
+// The preprocessing the encoder panel shows is what the waveform shows.
+TEST_F(MainWindowTest, ThePresetsPreprocessingIsShownOnTheWaveform) {
+  AddPhrases({AudioPhrase(1, "ONE")});
+  window_.Panel()->Select({TestId(1)});
+  emit window_.Encoder()->Form()->PresetBox()->activated(1);
+  EXPECT_EQ(window_.Waveforms()->Preprocessing(),
+            core::preprocess::PreprocessPresets()[1].options);
 }
 
 TEST_F(MainWindowTest, ReEncodeEncodesTheSelectionAsOneStep) {

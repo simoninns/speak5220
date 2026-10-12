@@ -46,11 +46,12 @@ speak5220-cli export words.s5proj --output out --preset phrom
   `acorn-phrom` (with `--layout separate`, one file per PHROM, the
   default, or `--layout concatenated`), `c-header-phrom` or
   `c-header-speak-external` (with `--licence`, the header's SPDX licence),
-  `wav` (with `--audio encoded`, the default, or `--audio original`), or
+  `wav` (with `--audio encoded`, the default, `--audio original` or
+  `--audio preprocessed`), or
   `bbc-dsd` (a [BBC Micro disc](bbc-disc.md)).
   `--phrase NAME`, which may be repeated, exports only those phrases. Every
   phrase exported must be encoded with its current settings first, except
-  for the original audio. Existing files of the same names are replaced.
+  for the original or preprocessed audio. Existing files of the same names are replaced.
 
 `new`, `add` and `encode` save the project in place, keeping the previous
 version as `PROJECT~`. With `--output DIR` they write the project into

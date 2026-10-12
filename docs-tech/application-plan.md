@@ -95,7 +95,7 @@ Other source files carry the two SPDX lines in their own comment syntax:
   ctest --test-dir build/app --output-on-failure
   ```
 
-- In Phase 12, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
+- In Phase 13, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
   and a DMG (macOS). CMake stays the single build description. Nix supplies
   the dependencies on Linux. On Windows and macOS, CI installs Qt with
   `aqtinstall` and the other libraries with vcpkg (manifest mode, pinned
@@ -428,7 +428,7 @@ Warnings and errors are always logged, whichever level is selected.
 | `--log-file PATH` | Also writes the log to `PATH`, replacing any existing file |
 | `--no-console-log` | Turns console output off (needs `--log-file`) |
 
-The GUI also has these as preferences (Phase 11). A command-line option
+The GUI also has these as preferences (Phase 12). A command-line option
 overrides the preference for that run.
 
 **Implementation.**
@@ -651,7 +651,7 @@ A phrase stores its **encoder settings** and **source audio**. The frames are
 a cache derived from them, saved in the project so a project opens instantly.
 The cache is invalidated by a hash of (source audio, settings, encoder
 version). A phrase can also be **locked**: frames imported from an existing PHROM
-image (Phase 11) are never re-encoded.
+image (Phase 12) are never re-encoded.
 
 ---
 
@@ -882,7 +882,7 @@ more speech than one PHROM (decision D4):
   scheme, at start-up and when it changes. Widgets take their colours from
   the palette; colours of our own (warnings, the waveforms, frame kinds, the
   quality scale) have a light and a dark form, chosen in one place.
-  Preferences can override the scheme (Phase 11).
+  Preferences can override the scheme (Phase 12).
 
 ---
 
@@ -1441,7 +1441,7 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
    and WORLD's Harvest the pitch measures use, in the Nix dev shell and
    package (as a derivation where nixpkgs lacks one), and in vcpkg for
    Windows and macOS (as overlay ports, since vcpkg has neither); the
-   Flatpak modules come with the manifest (Phase 12). Each is wrapped behind
+   Flatpak modules come with the manifest (Phase 13). Each is wrapped behind
    an interface (`IVoiceActivity`, `ILpcAnalysis`, `IPitchEstimator`),
    listed in TESTING.md.
    - **Acceptance:** `nix build .#speak5220` succeeds; a manually started
@@ -1644,9 +1644,60 @@ Depends on: Phase 9.
      [Appendix B](../docs/technical/datasheet/gaps.md#the-acorn-phrom-format-and-the-bbc-micro),
      which is updated only with the user's agreement (AGENTS.md §9.4).
 
-### Phase 11: Polish
+### Phase 11: Preprocessing
 
-Depends on: Phase 8.
+Depends on: Phase 10.
+
+A phrase is shown and measured in three stages: the **original** audio, the
+**preprocessed** audio made from it, and the **encoding** of that. The
+quality score compares the encoding with the preprocessed audio, so a
+preprocessing that suits a small speaker (the BBC Micro's) is not counted
+against the encoding. The checks on a BBC Micro behind this are in the
+[HLD §9](design/high-level-design.md#9-quality-measurement) and
+[§16](design/high-level-design.md#16-waveforms-playback-and-colours).
+
+1. **Preprocessing stage.** A core module with the preprocessing options
+   (the squelch, the bass cut and the treble tilt, which leave the encoder's
+   options), the function that makes the preprocessed audio from the
+   original, and the presets *None* (everything off) and *BBC Micro* (bass
+   cut 200 Hz, treble tilt 0.4). The encoder preprocesses its input itself,
+   finding pitch and voicing before the bass cut and treble tilt, and
+   everything that measures an encoding compares it with the preprocessed
+   audio.
+   - **Acceptance:** unit tests: with everything off the preprocessed audio
+     is the original; each option does what it says; the encoder's frames
+     with preprocessing off are unchanged (the corpus check passes); the
+     quality measures and Optimise are given the preprocessed audio.
+2. **Project format.** `project.yaml` gains `default_preprocess` beside
+   `default_encoder`, and a phrase's `preprocess` overrides beside its
+   `encoder` overrides; the fixtures are rewritten. The application is not
+   released, so the format stays at version 1 with no migration.
+   - **Acceptance:** serializer tests write and read both mappings, refuse
+     a preprocessing key under `default_encoder`, and keep unknown keys of
+     each; the settings hash covers the preprocessing; the fixtures'
+     frames are unchanged, with only their settings hashes updated.
+3. **Settings form.** The panel's form shows a *Preprocessing* section,
+   with a preset chooser and the three options, above the *Encoder*
+   section. Choosing a preset sets the options; the chooser shows *Custom*
+   when they match no preset.
+   - **Acceptance:** GUI unit tests: choosing *BBC Micro* sets the bass cut
+     and tilt and re-encodes once; editing an option shows *Custom*; Reset
+     restores both sections.
+4. **Original and preprocessed waveform.** The top waveform pane toggles
+   between the original and the preprocessed audio, and plays what it
+   shows; the squelch's shading stays on the original.
+   - **Acceptance:** GUI unit tests: the toggle changes the samples shown
+     and played, follows a change of preprocessing, and is remembered
+     between sessions.
+5. **Export and documentation.** The WAV export, in the Export dialog,
+   presets and `speak5220-cli export --audio`, can write the preprocessed
+   audio (`audio: "preprocessed"`); the user documentation and the HLD
+   describe the three stages.
+   - **Acceptance:** export tests; `mkdocs build --strict` passes.
+
+### Phase 12: Polish
+
+Depends on: Phase 11.
 
 1. **Preferences.** Audio device, default encoder settings, the colour
    scheme (follow the desktop, light or dark; Phase 6 makes following the
@@ -1672,9 +1723,9 @@ Depends on: Phase 8.
    - **Acceptance:** every YAML key, encoder option, CLI option and export
      format is documented; `mkdocs build --strict` passes.
 
-### Phase 12: Cross-platform packaging and release
+### Phase 13: Cross-platform packaging and release
 
-Depends on: Phase 11.
+Depends on: Phase 12.
 
 1. **Flatpak.** A manifest on the KDE runtime (`org.kde.Platform` 6.x),
    with libsndfile, libsamplerate, libzip, yaml-cpp, libfvad and SPTK as

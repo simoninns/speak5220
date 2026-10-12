@@ -26,6 +26,7 @@
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame_statistics.h"
 #include "core/optimiser/optimiser.h"
+#include "core/preprocess/preprocess.h"
 #include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/task_runner.h"
@@ -219,7 +220,7 @@ TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
         std::chrono::steady_clock::now() - start;
     ASSERT_TRUE(encoding.IsOk()) << name;
     const std::vector<double> source =
-        core::encoder::SquelchedSource(wav->samples, options);
+        core::preprocess::Preprocess(wav->samples, options.preprocess).samples;
     const auto scored = assessor.Assess(source, encoding->frames);
     ASSERT_TRUE(scored.IsOk()) << name << ": " << scored.GetStatus().ToString();
     const auto plain = assessor.Assess(wav->samples, encoding->frames);
