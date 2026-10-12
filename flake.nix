@@ -60,7 +60,31 @@
             };
           };
 
-          # Libraries the application links (plan §2.4)
+          # libfvad, the WebRTC voice activity detector as a C library, which
+          # nixpkgs does not package
+          libfvad = pkgs.stdenv.mkDerivation {
+            pname = "libfvad";
+            version = "1.0.1-unstable-2024-02-19";
+            src = pkgs.fetchFromGitHub {
+              owner = "dpirch";
+              repo = "libfvad";
+              rev = "532ab666c20d3cfda38bca63abbb0f152706c369";
+              hash = "sha256-TS/2ywq88AAPJEfYD5b0H7tzpAoigynsctzZodvPFzU=";
+            };
+            nativeBuildInputs = [ pkgs.cmake ];
+            postInstall = ''
+              install -Dm644 ../LICENSE $out/share/licenses/libfvad/LICENSE
+              install -Dm644 ../PATENTS $out/share/licenses/libfvad/PATENTS
+            '';
+            meta = {
+              description = "Voice activity detection library, from the WebRTC code";
+              homepage = "https://github.com/dpirch/libfvad";
+              license = lib.licenses.bsd3;
+            };
+          };
+
+          # Libraries the application links (plan §2.4). SPTK 4 brings its
+          # own copies of REAPER and WORLD (HLD §10).
           libraries = [
             pkgs.qt6.qtbase
             pkgs.qt6.qtmultimedia
@@ -71,6 +95,8 @@
             pkgs.libzip
             pkgs.yaml-cpp
             pkgs.spdlog
+            libfvad
+            pkgs.sptk
           ];
 
           # Format and lint tools (plan §1.3)
@@ -296,6 +322,7 @@
           inherit
             speak5220
             pocketfft
+            libfvad
             checkHooks
             devShell
             ;
@@ -308,7 +335,7 @@
           app = appFor pkgs;
         in
         {
-          inherit (app) speak5220 pocketfft;
+          inherit (app) speak5220 pocketfft libfvad;
           default = app.speak5220;
         }
       );
@@ -323,7 +350,35 @@
           # Pico SDK with its submodules (TinyUSB is needed for USB stdio)
           pico-sdk = pkgs.pico-sdk.override { withSubmodules = true; };
 
-          # Capture and analysis tools (investigation/tools/)
+          # Google's REAPER pitch tracker as its own command-line tool, for the
+          # quality reference data (app/scripts/golden/quality.py); the
+          # application uses SPTK's copy
+          reaper-f0 = pkgs.stdenv.mkDerivation {
+            pname = "reaper-f0";
+            version = "0-unstable-2019-12-21";
+            src = pkgs.fetchFromGitHub {
+              owner = "google";
+              repo = "REAPER";
+              rev = "1d6e9b95e6b08b500fccbc9a043989dbda747276";
+              hash = "sha256-sLvY7YOAcxslNJ0miW124iGxhwM0njU7DxAzP/jhi44=";
+            };
+            nativeBuildInputs = [ pkgs.cmake ];
+            # Its CMakeLists.txt asks for a CMake older than current ones
+            # accept, and has no install rule
+            cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
+            installPhase = ''
+              install -Dm755 reaper $out/bin/reaper
+            '';
+            meta = {
+              description = "Google's REAPER epoch and pitch tracker";
+              homepage = "https://github.com/google/REAPER";
+              license = pkgs.lib.licenses.asl20;
+              mainProgram = "reaper";
+            };
+          };
+
+          # Capture and analysis tools (investigation/tools/), and the
+          # reference tools of app/scripts/golden/
           python = pkgs.python3.withPackages (p: [
             p.numpy
             p.scipy
@@ -331,6 +386,26 @@
             p.pyserial
             p.soundfile
             p.pesq # ITU-T P.862 speech quality (investigation/tools/speechqual.py)
+            # The quality reference data (app/scripts/golden/quality.py): the
+            # original WebRTC voice activity detector, ESTOI and WORLD's
+            # Harvest
+            p.webrtcvad
+            (p.buildPythonPackage rec {
+              pname = "pystoi";
+              version = "0.4.1";
+              pyproject = true;
+              src = p.fetchPypi {
+                inherit pname version;
+                hash = "sha256-HG9Q1vv+5GsAySJFjNvScijZgwyoHOp4j9YA/C995uQ=";
+              };
+              build-system = [ p.setuptools ];
+              dependencies = [
+                p.numpy
+                p.scipy
+              ];
+              meta.license = pkgs.lib.licenses.mit;
+            })
+            p.pyworld
             # The documentation site (mkdocs.yml, docs/)
             p.mkdocs
             p.mkdocs-material
@@ -351,6 +426,7 @@
               # Hardware design
               kicad
               python
+              reaper-f0
               git
 
               # Text to speech for the encoder's test inputs (investigation/tools/ttsgen.py)

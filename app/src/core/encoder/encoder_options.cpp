@@ -37,7 +37,7 @@ constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
      .type = kReal,
      .minimum = 1.0,
      .maximum = 100.0,
-     .default_text = "20",
+     .default_text = "24",
      .unit = "codes",
      .typical_minimum = 5.0,
      .typical_maximum = 50.0,
@@ -144,7 +144,7 @@ constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
      .type = kInteger,
      .minimum = 80.0,
      .maximum = 480.0,
-     .default_text = "240",
+     .default_text = "256",
      .unit = "samples",
      .typical_minimum = 120.0,
      .typical_maximum = 400.0,
@@ -185,7 +185,7 @@ constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
      .type = kReal,
      .minimum = 0.0,
      .maximum = 20.0,
-     .default_text = "4",
+     .default_text = "5",
      .unit = "",
      .typical_minimum = 0.0,
      .typical_maximum = 12.0,
@@ -241,11 +241,11 @@ constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
      .type = kReal,
      .minimum = 1.0,
      .maximum = 10.0,
-     .default_text = "1",
+     .default_text = "1.25",
      .unit = ":1",
      .typical_minimum = 1.0,
      .typical_maximum = 6.0,
-     .step = 0.1,
+     .step = 0.05,
      .advanced = true},
     {.key = "compression",
      .field = "compression",
@@ -379,11 +379,6 @@ Status ValidateEncoderOptions(const EncoderOptions& options) {
     }
   }
   return OkStatus();
-}
-
-bool IsLeftOutAtDefault(const EncoderOptions& options, std::string_view field) {
-  return (field == "squelch_db" && !options.squelch_db.has_value()) ||
-         (field == "quiet_pauses" && options.quiet_pauses);
 }
 
 Status SetEncoderOption(EncoderOptions& options, std::string_view field,

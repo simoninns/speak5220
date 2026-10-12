@@ -53,7 +53,7 @@
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gui/encoder_panel/encoding_summary.h"
-#include "gui/encoder_panel/quality_scale_view.h"
+#include "gui/encoder_panel/quality_rating_view.h"
 #include "gui/optimise/optimise_session.h"
 #include "gui/playback/playback_icon.h"
 #include "gui/playback/player.h"
@@ -71,10 +71,11 @@ namespace {
 constexpr int kStepsPerPhrase = 1000;
 // The largest byte limit offered: a whole PHROM's words.
 constexpr int kMaxLimit = 16128;
-// The bit-rate weight's range and default, in PESQ per kbit/s.
-constexpr double kMaxWeight = 10.0;
-constexpr double kDefaultWeight = 0.1;
-constexpr double kWeightStep = 0.05;
+// The bit-rate weight's range and default, in overall score per kbit/s:
+// at the default, 1 kbit/s less is worth 0.03 of the score.
+constexpr double kMaxWeight = 3.0;
+constexpr double kDefaultWeight = 0.03;
+constexpr double kWeightStep = 0.01;
 constexpr int kWeightDecimals = 3;
 // Space above and below a history row's text, in pixels.
 constexpr int kRowPadding = 6;
@@ -128,7 +129,7 @@ OptimiseDialog::OptimiseDialog(OptimiseSession& session, Player& player,
       weight_(new QDoubleSpinBox(this)),
       status_(new QLabel(this)),
       progress_(new QProgressBar(this)),
-      quality_(new QualityScaleView(this)),
+      quality_(new QualityRatingView(this)),
       best_(new QLabel(this)),
       show_history_(
           new QCheckBox(QStringLiteral("Show every &candidate"), this)),
@@ -158,11 +159,11 @@ OptimiseDialog::OptimiseDialog(OptimiseSession& session, Player& player,
   weight_->setDecimals(kWeightDecimals);
   weight_->setSingleStep(kWeightStep);
   weight_->setValue(kDefaultWeight);
-  weight_->setSuffix(QStringLiteral(" PESQ per kbit/s"));
+  weight_->setSuffix(QStringLiteral(" score per kbit/s"));
   weight_->setEnabled(false);
   weight_box_->setToolTip(QStringLiteral(
-      "Choose the settings with the best PESQ less this much for each "
-      "kbit/s, so a smaller encoding can win"));
+      "Choose the settings with the best quality score less this much for "
+      "each kbit/s, so a smaller encoding can win"));
   connect(limit_box_, &QCheckBox::toggled, limit_, &QSpinBox::setEnabled);
   connect(weight_box_, &QCheckBox::toggled, weight_,
           &QDoubleSpinBox::setEnabled);
@@ -171,7 +172,7 @@ OptimiseDialog::OptimiseDialog(OptimiseSession& session, Player& player,
   history_->setHorizontalHeaderLabels(
       {QStringLiteral("Phrase"), QStringLiteral("#"), QStringLiteral("Stage"),
        QStringLiteral("Changes"), QStringLiteral("Bytes"),
-       QStringLiteral("bit/s"), QStringLiteral("PESQ"),
+       QStringLiteral("bit/s"), QStringLiteral("Score"),
        QStringLiteral("Outcome")});
   // The short columns fit their contents; the changes take the rest.
   QHeaderView* header = history_->horizontalHeader();
@@ -267,7 +268,6 @@ void OptimiseDialog::Prepare(const project::Project& project,
   history_->setRowCount(0);
   // The phrase column says nothing when there is one phrase.
   history_->setColumnHidden(kPhraseColumn, ids_.size() == 1);
-  quality_->SetScores(std::nullopt, std::nullopt);
   quality_->SetPlaceholder(QString());
   best_->clear();
   progress_->setValue(0);
@@ -290,7 +290,7 @@ void OptimiseDialog::Prepare(const project::Project& project,
                      ? QStringLiteral("Optimise %1").arg(name)
                      : QStringLiteral("Optimise %1 Phrases").arg(ids_.size()));
   status_->setText(QStringLiteral(
-      "Searches the encoder settings for the best PESQ within the "
+      "Searches the encoder settings for the best quality within the "
       "project's PHROM budget. Nothing changes until you accept."));
   SetStage(Stage::kReady);
 }
@@ -375,9 +375,9 @@ void OptimiseDialog::OnProgress() {
         phrase.start.has_value() && phrase.start->IsScored()
             ? std::optional<double>(phrase.start->score)
             : std::nullopt;
-    quality_->SetScores(phrase.best->score, phrase.anchor, start);
-    QString text = QStringLiteral("Best so far: PESQ %1, %2 bytes")
-                       .arg(phrase.best->score, 0, 'f', 2)
+    quality_->SetScore(phrase.best->score, start);
+    QString text = QStringLiteral("Best so far: %1, %2 bytes")
+                       .arg(QualityText(phrase.best->score))
                        .arg(phrase.best->bytes);
     if (phrase.start.has_value()) {
       text += QStringLiteral(" (start %1, %2 bytes)")

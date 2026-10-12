@@ -9,17 +9,17 @@ The Texas Instruments TMS5220 voice synthesis processor, measured on real hardwa
 
 A cross-platform Qt/C++ application for creating and editing TMS5220 LPC speech data and building new PHROMs is **in development**. It will:
 
-- import WAV speech and encode it, with an optimiser that tunes the encoder for the best PESQ score;
+- import WAV speech and encode it, with an optimiser that tunes the encoder for the best quality, rated from Poor to Good by objective measures of the spectral envelope, pitch and intelligibility;
 - play the original and the encoded speech, the latter through a built-in emulator;
 - export Acorn PHROM and TI indexed images, C headers, raw data, WAV, and BBC Micro disc images that speak through Speak External.
 
-So far its core library has the emulator, the encoder and the quality measures (PESQ and the quality scale), each checked against the retired references, and the project model: phrases, PHROM allocation, cached encodings and the `.s5proj` file. Around them are the build, a main window with the phrase list, phrase names and descriptions, and undo, a command-line tool that creates projects, imports WAV files, encodes them and exports Acorn PHROM images, the test tree, and the format, lint and CI checks. The plan is in [`docs-tech/application-plan.md`](docs-tech/application-plan.md), and the design in [`docs-tech/design/high-level-design.md`](docs-tech/design/high-level-design.md).
+So far its core library has the emulator, the encoder and the quality measures (spectral envelope, pitch and voicing, and intelligibility, combined into a rating), each checked against the retired references or independent implementations, and the project model: phrases, PHROM allocation, cached encodings and the `.s5proj` file. Around them are the build, a main window with the phrase list, phrase names and descriptions, and undo, a command-line tool that creates projects, imports WAV files, encodes them and exports Acorn PHROM images, the test tree, and the format, lint and CI checks. The plan is in [`docs-tech/application-plan.md`](docs-tech/application-plan.md), and the design in [`docs-tech/design/high-level-design.md`](docs-tech/design/high-level-design.md).
 
 ## Repository layout
 
 | Path | Contents |
 |---|---|
-| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), fixture projects for the tests (`projects/`), reference data from the retired encoder, emulator and quality tools (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`), and check, corpus, benchmark and golden-data scripts (`scripts/`) |
+| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), fixture projects for the tests (`projects/`), reference data from the retired encoder, emulator and quality tools (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`, with overlay ports in `vcpkg-ports/`), and check, corpus, benchmark and golden-data scripts (`scripts/`) |
 | [`docs/`](docs/index.md) | The published documentation site: the reference datasheet and the research record |
 | [`docs-tech/`](docs-tech/application-plan.md) | Developer documents that are not part of the site: the application's implementation plan and its high-level design |
 | [`investigation/`](investigation/README.md) | The research: the capture board (`kicad/`), its firmware (`firmware/`), the host tools (`tools/`), the captures (`captures/`), the speech PROM manifests (`proms/`), and the reference emulator (`emulator/`) and encoder (`encoder/`) |

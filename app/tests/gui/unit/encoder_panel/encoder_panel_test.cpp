@@ -1,8 +1,8 @@
 /*
  * File:        encoder_panel_test.cpp
  * Module:      encoder panel tests
- * Purpose:     Unit tests of the encoder panel with a mocked encoder,
- *              metric and anchor, a fake clock and an inline runner
+ * Purpose:     Unit tests of the encoder panel with a mocked encoder and
+ *              quality assessor, a fake clock and an inline runner
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -16,6 +16,7 @@
 #include <QLabel>
 #include <QMetaObject>
 #include <QObject>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QString>
 #include <QUndoStack>
@@ -30,17 +31,20 @@
 #include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/quality/cached_quality.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/encoder_panel/option_slider.h"
-#include "gui/encoder_panel/quality_scale_view.h"
+#include "gui/encoder_panel/quality_rating_view.h"
 #include "gui/support/gui_mocks.h"
 #include "gui/undo/project_edits.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
+#include "support/quality_mocks.h"
 
 namespace speak5220::app {
 namespace {
@@ -123,8 +127,8 @@ TEST_F(EncoderPanelTest, ShowsTheStatisticsAndTheMeasuredQuality) {
       panel_.KindsLabel()->text().startsWith(QStringLiteral("voiced ")));
   // The test synth's output is idle (code -1) throughout.
   EXPECT_EQ(panel_.LevelLabel()->text(), QStringLiteral("peak code 1 of 127"));
-  EXPECT_EQ(panel_.Quality()->Text(),
-            QStringLiteral("PESQ 2.00 (LPC reference 2.50): Fair"));
+  EXPECT_EQ(panel_.Quality()->Text(), QStringLiteral("Fair · 0.60"));
+  EXPECT_FALSE(panel_.Quality()->Figures().isEmpty());
   EXPECT_EQ(panel_.JobsRunning(), 0);
 }
 
@@ -161,24 +165,18 @@ TEST_F(EncoderPanelTest, SquelchedPhraseIsMeasuredAgainstItsSquelchedSource) {
   std::fill(breath.audio.begin() + 4000, breath.audio.end(), 0.0005F);
   project_ = ProjectWith({breath});
   const std::vector<double> source(breath.audio.begin(), breath.audio.end());
-  std::vector<std::vector<double>> anchored;
   std::vector<double> measured;
-  ON_CALL(encoding_.anchor, Score(_))
-      .WillByDefault([&anchored](std::span<const double> s) {
-        anchored.emplace_back(s.begin(), s.end());
-        return core::StatusOr<double>(TestEncoding::kAnchor);
-      });
-  ON_CALL(encoding_.quality, Measure(_, _))
+  ON_CALL(encoding_.quality, Assess(_, _))
       .WillByDefault([&measured](std::span<const double> s,
-                                 const core::encoder::EncodeResult&) {
+                                 std::span<const core::lpc::Frame>) {
         measured.assign(s.begin(), s.end());
-        return core::StatusOr<double>(TestEncoding::kScore);
+        return core::StatusOr<core::quality::QualityAssessment>(
+            testing::AssessmentScoring(TestEncoding::kScore));
       });
   Show(4);
   panel_.ReEncodeButton()->click();
   QCoreApplication::processEvents();
-  ASSERT_EQ(anchored.size(), 1U);
-  EXPECT_EQ(anchored[0], source);
+  EXPECT_EQ(measured, source);
 
   panel_.Form()->OnBox("squelch_db")->setChecked(true);
   Tick(EncoderPanel::kDebounceMs);
@@ -187,15 +185,10 @@ TEST_F(EncoderPanelTest, SquelchedPhraseIsMeasuredAgainstItsSquelchedSource) {
   const std::vector<double> expected =
       core::encoder::SquelchedSource(source, squelched);
   ASSERT_NE(expected, source);
-  // A new squelch needs a new anchor.
-  ASSERT_EQ(anchored.size(), 2U);
-  EXPECT_EQ(anchored[1], expected);
   EXPECT_EQ(measured, expected);
 
-  // Back to no squelch: the anchor measured before is used again.
   panel_.Form()->OnBox("squelch_db")->setChecked(false);
   Tick(EncoderPanel::kDebounceMs);
-  EXPECT_EQ(anchored.size(), 2U);
   EXPECT_EQ(measured, source);
 }
 
@@ -228,15 +221,17 @@ TEST_F(EncoderPanelTest, ReportsTheSquelchAsTheFormHasIt) {
   EXPECT_EQ(reported.back(), std::nullopt);
 }
 
-TEST_F(EncoderPanelTest, StoresPesqAndTheAnchorWithTheEncoding) {
+TEST_F(EncoderPanelTest, StoresTheQualityWithTheEncoding) {
   Show(2);
   EXPECT_EQ(panel_.ReEncodeButton()->text(), QStringLiteral("&Encode"));
   EXPECT_EQ(panel_.StateLabel()->text(), QStringLiteral("Not encoded yet"));
   panel_.ReEncodeButton()->click();
   QCoreApplication::processEvents();
   ASSERT_TRUE(Phrase(2).encoding.has_value());
-  EXPECT_EQ(Phrase(2).encoding->pesq, TestEncoding::kScore);
-  EXPECT_EQ(Phrase(2).encoding->anchor, TestEncoding::kAnchor);
+  ASSERT_TRUE(Phrase(2).encoding->quality.has_value());
+  EXPECT_NEAR(Phrase(2).encoding->quality->score, TestEncoding::kScore, 1e-12);
+  EXPECT_EQ(Phrase(2).encoding->quality->measures_version,
+            core::quality::kMeasuresVersion);
   EXPECT_EQ(panel_.StateLabel()->text(), QStringLiteral("Up to date"));
   EXPECT_EQ(panel_.ReEncodeButton()->text(), QStringLiteral("Re-&encode"));
 }
@@ -267,16 +262,31 @@ TEST_F(EncoderPanelTest, ReEncodeIsOfferedOnlyWhenThereIsSomethingToRedo) {
   EXPECT_TRUE(panel_.ReEncodeButton()->isEnabled());
 }
 
-TEST_F(EncoderPanelTest, EncodingAtOrAboveTheAnchorShowsLpcOrBetter) {
-  ON_CALL(encoding_.quality, Measure(_, _)).WillByDefault(Return(2.6));
+TEST_F(EncoderPanelTest, ShowsTheRatingAndItsComponents) {
+  ON_CALL(encoding_.quality, Assess(_, _))
+      .WillByDefault(Return(testing::AssessmentScoring(0.8)));
   Show(2);
   panel_.ReEncode();
   QCoreApplication::processEvents();
-  ASSERT_TRUE(panel_.Quality()->Placement().has_value());
-  EXPECT_EQ(panel_.Quality()->Placement()->band,
-            core::quality::QualityBand::kLpcOrBetter);
-  EXPECT_TRUE(panel_.Quality()->Text().endsWith(
-      QStringLiteral(": As good as LPC or better")));
+  EXPECT_EQ(panel_.Quality()->Text(), QStringLiteral("Good · 0.80"));
+  ASSERT_TRUE(panel_.Quality()->Bar()->Score().has_value());
+  EXPECT_NEAR(*panel_.Quality()->Bar()->Score(), 0.8, 1e-9);
+  EXPECT_EQ(panel_.Quality()
+                ->ComponentBar(QualityRatingView::Component::kIntelligibility)
+                ->format(),
+            QStringLiteral("0.80"));
+}
+
+TEST_F(EncoderPanelTest, CachedQualityIsShownWithoutMeasuring) {
+  core::project::CachedEncoding cached = *Phrase(1).encoding;
+  cached.quality =
+      core::quality::ToCachedQuality(testing::AssessmentScoring(0.3));
+  ASSERT_TRUE(project_
+                  .SetEncoding(TestId(1), {.overrides = Phrase(1).encoder,
+                                           .encoding = cached})
+                  .IsOk());
+  Show(1);
+  EXPECT_EQ(panel_.Quality()->Text(), QStringLiteral("Poor · 0.30"));
 }
 
 TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {
@@ -289,12 +299,12 @@ TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {
   EXPECT_TRUE(panel_.Form()->IsMarked("target_rms"));
   ASSERT_TRUE(panel_.ResetButton()->isEnabled());
   EXPECT_CALL(encoding_.encoder,
-              Encode(_, kSampleRate, Field(&EncoderOptions::target_rms, 20.0)))
+              Encode(_, kSampleRate, Field(&EncoderOptions::target_rms, 24.0)))
       .Times(1);
   panel_.ResetButton()->click();
   QCoreApplication::processEvents();
   EXPECT_TRUE(Phrase(1).encoder.empty());
-  EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 20.0);
+  EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 24.0);
   EXPECT_FALSE(panel_.ResetButton()->isEnabled());
   // One step, undone as one.
   ASSERT_EQ(stack_.count(), 1);
@@ -383,7 +393,7 @@ TEST(EncoderPanelRefusalTest,
   panel.ReEncode();
   QCoreApplication::processEvents();
   EXPECT_EQ(failure, QStringLiteral("over the budget"));
-  EXPECT_DOUBLE_EQ(rms->Value(), 20.0);
+  EXPECT_DOUBLE_EQ(rms->Value(), 24.0);
   EXPECT_EQ(stack.count(), 0);
 }
 

@@ -75,7 +75,7 @@ std::vector<double> MatchLevel(std::span<const double> input,
                                std::span<const double> degraded);
 
 // The chip's output lined up with the input and level-matched, as
-// speechqual.py measure() prepares it for PESQ.
+// speechqual.py measure() prepared it.
 struct AlignedOutput {
   std::vector<double> degraded;
   int lag = 0;

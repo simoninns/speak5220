@@ -36,12 +36,15 @@ struct PreEmphasis {
 };
 
 // Everything that controls an encoding. The defaults are those of
-// tms5220enc.py DEFAULTS, with quiet_pauses on and no squelch, neither of
-// which the reference has; each field's range and help text are in
+// tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence and
+// level_agc, chosen for the best median quality score on the corpus (HLD
+// §9), and quiet_pauses, on, which the reference does not have. Projects
+// list every option (plan §4), so changing a default never changes a
+// project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
   // RMS of the output over sounding frames, in codes.
-  double target_rms = 20.0;
+  double target_rms = 24.0;
   // If set, scale so the loudest output peak is this instead of target_rms.
   std::optional<double> target_peak;
   // No output code beyond this (the DAC's range is +-127).
@@ -58,14 +61,14 @@ struct EncoderOptions {
   std::optional<double> squelch_db;
   // Voiced analysis pre-emphasis.
   PreEmphasis pre_emphasis;
-  // Analysis window, in samples (30 ms).
-  int window = 240;
+  // Analysis window, in samples (32 ms).
+  int window = 256;
   // Bandwidth of the Gaussian lag window, in Hz.
   double lag_window_hz = 60.0;
   // CMNDF level at which voiced and unvoiced cost the same.
   double voicing_threshold = 0.3;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
-  double voicing_evidence = 4.0;
+  double voicing_evidence = 5.0;
   // Closed-loop energy passes.
   int iterations = 5;
   // Fade unvoiced sound before a stop or silence (§12.2).
@@ -75,7 +78,7 @@ struct EncoderOptions {
   // QuietPauses()). Not in the reference encoder.
   bool quiet_pauses = true;
   // Slow gain control ratio over about 0.75 s (1: off).
-  double level_agc = 1.0;
+  double level_agc = 1.25;
   // Per-frame level compression ratio (1: off).
   double compression = 1.0;
 
@@ -141,12 +144,6 @@ const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
 // The text for an unset optional option (target_peak, squelch_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
-
-// True for an option added after project files were first made
-// (squelch_db, quiet_pauses) while it has its default (unset, true): it is
-// left out of project files and of the settings hash, so a project that
-// does not change it saves as before.
-bool IsLeftOutAtDefault(const EncoderOptions& options, std::string_view field);
 
 // Sets one option from text, as a user types it or a project file holds
 // it: a number ("18", "0.35"), "true" or "false", "chirp" or a number for

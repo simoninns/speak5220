@@ -2,7 +2,8 @@
  * File:        optimiser_threads_test.cpp
  * Module:      optimiser tests
  * Purpose:     Checks that the optimiser finds the same result on 1 and 8
- *              threads, with the real encoder, emulator and PESQ
+ *              threads, with the real encoder, emulator and quality
+ *              measures
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -13,7 +14,7 @@
 
 #include "core/encoder/encoder.h"
 #include "core/optimiser/optimiser.h"
-#include "core/quality/pesq_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -33,7 +34,8 @@ core::StatusOr<optimiser::OptimiseResult> OptimiseOn(int threads,
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
   core::synth::Synth synth({}, core::synth::SynthCache::kOff);
-  core::quality::PesqMetric metric(synth);
+  core::quality::QualityAssessor assessor(synth);
+  core::quality::OverallQualityMetric metric(assessor);
   core::ThreadPoolTaskRunner workers(threads);
   optimiser::Optimiser search(*encoder, metric, workers);
   return search.Run({.source = wav.samples,

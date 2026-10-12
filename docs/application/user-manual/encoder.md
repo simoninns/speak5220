@@ -28,7 +28,7 @@ From the top:
     chip's output reaches (its DAC's range is ±127). What the limiter did
     (frames whose energy was lowered to stay under `peak_limit`, and
     frames made silent) is known only for encodings made in this session.
-- **The quality scale** (below).
+- **The quality rating** (below).
 - **The settings** (below).
 - **Re-encode** (Encode for a phrase with no frames) encodes the phrase
   now with the settings shown. It is available only when there is
@@ -38,61 +38,65 @@ From the top:
   Defaults** removes the phrase's own settings, so it follows the
   project's defaults again, and re-encodes it.
 
-## The quality scale
+## The quality rating
 
-PESQ (ITU-T P.862, as MOS-LQO) compares the encoded speech with the
-original and scores it from 1.0 to 4.5. No TMS5220 encoding comes near
-4.5: a typical encoding scores about 2.0, and an ideal LPC coder with
-nothing quantised only about 2.3. So the score is shown against the
-phrase's own reference, the **anchor**: the score of an unquantised
-LPC-10 vocoder of the same recording.
+The encoded speech is compared with the original on the frames that hold
+speech. Silence, pauses, breaths and clicks are left out, found by a
+voice activity detector. Three things are measured:
 
-`[ Bad | Poor | Fair |  Good ▼  | Best ]`
+- **Envelope**: how far the encoding's spectral envelope (the shape the
+  chip's ten K parameters give the sound) is from the original's, as log
+  spectral distortion in dB, and the share of frames more than 4 dB out.
+  Under 2 dB is close; over 4 dB is a clear difference.
+- **Pitch**: the share of frames whose pitch is wrong by more than 20%
+  (gross errors, such as an octave out), how far it is out otherwise, in
+  cents, and the share of frames where voiced and unvoiced sounds are
+  swapped.
+- **Intelligibility**: ESTOI, from 0 to 1, which compares the loudness of
+  the speech in each band over time. It needs about 0.4 s of speech; a
+  shorter phrase is rated on the other two.
 
-`PESQ 2.08 (LPC reference 2.31): Good`
+Each is scored from 0 to 1, and the **overall score** is their geometric
+mean, so one weak part pulls it down and cannot be hidden by the others.
+The rating divides the overall score into three bands:
 
-The score relative to the anchor is (score − 1.0) / (anchor − 1.0): 0
-for PESQ's floor, 1 for an encoding that matches the anchor. The anchor
-is a reference, not a limit: an encoding can score above it, and after
-Optimise about a quarter do. So the bar runs on a quarter
-past the anchor: the **Best** band starts at the anchor, four fifths of
-the way along, and a score beyond it shows how far (1.25 or more is at
-the right end).
-
-The bar is divided into five bands, each named inside it (the top one as
-**Best**), and the line under the bar gives the band in full, so the
-scale reads the same without colour. The bar is at most 520 pixels
-wide, so it can be taken in at a glance:
-
-| Band | Score relative to the anchor |
+| Rating | Overall score |
 |---|---|
-| Bad | below 0.40 |
-| Poor | 0.40 to below 0.60 |
-| Fair | 0.60 to below 0.75 |
-| Good | 0.75 to below 1.00 |
-| As good as LPC or better | 1.00 (the anchor) and above |
+| Poor | below 0.50 |
+| Fair | 0.50 to below 0.70 |
+| Good | 0.70 and above |
 
-With the default settings a typical encoding is *Good*; Optimise moves
-most encodings up within *Good*, and some past the anchor. PESQ was not
-validated for vocoders, so use the scale to rank encodings of a phrase,
-not to predict what a listener would say; hover over it for a reminder.
+`[    Poor    |  Fair  ▼ |  Good  ]`
 
-PESQ treats breaths and room noise as part of the speech, and gives
-quiet stretches a little more weight than loud ones. If a recording has
-audible breaths, Optimise may favour settings that reproduce them; use
-the [squelch](#the-squelch) to leave them out.
+`Fair · 0.62`
 
-The score and the anchor are measured when a phrase is encoded in the
-window, and saved with its frames. For frames made elsewhere (by
-`speak5220-cli encode`, for example) they are measured in the background
-for display, and the line says *Measuring quality...* meanwhile.
+The bar names each band inside it, and the line under it gives the rating
+and the score, so it reads the same without colour. Under that, a small
+bar for each of the three parts shows its score, so you can see which one
+holds an encoding back, and the figures behind them follow:
+
+`envelope 3.34 dB, 28% over 4 dB · pitch 5.6% gross, 60 cents RMS ·
+voicing 9.9% · ESTOI 0.76`
+
+The rating means the same on every phrase. An ideal LPC coder with
+nothing quantised is *Good* on nearly every phrase; with the default
+settings encodings are *Good* or *Fair* in about equal parts, and *Poor*
+on a few. The envelope is usually the weakest part, since the chip's K
+parameters are coarsely quantised. Hover over the rating for a reminder
+of what each part measures.
+
+The quality is measured when a phrase is encoded in the window, and saved
+with its frames. For frames made elsewhere (by `speak5220-cli encode`, for
+example), or saved by an earlier version of the measures, it is measured
+in the background for display, and the line says *Measuring quality...*
+meanwhile.
 
 ## The settings
 
 One row per [encoder option](../reference/encoder-options.md), in two
 columns. Hover over a label for what the option does and its default.
 Numbers are set with sliders, with the value and its unit beside them
-(`20 codes`, `45 dB`, `30 ms`; the ratios read `off` at 1). A small tick
+(`24 codes`, `45 dB`, `32 ms`; the ratios read `off` at 1). A small tick
 under each slider marks the default, so an option moved from it is easy
 to see. A slider covers the range where useful values lie (the reference
 gives each one); a value outside it, from the project file or Optimise,
@@ -147,9 +151,8 @@ stored: a message says so, and the form shows the phrase's settings again
 silent before it is encoded: everything more than the set number of dB
 below the recording's loudest sound, such as breaths, lip noise and room
 noise. Tick its check box to turn it on (it starts at `30 dB`). The
-quality scale then compares the encoding with the squelched recording,
-so an encoding that reproduces a breath scores *lower*, and Optimise
-looks for settings that keep it out.
+quality is then measured against the squelched recording, so muted
+breaths are not asked of the encoding.
 
 - A lower number squelches more: `20 dB` mutes anything a tenth as loud
   as the loudest sound; `40 dB` only sounds a hundredth as loud.
@@ -159,8 +162,8 @@ looks for settings that keep it out.
   *h* or a trailing *s*, though: if a word loses its ending, raise the
   number.
 - Changing the squelch changes what the quality is measured against, so
-  scores made with different squelches do not compare, and the anchor is
-  measured again. Optimise keeps the phrase's squelch as it is.
+  scores made with different squelches do not compare. Optimise keeps
+  the phrase's squelch as it is.
 - The squelch is not the **Silence gate**, which only decides which
   frames of the encoding are silent (45 dB below the loudest frame by
   default) and leaves the quality measured against the whole recording.
@@ -218,16 +221,18 @@ project past its budget, none is stored.
 
 **Optimise...** in the encoder panel, or **Phrase > Optimise...**
 (Ctrl+Shift+O) for the selected phrases, opens the Optimise window. It
-searches each phrase's settings for the encoding with the best PESQ.
+searches each phrase's settings for the encoding with the best overall
+quality score.
 
 Before it starts, two limits can be set:
 
 - **Limit each phrase to ... bytes**: only settings whose frames fit are
   chosen. It starts at the largest of the phrases' sizes now, so ticking
   it alone finds better settings that are no bigger.
-- **Trade quality for size**: choose the settings with the best PESQ less
-  this much for each kbit/s, so a smaller encoding can win over a
-  slightly better one. With 0.1, saving 1 kbit/s is worth 0.1 of PESQ.
+- **Trade quality for size**: choose the settings with the best overall
+  score less this much for each kbit/s, so a smaller encoding can win
+  over a slightly better one. With the default 0.03, saving 1 kbit/s is
+  worth 0.03 of the score.
 
 Whatever the limits, a result that would take the project past its 64
 PHROMs is never chosen. Optimise does not change the
@@ -238,12 +243,12 @@ results in place, so the results fit together.
 **Start** begins the search. While it runs, the window shows:
 
 - the phrase being optimised and the candidates tried so far;
-- the best so far on the phrase's quality scale, with a dashed mark at
-  the score it started from;
+- the best so far on the quality rating's bar, with a dashed mark at the
+  score it started from;
 - the best so far's size and the settings it changes.
 
 **Show every candidate** lists every set of settings tried, with its
-size, bit rate, PESQ and what became of it (*scored*, *over budget*,
+size, bit rate, overall score and what became of it (*scored*, *over budget*,
 *over limit* or *failed*).
 
 When it finishes with better settings, **Listen** compares them by ear:
@@ -258,7 +263,7 @@ beginning. When several phrases changed, choose which to hear beside
 **Listen**. A phrase with no frames before Optimise has only **Optimised**.
 
 **Accept** keeps the results: each phrase's new
-settings and frames, with their PESQ, as one step to undo (**Undo
+settings and frames, with their quality, as one step to undo (**Undo
 Optimise HELLO**, or **Undo Optimise 3 Phrases**). **Revert** keeps the
 current settings. **Cancel**, or closing the window, stops the search and
 changes nothing. While the window is open the main window cannot be

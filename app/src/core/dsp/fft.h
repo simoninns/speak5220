@@ -17,7 +17,8 @@
 
 namespace speak5220::core::dsp {
 
-// The real FFTs the encoder and PESQ use, with NumPy's conventions:
+// The real FFTs the encoder and the quality measures use, with NumPy's
+// conventions:
 // forward unscaled, inverse scaled by 1/n. Implementations are
 // thread-safe.
 class IFft {

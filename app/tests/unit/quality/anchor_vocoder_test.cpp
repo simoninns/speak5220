@@ -87,12 +87,5 @@ TEST(AnchorVocoderTest, VocoderIsDeterministicAndKeepsTheLength) {
   EXPECT_EQ(a, AnchorVocoder(x));
 }
 
-TEST(AnchorVocoderTest, AnchorScoreIsAPlausibleCeiling) {
-  const auto score = AnchorScore(testing::SyntheticSpeech());
-  ASSERT_TRUE(score.IsOk()) << score.GetStatus().ToString();
-  EXPECT_GT(*score, 1.5);
-  EXPECT_LT(*score, 4.6);
-}
-
 }  // namespace
 }  // namespace speak5220::core::quality

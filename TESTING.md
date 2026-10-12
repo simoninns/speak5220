@@ -222,9 +222,12 @@ way its callers can be unit tested.
 | `IFft` | `PocketFft` (pocketfft) | Encoder stages |
 | `IFrameAnalyser`, `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | `FrameAnalyser`, `YinPitchTracker`, `VoicingClassifier`, `RepeatSearch`, `LevelSetter` | `Encoder` (orchestration only) |
 | `IEncoder` | `Encoder` | `Optimiser`, the project's re-encode logic (`EncodingCache`), the GUI's encoder panel and Optimise |
-| `ISynth` | `Synth` | `PesqMetric`, `RenderEncodedAudio()`, `PhraseWaveforms`, `Optimiser` |
-| `IQualityMetric` | `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` | `Optimiser`, the GUI's encoder panel and Optimise |
-| `IAnchorScorer` | `AnchorScorer` (`AnchorScore()`) | The GUI's encoder panel and Optimise |
+| `ISynth` | `Synth` | `QualityAssessor`, `RenderEncodedAudio()`, `PhraseWaveforms`, `Optimiser` |
+| `IQualityMetric` | `OverallQualityMetric` | `Optimiser` |
+| `IQualityAssessor` | `QualityAssessor` | The GUI's encoder panel and Optimise |
+| `IVoiceActivity` | `FvadVoiceActivity` (libfvad) | The quality measures' voice activity mask |
+| `ILpcAnalysis` | `SptkLpcAnalysis` (SPTK 4) | The spectral envelope measure |
+| `IPitchEstimator` | `SptkPitchEstimator` (SPTK 4's REAPER or Harvest) | The pitch and voicing measures |
 | `IProjectStore` | `ZipProjectStore` (libzip), `DirectoryProjectStore` | `ProjectSerializer` |
 | `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails`, `PhraseWaveforms` |
 | `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`) | `MainWindow`: file choices, the save prompt, confirmations, errors |
@@ -241,8 +244,8 @@ BASIC tokeniser, the DFS image writer, the YAML mapping, and the
 name/identifier rules.
 
 The adapters over third-party libraries (libsndfile, libsamplerate,
-pocketfft, libzip, `QAudioSink`, Qt D-Bus) are kept as thin as possible.
-They can only be tested for real, so their tests are functional; the
+pocketfft, libzip, libfvad, SPTK, `QAudioSink`, Qt D-Bus) are kept as thin
+as possible. They can only be tested for real, so their tests are functional; the
 audio output and the desktop portal need a device and a desktop session,
 so they are checked by hand.
 
@@ -333,7 +336,7 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
 | `app/golden/emulator/` | The C emulator's runs (plan §1.4): codes and event logs for its self-test scenarios, synthetic vectors and encoder output, through both paths |
 | `app/golden/packaging/` | The Python encoder's Acorn PHROM and TI indexed images and Speak External streams |
 | `app/golden/encoder/` | The Python encoder's frames for the whole corpus with four option sets, with each file's near-tie frames; `encodeDetailed()` intermediates and WAV inputs for a corpus subset |
-| `app/golden/quality/` | The retired quality tools' measures of the reference encodings: PESQ with its alignment lag, the cheap measures, and each corpus file's anchor score |
+| `app/golden/quality/measures/` | Independent implementations of the quality measures of plan §3.3 on the corpus subset's reference encodings: the voice activity masks, the pitch tracks and the scores |
 
 - **Fixture projects are stored unpacked**, as a directory with the same
   layout as a `.s5proj` ZIP (`project.yaml`, `phrases/<uuid>/…`). That way
@@ -350,8 +353,8 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
   emulator (plan §1.4, decision D5) by
   `app/scripts/golden/generate_golden.py` (emulator and packaging),
   `app/scripts/golden/encoder.py` (encoder) and
-  `app/scripts/golden/quality.py` (quality measures, from the retired
-  `speechqual.py` and `evaluate.py`), run by hand in the default Nix shell
+  `app/scripts/golden/measures.py` (the quality measures of plan §3.3,
+  from py-webrtcvad, pystoi, REAPER, pyworld and NumPy), run by hand in the default Nix shell
   (`nix develop --command python3 app/scripts/golden/encoder.py`).
   `--check` regenerates the data into a temporary directory and compares it
   with the committed files. It is a fixed regression baseline:
@@ -379,7 +382,7 @@ Everything writes through an output directory chosen by the caller (the
 CLI's `--output DIR`), never into `app/projects/`, `app/golden/` or
 `app/tests/`.
 The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`,
-`encoder.py` and `quality.py`), which write `app/golden/` themselves; they are run by
+`encoder.py` and `measures.py`), which write `app/golden/` themselves; they are run by
 hand, and only to create or, by agreement, regenerate the reference data
 (AGENTS.md §3.1).
 
@@ -394,18 +397,30 @@ hand, and only to create or, by agreement, regenerate the reference data
   corpus with every option set and checks the plan's acceptance criteria
   (§3.2): at least 99% of encodings identical to the reference, the rest
   differing only at the reference's near-tie frames and within 0.02 of its
-  PESQ. It then measures every reference encoding against
-  `app/golden/quality/` (Phase 3): PESQ within 0.01, each file's anchor
-  within 0.02, and the cheap measures. Then it optimises every file from
+  overall quality score. Then it optimises every file from
   the default options (Phase 7), with a byte limit at the default
   encoding's size, and checks that the best is within the limit and
   scores above the defaults on most files (`SPEAK5220_OPTIMISE_STRIDE=N`
-  takes every Nth file, for a quicker run). It writes its reports to
-  `build/app/corpus-check/`. It is slow, so it is run by hand in the default
+  takes every Nth file, for a quicker run). Last, it measures every file
+  with the quality measures of plan §3.3 (Phase 8), as the reference
+  encodings, the application's default and optimised encodings and the
+  anchor vocoder render it, for the calibration of the overall score
+  (`measures.tsv`). It writes its reports to `build/app/corpus-check/`.
+  `corpus-check.sh --listening` instead writes the listening check's
+  samples: for each rating band, files spread over its scores, as the
+  original and the chip's output (`listening/`). It is slow, so it is run by hand in the default
   Nix shell, not by CTest.
+- For choosing the encoder's defaults (plan Phase 8, task 14), the
+  Optimise corpus check also writes each file's best options, and
+  `SPEAK5220_OPTIMISE_START` (such as `squelch_db=30`) changes where it
+  starts. `OptionsCorpusCheck.DISABLED_ScoresTheOptions` encodes the corpus
+  with the options in `SPEAK5220_OPTIONS` (the same form; unset for the
+  defaults) and writes each file's size and score to
+  `SPEAK5220_OPTIONS_REPORT`. Both are run by hand from the functional
+  test binary, with `SPEAK5220_CORPUS_DIR` set to the generated corpus.
 - `app/scripts/benchmark.sh` times encoding on one core, against the target
-  of 0.05 s per second of speech, then the quality measures (PESQ, PESQ with
-  the synthesis and alignment, the anchor, the cheap measures), writing
+  of 0.05 s per second of speech, then the quality measures of plan §3.3
+  with their synthesis and preparation, writing
   per-file timings into `build/app/project-output/benchmark/`. It takes the
   corpus subset by default, or any directory of WAV files. Then it times
   Optimise on every phrase of `app/projects/benchmark/synthetic-speech`,

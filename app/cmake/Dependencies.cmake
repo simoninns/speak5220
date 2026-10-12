@@ -50,3 +50,9 @@ target_compile_definitions(
     speak5220_pocketfft
     INTERFACE POCKETFFT_NO_MULTITHREADING
 )
+
+# The quality measures (plan §3.3): libfvad's voice activity detector, and
+# SPTK 4's LPC analysis and pitch estimators (its own copies of REAPER and
+# WORLD's Harvest)
+speak5220_import_library(fvad fvad.h fvad)
+find_package(SPTK 4 CONFIG REQUIRED)

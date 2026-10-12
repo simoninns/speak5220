@@ -34,6 +34,7 @@
 #include "core/project/project.h"
 #include "core/project/project_serializer.h"
 #include "core/project/zip_project_store.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -93,7 +94,16 @@ Project SampleProject() {
       lpc::Frame::Voiced(9, 34, {12, 20, 8, 7, 9, 8, 7, 4, 3, 2}),
       lpc::Frame::Repeat(9, 35), lpc::Frame::Unvoiced(4, {20, 18, 9, 6}),
       lpc::Frame::Silence(), lpc::Frame::Stop()};
-  phrase.encoding->pesq = 2.08;
+  phrase.encoding->quality =
+      CachedQuality{.measures_version = quality::kMeasuresVersion,
+                    .lsd_db = 3.25,
+                    .lsd_over_2db = 81.5,
+                    .lsd_over_4db = 27.75,
+                    .gross_pitch_error = 5.5,
+                    .f0_rmse_cents = 60.125,
+                    .voicing_error = 9.875,
+                    .estoi = 0.75,
+                    .score = 0.6875};
   phrase.audio = {0.0F, 0.123456F, -0.5F, 0.999F};
   // The project stores audio on the 24-bit grid (plan §3.1).
   audio::QuantiseToPcm24(phrase.audio);

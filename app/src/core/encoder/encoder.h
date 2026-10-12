@@ -125,7 +125,7 @@ class Encoder : public IEncoder {
 // The source an encoding is made from and scored against: `samples` (8
 // kHz) squelched when options.squelch_db is set (dsp::Squelch()), else a
 // copy. The encoder applies it itself; whatever measures an encoding
-// against its source (PESQ, the anchor) applies it to the source first,
+// against its source (the quality measures) applies it to the source first,
 // so breaths muted for the encoder are not asked of it. Pure; O(n).
 std::vector<double> SquelchedSource(std::span<const double> samples,
                                     const EncoderOptions& options);

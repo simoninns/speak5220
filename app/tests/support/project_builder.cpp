@@ -72,8 +72,7 @@ project::Phrase EncodedPhrase(int n, const std::string& name, int cost) {
       .encoder_version = "test",
       .settings_hash = "",
       .frames = FramesPackingTo(BytesForCost(cost, name)),
-      .pesq = std::nullopt,
-      .anchor = std::nullopt,
+      .quality = std::nullopt,
       .unknown = {},
       .quality_unknown = {}};
   return phrase;

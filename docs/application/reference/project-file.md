@@ -38,11 +38,11 @@ project:
     " ": "(TONE 1)"
     "1": "ONE,WON"
   default_encoder:
-    target_rms: 20
+    target_rms: 24
     target_peak: null
+    squelch_db: null
     pre_emphasis: "chirp"
-    # ... every encoder option (squelch_db only when set, quiet_pauses
-    # only when false)
+    # ... every encoder option, each one required
   phroms:
     - number: 2
       header_strings: ["(C)2026 Simon Inns", "Numbers", "1.00"]
@@ -73,7 +73,7 @@ exports:
 |---|---|---|
 | `format` | String | Always `"speak5220-project"`. A file with any other value is not opened |
 | `version` | Whole number | The format version, 1. A project from a newer version of Speak5220 is refused rather than misread; older versions are upgraded when opened |
-| `project` | Mapping | The project settings, below. Optional: missing settings take their defaults |
+| `project` | Mapping | The project settings, below. Required, for `default_encoder`; the other settings are optional and take their defaults |
 | `phrases` | List | The phrases, in PHROM order: the order of this list is the order of the words in the PHROMs (datasheet §12.8) |
 | `exports` | List | The export presets, below |
 
@@ -84,7 +84,7 @@ exports:
 | `name` | String | The file name, for a project made by `speak5220-cli new` | The project's name |
 | `header_strings` | List of strings | `["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]` | The strings in each PHROM's header. Each PHROM gets its number appended to the second string (`"My PHROM 2"`). Together, with a null after each, they must fit in 54 bytes, and they must be ASCII; the BBC Micro expects the first to start `(C)` |
 | `ascii_map` | Mapping | Empty | The "ASCII associated" words: each key is one printable ASCII character, each value a phrase name. A PHROM includes only the entries whose phrase it holds |
-| `default_encoder` | Mapping | The [encoder options](encoder-options.md)' defaults | The options every phrase is encoded with, unless it sets its own. Every option is written, except `squelch_db` while it is unset and `quiet_pauses` while it is `true`, so a project that does not change them reads the same in earlier versions of Speak5220 |
+| `default_encoder` | Mapping | Required | The options every phrase is encoded with, unless it sets its own. Every [encoder option](encoder-options.md) must be listed, an unset one as `null`, so a project never depends on the defaults: a later version of Speak5220 that changes one does not change the project's encodings. A project that does not list them all, such as one saved by a development version before this rule, is not opened, and the message names the missing options |
 | `phroms` | List | Empty | Header strings for single PHROMs: `number` (from 1) and `header_strings`, which replace the project's strings in that PHROM |
 
 ### phrases
@@ -143,8 +143,15 @@ frames:
   - {energy: 0}
   - {energy: 15}
 quality:
-  pesq: 2.08
-  anchor: 2.31
+  measures_version: 1
+  lsd_db: 3.34
+  lsd_over_2db: 82.4
+  lsd_over_4db: 27.8
+  gross_pitch_error: 5.6
+  f0_rmse_cents: 60.1
+  voicing_error: 9.9
+  estoi: 0.76
+  score: 0.70
 ```
 
 | Key | Type | Meaning |
@@ -152,7 +159,7 @@ quality:
 | `encoder_version` | String | The version of the encoder that made the frames |
 | `settings_hash` | String | A SHA-256 of the audio, the encoder options in effect and the encoder version. When it no longer matches, the encoding is out of date and `speak5220-cli encode` redoes it. Empty for frames that were not encoded by Speak5220 |
 | `frames` | List | One flow mapping per frame, ending in a stop frame |
-| `quality` | Mapping | Optional: the encoding's PESQ (MOS-LQO) and the phrase's anchor score, when measured |
+| `quality` | Mapping | Optional: the quality measured with the encoding (below) |
 
 Each frame (datasheet §8.1) has `energy` (0–15; 0 is a silence frame, 15
 the stop frame), and, for the other kinds, `repeat` (0 or 1), `pitch`
@@ -160,6 +167,25 @@ the stop frame), and, for the other kinds, `repeat` (0 or 1), `pitch`
 unvoiced frame, ten for a voiced one, none for a repeat. Missing fields are
 0. Every frame is checked against its field widths when the project is
 opened.
+
+The `quality` mapping holds the [quality rating](../user-manual/encoder.md#the-quality-rating)'s
+figures, as the encoder panel and Optimise measured them against the
+phrase's recording (squelched, if the phrase is):
+
+| Key | Type | Meaning |
+|---|---|---|
+| `measures_version` | Integer | The version of the quality measures that gave the figures. Figures from another version are dropped when the project is opened, and measured again |
+| `lsd_db` | Number | The mean log spectral distortion between the envelopes, in dB |
+| `lsd_over_2db`, `lsd_over_4db` | Number | The percentages of speech frames whose distortion is over 2 dB and over 4 dB |
+| `gross_pitch_error` | Number | The percentage of frames voiced in both whose pitch differs by more than 20% |
+| `f0_rmse_cents` | Number | The RMS pitch difference over the other frames voiced in both, in cents |
+| `voicing_error` | Number | The percentage of speech frames whose voicing differs |
+| `estoi` | Number | ESTOI, 0 to 1; absent when the phrase had too little speech for it |
+| `score` | Number | The overall score, 0 to 1 |
+
+Projects saved before the quality measures had `pesq` and `anchor` keys
+here; they are dropped when the project is opened, and the quality is
+measured again. Other keys are kept.
 
 For a phrase that is not locked, the frames are a cache: they are kept so a
 project opens instantly, and are redone from the audio and options when

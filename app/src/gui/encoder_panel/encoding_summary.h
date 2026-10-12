@@ -2,7 +2,7 @@
  * File:        encoding_summary.h
  * Module:      encoder_panel
  * Purpose:     The encoder panel's text: frame statistics, levels, the
- *              PESQ score against its anchor, and changed options
+ *              overall quality, its figures, and changed options
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -17,6 +17,7 @@
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/lpc/frame_statistics.h"
+#include "core/quality/quality_measures.h"
 
 namespace speak5220::app {
 
@@ -33,13 +34,17 @@ QString KindsText(const core::lpc::FrameStatistics& stats);
 QString LevelText(std::optional<int> peak_code,
                   const std::optional<core::encoder::LevelStats>& levels);
 
-// Plan §3.3, "Presenting PESQ to the user": "PESQ 2.08 (LPC reference
-// 2.31): Good", with the band's label; "PESQ 2.08" with no anchor;
-// "Quality not measured" with no score. Pure.
-QString QualityText(std::optional<double> pesq, std::optional<double> anchor);
+// Plan §3.3, "Presenting quality to the user": the rating and the overall
+// score, "Good · 0.72"; "Quality not measured" with no score. Pure.
+QString QualityText(std::optional<double> overall);
 
-// The scale's tooltip: what PESQ measures, why 4.5 is out of reach, and
-// that it ranks encodings rather than predicting a listener's score.
+// The figures behind the components: "envelope 3.34 dB, 28% over 4 dB ·
+// pitch 5.6% gross, 60 cents RMS · voicing 9.9% · ESTOI 0.76" (ESTOI
+// "too short" when it could not be measured). Pure.
+QString FiguresText(const core::quality::QualityMeasurement& m);
+
+// The quality's tooltip: what each measure compares, that only
+// speech-active frames count, and how the score and rating are made.
 QString QualityToolTip();
 
 // The options that differ between `from` and `to`, by label with their

@@ -4,9 +4,9 @@
 #
 # Times the encoder (TESTING.md, plan Phase 2 task 6): the default encoding
 # of each WAV file, on one core, against the target of 0.05 s per second of
-# speech. Then times the quality measures of those encodings (plan Phase 3):
-# PESQ, PESQ with the synthesis and alignment, the anchor and the cheap
-# measures. Then times Optimise (plan Phase 7) on every phrase of the
+# speech. Then times the quality measures of those encodings (plan §3.3,
+# Phase 8), with their synthesis and preparation. Then times
+# Optimise (plan Phase 7) on every phrase of the
 # benchmark project, app/projects/benchmark/synthetic-speech, on one
 # thread and on every core.
 #

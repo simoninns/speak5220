@@ -86,18 +86,21 @@ TEST(LevelSetterTest, OutputLevelsPastTheEndAreZero) {
   EXPECT_EQ(out.peak[1], 0);
 }
 
-TEST(LevelSetterTest, ShapingIsOffByDefault) {
+TEST(LevelSetterTest, ShapingIsOffWithoutGainControlOrCompression) {
   dsp::PocketFft fft;
   LevelSetter setter(fft);
+  EncoderOptions options;
+  options.level_agc = 1.0;
   const std::vector<double> levels = {0.1, 0.01, 0.05};
   const std::vector<PlanEntry> plan = {Voiced(), Voiced(), {}};
-  EXPECT_EQ(setter.ShapeLevels(levels, plan, {}), levels);
+  EXPECT_EQ(setter.ShapeLevels(levels, plan, options), levels);
 }
 
 TEST(LevelSetterTest, CompressionDividesDecibelsAroundTheMedian) {
   dsp::PocketFft fft;
   LevelSetter setter(fft);
   EncoderOptions options;
+  options.level_agc = 1.0;
   options.compression = 2.0;
   const std::vector<double> levels = {1.0, 0.01, 0.5};
   const std::vector<PlanEntry> plan = {Voiced(), Voiced(), {}};

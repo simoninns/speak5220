@@ -13,6 +13,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <yaml-cpp/yaml.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -31,6 +32,7 @@
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_migration.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/logging.h"
 #include "core/util/number_text.h"
 
@@ -184,11 +186,9 @@ void EmitSettings(YAML::Emitter& out, const ProjectSettings& settings) {
     EmitQuoted(out, name);
   }
   out << YAML::EndMap;
+  // Every option, so the project never depends on the defaults.
   out << YAML::Key << "default_encoder" << YAML::Value << YAML::BeginMap;
   for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
-    if (encoder::IsLeftOutAtDefault(settings.default_encoder, info.field)) {
-      continue;
-    }
     out << YAML::Key << std::string(info.field) << YAML::Value;
     EmitOptionValue(
         out, info,
@@ -330,6 +330,19 @@ void EmitFrame(YAML::Emitter& out, const lpc::Frame& frame) {
   out << YAML::EndMap;
 }
 
+// The figures of a quality mapping, by key, in the order they are written
+// (bar measures_version and estoi).
+constexpr std::array<std::pair<std::string_view, double CachedQuality::*>, 7>
+    kQualityFigures = {{
+        {"lsd_db", &CachedQuality::lsd_db},
+        {"lsd_over_2db", &CachedQuality::lsd_over_2db},
+        {"lsd_over_4db", &CachedQuality::lsd_over_4db},
+        {"gross_pitch_error", &CachedQuality::gross_pitch_error},
+        {"f0_rmse_cents", &CachedQuality::f0_rmse_cents},
+        {"voicing_error", &CachedQuality::voicing_error},
+        {"score", &CachedQuality::score},
+    }};
+
 std::string FramesYaml(const CachedEncoding& encoding) {
   YAML::Emitter out;
   BeginDocument(out);
@@ -346,15 +359,19 @@ std::string FramesYaml(const CachedEncoding& encoding) {
     EmitFrame(out, frame);
   }
   out << YAML::EndSeq;
-  if (encoding.pesq || encoding.anchor || !encoding.quality_unknown.empty()) {
+  if (encoding.quality || !encoding.quality_unknown.empty()) {
     out << YAML::Key << "quality" << YAML::Value << YAML::BeginMap;
-    if (encoding.pesq) {
-      out << YAML::Key << "pesq" << YAML::Value;
-      EmitNumber(out, *encoding.pesq);
-    }
-    if (encoding.anchor) {
-      out << YAML::Key << "anchor" << YAML::Value;
-      EmitNumber(out, *encoding.anchor);
+    if (const std::optional<CachedQuality>& q = encoding.quality) {
+      out << YAML::Key << "measures_version" << YAML::Value;
+      EmitInteger(out, q->measures_version);
+      for (const auto& [key, member] : kQualityFigures) {
+        if (key == "score" && q->estoi) {
+          out << YAML::Key << "estoi" << YAML::Value;
+          EmitNumber(out, *q->estoi);
+        }
+        out << YAML::Key << std::string(key) << YAML::Value;
+        EmitNumber(out, (*q).*member);
+      }
     }
     EmitUnknown(out, encoding.quality_unknown);
     out << YAML::EndMap;
@@ -545,6 +562,34 @@ Status ReadEncoderMapping(const YAML::Node& node, const Where& where,
         }
         return OkStatus();
       });
+}
+
+// Fails unless project.default_encoder lists every encoder option (plan
+// §4), as projects saved before the defaults last changed do not.
+Status CheckEveryOptionListed(const YAML::Node& root, const Where& where) {
+  const Where at = where.Key("project").Key("default_encoder");
+  const YAML::Node settings = root["project"];
+  const YAML::Node options = settings.IsDefined() && settings.IsMap()
+                                 ? settings["default_encoder"]
+                                 : YAML::Node();
+  if (!options.IsDefined() || !options.IsMap()) {
+    return at.Error("is missing: a project lists every encoder option");
+  }
+  std::string missing;
+  for (const EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+    if (!options[std::string(info.field)].IsDefined()) {
+      missing += missing.empty() ? "" : ", ";
+      missing += info.field;
+    }
+  }
+  if (!missing.empty()) {
+    return at.Error(fmt::format(
+        "does not list {}: a project lists every encoder option, so this "
+        "one was saved by an earlier development version of Speak5220 and "
+        "cannot be opened",
+        missing));
+  }
+  return OkStatus();
 }
 
 Status ReadSettings(const YAML::Node& node, const Where& where,
@@ -792,42 +837,46 @@ Status ReadProjectYaml(YAML::Node root, ProjectContents& contents) {
       !status.IsOk()) {
     return status;
   }
-  return ForEachEntry(
-      root, where,
-      [&](const std::string& key, const YAML::Node& value) -> Status {
-        const Where at = where.Key(key);
-        if (key == "format" || key == "version") {
-          return OkStatus();
-        }
-        if (key == "project") {
-          return ReadSettings(value, at, contents.settings);
-        }
-        if (key == "phrases" || key == "exports") {
-          if (!value.IsSequence()) {
-            return at.Error("must be a list");
-          }
-          for (std::size_t i = 0; i < value.size(); ++i) {
-            if (key == "phrases") {
-              Phrase phrase;
-              if (Status status = ReadPhrase(value[i], at.Index(i), phrase);
-                  !status.IsOk()) {
-                return status;
-              }
-              contents.phrases.push_back(std::move(phrase));
-            } else {
-              ExportPreset preset;
-              if (Status status = ReadExport(value[i], at.Index(i), preset);
-                  !status.IsOk()) {
-                return status;
-              }
-              contents.exports.push_back(std::move(preset));
+  if (Status read = ForEachEntry(
+          root, where,
+          [&](const std::string& key, const YAML::Node& value) -> Status {
+            const Where at = where.Key(key);
+            if (key == "format" || key == "version") {
+              return OkStatus();
             }
-          }
-          return OkStatus();
-        }
-        contents.unknown.emplace_back(key, NodeText(value));
-        return OkStatus();
-      });
+            if (key == "project") {
+              return ReadSettings(value, at, contents.settings);
+            }
+            if (key == "phrases" || key == "exports") {
+              if (!value.IsSequence()) {
+                return at.Error("must be a list");
+              }
+              for (std::size_t i = 0; i < value.size(); ++i) {
+                if (key == "phrases") {
+                  Phrase phrase;
+                  if (Status status = ReadPhrase(value[i], at.Index(i), phrase);
+                      !status.IsOk()) {
+                    return status;
+                  }
+                  contents.phrases.push_back(std::move(phrase));
+                } else {
+                  ExportPreset preset;
+                  if (Status status = ReadExport(value[i], at.Index(i), preset);
+                      !status.IsOk()) {
+                    return status;
+                  }
+                  contents.exports.push_back(std::move(preset));
+                }
+              }
+              return OkStatus();
+            }
+            contents.unknown.emplace_back(key, NodeText(value));
+            return OkStatus();
+          });
+      !read.IsOk()) {
+    return read;
+  }
+  return CheckEveryOptionListed(root, where);
 }
 
 StatusOr<lpc::Frame> ReadFrame(const YAML::Node& node, const Where& where) {
@@ -887,6 +936,60 @@ StatusOr<lpc::Frame> ReadFrame(const YAML::Node& node, const Where& where) {
   return frame;
 }
 
+// Reads a quality mapping into `encoding`. Figures from other measures
+// than quality::kMeasuresVersion's, or incomplete, are dropped, to be
+// measured again (plan §4), as are the pesq and anchor keys the
+// application wrote before its measures; other keys are kept.
+Status ReadQuality(const YAML::Node& node, const Where& where,
+                   CachedEncoding& encoding) {
+  CachedQuality q;
+  std::optional<int> version;
+  std::set<std::string_view> found;
+  if (const Status status = ForEachEntry(
+          node, where,
+          [&](const std::string& key, const YAML::Node& value) -> Status {
+            const Where at = where.Key(key);
+            if (key == "pesq" || key == "anchor") {
+              return OkStatus();
+            }
+            if (key == "measures_version") {
+              StatusOr<int> number = ReadInteger(value, at, 0, kIntMax);
+              if (!number.IsOk()) {
+                return number.GetStatus();
+              }
+              version = *number;
+              return OkStatus();
+            }
+            const auto figure = std::ranges::find_if(
+                kQualityFigures,
+                [&key](const auto& entry) { return entry.first == key; });
+            if (key != "estoi" && figure == kQualityFigures.end()) {
+              encoding.quality_unknown.emplace_back(key, NodeText(value));
+              return OkStatus();
+            }
+            StatusOr<double> number = ReadNumber(value, at);
+            if (!number.IsOk()) {
+              return number.GetStatus();
+            }
+            if (key == "estoi") {
+              q.estoi = *number;
+            } else {
+              q.*(figure->second) = *number;
+              found.insert(figure->first);
+            }
+            return OkStatus();
+          });
+      !status.IsOk()) {
+    return status;
+  }
+  if (version == quality::kMeasuresVersion &&
+      found.size() == kQualityFigures.size()) {
+    q.measures_version = *version;
+    encoding.quality = q;
+  }
+  return OkStatus();
+}
+
 StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
                                         const std::string& file) {
   StatusOr<YAML::Node> root = ParseYaml(bytes, file);
@@ -921,24 +1024,7 @@ StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
               }
               has_frames = true;
             } else if (key == "quality") {
-              return ForEachEntry(
-                  value, at,
-                  [&](const std::string& measure,
-                      const YAML::Node& score) -> Status {
-                    if (measure != "pesq" && measure != "anchor") {
-                      encoding.quality_unknown.emplace_back(measure,
-                                                            NodeText(score));
-                      return OkStatus();
-                    }
-                    StatusOr<double> number =
-                        ReadNumber(score, at.Key(measure));
-                    if (!number.IsOk()) {
-                      return number.GetStatus();
-                    }
-                    (measure == "pesq" ? encoding.pesq : encoding.anchor) =
-                        *number;
-                    return OkStatus();
-                  });
+              return ReadQuality(value, at, encoding);
             } else {
               encoding.unknown.emplace_back(key, NodeText(value));
             }

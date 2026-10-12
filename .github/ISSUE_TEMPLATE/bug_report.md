@@ -16,7 +16,7 @@ A clear and concise description of what the bug is.
 ## Area
 
 - [ ] Import (WAV, resampling)
-- [ ] Encoder / Optimise / PESQ
+- [ ] Encoder / Optimise / quality measures
 - [ ] Emulator / playback / waveforms
 - [ ] PHROM assignment and project size
 - [ ] Project files (`.s5proj`, YAML)
@@ -68,7 +68,7 @@ If this relates to a documented behaviour, reference it:
 - Reference datasheet: docs/technical/datasheet/ (e.g. §8.8, §12.8, §12.9)
 - TI data manuals: docs/technical/sources/
 - Acorn Speech System User Guide (Section 5, 6 or 7)
-- ITU-T P.862 / P.862.1 (PESQ)
+- The quality measures: plan §3.3 (docs-tech/application-plan.md)
 -->
 
 ## Possible Solution

@@ -1,0 +1,17 @@
+{
+  "name": "sptk",
+  "version": "4.4",
+  "description": "Speech Signal Processing Toolkit, with its copies of REAPER and WORLD (an overlay port: vcpkg has none)",
+  "homepage": "https://github.com/sp-nitech/SPTK",
+  "license": "Apache-2.0",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

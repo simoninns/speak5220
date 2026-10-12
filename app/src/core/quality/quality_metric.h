@@ -21,9 +21,9 @@ namespace speak5220::core::quality {
 // Which way a metric's values improve.
 enum class MetricDirection { kHigherIsBetter, kLowerIsBetter };
 
-// Measures how well an encoding reproduces its source (plan §3.3). PESQ is
-// the main measure; the cheap measures give live feedback. Implementations
-// are deterministic and thread-safe.
+// Measures how well an encoding reproduces its source (plan §3.3), as one
+// number for Optimise to maximise or minimise: OverallQualityMetric.
+// Implementations are deterministic and thread-safe.
 class IQualityMetric {
  public:
   virtual ~IQualityMetric() = default;

@@ -103,6 +103,10 @@ StatusOr<std::vector<std::uint8_t>> FromHex(const std::string& hex) {
 
 EncoderOptions ReferenceEncoderOptions() {
   EncoderOptions options;
+  options.target_rms = 20.0;
+  options.window = 240;
+  options.voicing_evidence = 4.0;
+  options.level_agc = 1.0;
   options.quiet_pauses = false;
   return options;
 }

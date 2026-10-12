@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <span>
 #include <vector>
 
 #include "core/lpc/frame.h"
@@ -24,6 +25,9 @@
 
 namespace speak5220::core::quality {
 namespace {
+
+// No source audio.
+constexpr std::span<const float> kNoSource;
 
 using ::testing::_;
 using ::testing::Return;
@@ -75,7 +79,8 @@ TEST(EncodedAudioTest, NoSourcePutsTheFirstFrameAtTheStart) {
   EXPECT_CALL(synth, Synthesize(_, _))
       .WillOnce(
           Return(SpokenAsCodes(testing::SyntheticSpeech(), kSpeechStart)));
-  const StatusOr<EncodedAudio> audio = RenderEncodedAudio(synth, {}, kFrames);
+  const StatusOr<EncodedAudio> audio =
+      RenderEncodedAudio(synth, kNoSource, kFrames);
   ASSERT_TRUE(audio.IsOk());
   EXPECT_EQ(audio->source_offset, kFirstFrameStretch);
   EXPECT_EQ(audio->level_gain, 1.0);
@@ -99,7 +104,7 @@ TEST(EncodedAudioTest, SynthFailureIsReturned) {
   testing::MockSynth synth;
   EXPECT_CALL(synth, Synthesize(_, _))
       .WillOnce(Return(InternalError("the Speak command did not start")));
-  EXPECT_EQ(RenderEncodedAudio(synth, {}, kFrames).GetStatus().Code(),
+  EXPECT_EQ(RenderEncodedAudio(synth, kNoSource, kFrames).GetStatus().Code(),
             StatusCode::kInternal);
 }
 
@@ -107,7 +112,7 @@ TEST(EncodedAudioTest, InvalidFrameIsRefusedBeforeSpeaking) {
   testing::MockSynth synth;
   EXPECT_CALL(synth, Synthesize(_, _)).Times(0);
   const std::vector<lpc::Frame> bad = {lpc::Frame{.energy = 99}};
-  EXPECT_FALSE(RenderEncodedAudio(synth, {}, bad).IsOk());
+  EXPECT_FALSE(RenderEncodedAudio(synth, kNoSource, bad).IsOk());
 }
 
 }  // namespace

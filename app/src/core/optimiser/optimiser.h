@@ -64,7 +64,7 @@ struct Candidate {
   SearchStage stage = SearchStage::kStart;
   encoder::EncoderOptions options;
   CandidateOutcome outcome = CandidateOutcome::kCancelled;
-  // The metric's value (PESQ: MOS-LQO), when scored.
+  // The metric's value (the overall quality score), when scored.
   double score = 0.0;
   // The packed bytes (PackedSize()) and bits per second, when encoded.
   int bytes = 0;

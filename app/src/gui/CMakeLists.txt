@@ -11,7 +11,7 @@ add_library(
     encoder_panel/encoding_summary.cpp
     encoder_panel/option_slider.cpp
     encoder_panel/phrase_encoder.cpp
-    encoder_panel/quality_scale_view.cpp
+    encoder_panel/quality_rating_view.cpp
     main_window/dialogs.cpp
     main_window/main_window.cpp
     main_window/project_document.cpp

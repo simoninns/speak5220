@@ -136,7 +136,7 @@ TEST(OptimiserTest, TriesTheStartThenTheGridAroundIt) {
     targets.insert(
         result->history[static_cast<std::size_t>(i)].options.target_rms);
   }
-  EXPECT_EQ(targets, (std::set<double>{16.0, 20.0, 24.0}));
+  EXPECT_EQ(targets, (std::set<double>{20.0, 24.0, 28.0}));
 }
 
 TEST(OptimiserTest, VariesTheTargetPeakWhenTheStartSetsOne) {
@@ -154,7 +154,7 @@ TEST(OptimiserTest, VariesTheTargetPeakWhenTheStartSetsOne) {
     }
   }
   EXPECT_EQ(peaks, (std::set<double>{84.0, 100.0, 116.0}));
-  EXPECT_EQ(rms, (std::set<double>{20.0}));
+  EXPECT_EQ(rms, (std::set<double>{24.0}));
 }
 
 // The squelch changes what encodings are scored against, so it is kept
@@ -262,7 +262,9 @@ TEST(OptimiserTest, KeepsWithinThePerPhraseByteLimit) {
   search.bytes = [](const EncoderOptions& o) {
     return static_cast<int>(o.target_rms * 5.0);
   };
-  OptimiseRequest request = RequestFrom();
+  EncoderOptions start;
+  start.target_rms = 20.0;
+  OptimiseRequest request = RequestFrom(start);
   request.limits.max_bytes = 90;
   const StatusOr<OptimiseResult> result = search.Run(request);
   ASSERT_TRUE(result.IsOk());

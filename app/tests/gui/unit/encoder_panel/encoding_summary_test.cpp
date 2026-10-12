@@ -16,6 +16,8 @@
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/lpc/frame_statistics.h"
+#include "core/quality/quality_measures.h"
+#include "core/quality/quality_score.h"
 #include "gtest/gtest.h"
 
 namespace speak5220::app {
@@ -60,27 +62,41 @@ TEST(EncodingSummaryTest, LevelTextGivesWhatIsKnown) {
                            "silenced 1"));
 }
 
-TEST(EncodingSummaryTest, QualityTextGivesTheScoreTheAnchorAndTheBand) {
-  EXPECT_EQ(QualityText(2.08, 2.31),
-            QStringLiteral("PESQ 2.08 (LPC reference 2.31): Good"));
-  EXPECT_EQ(QualityText(2.08, std::nullopt), QStringLiteral("PESQ 2.08"));
-  EXPECT_EQ(QualityText(std::nullopt, 2.31),
-            QStringLiteral("Quality not measured"));
+TEST(EncodingSummaryTest, QualityTextGivesTheRatingAndTheScore) {
+  EXPECT_EQ(QualityText(0.72), QStringLiteral("Good · 0.72"));
+  EXPECT_EQ(QualityText(0.55), QStringLiteral("Fair · 0.55"));
+  EXPECT_EQ(QualityText(0.2), QStringLiteral("Poor · 0.20"));
+  EXPECT_EQ(QualityText(std::nullopt), QStringLiteral("Quality not measured"));
 }
 
-TEST(EncodingSummaryTest, ScoreAtOrAboveTheAnchorIsLpcOrBetter) {
-  EXPECT_TRUE(QualityText(2.31, 2.31)
-                  .endsWith(QStringLiteral(": As good as LPC or better")));
-  EXPECT_TRUE(QualityText(2.30, 2.31).endsWith(QStringLiteral(": Good")));
-  EXPECT_TRUE(QualityText(2.6, 2.31).endsWith(
-      QStringLiteral(": As good as LPC or better")));
+TEST(EncodingSummaryTest, QualityTextRatesAtTheThresholds) {
+  using C = core::quality::ScoreCalibration;
+  EXPECT_TRUE(QualityText(C::kGoodFrom).startsWith(QStringLiteral("Good")));
+  EXPECT_TRUE(QualityText(C::kFairFrom).startsWith(QStringLiteral("Fair")));
 }
 
-TEST(EncodingSummaryTest, ToolTipExplainsPesqAndItsLimits) {
+TEST(EncodingSummaryTest, FiguresTextGivesEveryFigure) {
+  core::quality::QualityMeasurement m;
+  m.envelope.mean_db = 3.344;
+  m.envelope.over_4db = 27.8;
+  m.pitch.gross_error = 5.56;
+  m.pitch.f0_rmse_cents = 60.2;
+  m.pitch.voicing_error = 9.94;
+  m.estoi = 0.761;
+  EXPECT_EQ(FiguresText(m),
+            QStringLiteral("envelope 3.34 dB, 28% over 4 dB · pitch 5.6% "
+                           "gross, 60 cents RMS · voicing 9.9% · ESTOI 0.76"));
+  m.estoi.reset();
+  EXPECT_TRUE(FiguresText(m).endsWith(QStringLiteral("ESTOI too short")));
+}
+
+TEST(EncodingSummaryTest, ToolTipExplainsTheMeasures) {
   const QString tip = QualityToolTip();
-  EXPECT_TRUE(tip.contains(QStringLiteral("4.5")));
-  EXPECT_TRUE(tip.contains(QStringLiteral("LPC-10")));
-  EXPECT_TRUE(tip.contains(QStringLiteral("not validated for vocoders")));
+  EXPECT_TRUE(tip.contains(QStringLiteral("speech")));
+  EXPECT_TRUE(tip.contains(QStringLiteral("Envelope")));
+  EXPECT_TRUE(tip.contains(QStringLiteral("Pitch")));
+  EXPECT_TRUE(tip.contains(QStringLiteral("ESTOI")));
+  EXPECT_TRUE(tip.contains(QStringLiteral("geometric mean")));
 }
 
 TEST(EncodingSummaryTest, ChangesTextNamesTheOptionsThatDiffer) {

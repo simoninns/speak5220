@@ -27,6 +27,8 @@
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/quality/cached_quality.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
@@ -107,122 +109,123 @@ core::Status OptimiseSession::Start(const project::Project& project,
 
   // Plan §3.3: a cancellable background job. The project is copied, so
   // the search sees it as it was, with its own results added as it goes.
-  tools_.optimiser_driver->Post(
-      [this, working = project, order = std::move(order), limits, plan,
-       tools = tools_, workers = workers_, cancel = cancel_]() mutable {
-        optimiser::Optimiser search(*tools.encoder, *tools.quality, *workers);
-        for (std::size_t p = 0; p < order.size() && !cancel->load(); ++p) {
-          const int phrase_index = static_cast<int>(p);
-          const project::Phrase& phrase = *working.FindPhrase(order[p]);
-          PhraseOptimisation result;
-          result.id = phrase.id;
-          result.name = QString::fromStdString(phrase.name);
-          const std::vector<double> source(phrase.audio.begin(),
-                                           phrase.audio.end());
-          const core::StatusOr<core::encoder::EncoderOptions> options =
-              project::EffectiveEncoderOptions(
-                  working.Settings().default_encoder, phrase.encoder);
-          const core::StatusOr<project::PhraseBudgetCheck> check =
-              working.BudgetCheckFor(phrase.id);
-          if (!options.IsOk() || !check.IsOk()) {
-            result.problem =
-                ToQString(options.IsOk() ? check.GetStatus().Message()
-                                         : options.GetStatus().Message());
-            QMetaObject::invokeMethod(
-                this,
-                [this, phrase_index, result] {
-                  OnPhraseFinished(phrase_index, result);
-                },
-                Qt::QueuedConnection);
-            continue;
-          }
-          // The anchor of the source as the encodings are scored against
-          // it, squelched by the phrase's squelch, which Optimise keeps.
-          if (core::StatusOr<double> anchor = tools.anchor->Score(
-                  core::encoder::SquelchedSource(source, *options));
-              anchor.IsOk()) {
-            result.anchor = *anchor;
-          }
-          std::size_t sent = 0;
-          auto report = [&](const optimiser::OptimiseResult& so_far,
-                            int evaluated, int expected) {
-            std::vector<optimiser::Candidate> fresh(
-                so_far.history.begin() + static_cast<std::ptrdiff_t>(sent),
-                so_far.history.end());
-            sent = so_far.history.size();
-            std::optional<optimiser::Candidate> start;
-            std::optional<optimiser::Candidate> best;
-            if (so_far.Start() != nullptr) {
-              start = *so_far.Start();
-            }
-            if (so_far.Best() != nullptr) {
-              best = *so_far.Best();
-            }
-            QMetaObject::invokeMethod(
-                this,
-                [this, phrase_index, anchor = result.anchor, evaluated,
-                 expected, start = std::move(start), best = std::move(best),
-                 fresh = std::move(fresh)]() mutable {
-                  OnProgress(phrase_index, anchor, evaluated, expected,
-                             std::move(start), std::move(best),
-                             std::move(fresh));
-                },
-                Qt::QueuedConnection);
-          };
-          auto check_bytes = [check = *check](int bytes) {
-            return check.Check(bytes);
-          };
-          core::StatusOr<optimiser::OptimiseResult> run =
-              search.Run({.source = source,
-                          .start = *options,
-                          .limits = limits,
-                          .budget = check_bytes,
-                          .plan = plan},
-                         cancel.get(), report);
-          if (!run.IsOk()) {
-            result.problem = ToQString(run.GetStatus().Message());
-          } else {
-            // The last batch, which the progress callback had not seen.
-            report(*run, static_cast<int>(run->history.size()),
-                   static_cast<int>(run->history.size()));
-            if (run->Start() != nullptr) {
-              result.start = *run->Start();
-            }
-            if (run->Best() != nullptr) {
-              result.best = *run->Best();
-            }
-            if (!run->cancelled && result.best.has_value() &&
-                result.best->options != *options) {
-              project::CachedEncoding encoding =
-                  project::EncodingCache::MakeEncoding(
-                      phrase.audio, result.best->options, run->best_frames);
-              encoding.pesq = result.best->score;
-              encoding.anchor = result.anchor;
-              project::EncodingChange change{
-                  .overrides = project::OverridesFor(
-                      working.Settings().default_encoder, result.best->options),
-                  .encoding = std::move(encoding)};
-              // Kept in the copy, so later phrases are checked against it.
-              if (const core::Status status =
-                      working.SetEncoding(phrase.id, change).GetStatus();
-                  status.IsOk()) {
-                result.change = std::move(change);
-              } else {
-                result.problem = ToQString(status.Message());
-              }
-            }
-          }
-          QMetaObject::invokeMethod(
-              this,
-              [this, phrase_index, result = std::move(result)]() mutable {
-                OnPhraseFinished(phrase_index, std::move(result));
-              },
-              Qt::QueuedConnection);
+  tools_.optimiser_driver->Post([this, working = project,
+                                 order = std::move(order), limits, plan,
+                                 tools = tools_, workers = workers_,
+                                 cancel = cancel_]() mutable {
+    // Optimise maximises the overall score (plan §3.3).
+    core::quality::OverallQualityMetric metric(*tools.quality);
+    optimiser::Optimiser search(*tools.encoder, metric, *workers);
+    for (std::size_t p = 0; p < order.size() && !cancel->load(); ++p) {
+      const int phrase_index = static_cast<int>(p);
+      const project::Phrase& phrase = *working.FindPhrase(order[p]);
+      PhraseOptimisation result;
+      result.id = phrase.id;
+      result.name = QString::fromStdString(phrase.name);
+      const std::vector<double> source(phrase.audio.begin(),
+                                       phrase.audio.end());
+      const core::StatusOr<core::encoder::EncoderOptions> options =
+          project::EffectiveEncoderOptions(working.Settings().default_encoder,
+                                           phrase.encoder);
+      const core::StatusOr<project::PhraseBudgetCheck> check =
+          working.BudgetCheckFor(phrase.id);
+      if (!options.IsOk() || !check.IsOk()) {
+        result.problem =
+            ToQString(options.IsOk() ? check.GetStatus().Message()
+                                     : options.GetStatus().Message());
+        QMetaObject::invokeMethod(
+            this,
+            [this, phrase_index, result] {
+              OnPhraseFinished(phrase_index, result);
+            },
+            Qt::QueuedConnection);
+        continue;
+      }
+      std::size_t sent = 0;
+      auto report = [&](const optimiser::OptimiseResult& so_far, int evaluated,
+                        int expected) {
+        std::vector<optimiser::Candidate> fresh(
+            so_far.history.begin() + static_cast<std::ptrdiff_t>(sent),
+            so_far.history.end());
+        sent = so_far.history.size();
+        std::optional<optimiser::Candidate> start;
+        std::optional<optimiser::Candidate> best;
+        if (so_far.Start() != nullptr) {
+          start = *so_far.Start();
+        }
+        if (so_far.Best() != nullptr) {
+          best = *so_far.Best();
         }
         QMetaObject::invokeMethod(
-            this, [this, cancelled = cancel->load()] { OnFinished(cancelled); },
+            this,
+            [this, phrase_index, evaluated, expected, start = std::move(start),
+             best = std::move(best), fresh = std::move(fresh)]() mutable {
+              OnProgress(phrase_index, evaluated, expected, std::move(start),
+                         std::move(best), std::move(fresh));
+            },
             Qt::QueuedConnection);
-      });
+      };
+      auto check_bytes = [check = *check](int bytes) {
+        return check.Check(bytes);
+      };
+      core::StatusOr<optimiser::OptimiseResult> run =
+          search.Run({.source = source,
+                      .start = *options,
+                      .limits = limits,
+                      .budget = check_bytes,
+                      .plan = plan},
+                     cancel.get(), report);
+      if (!run.IsOk()) {
+        result.problem = ToQString(run.GetStatus().Message());
+      } else {
+        // The last batch, which the progress callback had not seen.
+        report(*run, static_cast<int>(run->history.size()),
+               static_cast<int>(run->history.size()));
+        if (run->Start() != nullptr) {
+          result.start = *run->Start();
+        }
+        if (run->Best() != nullptr) {
+          result.best = *run->Best();
+        }
+        if (!run->cancelled && result.best.has_value() &&
+            result.best->options != *options) {
+          project::CachedEncoding encoding =
+              project::EncodingCache::MakeEncoding(
+                  phrase.audio, result.best->options, run->best_frames);
+          // The search kept only the best's score; its figures are
+          // measured once more, against the source as it squelched it.
+          if (core::StatusOr<core::quality::QualityAssessment> quality =
+                  tools.quality->Assess(
+                      core::encoder::SquelchedSource(source, *options),
+                      run->best_frames);
+              quality.IsOk()) {
+            encoding.quality = core::quality::ToCachedQuality(*quality);
+          }
+          project::EncodingChange change{
+              .overrides = project::OverridesFor(
+                  working.Settings().default_encoder, result.best->options),
+              .encoding = std::move(encoding)};
+          // Kept in the copy, so later phrases are checked against it.
+          if (const core::Status status =
+                  working.SetEncoding(phrase.id, change).GetStatus();
+              status.IsOk()) {
+            result.change = std::move(change);
+          } else {
+            result.problem = ToQString(status.Message());
+          }
+        }
+      }
+      QMetaObject::invokeMethod(
+          this,
+          [this, phrase_index, result = std::move(result)]() mutable {
+            OnPhraseFinished(phrase_index, std::move(result));
+          },
+          Qt::QueuedConnection);
+    }
+    QMetaObject::invokeMethod(
+        this, [this, cancelled = cancel->load()] { OnFinished(cancelled); },
+        Qt::QueuedConnection);
+  });
   return core::OkStatus();
 }
 
@@ -277,8 +280,7 @@ void OptimiseSession::Discard() {
   }
 }
 
-void OptimiseSession::OnProgress(int phrase, std::optional<double> anchor,
-                                 int evaluated, int expected,
+void OptimiseSession::OnProgress(int phrase, int evaluated, int expected,
                                  std::optional<optimiser::Candidate> start,
                                  std::optional<optimiser::Candidate> best,
                                  std::vector<optimiser::Candidate> fresh) {
@@ -289,7 +291,6 @@ void OptimiseSession::OnProgress(int phrase, std::optional<double> anchor,
   evaluated_ = evaluated;
   expected_ = expected;
   PhraseOptimisation& entry = phrases_[static_cast<std::size_t>(phrase)];
-  entry.anchor = anchor;
   entry.start = std::move(start);
   entry.best = std::move(best);
   if (!fresh.empty()) {

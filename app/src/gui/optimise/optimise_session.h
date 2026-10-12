@@ -37,7 +37,6 @@ struct PhraseOptimisation {
   // candidate found (none if none was within the limits).
   std::optional<core::optimiser::Candidate> start;
   std::optional<core::optimiser::Candidate> best;
-  std::optional<double> anchor;
   // The settings and encoding to store, when the best differs from the
   // start.
   std::optional<core::project::EncodingChange> change;
@@ -61,7 +60,7 @@ struct OptimiseHistoryRow {
 // together. Progress and the history come back to the GUI thread queued.
 //
 // Nothing changes until Accept(), which stores every phrase's new settings
-// and encoding (with its PESQ and anchor) as one undoable step;
+// and encoding (with its quality) as one undoable step;
 // Discard(), or cancelling, leaves the project as it was.
 //
 // GUI thread only. The edits, tools and runner must outlive the session;
@@ -115,8 +114,8 @@ class OptimiseSession : public QObject {
   void Finished();
 
  private:
-  void OnProgress(int phrase, std::optional<double> anchor, int evaluated,
-                  int expected, std::optional<core::optimiser::Candidate> start,
+  void OnProgress(int phrase, int evaluated, int expected,
+                  std::optional<core::optimiser::Candidate> start,
                   std::optional<core::optimiser::Candidate> best,
                   std::vector<core::optimiser::Candidate> fresh);
   void OnPhraseFinished(int phrase, PhraseOptimisation result);

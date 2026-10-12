@@ -2,7 +2,9 @@
  * File:        optimiser_corpus_test.cpp
  * Module:      optimiser tests
  * Purpose:     Optimises every corpus file from the default options and
- *              checks that PESQ rises, within a per-phrase byte limit
+ *              checks that the quality score rises, within a per-phrase
+ *              byte limit; and scores any options over the corpus, for
+ *              choosing the defaults
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -17,11 +19,14 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
+#include <vector>
 
 #include "core/encoder/encoder.h"
+#include "core/encoder/encoder_options.h"
 #include "core/lpc/frame_statistics.h"
 #include "core/optimiser/optimiser.h"
-#include "core/quality/pesq_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/task_runner.h"
 #include "gtest/gtest.h"
@@ -34,14 +39,69 @@ namespace optimiser = core::optimiser;
 
 constexpr double kSampleRate = 8000.0;
 
+// The corpus's WAV files by name, from SPEAK5220_CORPUS_DIR.
+std::map<std::string, std::filesystem::path> CorpusFiles(const char* corpus) {
+  std::map<std::string, std::filesystem::path> inputs;
+  for (const auto& entry : std::filesystem::directory_iterator(corpus)) {
+    if (entry.path().extension() == ".wav") {
+      inputs[entry.path().stem().string()] = entry.path();
+    }
+  }
+  return inputs;
+}
+
+// Options from text such as "target_rms=18,squelch_db=30" over the
+// defaults; empty or unset text gives the defaults.
+core::encoder::EncoderOptions OptionsFromText(const char* text) {
+  core::encoder::EncoderOptions options;
+  std::string_view rest = text == nullptr ? "" : text;
+  while (!rest.empty()) {
+    const std::size_t comma = rest.find(',');
+    const std::string_view item = rest.substr(0, comma);
+    rest = comma == std::string_view::npos ? "" : rest.substr(comma + 1);
+    const std::size_t equals = item.find('=');
+    EXPECT_NE(equals, std::string_view::npos) << item;
+    if (equals == std::string_view::npos) {
+      continue;
+    }
+    const core::Status set = core::encoder::SetEncoderOption(
+        options, item.substr(0, equals), item.substr(equals + 1));
+    EXPECT_TRUE(set.IsOk()) << set.ToString();
+  }
+  return options;
+}
+
+// The options' fields as report columns: the header, then each value.
+std::string OptionsHeader() {
+  std::string header;
+  for (const auto& info : core::encoder::EncoderOptionInfos()) {
+    header += '\t';
+    header += info.field;
+  }
+  return header;
+}
+
+std::string OptionsColumns(const core::encoder::EncoderOptions& options) {
+  std::string columns;
+  for (const auto& info : core::encoder::EncoderOptionInfos()) {
+    columns += '\t';
+    columns += core::encoder::EncoderOptionText(options, info.field);
+  }
+  return columns;
+}
+
 // Run by app/scripts/corpus-check.sh, not by CTest (plan Phase 7, item 4):
 // optimises every WAV file in SPEAK5220_CORPUS_DIR from the default
 // options on every core, with the per-phrase byte limit set to the
 // default encoding's size, so a better score cannot come from more bytes.
-// SPEAK5220_OPTIMISE_STRIDE=N takes every Nth file. Writes one row per
-// file to SPEAK5220_OPTIMISE_REPORT. Passes if the best is within the
-// limit on every file and scores above the defaults on most of them.
-TEST(OptimiserCorpusCheck, DISABLED_RaisesPesqOverTheDefaults) {
+// SPEAK5220_OPTIMISE_STRIDE=N takes every Nth file, and
+// SPEAK5220_OPTIMISE_START (as "squelch_db=30,...") changes the start
+// options; the limit stays at the size of the default encoding. Writes one
+// row per file to SPEAK5220_OPTIMISE_REPORT, with the best options and
+// the best's score against the source without a squelch. Passes if the
+// best is within the limit on every file and scores above the start on
+// most of them.
+TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
   const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");
   const char* report_path = std::getenv("SPEAK5220_OPTIMISE_REPORT");
   ASSERT_NE(corpus, nullptr) << "set SPEAK5220_CORPUS_DIR (corpus-check.sh)";
@@ -51,22 +111,22 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesPesqOverTheDefaults) {
   if (const char* text = std::getenv("SPEAK5220_OPTIMISE_STRIDE")) {
     stride = std::max(1, std::atoi(text));
   }
-  std::map<std::string, std::filesystem::path> inputs;
-  for (const auto& entry : std::filesystem::directory_iterator(corpus)) {
-    if (entry.path().extension() == ".wav") {
-      inputs[entry.path().stem().string()] = entry.path();
-    }
-  }
+  const core::encoder::EncoderOptions start_options =
+      OptionsFromText(std::getenv("SPEAK5220_OPTIMISE_START"));
+  const std::map<std::string, std::filesystem::path> inputs =
+      CorpusFiles(corpus);
   ASSERT_FALSE(inputs.empty()) << "no WAV files in " << corpus;
   std::ofstream report(report_path);
   ASSERT_TRUE(report.is_open()) << "cannot write " << report_path;
-  report << "name\tspeech_seconds\tdefault_pesq\tdefault_bytes\tbest_pesq\t"
-            "best_bytes\tcandidates\tseconds\n";
+  report << "name\tspeech_seconds\tdefault_score\tdefault_bytes\tbest_score\t"
+            "best_bytes\tcandidates\tseconds\tbest_plain_score"
+         << OptionsHeader() << '\n';
 
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
   core::synth::Synth synth({}, core::synth::SynthCache::kOff);
-  core::quality::PesqMetric metric(synth);
+  core::quality::QualityAssessor assessor(synth);
+  core::quality::OverallQualityMetric metric(assessor);
   core::ThreadPoolTaskRunner workers;
   optimiser::Optimiser search(*encoder, metric, workers);
 
@@ -88,7 +148,7 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesPesqOverTheDefaults) {
     const auto start = std::chrono::steady_clock::now();
     const auto result =
         search.Run({.source = wav->samples,
-                    .start = {},
+                    .start = start_options,
                     .limits = {.max_bytes = default_bytes.bytes},
                     .budget = {},
                     .plan = {}});
@@ -98,24 +158,72 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesPesqOverTheDefaults) {
     const optimiser::Candidate* best = result->Best();
     ASSERT_NE(best, nullptr) << name;
     EXPECT_LE(best->bytes, default_bytes.bytes) << name;
-    const double default_pesq = result->Start()->score;
+    const double default_score = result->Start()->score;
     ++files;
-    raised += best->score > default_pesq ? 1 : 0;
-    gain += best->score - default_pesq;
+    raised += best->score > default_score ? 1 : 0;
+    gain += best->score - default_score;
     const double length =
         static_cast<double>(wav->samples.size()) / kSampleRate;
     speech += length;
     took += seconds.count();
-    report << name << '\t' << length << '\t' << default_pesq << '\t'
+    report << name << '\t' << length << '\t' << default_score << '\t'
            << default_bytes.bytes << '\t' << best->score << '\t' << best->bytes
-           << '\t' << result->history.size() << '\t' << seconds.count() << '\n';
+           << '\t' << result->history.size() << '\t' << seconds.count();
+    // The best scored against the source as recorded, so runs with and
+    // without a squelch compare.
+    const auto plain = assessor.Assess(wav->samples, result->best_frames);
+    ASSERT_TRUE(plain.IsOk()) << name << ": " << plain.GetStatus().ToString();
+    report << '\t' << plain->score.overall << OptionsColumns(best->options)
+           << '\n';
   }
-  std::cout << "optimise: " << files << " files; PESQ raised on " << raised
+  std::cout << "optimise: " << files << " files; score raised on " << raised
             << ", mean gain " << gain / files << "; " << took / speech
             << " s per second of speech on " << workers.ThreadCount()
             << " threads\n";
   EXPECT_GT(2 * raised, files)
-      << "PESQ rose on only " << raised << " of " << files << " files";
+      << "the score rose on only " << raised << " of " << files << " files";
+}
+
+// Run by hand when choosing the default options (plan Phase 8, task 14):
+// encodes every WAV file in SPEAK5220_CORPUS_DIR with the options in
+// SPEAK5220_OPTIONS (as "target_rms=18,squelch_db=30"; unset for the
+// defaults) and writes each one's size and overall score, against its
+// squelched source and the source as recorded, to SPEAK5220_OPTIONS_REPORT.
+TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
+  const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");
+  const char* report_path = std::getenv("SPEAK5220_OPTIONS_REPORT");
+  ASSERT_NE(corpus, nullptr) << "set SPEAK5220_CORPUS_DIR";
+  ASSERT_NE(report_path, nullptr) << "set SPEAK5220_OPTIONS_REPORT";
+  const core::encoder::EncoderOptions options =
+      OptionsFromText(std::getenv("SPEAK5220_OPTIONS"));
+  const std::map<std::string, std::filesystem::path> inputs =
+      CorpusFiles(corpus);
+  ASSERT_FALSE(inputs.empty()) << "no WAV files in " << corpus;
+  std::ofstream report(report_path);
+  ASSERT_TRUE(report.is_open()) << "cannot write " << report_path;
+  report << "name\tspeech_seconds\tbytes\tscore\tplain_score\n";
+
+  const std::unique_ptr<core::encoder::IEncoder> encoder =
+      core::encoder::MakeEncoder();
+  core::synth::Synth synth({}, core::synth::SynthCache::kOff);
+  core::quality::QualityAssessor assessor(synth);
+  for (const auto& [name, path] : inputs) {
+    const auto wav = ReadWavSamples(path);
+    ASSERT_TRUE(wav.IsOk()) << wav.GetStatus().ToString();
+    const auto encoding =
+        encoder->Encode(wav->samples, wav->sample_rate, options);
+    ASSERT_TRUE(encoding.IsOk()) << name;
+    const std::vector<double> source =
+        core::encoder::SquelchedSource(wav->samples, options);
+    const auto scored = assessor.Assess(source, encoding->frames);
+    ASSERT_TRUE(scored.IsOk()) << name << ": " << scored.GetStatus().ToString();
+    const auto plain = assessor.Assess(wav->samples, encoding->frames);
+    ASSERT_TRUE(plain.IsOk()) << name << ": " << plain.GetStatus().ToString();
+    report << name << '\t'
+           << static_cast<double>(wav->samples.size()) / kSampleRate << '\t'
+           << core::lpc::SummariseFrames(encoding->frames).bytes << '\t'
+           << scored->score.overall << '\t' << plain->score.overall << '\n';
+  }
 }
 
 }  // namespace

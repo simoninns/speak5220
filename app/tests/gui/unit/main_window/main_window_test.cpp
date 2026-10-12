@@ -204,8 +204,9 @@ TEST_F(MainWindowTest, ReEncodeEncodesTheSelectionAsOneStep) {
   const core::project::Project& project = window_.Document().Project();
   ASSERT_TRUE(project.FindPhrase(TestId(1))->encoding.has_value());
   ASSERT_TRUE(project.FindPhrase(TestId(2))->encoding.has_value());
-  EXPECT_EQ(project.FindPhrase(TestId(2))->encoding->pesq,
-            testing::TestEncoding::kScore);
+  ASSERT_TRUE(project.FindPhrase(TestId(2))->encoding->quality.has_value());
+  EXPECT_NEAR(project.FindPhrase(TestId(2))->encoding->quality->score,
+              testing::TestEncoding::kScore, 1e-9);
   EXPECT_EQ(window_.Document().UndoStack().count(), steps + 1);
   EXPECT_EQ(window_.Document().UndoStack().undoText(),
             QStringLiteral("Re-encode 2 Phrases"));

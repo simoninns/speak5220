@@ -3,25 +3,30 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # The full-corpus acceptance of the C++ encoder and quality measures
-# (application plan §3.2 and Phase 3, TESTING.md):
+# (application plan §3.2 and Phase 8, TESTING.md):
 # - encodes all 243 corpus files with every option set in
 #   app/golden/encoder/option_sets.tsv and checks that at least 99% of the
 #   encodings are identical to the reference frames, and that every other
-#   one differs only at the reference's near-tie frames and scores within
-#   0.02 of the reference's PESQ;
-# - measures every reference encoding with PESQ (within 0.01 of
-#   app/golden/quality/), every file's anchor (within 0.02) and the cheap
-#   measures;
+#   one differs only at the reference's near-tie frames and its overall
+#   quality score is within 0.02 of the reference's;
 # - optimises every file from the default options on every core (plan
 #   Phase 7), with each file's byte limit at its default encoding's size,
 #   and checks that the best is within the limit and scores above the
 #   defaults on most files. SPEAK5220_OPTIMISE_STRIDE=N takes every Nth
-#   file, for a quicker run.
+#   file, for a quicker run;
+# - measures every file with the quality measures of plan §3.3, as the
+#   reference encodings, the application's default and optimised
+#   encodings and the anchor vocoder render it, for the calibration of the
+#   overall score (measures.tsv; plan Phase 8, task 12).
+# With --listening it only writes the listening check's samples instead:
+# for each rating band, files spread over its scores, as the original and
+# the chip's output (listening/BAND/*.wav, with listening/index.tsv).
 # It is slow, so it is run by hand, not by CTest.
 #
-# Usage: corpus-check.sh [BUILD_DIR [OUTPUT_DIR]]
+# Usage: corpus-check.sh [--listening] [BUILD_DIR [OUTPUT_DIR]]
 # BUILD_DIR defaults to build/app (the functional tests must be built);
-# OUTPUT_DIR, where the reports go (report.tsv, quality.tsv, optimise.tsv), to
+# OUTPUT_DIR, where the reports go (report.tsv, optimise.tsv, measures.tsv),
+# to
 # BUILD_DIR/corpus-check. The corpus WAVs are written to
 # BUILD_DIR/generated-corpus. Run from the repository root in the default
 # Nix shell, which has the Python packages the corpus step needs:
@@ -30,6 +35,11 @@
 
 set -euo pipefail
 
+listening=0
+if [[ ${1:-} == --listening ]]; then
+  listening=1
+  shift
+fi
 build_dir=${1:-build/app}
 output_dir=${2:-$build_dir/corpus-check}
 script_dir=$(dirname "${BASH_SOURCE[0]}")
@@ -45,6 +55,14 @@ mkdir -p "$output_dir"
 corpus=$build_dir/generated-corpus
 python3 "$script_dir/generate_corpus.py" --output "$corpus"
 
+if [[ $listening -eq 1 ]]; then
+  SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_LISTENING_DIR=$output_dir/listening \
+    "$tests" --gtest_also_run_disabled_tests \
+    --gtest_filter='MeasuresCorpusCheck.DISABLED_WritesListeningSamples'
+  echo "corpus-check: listening samples in $output_dir/listening"
+  exit 0
+fi
+
 report=$output_dir/report.tsv
 status=0
 SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_CORPUS_REPORT=$report \
@@ -55,13 +73,14 @@ awk -F'\t' 'NR > 1 { n[$3]++; t++ }
   END { printf "corpus-check: %d encodings: %d identical, %d near-tie, %d differing\n",
         t, n["identical"], n["near-tie"], n["differs"] }' "$report"
 
-SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_QUALITY_REPORT=$output_dir/quality.tsv \
-  "$tests" --gtest_also_run_disabled_tests \
-  --gtest_filter='QualityCorpusCheck.*' || status=1
-
 SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_OPTIMISE_REPORT=$output_dir/optimise.tsv \
   "$tests" --gtest_also_run_disabled_tests \
   --gtest_filter='OptimiserCorpusCheck.*' || status=1
+
+SPEAK5220_CORPUS_DIR=$corpus SPEAK5220_MEASURES_REPORT=$output_dir/measures.tsv \
+  "$tests" --gtest_also_run_disabled_tests \
+  --gtest_filter='MeasuresCorpusCheck.DISABLED_WritesTheCalibrationData' ||
+  status=1
 
 if [[ $status -eq 0 ]]; then
   echo "corpus-check: passed"

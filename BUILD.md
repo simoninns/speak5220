@@ -39,7 +39,7 @@ ctest --test-dir build/app -L unit          # the fast, mocked lane
 ctest --test-dir build/app -L functional    # file system, processes, reference data, GUI (offscreen)
 ```
 
-The application links Qt 6.8 or later (Core, Widgets, Multimedia, and D-Bus on Linux), spdlog, libsndfile, libsamplerate, pocketfft (header-only), yaml-cpp and libzip (for the project file), all provided by the dev shell. `app/cmake/Dependencies.cmake` finds them.
+The application links Qt 6.8 or later (Core, Widgets, Multimedia, and D-Bus on Linux), spdlog, libsndfile, libsamplerate, pocketfft (header-only), yaml-cpp and libzip (for the project file), and libfvad and SPTK 4 (for the quality measures; SPTK brings its own copies of REAPER and WORLD), all provided by the dev shell. nixpkgs has no libfvad, so `flake.nix` builds it. `app/cmake/Dependencies.cmake` finds them.
 
 This builds:
 
@@ -60,7 +60,7 @@ Debug and sanitizer builds also range-check `operator[]` on standard containers 
 
 ### Windows and macOS
 
-Outside Nix, Qt comes from the Qt installer or [aqtinstall](https://github.com/miurahr/aqtinstall), at the flake's version (6.11.2), and the other libraries from [vcpkg](https://vcpkg.io) in manifest mode: `app/vcpkg.json` lists them and pins vcpkg's baseline. On Windows, run these from a Visual Studio developer prompt (MSVC):
+Outside Nix, Qt comes from the Qt installer or [aqtinstall](https://github.com/miurahr/aqtinstall), at the flake's version (6.11.2), and the other libraries from [vcpkg](https://vcpkg.io) in manifest mode: `app/vcpkg.json` lists them and pins vcpkg's baseline. vcpkg has no libfvad or SPTK, so `app/vcpkg-ports/` holds overlay ports for them, at the versions the flake uses, and `app/vcpkg-configuration.json` points vcpkg at them. On Windows, run these from a Visual Studio developer prompt (MSVC):
 
 ```bash
 cmake -S app -B build/app -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -81,16 +81,16 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Reference data
 
-`app/golden/` holds the output of the retired reference emulator, encoder and quality tools, which the functional tests compare against. It is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile and pesq, and a C compiler):
+`app/golden/` holds the output of the retired reference emulator and encoder, and of independent implementations of the quality measures, which the functional tests compare against. It is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile, py-webrtcvad, pystoi and pyworld, REAPER's command-line tool, and a C compiler):
 
 ```bash
 nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator and packaging: regenerate in a temporary directory and compare
 nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/ and packaging/
 nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (a few minutes, on every core)
 nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
-make -C investigation/emulator                                                # quality.py runs the built reference emulator
-nix develop --command python3 app/scripts/golden/quality.py --check           # quality measures: regenerate and compare (about ten minutes, on every core)
-nix develop --command python3 app/scripts/golden/quality.py                   # rewrite app/golden/quality/
+make -C investigation/emulator                                                # measures.py runs the built reference emulator
+nix develop --command python3 app/scripts/golden/measures.py --check          # quality measures: regenerate and compare (under a minute, on every core)
+nix develop --command python3 app/scripts/golden/measures.py                  # rewrite app/golden/quality/measures/
 ```
 
 The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's (with the quality data that measures it) only for an intended improvement; see [`TESTING.md`](TESTING.md).

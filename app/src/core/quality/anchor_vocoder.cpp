@@ -2,8 +2,8 @@
  * File:        anchor_vocoder.cpp
  * Module:      quality
  * Purpose:     The anchor: an unquantised floating-point LPC-10 vocoder of
- *              a phrase's source, whose PESQ is the ceiling of the quality
- *              scale
+ *              a phrase's source, what unquantised LPC reaches, for the
+ *              calibration of the quality score
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -25,8 +25,6 @@
 #include "core/encoder/encoder_filters.h"
 #include "core/quality/numpy_normal.h"
 #include "core/quality/output_alignment.h"
-#include "core/quality/pesq.h"
-#include "core/util/status.h"
 
 namespace speak5220::core::quality {
 
@@ -289,20 +287,6 @@ std::vector<double> SynthesiseAnchor(std::span<const AnchorFrame> frames, int n,
 std::vector<double> AnchorVocoder(std::span<const double> x) {
   NumpyNormal noise = NumpyNormal::SeedOne();
   return SynthesiseAnchor(AnalyseAnchor(x), static_cast<int>(x.size()), noise);
-}
-
-StatusOr<double> AnchorScore(std::span<const double> source) {
-  const std::vector<double> ref = encoder::HighPass60Hz(source);
-  const std::vector<double> voc = MatchLevel(ref, AnchorVocoder(ref));
-  StatusOr<PesqScore> score = ScorePesq(ref, voc);
-  if (!score.IsOk()) {
-    return score.GetStatus();
-  }
-  return static_cast<double>(score->mos_lqo);
-}
-
-StatusOr<double> AnchorScorer::Score(std::span<const double> source) {
-  return AnchorScore(source);
 }
 
 }  // namespace speak5220::core::quality

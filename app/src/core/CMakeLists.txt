@@ -50,16 +50,20 @@ add_library(
     project/project_store.cpp
     project/zip_project_store.cpp
     quality/anchor_vocoder.cpp
-    quality/cheap_measures.cpp
+    quality/cached_quality.cpp
     quality/encoded_audio.cpp
+    quality/envelope_distortion.cpp
+    quality/estoi.cpp
+    quality/lpc_envelope.cpp
     quality/numpy_normal.cpp
     quality/output_alignment.cpp
-    quality/pesq.cpp
-    quality/pesq_alignment.cpp
-    quality/pesq_fft.cpp
-    quality/pesq_metric.cpp
-    quality/pesq_model.cpp
-    quality/quality_scale.cpp
+    quality/pitch_errors.cpp
+    quality/pitch_estimator.cpp
+    quality/quality_assessor.cpp
+    quality/quality_measures.cpp
+    quality/quality_score.cpp
+    quality/signal_preparation.cpp
+    quality/voice_activity.cpp
     synth/output_pin.cpp
     synth/reference_synthesizer.cpp
     synth/synth.cpp
@@ -106,5 +110,7 @@ target_link_libraries(
         speak5220::sndfile
         speak5220::samplerate
         speak5220_pocketfft
+        speak5220::fvad
+        SPTK::sptk
         speak5220_compile_options
 )

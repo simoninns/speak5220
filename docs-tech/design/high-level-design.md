@@ -23,7 +23,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
-| `s5core`: `quality/` (PESQ, the anchor, the cheap measures, `QualityScale`, the encoded audio for display) | Implemented, matching the reference tools' values on the whole corpus |
+| `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
@@ -54,7 +54,7 @@ app/
                                 generate_corpus.py,
                                 generate_filter_constants.py (§8)
     golden/                     generate_golden.py and its scenario scripts,
-                                encoder.py, quality.py (offline, run by
+                                encoder.py, measures.py (offline, run by
                                 hand: §13)
   golden/                       reference data from the retired references (§13)
   projects/                     fixture projects, unpacked: general/, phrom/,
@@ -76,9 +76,11 @@ app/
                                 NumPy-ordered sums and windows, LPC analysis,
                                 the squelch
       encoder/                  Encoder and its stages, EncoderOptions (§8)
-      quality/                  PESQ, PesqMetric, the output alignment, the
-                                anchor vocoder, the cheap measures,
-                                QualityScale (§9), RenderEncodedAudio (§16)
+      quality/                  the quality measures, the adapters over
+                                libfvad and SPTK, the overall score,
+                                QualityAssessor, the anchor vocoder (§9),
+                                the output alignment and
+                                RenderEncodedAudio (§16)
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
                                 stores, PhraseImporter, the PHROM export (§14)
@@ -90,7 +92,7 @@ app/
       phrase_list/              PhraseListModel, its delegate and panel
       phrase_editor/            PhraseDetails (name and description)
       encoder_panel/            EncoderPanel, EncoderSettingsForm,
-                                QualityScaleView, the encode-and-measure
+                                QualityRatingView, the encode-and-measure
                                 helpers and text (§17)
       optimise/                 OptimiseSession, OptimiseDialog (§17)
       waveform/                 PhraseWaveforms, WaveformPane, WaveformView,
@@ -270,12 +272,15 @@ Phase 2 task 7).
     reference encodings with their near-tie frames, JSON intermediates via
     `QJsonDocument`, WAV inputs as doubles) and `CompareEncoding()`, which
     applies the acceptance rule of §8;
-  - `quality_golden`: readers for `app/golden/quality/` (each reference
-    encoding's lag, output length, PESQ and cheap measures; the anchor
-    scores);
+  - `measures_golden`: readers for `app/golden/quality/measures/` (the
+    scores, masks and pitch tracks) and `PrepareReferenceEncodings()`, which
+    speaks and prepares the subset's reference encodings as the quality
+    measures do;
   - `synth_mocks.h`: a gMock mock of `ISynth`;
-  - `quality_mocks.h`: gMock mocks of `IQualityMetric` and
-    `IAnchorScorer`;
+  - `quality_mocks.h`: gMock mocks of `IQualityMetric`,
+    `IQualityAssessor`, `IVoiceActivity`, `ILpcAnalysis` and
+    `IPitchEstimator`, and `AssessmentScoring()`, an assessment with a
+    chosen overall score;
   - `synthetic_speech`: a deterministic speech-like signal (two vowels, a
     fricative, pauses), a delay and white noise, for the quality unit
     tests;
@@ -302,8 +307,8 @@ Phase 2 task 7).
   `IRecentFilesStore` and `IViewPreferences`, a `FakeClock`,
   `TestPlayback` (a `Player` over a
   mocked output, and a mocked synth, for windows not testing playback),
-  `TestEncoding` (`EncodingTools` over a mocked encoder, metric and
-  anchor, a fake clock and an inline runner), and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
+  `TestEncoding` (`EncodingTools` over a mocked encoder and quality
+  assessor, a fake clock and an inline runner), and `IdsAre()`, a matcher for spans of phrase ids; `test_palettes.h` has
   light and dark palettes like Fusion's. The GUI functional lane
   has `SPEAK5220_PROJECTS_DIR` compiled in.
 
@@ -341,11 +346,11 @@ Plan §2.2, with the names as built.
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
-| `ScorePesq()`, `PesqMetric`, `LevelErrorMetric`, `SpectralDistanceMetric` (`IQualityMetric`), `AnchorScore()`, `QualityScale` | **Implemented** (`core/quality/`): PESQ (P.862 narrowband, as P.862.1 MOS-LQO), the cheap measures, the anchor and the quality scale (§9) |
-| `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best PESQ, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
-| `EncoderPanel`, `EncoderSettingsForm`, `QualityScaleView` | **Implemented** (`gui/encoder_panel/`): statistics, the quality scale, the settings form and debounced re-encoding (§17) |
+| `QualityAssessor` (`IQualityAssessor`), `OverallQualityMetric` (`IQualityMetric`), `ScoreQuality()` | **Implemented** (`core/quality/`): the quality measures, the overall score and the rating (§9) |
+| `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best overall quality score, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
+| `EncoderPanel`, `EncoderSettingsForm`, `QualityRatingView` | **Implemented** (`gui/encoder_panel/`): statistics, the quality rating, the settings form and debounced re-encoding (§17) |
 | `OptimiseSession`, `OptimiseDialog` | **Implemented** (`gui/optimise/`): Optimise and Optimise all in the GUI (§17) |
-| `AnchorScorer` (`IAnchorScorer`) | **Implemented** (`core/quality/anchor_vocoder`): `AnchorScore()` behind an interface, for the GUI's tests (§17) |
+| `FvadVoiceActivity` (`IVoiceActivity`), `SptkLpcAnalysis` (`ILpcAnalysis`), `SptkPitchEstimator` (`IPitchEstimator`) | **Implemented** (`core/quality/voice_activity`, `lpc_envelope`, `pitch_estimator`): the adapters over libfvad and SPTK 4 for the quality measures of plan Phase 8 (§9, §10) |
 | `Project` (`IProjectEditor`) | **Implemented** (`core/project/project`): phrases, their audio, settings and cached encodings; the editing operations (§14) |
 | `AllocatePhroms()` | **Implemented** (`core/project/phrom_allocator`): list-order assignment to PHROMs and the 64-PHROM budget (§14) |
 | `EncodingCache` | **Implemented** (`core/project/encoding_cache`): the settings hash and re-encoding within the budget, over `IEncoder` (§14) |
@@ -406,7 +411,7 @@ boundary, then run until idle plus one frame):
 - Results are cached per phrase in a hash map keyed by the path and the
   bytes (FNV-1a hash, full comparison), unless the synth is made with
   `SynthCache::kOff`: Optimise speaks hundreds of candidates once each,
-  so the synth behind its PESQ keeps nothing (§17). `Synthesize()` is
+  so the synth behind its quality measures keeps nothing (§17). `Synthesize()` is
   thread-safe; the caller runs it on a worker thread.
 
 **Acceptance** (met): the C++ emulator reproduces every reference run in
@@ -456,11 +461,14 @@ the plan, the shaped levels, the energies and the limiter's statistics.
 options outside their ranges (`ValidateEncoderOptions()`).
 
 **Options.** `EncoderOptions` has the 15 options of `tms5220enc.py`
-`DEFAULTS`, with the same defaults, and two the reference does not have:
-the squelch (`squelch_db`, off by default) and quiet pauses
-(`quiet_pauses`, on by default). So the defaults encode as the reference
-does with quiet pauses off, which is how the reference data is compared
-(§13). `EncoderOptionInfos()` gives each one's key (the Python name, or
+`DEFAULTS`, and two the reference does not have: the squelch
+(`squelch_db`, off by default) and quiet pauses (`quiet_pauses`, on by
+default). Its defaults are the reference's but for four chosen on the
+corpus for the overall quality score (§9, "Default settings"):
+`target_rms` 24, `window` 256, `voicing_evidence` 5 and `level_agc` 1.25.
+The reference data is compared with the reference's own defaults written
+out, quiet pauses off (`ReferenceEncoderOptions()` in the test support,
+§13), so it does not depend on the application's. `EncoderOptionInfos()` gives each one's key (the Python name, or
 `squelchDb` and `quietPauses` in its style), label, help text, type,
 range and default, for the GUI's settings form and for project files,
 and marks the options the GUI shows only with its advanced settings
@@ -485,7 +493,8 @@ Table 8-6 entry nearest zero. The chip then holds neutral K, and the rest
 of the pause is code 0, at the bench's noise floor (47 dB below the
 speech). The second frame, not the first: in the first, the K would glide
 to neutral while the sound before fades (voiced to voiced is interpolated),
-which dulled it and lowered PESQ by 0.02 in the median over the corpus;
+which dulled it and lowered PESQ (the measure then) by 0.02 in the
+median over the corpus;
 after a silence frame the change is inhibited, so the K jump while the
 energy is 0. A silence frame must follow, or the next sound would glide in
 from the neutral frame. A repeat straight after a quietened pause is sent
@@ -493,28 +502,23 @@ in full with the K it would have had (an unvoiced repeat as an unvoiced
 frame, which zeroes K5–K10 as the repeat would); a pause before a voiced
 repeat of an unvoiced frame, whose K5–K10 zeroing no full frame can give,
 is left alone. Over the 243 corpus files with a 30 dB squelch, 110 have
-such pauses (288 in all); the encodings grow by 1.7% and PESQ is
-unchanged within its noise (median change +0.0003; 53 files higher, 48
-lower). Optimise does not search it.
+such pauses (288 in all); the encodings grow by 1.7%, and PESQ (the
+measure then) was unchanged within its noise (median change +0.0003; 53
+files higher, 48 lower). Optimise does not search it.
 
-**The squelch.** PESQ counts any frame louder than near-silence as speech
-and weights the disturbance of quiet frames slightly more (ITU-T P.862
-§10.2.11: each frame's disturbance is divided by its reference power to
-the 0.04), and breaths and room noise 20 to 35 dB down sit above the
-encoder's 45 dB gate. So nothing told the encoder or Optimise that a
-breath is not wanted, and Optimise could favour settings that reproduce
-it. When `squelch_db` is set, `SquelchedSource()` (`dsp::Squelch()`)
+**The squelch.** Breaths and room noise 20 to 35 dB down sit above the
+encoder's 45 dB gate, so the encoder reproduces them; PESQ, the measure
+when the squelch was added, even rewarded it. When `squelch_db` is set, `SquelchedSource()` (`dsp::Squelch()`)
 mutes the source's stretches more than that many dB below its loudest
 10 ms block (blocks every 2.5 ms), keeping 60 ms after the sound and
 10 ms before it so word endings and onsets survive, with 5 ms ramps so
 the cut makes no click. The encoder applies it before its first stage,
 and every measurement against the source uses the same squelched source:
-`MeasureFrames()` (PESQ and the anchor), Optimise's anchor, and the
-`Optimiser`'s candidates. Reproducing a muted breath then counts against
-an encoding (PESQ penalises added sound), rather than for it. The squelch
-is not searched by Optimise, since scores against differently squelched
-sources do not compare. PESQ itself is unchanged, so it still matches
-the reference tools. Loudness alone cannot tell a breath from a soft
+`MeasureFrames()` and the `Optimiser`'s candidates. The quality measures
+leave out what their voice activity mask does not count as speech, so a
+muted breath is not asked of an encoding. The squelch is not searched by
+Optimise, since scores against differently squelched sources do not
+compare. Loudness alone cannot tell a breath from a soft
 "h" or a trailing "s"; the hold keeps word endings, and the user chooses
 the level.
 
@@ -560,121 +564,217 @@ optimised: neither needs it.
 
 ## 9. Quality measurement
 
-**Implemented** (plan §3.3, Phase 3). `core/quality/` measures how well an
-encoding reproduces its source, as the retired tools did:
-`investigation/tools/speechqual.py` (PESQ and the anchor) and
-`investigation/encoder/evaluate.py` (the cheap measures). Each C++ function
-names its Python original, or the ITU-T section it implements.
+**Implemented** (plan §3.3, Phase 8; decision D10). `core/quality/`
+compares the chip's output with the original over speech-active frames,
+with three complementary measures that a parametric vocoder can be judged
+by, and combines them into an overall score and a rating from *Poor* to
+*Good*. The encoder panel shows them, Optimise maximises the score, and
+the project caches the figures with each encoding (§14, §17).
+
 
 | Component | Files | Does |
 |---|---|---|
-| `ScorePesq()` | `pesq`, `pesq_stages.h`, `pesq_alignment`, `pesq_model`, `pesq_fft`, `pesq_tables.h` | ITU-T P.862 narrowband at 8 kHz, mapped to MOS-LQO by P.862.1: level alignment, IRS receive filtering, voice activity, time alignment with utterance splitting, the auditory transform, the disturbance densities, bad-interval realignment and the aggregation |
-| `PesqMetric` (`IQualityMetric`) | `pesq_metric` | Speaks the frames through `ISynth`'s VSM path, cuts the output to its sound (idle at 0), lines it up with the source after the 60 Hz high-pass (`AlignOutput()`), and scores it with `ScorePesq()` |
-| `AlignOutput()` | `output_alignment` | `speechqual.py`'s `align()` (level envelopes in 2.5 ms steps), `refine()` (±25 ms by mel-cepstral distance), `placed()` and `matchLevel()` |
-| `MeasureCheap()`, `LevelErrorMetric`, `SpectralDistanceMetric` | `cheap_measures` | `evaluate.py`'s level error (`lvMeanAbs`, `lvBias`, `lvP90`) and mel spectral distance (`specDist`), comparing each frame's input with `ReferenceSynthesizer`'s output where the frame's values are reached; no alignment search |
-| `AnchorVocoder()`, `AnchorScore()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s `lpcVocoder()` and its pitch tracker, and the PESQ of its output: the reference of the quality scale |
-| `QualityScale` | `quality_scale` | A score relative to the phrase's anchor, its place on the bar and its band |
+| `FvadVoiceActivity` (`IVoiceActivity`) | `voice_activity` | libfvad, the WebRTC detector, at 8 kHz in 10 ms frames; a fresh detector per call |
+| `SptkLpcAnalysis` (`ILpcAnalysis`) | `lpc_envelope` | SPTK 4's autocorrelation, Levinson recursion and filter-to-spectrum: an all-pole fit of a frame and its envelope in dB |
+| `SptkPitchEstimator` (`IPitchEstimator`) | `pitch_estimator` | SPTK 4's REAPER (the default) or Harvest, every 10 ms, 50 to 400 Hz |
+| `PrepareSignals()`, `PrepareAlignedSignals()` | `signal_preparation` | The placement, band-limit, mask and level below |
+| `MeasureEnvelopeDistortion()` | `envelope_distortion` | Log spectral distortion between LPC envelope shapes |
+| `MeasurePitchErrors()`, `ComparePitch()` | `pitch_errors` | Gross pitch error, F0 RMSE in cents, voicing decision error |
+| `Estoi()`, `MeasureIntelligibility()` | `estoi` | A port of pystoi's ESTOI, with the mask applied |
+| `MeasureQuality()`, `MeasurePrepared()` | `quality_measures` | All of it for one encoding |
+| `ScoreQuality()`, `ScoreCalibration` | `quality_score` | The component scores, the overall score and the rating (below) |
+| `QualityAssessor` (`IQualityAssessor`) | `quality_assessor` | The measures and score of one encoding, with libfvad, SPTK's LPC and REAPER: what the encoder panel and Optimise use; `kMeasuresVersion` |
+| `OverallQualityMetric` (`IQualityMetric`) | `quality_assessor` | The overall score as the one number Optimise maximises |
+| `ToCachedQuality()`, `FromCachedQuality()` | `cached_quality` | The figures a project caches with an encoding (§14), and the assessment they give back |
+| `RenderEncodedAudio()`, `AlignOutput()` | `encoded_audio`, `output_alignment` | The chip's output spoken and placed against the source by `speechqual.py`'s alignment (`align()`, `refine()`, `placed()`, `matchLevel()`): for display (§16) and for the measures |
+| `AnchorVocoder()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s unquantised LPC-10 vocoder, for the calibration (below) |
 
-`IQualityMetric::Measure(source, encoding)` takes the source as given to
-the encoder and its `EncodeResult`; `Direction()` says whether larger values
-are better (PESQ) or smaller (the cheap measures).
+**Preparing the signals** (plan §3.3's six steps, as fixed in Phase 8):
 
-**Where PESQ comes from** (plan decision D6). The Recommendation describes
-each stage but leaves most of its numbers and details to the ANSI-C
-reference implementation, which Annex A makes part of P.862 and gives
-precedence over the text: the Bark bands, the hearing thresholds, the
-filter curves and coefficients, the scaling factors, the thresholds of the
-voice activity detector and the alignment, and the weights of the score.
-The C++ is the project's own code, written to this project's rules and
-licensed GPL-3.0-or-later. Its constants and the details the text leaves
-open are taken from the reference implementation (as the Python `pesq`
-0.0.4 package bundles it: the 2005 code of Amendment 2), and each stage
-cites its section of P.862. The ITU's texts, code and conformance data are
-not in the repository.
+1. The original is the source as given to the encoder (squelched when the
+   squelch is on), at 8 kHz.
+2. The chip's output is spoken through the VSM path and placed against the
+   source by `RenderEncodedAudio()`, with its idle code taken as 0, which
+   removes the chip's DC offset.
+3. Both are band-limited by the same order-4 Butterworth band-pass, 80 to
+   3600 Hz, forwards and backwards (`dsp::kQualityBand` through
+   `SosFiltFilt()`, SciPy's `sosfiltfilt`), so without delay.
+4. **The alignment** is that of the encoded waveform (§16):
+   `speechqual.py`'s correlation of level envelopes in 2.5 ms steps over
+   every overlap, refined within ±25 ms in 0.625 ms steps by mel-cepstral
+   distance. The plan asked for a cross-correlation of the signals around
+   the chip's start latency. That was tried on the corpus: the latency is
+   not known from the frames alone (the encoder leaves out leading
+   silence, by up to 0.6 s), and the vocoder's output does not follow the
+   original's phase, so a plain cross-correlation of the band-limited
+   waveforms strayed by more than 140 samples (18 ms) from the envelope
+   alignment on a tenth of the files, and by thousands on the worst. The
+   envelope alignment matched the reference tools on all 972 reference
+   encodings, and the waveform view shows the same alignment the measures
+   use.
+5. The output is scaled to the original's power over the mask's samples.
+6. **The mask** is libfvad's decision at its most aggressive (mode 3) for
+   each 10 ms frame of the band-limited original, less the frames 40 dB or
+   more below its loudest. On the corpus, mode 3 marks 1 % of the quiet
+   frames (45 dB down) more than 100 ms from speech as speech, against
+   29 % at mode 2; the frames it keeps near speech are its hangover at the
+   ends of words, which the 40 dB floor (ESTOI's own) removes.
 
-**Matching the reference.** A PESQ score is the outcome of many threshold
-decisions, so the C++ keeps the reference's arithmetic:
+**The measures:**
 
-- its own radix-2 FFT in single precision (`pesq_fft`), the reference's
-  order of operations, rather than pocketfft;
-- single precision wherever the reference uses it, the same promotions to
-  double, and the same order of evaluation;
-- the reference's shared scratch buffer, laid out as it is: in the
-  utterance split, a long utterance's crude alignment overwrites the
-  window of the fine alignment that follows, and the scores depend on it;
-- both inputs divided by their joint peak and rounded to single precision,
-  as the Python package does before calling the C code.
+- **Spectral envelope.** Each 25 ms frame (the chip's) whose centre the
+  mask keeps is Hamming-windowed and fitted with an order-10 all-pole
+  model (the chip's order); the distortion is the RMS difference in dB of
+  the two envelope *shapes* (1/|A|, the gain left out) over 100 to 3500 Hz
+  on a 512-point grid. The shape alone is compared, as the classic
+  criteria of transparent LPC quantisation (a mean of 1 dB, under 2 % of
+  frames over 2 dB, none over 4 dB) are defined; with the gain left in,
+  the chip's coarse energy steps dominate (a median of 5.0 dB and 54 % of
+  frames over 4 dB on the corpus, against 3.4 dB and 28 % for the shape).
+  A frame whose original is silent is skipped; one whose output is silent
+  is compared with a flat shape.
+- **Pitch and voicing.** Both prepared signals are tracked every 10 ms;
+  frame i counts if mask frame i does. The gross pitch error is the
+  percentage of frames voiced in both whose F0 differs by more than 20 %;
+  the F0 RMSE, in cents, is over the other frames voiced in both; the
+  voicing decision error is the percentage of counted frames whose voicing
+  differs. **REAPER is the default** (risk R1): on the corpus its median
+  errors between original and output are lower than Harvest's (gross 4.6 %
+  against 8.6 %, RMSE 57 against 83 cents, voicing 7.8 % against 10.8 %),
+  Harvest makes gross octave errors on some files (over 60 % on two of the
+  eight subset files), and REAPER is about 40 times faster. Both find the
+  F0 of 8 kHz pulse trains within 1 %.
+- **Intelligibility.** ESTOI as pystoi 0.4.1 computes it
+  (`extended=True`), of the prepared signals with the samples outside the
+  mask set to zero, so pystoi's own removal of frames 40 dB below the
+  loudest drops them. pystoi adds random noise of 2.2e-16 before each
+  normalisation to avoid dividing by zero; the port leaves a row or column
+  without variation at zero instead, so it is deterministic. ESTOI needs
+  30 frames (about 0.4 s of sound); with less it is absent, where pystoi
+  returns 1e-5.
 
-**The anchor.** The anchor vocoder is order 10, 25 ms frames, K and gain
-interpolated over 8 steps, a pulse per pitch period or Gaussian noise, pre-
-and de-emphasis 0.9375, nothing quantised. Its noise must be the
-reference's sample for sample: on corpus files, other noise moves the
-anchor's PESQ by up to 0.07. `NumpyNormal` therefore reproduces NumPy's
-default generator (PCG64, XSL-RR 128/64, from the state of
-`numpy.random.default_rng(1)`) and its ziggurat normal sampler, with
-NumPy's tables, bit for bit.
+**Matching the reference** (`app/golden/quality/measures/`, §13, the
+eight subset files in the four option sets): the alignment and the mask
+are identical on all 32 encodings; the mean distortion is within 7e-12 dB
+of the NumPy reference's; SPTK's REAPER and Harvest give the original
+tools' tracks frame for frame, and the same errors; ESTOI is within 5e-13
+of pystoi's. The plan's tolerances were ±0.01 dB and ±0.005.
 
-**The quality scale** (plan §3.3, "Presenting PESQ to the user"). The
-relative score is (score − 1.0) / (anchor − 1.0): 0 at PESQ's floor, 1 at
-the anchor. The anchor is a reference, not a ceiling: after Optimise, 28%
-of the corpus's encodings beat it. So the bar runs from 0 to
-`QualityScale::kTop` (1.25), with the anchor at 80% of its width, and a
-score beyond the anchor shows how far (a position is the relative score
-over 1.25, clamped to [0, 1]). Of the optimised encodings, 95% score at
-most 1.16 and 5 of 243 beyond 1.25. The bands, with plain-language labels
-for the GUI:
+**Performance** (`benchmark.sh`, one core, the eight-file subset):
+`QualityAssessor` takes 0.047 s per second of speech, as long as PESQ with
+its synthesis and alignment took before it; most of it is the synthesis
+and the alignment's spectral search. Harvest in place of REAPER would add
+about 0.13 s.
 
-| Band | Relative score |
-|---|---|
-| Bad | below 0.40 |
-| Poor | 0.40 to below 0.60 |
-| Fair | 0.60 to below 0.75 |
-| Good | 0.75 to below 1.00 |
-| As good as LPC or better | 1.00 (the anchor) and above |
+**The overall score and rating** (`quality_score`, plan Phase 8, task 12;
+**calibrated and confirmed by listening**). Each figure is mapped
+linearly to 0..1 between a *poor* and a *good* value
+(`ScoreCalibration`); the envelope component is the mean of its two
+figures' scores, the pitch component the mean of its three, and the
+intelligibility component ESTOI's. The overall score is their geometric
+mean with equal weights, so one poor component pulls it down; without
+ESTOI (35 of the corpus's 1,701 measurements, all short phrases) the other
+two share its weight.
 
-The thresholds were calibrated on the reference encodings of the whole
-corpus (243 files; anchors from 1.83 to 3.60, median 2.29), and on the
-results of Optimise from the default options
-(`app/scripts/corpus-check.sh`):
+| Figure | Poor | Good | Where the good end comes from |
+|---|---|---|---|
+| Mean envelope distortion | 5.0 dB | 1.8 dB | The anchor's median (1.80) |
+| Frames over 4 dB | 60 % | 2 % | The anchor's median (1.9) |
+| Gross pitch error | 50 % | 0 % | The default encodings' best tenth (0) |
+| F0 RMSE | 120 cents | 40 cents | The default encodings' best tenth (39.5) |
+| Voicing decision error | 30 % | 3.5 % | The default encodings' best tenth (3.4) |
+| ESTOI | 0.55 | 0.82 | The anchor's median (0.821) |
 
-| Option set | Median PESQ | Median relative score | Bad | Poor | Fair | Good | As good as LPC or better |
-|---|---|---|---|---|---|---|---|
-| default | 2.03 | 0.78 | 0% | 11% | 28% | 55% | 6% |
-| lean | 1.95 | 0.73 | 1% | 13% | 44% | 38% | 3% |
-| loud | 1.98 | 0.74 | 1% | 16% | 35% | 45% | 3% |
-| plain | 1.97 | 0.73 | 0% | 14% | 43% | 39% | 3% |
-| default, optimised | 2.22 | 0.93 | 0% | 0% | 7% | 65% | 28% |
+The good ends are what unquantised LPC reaches (the anchor vocoder) for
+the envelope and ESTOI; for pitch the anchor is no reference, since its
+own pitch tracker is cruder than the encoder's (its median voicing error
+is 10 %), so the best tenth of the default encodings is used. The poor
+ends are round values just beyond the worst 1 % of the encodings (the four
+reference option sets, the application's defaults and Optimise's
+results: 4.30 dB, 49.7 %, 107 cents, 25.4 %, 0.578), except the gross
+pitch error, whose worst 1 % (96 %, encodings an octave out) is capped at
+half the voiced frames.
 
-With the defaults the typical encoding is *Good*, and 89% are *Fair* or
-better; the other sets, each of which changes several options away from
-their defaults, sit a little lower; Optimise moves most encodings up
-within *Good*, and over a quarter past the anchor. The plan asks for the bands to be
-confirmed by listening; that has not been done yet.
+**Bands:** *Poor* below 0.50, *Fair* from 0.50, *Good* from 0.70.
+Calibrated with `corpus-check.sh`'s `measures.tsv` (all 243 files; Optimise
+from the defaults, then still maximising PESQ, with the default
+encoding's size as its limit):
 
-**Acceptance** (met, plan Phase 3):
+| Encodings | Median score | 10th percentile | Poor | Fair | Good |
+|---|---|---|---|---|---|
+| Reference, default options | 0.70 | 0.57 | 3 % | 47 % | 49 % |
+| Reference, lean | 0.62 | 0.48 | 13 % | 62 % | 25 % |
+| Reference, loud | 0.68 | 0.54 | 6 % | 52 % | 42 % |
+| Reference, plain | 0.69 | 0.56 | 5 % | 47 % | 48 % |
+| Application defaults | 0.70 | 0.57 | 4 % | 47 % | 49 % |
+| Optimised (for PESQ) | 0.69 | 0.57 | 4 % | 48 % | 49 % |
+| Anchor vocoder | 0.89 | 0.78 | 1 % | 3 % | 96 % |
 
-- PESQ: on all 972 reference encodings of the corpus (243 files, four
-  option sets), the same score as the Python package to the last bit of
-  its single-precision result, against ±0.01; the alignment lag and the
-  output length are the same for every encoding.
-- The anchor: the same score on all 243 files, against ±0.02.
-- The cheap measures: within 1e-6 of `evaluate.py`'s on every encoding.
-- The corpus calibration above places the default encodings' median in
-  *Good* (a functional test checks this from the reference data).
-- Beyond the plan: the C++ PESQ, run locally on the ITU's 8 kHz conformance
-  pairs for variable delay (Annex A, test 2(b), 40 pairs), gives the
-  reference's raw score for every pair to the three decimals the ITU
-  lists. The data is the ITU's and is not committed; Supplement 23 (test
-  1(b)) was not available.
+Unquantised LPC is *Good* on nearly every file; the encoder's defaults are
+*Good* or *Fair* in equal parts, and *Poor* on a few files; the lean
+options (fewer bits) score lowest. The median components of the default
+encodings are envelope 0.53, pitch 0.82 and intelligibility 0.84: the
+envelope, the chip's quantised K, is what holds encodings back.
+Optimising PESQ barely moves the score (the median is unchanged), which
+is the reason for replacing it. The rank agreement of the overall score
+with PESQ is weak: Spearman 0.27 over the reference encodings, 0.31 over
+the optimised ones and 0.37 over the anchor.
 
-**Performance** (`benchmark.sh`, one core, the eight-file corpus subset,
-seconds per second of speech): PESQ alone 0.0076; `PesqMetric` (synthesis,
-alignment and PESQ) 0.047; the anchor score 0.012; the cheap measures
-0.0013. Most of `PesqMetric`'s time is the output alignment's spectral
-search (81 candidate lags). Nothing has been optimised yet; Optimise's
-timings (§17) have not needed it.
+**The listening check** (2026-10-11): `corpus-check.sh --listening`
+writes five files per band, spread over its scores, as the original and
+the chip's output at the original's level (`listening/BAND/`, with every
+file's score in `listening/index.tsv`). The user listened to all fifteen,
+paying attention to the pairs either side of each threshold (0.497 and
+0.503, 0.699 and 0.700) and to the files rated down by one component
+(ESTOI 0 on the lowest Poor file); the bands were confirmed as they are.
+
+**Default settings** (plan Phase 8, task 14; 2026-10-12). Optimise was run
+over the corpus from the old defaults (the reference's), and from them
+with the squelch at 30 and 40 dB, each file's limit at its default
+encoding's size, and the best options studied across files. Optimise
+raised `target_rms` on 156 files (most often to 24), turned `level_agc`
+on for 89, lengthened `window` on 79 (shortened it on 19) and moved
+`voicing_evidence` both ways (70 up, 58 down); the other options mostly
+stayed. The squelch did not help: the best scores' median was 0.771 at
+30 dB and 0.773 at 40 dB, against 0.774 without. 26 candidate sets were
+then scored over the corpus (`OptionsCorpusCheck`), and four defaults
+changed, agreed with the user:
+
+| Option | Old (the reference's) | New |
+|---|---|---|
+| `target_rms` | 20 | 24 |
+| `window` | 240 | 256 |
+| `voicing_evidence` | 4 | 5 |
+| `level_agc` | 1 | 1.25 |
+
+| On the 243 files | Old defaults | New defaults |
+|---|---|---|
+| Overall score: 10th percentile, lower quartile, median, upper quartile, 90th percentile | 0.565, 0.622, 0.699, 0.767, 0.826 | 0.576, 0.651, 0.720, 0.775, 0.840 |
+| Good / Fair / Poor | 120 / 114 / 9 | 141 / 93 / 9 |
+| Total size | 100,294 bytes | 100,591 bytes (+0.3 %) |
+| Optimised (limit: each file's default size): median, Good / Fair / Poor | 0.774, 188 / 53 / 2 | 0.777, 191 / 50 / 2 |
+
+The score rose on 183 files and fell by more than 0.05 on 2 (the worst
+fall 0.08); the typical change is small (median +0.015) and the largest
++0.28. A window of 260 scored a median of 0.724 but is off the slider's
+steps of 8; 256 is on them, and its mean is the same (0.710). The slow gain
+control's slider steps became 0.05, so that 1.25 lies on them. Encoding
+with the new defaults takes 4 % longer (0.0109 s per second of speech
+against 0.0105, one core). Optimise from them took 5 % longer (1.72 s per
+second of speech on 16 threads, against 1.64), trying a median of 310
+candidates against 294.
 
 ---
+
+
+**The anchor vocoder** is order 10, 25 ms frames, K and gain
+interpolated over 8 steps, a pulse per pitch period or Gaussian noise, pre-
+and de-emphasis 0.9375, nothing quantised: what unquantised LPC reaches,
+which places the good ends of the calibration. Its noise is the
+reference's sample for sample: `NumpyNormal` reproduces NumPy's default
+generator (PCG64, XSL-RR 128/64, from the state of
+`numpy.random.default_rng(1)`) and its ziggurat normal sampler, with
+NumPy's tables, bit for bit.
 
 ## 10. Third-party libraries
 
@@ -687,7 +787,10 @@ timings (§17) have not needed it.
 | FFT | pocketfft (C++ header-only) | BSD-3 | Used by `s5core`; packaged in `flake.nix` |
 | Project container | libzip | BSD-3 | Linked by `s5core` |
 | Project metadata | yaml-cpp | MIT | Linked by `s5core` (public: the migration interface takes a `YAML::Node`) |
-| PESQ | The project's own code (`core/quality/`), its constants and details from the ITU reference implementation (§9) | GPLv3-or-later | Implemented |
+| ESTOI | The project's own code (`core/quality/estoi`), a port of pystoi's (MIT), checked against it (§9) | GPLv3-or-later | Implemented |
+| Voice activity | libfvad (the WebRTC detector as a C library) | BSD-3 | Linked by `s5core` (`FvadVoiceActivity`); built by `flake.nix` and a vcpkg overlay port, since neither nixpkgs nor vcpkg has it |
+| LPC analysis, pitch and voicing | SPTK 4, with its own copies of REAPER (Apache-2.0) and WORLD's Harvest (Modified BSD) | Apache-2.0 | Linked by `s5core` (`SptkLpcAnalysis`, `SptkPitchEstimator`); from nixpkgs, and a vcpkg overlay port. SPTK's REAPER and Harvest are the originals with warning fixes, in SPTK's namespace, with the same defaults, so they need no packages of their own; the reference data takes its tracks from the originals (§13) |
+| Overall perceptual score | ViSQOL v3 | Apache-2.0 | Left out (plan §3.3, R1): Bazel-only upstream, with Abseil, protobuf, Armadillo and a machine-learned model in its speech mode |
 | Logging | spdlog | MIT | Linked by `s5core` |
 | Tests | Google Test with Google Mock | BSD-3 | Linked by the test binaries |
 
@@ -704,9 +807,9 @@ Both executables are thin front ends over `s5core`.
   starts following the desktop's colour scheme (§16), creates the real
   `QtDialogs`, `SettingsRecentFilesStore`, `ThreadPoolTaskRunner`, `Synth`
   and `Player` (over `QtAudioOutput`, `SteadyClock` and `SincResampler`),
-  and the `EncodingTools` (the encoder, `PesqMetric` over an uncached
-  `Synth`, `AnchorScorer`, the clock, and a one-thread runner for
-  Optimise's search), and opens `speak5220 [PROJECT]` if given. The
+  and the `EncodingTools` (the encoder, `QualityAssessor` over an
+  uncached `Synth`, the clock, and a one-thread runner for Optimise's
+  search), and opens `speak5220 [PROJECT]` if given. The
   window is described in §15, §16 and §17.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
@@ -804,17 +907,24 @@ tests read only these files and never run anything in `investigation/`.
 - The full corpus is not committed: `app/scripts/generate_corpus.py` writes
   its WAV copies (8 kHz, 16-bit, lossless from the FLAC originals) for
   `corpus-check.sh`. Where an encoding differs from the reference, the
-  encoder's corpus check scores both with the application's own PESQ
-  (§9).
-- `golden/quality/`, written by `app/scripts/golden/quality.py` from the
-  retired quality tools (same rules; it also records the `pesq` package's
-  version and the anchor's seed), for the reference encodings of
-  `golden/encoder/frames/`:
-  - `scores/SET.tsv`: for each option set and corpus file, the alignment
-    lag and output length, PESQ as `speechqual.py` measures it, and
-    `evaluate.py`'s level error and spectral distance;
-  - `anchor.tsv`: each corpus file's anchor score (`speechqual.py
-    --anchor`).
+  encoder's corpus check scores both with the overall quality score (§9).
+- `golden/quality/measures/`, written by `app/scripts/golden/measures.py`
+  (same rules; it also records the versions of NumPy, SciPy, py-webrtcvad,
+  pystoi, pyworld and REAPER's tool), for the reference encodings of the
+  eight subset files in every option set: independent implementations of
+  the quality measures (§9, "The quality measures"):
+  - the preparation in NumPy and SciPy (`sosfiltfilt`), with the alignment
+    of `speechqual.py`;
+  - `masks/SET.tsv`: the voice activity masks from py-webrtcvad, the
+    original WebRTC code;
+  - `tracks/SET/NAME.tsv`: the F0 tracks of both prepared signals from
+    REAPER's own command-line tool and from WORLD's Harvest through pyworld,
+    the originals of SPTK's copies;
+  - `scores/SET.tsv`: the alignment lag, the mask's frame count, the log
+    spectral distortion from the script's own NumPy LPC analysis, the pitch
+    and voicing errors of both trackers, and ESTOI from pystoi. Scores are
+    written to 12 significant digits, since NumPy's sums can differ in the
+    last bit from run to run.
 - The emulator's data is never regenerated unless the datasheet changes;
   the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).
@@ -831,8 +941,8 @@ tests read only these files and never run anything in `investigation/`.
 **Model.** `Phrase` is a plain struct: a UUID id, name, description,
 optional `SourceInfo`, the 8 kHz audio as floats, its `EncoderOverrides`
 (option field name → text), `locked`, `play_start` and an optional
-`CachedEncoding` (frames, encoder version, settings hash, cached PESQ and
-anchor). `ProjectContents` holds the `ProjectSettings` (name, header
+`CachedEncoding` (frames, encoder version, settings hash, and the cached
+quality figures, `CachedQuality`). `ProjectContents` holds the `ProjectSettings` (name, header
 strings, ASCII map, default `EncoderOptions`, per-PHROM header strings), the
 phrases in PHROM order, the export presets, and whatever the file held that
 this version does not know. `Project` wraps it and keeps the rules: valid,
@@ -892,9 +1002,6 @@ budget then stays inside it whatever is done to it.
 SHA-256 of the encoder version, every option's text in
 `EncoderOptionInfos()` order (the options in effect, so an override equal
 to a new default keeps an encoding current), and the audio's 24-bit codes.
-Options added later are left out while at their default
-(`IsLeftOutAtDefault()`: an unset `squelch_db`, `quiet_pauses` true), so
-adding one does not change the hash of an encoding that does not use it.
 `IsCurrent()` compares it, and the version, with the stored encoding; a
 locked phrase is always current. `ChangeSettings()` encodes with the new
 overrides and stores them through `SetEncoding()`, which refuses a result
@@ -923,10 +1030,8 @@ gives the same values as before.
   locale-independent) or `std::to_string`, never through yaml-cpp's stream
   output, which follows the global locale. Booleans are `true`/`false`,
   unset values `null`. Options are written in `EncoderOptionInfos()` order,
-  `default_encoder` in full but for the options added later while at
-  their defaults (`IsLeftOutAtDefault()`: an unset `squelch_db`,
-  `quiet_pauses` true), so a project that does not change them saves
-  exactly as before they existed. Frames are one flow mapping each, with only
+  `default_encoder` in full, so a project never depends on the defaults
+  and changing one never changes a project's encodings. Frames are one flow mapping each, with only
   the fields their kind carries.
 - Reading is type-checked: numbers and booleans must be plain scalars,
   numbers are parsed by `ParseNumber()`/`ParseInteger()` (a stream in the
@@ -939,9 +1044,24 @@ gives the same values as before.
   files** per phrase directory and per project. yaml-cpp drops a scalar's
   quoting when it writes a loaded node, so `EmitNode()` writes them back
   itself, quoted scalars quoted and flow collections in flow style.
+- **Cached quality** (`quality` in `frames.yaml`, plan §4): the figures of
+  the quality measures and the overall score, with the `measures_version`
+  that gave them (`quality::kMeasuresVersion`). Figures from another
+  version, or incomplete, are dropped on load (`ReadQuality()`), so the
+  GUI measures them again; the `pesq` and `anchor` keys written before the
+  measures are dropped too, not kept as unknown keys, since the
+  application wrote them itself. Other keys of the mapping are kept.
 - **Versions.** `format` must be `speak5220-project`; `version` is migrated
   by `MigrateProjectDocument()` through `ProjectMigrationSteps()` (none yet:
   version 1 is the first), and a newer version is refused.
+- **Every option listed.** After the rest of the file is read,
+  `CheckEveryOptionListed()` refuses a project whose
+  `project.default_encoder` is missing or lacks an option, naming the
+  missing ones. Before the application's first release the format
+  changed without a new version (plan Phase 8, task 14): the squelch and
+  quiet pauses were left out while at their defaults, and are now always
+  written, so a project saved before is refused rather than read with
+  whatever the defaults have become.
 - Phrase ids must be canonical lower-case UUIDs before they are used as
   paths.
 
@@ -1206,7 +1326,7 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   speaks them through `ISynth`'s VSM path and finds the offset: the sound
   (first to last non-idle code, idle at 0) is lined up with the source
   after the 60 Hz high-pass by `AlignByEnvelope()` and
-  `RefineBySpectrum()`, the alignment `PesqMetric` uses, and the offset is
+  `RefineBySpectrum()`, the alignment the quality measures use, and the offset is
   the first sound's index less the lag. The level gain
   (`LevelMatchGain()`, the scale of `MatchLevel()`) is measured on the
   output placed by that lag, against the source's speech frames, and
@@ -1327,7 +1447,7 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 - The plan offsets the encoded pane by the emulator's start latency. The
   encoder leaves out leading silence and the project does not record
   where its first frame starts, so a fixed latency would not line the
-  panes up; the offset is found by PESQ's alignment instead.
+  panes up; the offset is found by `speechqual.py`'s alignment instead.
 - The play start is a project edit, undoable, which the plan does not
   say; it is saved in the project as `play_start`, so changing it marks
   the project modified.
@@ -1362,7 +1482,7 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 
 ## 17. The encoder panel and Optimise
 
-**Implemented** (plan §3.3, §5, Phase 7) in `core/optimiser/`,
+**Implemented** (plan §3.3, §5, Phases 7 and 8) in `core/optimiser/`,
 `gui/encoder_panel/` and `gui/optimise/`. The user's view is
 [`docs/application/user-manual/encoder.md`](../../docs/application/user-manual/encoder.md).
 
@@ -1371,14 +1491,15 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 ```
 EncoderPanel ── ProjectEdits, EncodingTools, ISynth, ITaskRunner
  ├── state, FramesText/KindsText/LevelText (FrameStatistics, EncodingFacts)
- ├── QualityScaleView: QualityBar + the QualityText line (QualityScale)
+ ├── QualityRatingView: RatingBar, the QualityText line, the components'
+ │   bars and the FiguresText line (QualityAssessment)
  ├── "Settings for": this phrase | project defaults
  ├── EncoderSettingsForm (from EncoderOptionInfos())
  └── Re-encode, Optimise..., Reset
 OptimiseSession ── ProjectEdits, EncodingTools, ITaskRunner (candidates)
- └── core::optimiser::Optimiser ── IEncoder, IQualityMetric, ITaskRunner
+ └── core::optimiser::Optimiser ── IEncoder, OverallQualityMetric, ITaskRunner
 OptimiseDialog ── OptimiseSession, Player, ISynth, ITaskRunner (A/B)
-EncodingTools: IEncoder, IQualityMetric (PESQ), IAnchorScorer, IClock,
+EncodingTools: IEncoder, IQualityAssessor, IClock,
                ITaskRunner (Optimise's search, one at a time)
 ```
 
@@ -1411,9 +1532,10 @@ At most 400 evaluations and 10 rounds (`SearchPlan`). Options already tried
 are not tried again (keyed by every option's text). Each candidate is
 encoded; its packed size is checked against the per-phrase byte limit
 (`kOverLimit`) and then the budget callback (`kOverBudget`), and only a
-candidate within both is measured (`kScored`), since PESQ is most of the
-cost. The objective is the score, or with a bit-rate weight λ, the score
-less λ per kbit/s (plan §3.3 step 4); a lower-is-better metric is negated.
+candidate within both is measured (`kScored`), since the quality
+measures are most of the cost. The objective is the overall quality score (`OverallQualityMetric`), or
+with a bit-rate weight λ, the score less λ per kbit/s (the dialog offers
+0 to 3, 0.03 by default) (plan §3.3 step 4); a lower-is-better metric is negated.
 The best is the scored candidate with the highest objective, ties going to
 the lowest index.
 
@@ -1441,17 +1563,19 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
   waits or encodes.
 - For a phrase, the change becomes `OverridesFor(defaults, options)` and
   an encoding job on the `ITaskRunner`: `EncodePhrase()` encodes, then
-  `MeasureFrames()` measures PESQ (`IQualityMetric`), the anchor (once per
-  phrase and squelch, `IAnchorScorer`), both against the source as the
-  phrase's squelch leaves it (`SquelchedSource()`), and the peak code (the frames spoken through
+  `MeasureFrames()` assesses the quality (`IQualityAssessor`) against the
+  source as the phrase's squelch leaves it (`SquelchedSource()`), and
+  finds the peak code (the frames spoken through
   the shared, cached `ISynth`, which the waveforms then reuse). The result
-  comes back queued and is stored with `SetEncoding()`, PESQ and the anchor
-  in the `CachedEncoding`; a result superseded by a later encoding of the
+  comes back queued and is stored with `SetEncoding()`, the quality's
+  figures in the `CachedEncoding` (`ToCachedQuality()`); a result superseded by a later encoding of the
   same phrase is dropped. A refusal (the budget) is reported and the form
   reloaded.
 - For the project's defaults, the change is `SetDefaultEncoder()`.
-- Frames without a stored PESQ (encoded by the CLI) are measured in the
-  background for display only; the panel keeps the measurement, keyed by
+- Cached quality is shown as stored (`FromCachedQuality()`, rescored).
+  Frames without it (encoded by the CLI, or with figures of other
+  measures, dropped on load) are measured in the background for display
+  only; the panel keeps the measurement, keyed by
   the frames, and does not change the project.
 - The limiter's activity (`LevelStats`) comes from the encoder's details,
   so it is known only for encodings made in the session.
@@ -1481,15 +1605,19 @@ a chirp/first-order chooser and a slider for μ. Values are read back
 through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
 options it was given and changes only the edited one.
 
-**The quality scale.** `QualityBar` draws the five bands of
-`QualityScale::kBandStarts` in `ThemeColours::quality_bands` (each a
-different colour; the top band a brighter green than *Good*, so it is
-not read as part of it), each band's name inside it where it fits (the
-top band, a tenth of the bar, as "Best"), at most 520 pixels wide, the score's mark (a line and a triangle in
-`quality_mark`) and an optional dashed mark for an earlier score. The
-mark's colour has a contrast ratio of at least 4.5:1 with every band in
-both palettes, so it reads without colour (WCAG's ratio is of luminance
-alone); the line under the bar gives the band in words.
+**The quality rating.** `RatingBar` draws the three bands (*Poor* from 0,
+*Fair* from `ScoreCalibration::kFairFrom`, *Good* from `kGoodFrom`) in
+`ThemeColours::quality_bands` (each a different colour), each band's name
+inside it, at most 520 pixels wide, the overall score's mark (a line and a
+triangle in `quality_mark`) and an optional dashed mark for an earlier
+score (Optimise's start). The mark's colour has a contrast ratio of at
+least 4.5:1 with every band in both palettes, so it reads without colour
+(WCAG's ratio is of luminance alone); the line under the bar gives the
+rating and the score in words ("Fair · 0.62"). Under it, a `QProgressBar`
+per component with its score as text ("not measured" for intelligibility
+without ESTOI), and the figures behind them (`FiguresText()`); Optimise's
+window shows the bar and the line alone, since its candidates carry only
+the overall score. The tooltip explains each measure (`QualityToolTip()`).
 
 **Optimise in the GUI.** `OptimiseSession::Start()` copies the project and
 posts one job to `EncodingTools::optimiser_driver` (a one-thread
@@ -1499,7 +1627,9 @@ phrase's budget is checked against the copy with the earlier phrases'
 results stored in it, so the results fit together. Progress (the counts,
 the start and best so far, and new history rows) comes back queued per
 candidate. A phrase whose best differs from its start gets an
-`EncodingChange` (overrides, frames, PESQ, anchor); `Accept()` stores them
+`EncodingChange` (overrides, frames, and the quality's figures, the best
+frames assessed once more, since the search keeps only their score);
+`Accept()` stores them
 all with one `SetEncodingsCommand`, and cancelling or `Discard()` drops
 them. The session's destructor cancels and waits for the driver, and the
 window waits for it before its runner. `OptimiseDialog` is window-modal,
@@ -1547,19 +1677,23 @@ stale frames, or a change waiting.
 
 
 - **Corpus** (`corpus-check.sh`, all 243 files, from the default options,
-  each with a byte limit at its default encoding's size): PESQ rose on
-  242 files and stayed level on one; median gain 0.17, mean 0.21, largest
-  0.87; every best within its limit. 1.8 s per second of speech on 16
-  threads (with other work on the machine), 20 minutes for the 673 s of
-  speech. The test asks for a rise on more than half the files.
+  each with a byte limit at its default encoding's size, maximising the
+  overall quality score): the score rose on 241 files and stayed level on
+  two; median gain 0.058, mean 0.074, largest 0.33; every best within its
+  limit. The ratings moved from 120 *Good*, 114 *Fair* and 9 *Poor* to
+  188, 53 and 2 (median 0.70 to 0.77). 1.6 s per second of speech on 16
+  threads, 18 minutes for the 673 s of speech. The test asks for a rise
+  on more than half the files.
 - **Benchmark** (`benchmark.sh`, `benchmark/synthetic-speech`, 4.9 s of
-  speech, no byte limit): 11.6 s per second of speech on one thread, 1.36
-  s on 16 (a speed-up of 8.6); 212 to 240 candidates per phrase. A phrase
-  of a few seconds therefore takes a few seconds on a many-core machine
-  and under a minute on one core. The longer clip's start was already the
-  best found.
-- Most of a candidate's time is `PesqMetric` (the output alignment's
-  spectral search, §9), then the encoder. Nothing has been optimised for
+  speech, no byte limit): 16.4 s per second of speech on one thread, 2.0
+  s on 16; 270 to 295 candidates per phrase. A candidate costs what it
+  did with PESQ (the measures take as long as PESQ with its alignment);
+  the search goes further, since the score keeps finding improvements
+  where PESQ stopped (212 to 240 candidates, 11.6 s on one thread). A
+  phrase of a few seconds still takes a few seconds on a many-core
+  machine.
+- Most of a candidate's time is the quality measures (with the output
+  alignment's spectral search, §9), then the encoder. Nothing has been optimised for
   speed; plan risk R3's shared analysis between candidates is not needed
   yet.
 
@@ -1575,12 +1709,11 @@ stale frames, or a change waiting.
 - a functional test finds the same result on 1 and 8 threads;
 - GUI unit tests: a setting change re-encodes once after the debounce (a
   fake clock); Reset restores the project's defaults as one undoable
-  step; the defaults scope; a refused change; PESQ and the anchor stored
-  with the encoding; the scale's score, band label, tooltip and marks,
-  an encoding at or above its anchor shown as *As good as LPC or
-  better*, and one beyond it short of the end of the bar; the squelch
-  turned on by its check box, and a squelched phrase measured against its
-  squelched source, with a new anchor for a new squelch; the squelch
+  step; the defaults scope; a refused change; the quality stored with
+  the encoding, and cached quality shown without measuring; the rating's
+  text, components, figures, tooltip and marks; the squelch turned on by
+  its check box, and a squelched phrase measured against its squelched
+  source; the squelch
   reported as the form has it and shaded on the original waveform; the mark's contrast with every band in light and dark;
 - GUI unit tests of Optimise with inline runners: accepting is one
   undoable step, Optimise all runs in list order and leaves out locked

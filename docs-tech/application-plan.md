@@ -21,7 +21,8 @@ it. The project's existing tools are re-implemented as C++ classes:
 
 This applies to the project's own code. Third-party libraries (Qt,
 libsndfile, libsamplerate, pocketfft, libzip, yaml-cpp, spdlog, and from
-Phase 8 libfvad, SPTK, REAPER, WORLD and ViSQOL) are used freely, provided
+Phase 8 libfvad and SPTK, with SPTK's copies of REAPER and WORLD) are used
+freely, provided
 their licences are GPLv3-compatible (§2.4).
 
 The original Python and C are the **references** while the C++ is being
@@ -282,7 +283,7 @@ no code copied from `investigation/`.
 | `Tms5220`, `Tms6100` | The chip and VSM emulators as C++ classes, re-implemented from `investigation/emulator/` (§2.3) |
 | `Encoder` | Re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set |
 | `Synth` | Runs `Tms5220` on a frame list through the VSM path or the Speak External path; returns codes and 16-bit samples |
-| `Quality` | Prepares the original and the chip output alike, masks them to speech-active frames, and measures spectral envelope, pitch and voicing, and intelligibility (ESTOI); an overall score and rating from *Poor* to *Good*; optionally ViSQOL (§3.3). PESQ until Phase 8 |
+| `Quality` | Prepares the original and the chip output alike, masks them to speech-active frames, and measures spectral envelope, pitch and voicing, and intelligibility (ESTOI); an overall score and rating from *Poor* to *Good* (§3.3). PESQ until Phase 8 |
 | `Optimiser` | Searches encoder options for the best overall score (§3.3), within the 64-PHROM project budget, optionally with a per-phrase byte limit |
 | `Packager` | Acorn PHROM image, TI indexed image, Speak External stream, raw `.bin`, C header |
 | `BbcExport` | A double-sided Acorn DFS disc image (`.dsd`): the fixed player program, and each PHROM's phrase data and index |
@@ -349,9 +350,8 @@ hash of the packed bytes plus the path).
 | PESQ | The project's own code (`quality/`) | GPLv3-or-later | Until Phase 8, which removes it: written from the ITU-T P.862 and P.862.1 texts, with the constants and details the text leaves open taken from the ITU reference implementation (D6) |
 | Voice activity | libfvad (a C port of the WebRTC VAD) | BSD-3 | The speech-active mask for every quality measure (§3.3); supports 8 kHz and 10, 20 or 30 ms frames |
 | LPC and cepstral analysis | SPTK 4 (C++) | Apache-2.0 | The spectral envelopes for log spectral distortion (§3.3) |
-| Pitch and voicing | REAPER (C++) | Apache-2.0 | F0 and voicing for the pitch measures (§3.3) |
-| Pitch, alternative | WORLD (C++), its Harvest estimator | Modified BSD | Selectable in place of REAPER, behind the same interface |
-| Overall perceptual score | ViSQOL v3 (C++) | Apache-2.0 | Speech mode, full reference, without its machine-learned model (§3.3, R1); brings Abseil, protobuf, Armadillo, PFFFT and libsvm, all GPLv3-compatible, and is built with Bazel upstream |
+| Pitch and voicing | REAPER (C++), SPTK 4's copy | Apache-2.0 | F0 and voicing for the pitch measures (§3.3). SPTK builds it into its own library, with warning fixes and its own namespace, so it needs no package of its own |
+| Pitch, alternative | WORLD's Harvest estimator (C++), SPTK 4's copy | Modified BSD | Selectable in place of REAPER, behind the same interface |
 | ESTOI | The project's own code (`quality/`) | GPLv3-or-later | A direct port of the reference algorithm in pystoi (MIT), checked against pystoi's values (D10) |
 | Logging | spdlog | MIT | `info`, `debug` and `trace`, to the console, a file or both (§2.6) |
 | Tests | Google Test with Google Mock | BSD-3 | Run through CTest; layout and lanes in TESTING.md |
@@ -523,9 +523,13 @@ any measure is taken:
    offset is removed.
 3. **Both are band-limited** by the same filter, to the band the chip can
    reproduce. The corners are fixed in Phase 8 and recorded in the HLD.
-4. **They are time-aligned by cross-correlation**, searched in a window
-   around the emulator's start latency. This replaces the fixed 25 ms lead
-   of the PESQ alignment.
+4. **They are time-aligned** as the encoded waveform is placed for display:
+   by correlating their level envelopes over every overlap, refined by
+   spectral distance (the alignment of the retired `speechqual.py`). A plain
+   cross-correlation of the waveforms around the chip's start latency was
+   tried and was unreliable, since the latency depends on the leading
+   silence the encoder leaves out and a vocoder's output does not follow
+   the original's phase (HLD §9).
 5. **Their levels are normalised** to the same RMS over speech-active
    frames.
 6. **A voice activity mask** is built from the original with libfvad, a C
@@ -563,14 +567,12 @@ the user needs a plain answer, so the primary measures are combined:
   reference. It is kept for the calibration, where its results on the corpus
   show what unquantised LPC reaches and help place the *Good* threshold.
 
-**An overall perceptual score.** Where a single perceptual figure is needed,
-the application uses Google's ViSQOL v3 in its speech mode, a full-reference
-measure that is more robust than PESQ for this kind of speech. Both signals
-are resampled to 16 kHz, the rate its speech mode needs, and it reports a
-MOS from 1 to 5. It is used without its machine-learned model (R1). It is
-shown beside the rating and cross-checks the calibration, where its
-agreement with the overall score is recorded. It is not part of the overall
-score, so the optimiser's objective depends only on the primary measures.
+**No overall perceptual score.** Google's ViSQOL v3 was considered as a
+single perceptual figure beside the rating. It is left out (R1): it is
+built only with Bazel upstream, brings Abseil, protobuf and Armadillo, and
+its recent speech mode leans on a machine-learned model. It would not have
+been part of the overall score, so the rating and the optimiser's objective
+do not change without it.
 
 Every component is native C or C++ with no machine-learned model, so the
 toolchain stays portable to Windows, macOS and the Flatpak.
@@ -584,8 +586,7 @@ toolchain stays portable to Windows, macOS and the Flatpak.
   whether the envelope, the pitch or the intelligibility holds an encoding
   back;
 - **the figures behind them**: mean LSD and its outliers, gross pitch error,
-  F0 RMSE, voicing decision error and ESTOI, and the ViSQOL MOS when it has
-  been measured;
+  F0 RMSE, voicing decision error and ESTOI;
 - **a tooltip** that explains each measure, and that the measures cover
   speech-active frames only;
 - **before and after**: while Optimise runs, the rating shows the starting
@@ -684,8 +685,8 @@ project:
   ascii_map:
     "A": "A"
     " ": "PAUSE"
-  default_encoder:
-    target_rms: 20.0
+  default_encoder:                # every encoder option, each one required
+    target_rms: 24.0
     repeat_lambda: 70.0
     pre_emphasis: "chirp"
 phrases:
@@ -734,7 +735,6 @@ quality:                          # cached with the encoding (Phase 8; before it
   voicing_error: 7.4
   estoi: 0.71
   score: 0.68
-  visqol: 2.9                     # only when measured
 ```
 
 - **Cached quality** is recomputed when `measures_version` is missing or
@@ -1394,7 +1394,8 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
        squelch;
      - while unset, it is left out of project files and of the settings
        hash: existing projects save byte for byte as before and their
-       encodings stay current (the fixture round-trip test);
+       encodings stay current (the fixture round-trip test). Task 14
+       replaced this: every option is now written and hashed;
      - the reference data is unchanged.
 3. **Squelch shading.** The stretches the squelch mutes are shaded on the
    original waveform (dimmed and hatched, with a hover text), and the
@@ -1427,28 +1428,29 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
        change are recorded in the HLD (PESQ unchanged within its noise);
      - the fixtures' encodings are redone with the new version, and their
        project files do not change.
-5. **Libraries.** libfvad, SPTK 4, REAPER, WORLD and ViSQOL v3 (§2.4), in
-   the Nix dev shell and package (as derivations where nixpkgs lacks them),
-   in vcpkg for Windows and macOS, and as Flatpak modules. ViSQOL is built
-   with CMake from its sources, since upstream uses Bazel. Each is wrapped
-   behind an interface (`IVoiceActivity`, `ILpcAnalysis`, `IPitchEstimator`,
-   `IPerceptualScore`), listed in TESTING.md.
+5. **Libraries.** libfvad and SPTK 4 (§2.4), whose own copies of REAPER
+   and WORLD's Harvest the pitch measures use, in the Nix dev shell and
+   package (as a derivation where nixpkgs lacks one), and in vcpkg for
+   Windows and macOS (as overlay ports, since vcpkg has neither); the
+   Flatpak modules come with the manifest (Phase 12). Each is wrapped behind
+   an interface (`IVoiceActivity`, `ILpcAnalysis`, `IPitchEstimator`),
+   listed in TESTING.md.
    - **Acceptance:** `nix build .#speak5220` succeeds; a manually started
      Windows and macOS run passes both lanes; functional tests call each
      adapter once on a short signal.
 6. **Reference data.** A script in `app/scripts/golden/` records, for a
    corpus subset of original and chip-output pairs: the voice activity masks
    from py-webrtcvad (the original WebRTC code), ESTOI from pystoi, LSD from
-   an independent NumPy implementation of §3.3's definition, the REAPER and
-   Harvest tracks from their own command-line tools, and ViSQOL scores from
-   its command-line tool. The data replaces the PESQ and anchor scores in
+   an independent NumPy implementation of §3.3's definition, and the REAPER
+   and Harvest tracks from the original code (REAPER's command-line tool,
+   and WORLD through pyworld). The data replaces the PESQ and anchor scores in
    `app/golden/quality/`, with the user's agreement.
    - **Acceptance:** the data is committed and the script reproduces it.
 7. **Signal preparation and the voice activity mask.** The six steps of
-   §3.3: resampling, DC removal, the shared band-limit, alignment by
-   cross-correlation, level normalisation and the libfvad mask.
-   - **Acceptance:** unit tests on synthetic signals: a known delay is
-     recovered to the sample, DC is removed, the levels match, and tone
+   §3.3: resampling, DC removal, the shared band-limit, the alignment,
+   level normalisation and the libfvad mask.
+   - **Acceptance:** unit tests on synthetic signals: a known delay on the
+     alignment's grid is recovered to the sample, DC is removed, the levels match, and tone
      bursts in silence are masked as speech and the silence is not;
      functional tests match the reference masks on the corpus subset.
 8. **Spectral envelope.** Mean LSD and the percentages of frames above 2 dB
@@ -1470,11 +1472,8 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
     - **Acceptance:** unit tests per stage (the one-third-octave matrix, the
       frame removal, the segment normalisation); functional tests are within
       ±0.005 of pystoi on the corpus subset.
-11. **ViSQOL.** The speech mode at 16 kHz, without a machine-learned model,
-    behind `IPerceptualScore`. It is measured on request in the encoder
-    panel, and by the corpus scripts, but not by Optimise.
-    - **Acceptance:** functional tests are within ±0.01 of the reference
-      scores.
+11. **ViSQOL (left out).** ViSQOL is not built (§3.3, R1), so there is no
+    task here; the numbering of the others is kept.
 12. **Overall score, rating and calibration.** The component scores, the
     weighted geometric mean and the *Poor*, *Fair* and *Good* bands (§3.3).
     They are calibrated on the corpus's reference encodings, on Optimise's
@@ -1483,7 +1482,7 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
     - **Acceptance:**
       - unit tests of the mappings, the combination and the band boundaries;
       - the end points, weights and thresholds, the listening check, and the
-       rank agreement of the overall score with ViSQOL on the corpus are
+       rank agreement of the overall score with PESQ on the corpus are
        recorded in the HLD.
 13. **PESQ removed.** The overall score replaces PESQ everywhere: the
     encoder panel (§3.3, "Presenting quality to the user"), Optimise's
@@ -1506,18 +1505,26 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
     with the new score, with and without the squelch, and the best settings
     are studied across files. New defaults are chosen for the best median
     overall score, weighing the size change. They are agreed with the user
-    before they are made. Projects saved earlier keep the settings they were
-    encoded with: the project format moves to version 2, and loading a
-    version 1 project writes the old defaults out explicitly, so its
-    encodings do not change until the user resets them.
+    before they are made. The application has not been released, so the
+    project format changes without a new version or a migration (agreed
+    with the user): `default_encoder` must list every option, the squelch
+    and quiet pauses included, so changing a default never changes a
+    project's encodings, and a project that does not list them all (one
+    saved before) is refused with a message naming the missing options.
+    The settings hash covers every option too. Run by hand with
+    `OptionsCorpusCheck`, which scores any options over the corpus, and
+    `SPEAK5220_OPTIMISE_START` for the Optimise corpus check.
     - **Acceptance:**
       - the before-and-after distributions of the overall score, the
         ratings and the size on the corpus are recorded in the HLD;
-      - unit tests of the migration: a version 1 project loads with the old
-        defaults and its encodings stay current, and saves as version 2;
+      - unit tests: every option is written, the squelch unset as null; a
+        project lacking `default_encoder` or any option is refused, naming
+        the missing ones; the defaults and their default texts agree and
+        lie on their sliders' steps;
       - the comparisons with the reference encoder pass its options
-        explicitly, so the reference data does not change; the fixtures
-        are migrated, and their encodings are unchanged.
+        explicitly (`ReferenceEncoderOptions()`), so the reference data
+        does not change; the fixtures list every option, with the values
+        they were made with, and their encodings stay current.
 
 ### Phase 9: Export: binary, C and audio
 
@@ -1623,8 +1630,8 @@ Depends on: Phase 8.
 Depends on: Phase 11.
 
 1. **Flatpak.** A manifest on the KDE runtime (`org.kde.Platform` 6.x),
-   with libsndfile, libsamplerate, libzip and yaml-cpp as modules where the
-   runtime lacks them, plus the `.desktop` file, AppStream metainfo and
+   with libsndfile, libsamplerate, libzip, yaml-cpp, libfvad and SPTK as
+   modules where the runtime lacks them, plus the `.desktop` file, AppStream metainfo and
    icons. Built with `flatpak-builder` in Actions.
    - **Acceptance:** the bundle installs, starts and plays audio on a Linux
      desktop.
@@ -1702,7 +1709,7 @@ In short:
 | D7 | When do the Windows and macOS CI jobs run? | **Only for a release** (a `v*` tag) or when started by hand, during development. Linux CI runs on every push (Phase 2, task 7). |
 | D8 | Which CI and distribution services are used? | **Free ones only.** GitHub's hosted runners (`ubuntu-latest` for Linux) with Nix installed by a free action and the public NixOS binary cache. No paid caches, remote builders or Nix CI services, and no paid code signing: the MSI is unsigned and the DMG is not notarised (Phase 13). |
 | D9 | What does the BBC disc hold? | **One fixed player program and each PHROM's raw data.** A double-sided 40-track DFS disc (200 KB) with, per PHROM, a file of its phrases' Speak External streams and an index file; at most 8 PHROMs. The MODE 7 player lists the PHROMs it finds, and loads each phrase from disc only when it speaks it (§6). |
-| D10 | How is quality measured? | **Complementary objective measures instead of PESQ**, which handles a parametric vocoder poorly and is skewed by noise in pauses. Both signals are prepared alike and masked to speech-active frames with libfvad; the measures are log spectral distortion (SPTK 4), pitch and voicing errors (REAPER, or WORLD's Harvest) and ESTOI (the project's own port of pystoi). They combine into an overall score and a rating from *Poor* to *Good*, which Optimise maximises. ViSQOL v3 gives an overall perceptual score where one is needed. Every component is native C or C++ with no machine-learned model (§3.3, Phase 8). |
+| D10 | How is quality measured? | **Complementary objective measures instead of PESQ**, which handles a parametric vocoder poorly and is skewed by noise in pauses. Both signals are prepared alike and masked to speech-active frames with libfvad; the measures are log spectral distortion (SPTK 4), pitch and voicing errors (REAPER, or WORLD's Harvest, both SPTK's copies) and ESTOI (the project's own port of pystoi). They combine into an overall score and a rating from *Poor* to *Good*, which Optimise maximises. ViSQOL is left out (R1). Every component is native C or C++ with no machine-learned model (§3.3, Phase 8). |
 
 ---
 
@@ -1710,7 +1717,7 @@ In short:
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R1 | **The quality libraries.** ViSQOL is built with Bazel upstream and brings Abseil, protobuf and Armadillo, which may be hard to package for Nix, vcpkg and the Flatpak, and recent versions may lean on a machine-learned model in speech mode. REAPER and Harvest are mostly used on speech above 8 kHz and may track 8 kHz speech less well. The ESTOI port depends on matching pystoi's resampling. (This replaces the PESQ accuracy risk, which Phase 8 retires) | Phase 8, task 5 builds every library on all three platforms before the measures are written. ViSQOL is outside the overall score, so it can be left out, without changing the rating, if it cannot be packaged or cannot run without a model. Both pitch estimators are tested on 8 kHz speech in task 9, and the better one becomes the default. The ESTOI port follows pystoi's resampler, and is checked against it within ±0.005 |
+| R1 | **The quality libraries.** ViSQOL is built with Bazel upstream and brings Abseil, protobuf and Armadillo, which may be hard to package for Nix, vcpkg and the Flatpak, and recent versions may lean on a machine-learned model in speech mode. REAPER and Harvest are mostly used on speech above 8 kHz and may track 8 kHz speech less well. The ESTOI port depends on matching pystoi's resampling. (This replaces the PESQ accuracy risk, which Phase 8 retires) | Phase 8, task 5 builds every library on all three platforms before the measures are written. ViSQOL is outside the overall score, so it can be left out without changing the rating; it is (§3.3). Both pitch estimators are tested on 8 kHz speech in task 9, and the better one becomes the default. The ESTOI port follows pystoi's resampler, and is checked against it within ±0.005 |
 | R2 | The C++ encoder drifts from Python through floating-point differences in near-tie decisions | Re-implement function by function with intermediate golden data; accept on frames plus PESQ, not bits alone (§3.2) |
 | R2a | The C++ emulator's restructuring (classes, observers) changes timing, for example the slot at which a host write lands or the order of events | Accept only on identical codes **and** events (§2.3); keep the slot-stepped design, and change structure, not order of evaluation |
 | R3 | The optimiser is too slow | A fast C++ encoder (Phase 2 target), parallel candidates, cached analysis shared between candidates where options do not affect it (pitch tracking is independent of the level options) |

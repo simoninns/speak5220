@@ -17,8 +17,7 @@
 
 #include "core/dsp/resampler.h"
 #include "core/encoder/encoder.h"
-#include "core/quality/anchor_vocoder.h"
-#include "core/quality/pesq_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/clock.h"
 #include "core/util/logging.h"
@@ -101,19 +100,18 @@ int main(int argc, char* argv[]) {
   core::SteadyClock clock;
   core::dsp::SincResampler resampler;
   speak5220::app::Player player(audio_output, clock, resampler);
-  // Plan §3.3: PESQ for the encoder panel and Optimise. Its synth keeps
-  // nothing, since Optimise speaks hundreds of candidates once each.
+  // Plan §3.3: the quality measures for the encoder panel and Optimise.
+  // Their synth keeps nothing, since Optimise speaks hundreds of
+  // candidates once each.
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
   core::synth::Synth quality_synth({}, core::synth::SynthCache::kOff);
-  core::quality::PesqMetric pesq(quality_synth);
-  core::quality::AnchorScorer anchor;
+  core::quality::QualityAssessor quality(quality_synth);
   // One search at a time; its candidates run on `runner`.
   core::ThreadPoolTaskRunner optimiser_driver(1);
   const speak5220::app::EncodingTools tools{
       .encoder = encoder.get(),
-      .quality = &pesq,
-      .anchor = &anchor,
+      .quality = &quality,
       .clock = &clock,
       .optimiser_driver = &optimiser_driver};
   speak5220::app::MainWindow window(dialogs, recent_files, view_preferences,

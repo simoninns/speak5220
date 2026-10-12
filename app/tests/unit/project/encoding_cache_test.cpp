@@ -51,8 +51,7 @@ Phrase CurrentPhrase(int n, const std::string& name) {
       .settings_hash = EncodingCache::SettingsHash(
           phrase.audio, encoder::EncoderOptions{}, encoder::kEncoderVersion),
       .frames = FramesPackingTo(10),
-      .pesq = std::nullopt,
-      .anchor = std::nullopt,
+      .quality = std::nullopt,
       .unknown = {},
       .quality_unknown = {}};
   return phrase;

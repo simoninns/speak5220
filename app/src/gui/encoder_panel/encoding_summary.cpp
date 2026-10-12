@@ -2,7 +2,7 @@
  * File:        encoding_summary.cpp
  * Module:      encoder_panel
  * Purpose:     The encoder panel's text: frame statistics, levels, the
- *              PESQ score against its anchor, and changed options
+ *              overall quality, its figures, and changed options
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -20,7 +20,8 @@
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/lpc/frame_statistics.h"
-#include "core/quality/quality_scale.h"
+#include "core/quality/quality_measures.h"
+#include "core/quality/quality_score.h"
 
 namespace speak5220::app {
 
@@ -82,31 +83,44 @@ QString LevelText(std::optional<int> peak_code,
   return parts.join(QStringLiteral(" · "));
 }
 
-QString QualityText(std::optional<double> pesq, std::optional<double> anchor) {
-  if (!pesq.has_value()) {
+QString QualityText(std::optional<double> overall) {
+  if (!overall.has_value()) {
     return QStringLiteral("Quality not measured");
   }
-  if (!anchor.has_value()) {
-    return QStringLiteral("PESQ %1").arg(Score(*pesq));
-  }
-  const core::quality::QualityPlacement placement =
-      core::quality::QualityScale::Place(*pesq, *anchor);
-  return QStringLiteral("PESQ %1 (LPC reference %2): %3")
-      .arg(Score(*pesq), Score(*anchor),
-           ToQString(core::quality::QualityScale::Label(placement.band)));
+  return QStringLiteral("%1 · %2").arg(
+      ToQString(core::quality::RatingLabel(core::quality::RatingOf(*overall))),
+      Score(*overall));
+}
+
+QString FiguresText(const core::quality::QualityMeasurement& m) {
+  return QStringLiteral(
+             "envelope %1 dB, %2% over 4 dB · pitch %3% gross, %4 cents RMS "
+             "· voicing %5% · ESTOI %6")
+      .arg(QString::number(m.envelope.mean_db, 'f', 2),
+           QString::number(std::lround(m.envelope.over_4db)),
+           QString::number(m.pitch.gross_error, 'f', 1),
+           QString::number(std::lround(m.pitch.f0_rmse_cents)),
+           QString::number(m.pitch.voicing_error, 'f', 1),
+           m.estoi.has_value() ? Score(*m.estoi) : QStringLiteral("too short"));
 }
 
 QString QualityToolTip() {
   return QStringLiteral(
-      "<p>PESQ (ITU-T P.862, as MOS-LQO) compares the encoded speech with "
-      "the original and scores it from 1.0 to 4.5.</p>"
-      "<p>No LPC coding comes near 4.5, so the scale is set by this "
-      "phrase's own LPC reference: the score of an ideal LPC-10 vocoder of "
-      "the same recording, with nothing quantised. The Best band starts "
-      "there; an optimised encoding can beat it, so the bar runs on a "
-      "quarter past it.</p>"
-      "<p>PESQ was not validated for vocoders, so use it to rank encodings "
-      "of a phrase, not to predict what a listener would say.</p>");
+      "<p>The encoded speech is compared with the original on the frames "
+      "that hold speech; silence, pauses, breaths and clicks are left "
+      "out.</p>"
+      "<p><b>Envelope</b>: how far the encoding's spectral envelope is from "
+      "the original's, as log spectral distortion; under 2 dB is close, "
+      "over 4 dB a clear difference.</p>"
+      "<p><b>Pitch</b>: how often the pitch is wrong by more than 20% (gross "
+      "errors), how far it is out otherwise, in cents, and how often voiced "
+      "and unvoiced sounds are swapped.</p>"
+      "<p><b>Intelligibility</b>: ESTOI, from 0 to 1. It needs about 0.4 s "
+      "of speech.</p>"
+      "<p>Each is scored from 0 to 1, and the overall score is their "
+      "geometric mean, so one weak part pulls it down. Poor is below 0.50, "
+      "Fair from 0.50 and Good from 0.70; unquantised LPC, the best a "
+      "TMS5220-style coding could do, is Good on nearly every phrase.</p>");
 }
 
 QString ChangesText(const core::encoder::EncoderOptions& from,

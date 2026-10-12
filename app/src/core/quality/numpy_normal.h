@@ -23,11 +23,11 @@ struct Uint128 {
   friend bool operator==(const Uint128&, const Uint128&) = default;
 };
 
-// The anchor vocoder's noise (plan §3.3) must be the reference's sample
-// for sample: a different noise sequence moves the anchor's PESQ by up to
-// 0.07. This is numpy.random.Generator's standard_normal() over PCG64
-// (XSL-RR 128/64), as in NumPy 2.4.4's pcg64.h and distributions.c.
-// Not thread-safe; use one generator per thread.
+// The anchor vocoder's noise (plan §3.3) is the reference's sample for
+// sample, so the anchor's output is the reference tools' exactly. This is
+// numpy.random.Generator's standard_normal() over PCG64 (XSL-RR 128/64), as in
+// NumPy 2.4.4's pcg64.h and distributions.c. Not thread-safe; use one generator
+// per thread.
 class NumpyNormal {
  public:
   // A generator in the given PCG64 state.

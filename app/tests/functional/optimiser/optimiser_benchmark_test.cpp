@@ -24,7 +24,7 @@
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_serializer.h"
-#include "core/quality/pesq_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/task_runner.h"
 #include "gtest/gtest.h"
@@ -59,13 +59,14 @@ TEST(OptimiserBenchmark, DISABLED_TimesOptimise) {
     report.open(report_path);
     ASSERT_TRUE(report.is_open()) << "cannot write " << report_path;
     report << "threads\tname\tspeech_seconds\tcandidates\tseconds\t"
-              "start_pesq\tbest_pesq\n";
+              "start_score\tbest_score\n";
   }
 
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
   core::synth::Synth synth({}, core::synth::SynthCache::kOff);
-  core::quality::PesqMetric metric(synth);
+  core::quality::QualityAssessor assessor(synth);
+  core::quality::OverallQualityMetric metric(assessor);
   for (const int threads : {1, QThread::idealThreadCount()}) {
     core::ThreadPoolTaskRunner workers(threads);
     optimiser::Optimiser search(*encoder, metric, workers);

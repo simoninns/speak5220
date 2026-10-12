@@ -64,6 +64,29 @@ struct SourceInfo {
   friend bool operator==(const SourceInfo& a, const SourceInfo& b) = default;
 };
 
+// The quality measured with an encoding (plan §3.3, §4): the figures of
+// the measures and the overall score, as the measures of
+// quality::kMeasuresVersion gave them. A plain value type.
+struct CachedQuality {
+  int measures_version = 0;
+  // The spectral envelope: the mean distortion (dB) and the percentages of
+  // frames over 2 and 4 dB.
+  double lsd_db = 0.0;
+  double lsd_over_2db = 0.0;
+  double lsd_over_4db = 0.0;
+  // Pitch and voicing: percentages, and cents.
+  double gross_pitch_error = 0.0;
+  double f0_rmse_cents = 0.0;
+  double voicing_error = 0.0;
+  // Absent when the phrase had too little sound for it.
+  std::optional<double> estoi = std::nullopt;
+  // The overall score, 0 to 1.
+  double score = 0.0;
+
+  friend bool operator==(const CachedQuality& a,
+                         const CachedQuality& b) = default;
+};
+
 // A phrase's frames and the inputs they were made from (plan §3.4). For an
 // unlocked phrase they are a cache, redone when the hash of the inputs no
 // longer matches; a locked phrase's frames are its content. A plain value
@@ -76,10 +99,9 @@ struct CachedEncoding {
   std::string settings_hash = {};
   // The frames, ending in a stop.
   std::vector<lpc::Frame> frames = {};
-  // Quality measured with the encoding (MOS-LQO), and the phrase's anchor
-  // score (plan §3.3), when measured.
-  std::optional<double> pesq = std::nullopt;
-  std::optional<double> anchor = std::nullopt;
+  // The quality measured with the encoding, when measured with the
+  // current measures.
+  std::optional<CachedQuality> quality = std::nullopt;
   // Unknown keys of frames.yaml and of its quality mapping.
   UnknownKeys unknown = {};
   UnknownKeys quality_unknown = {};

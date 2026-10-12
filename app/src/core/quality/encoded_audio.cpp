@@ -40,6 +40,13 @@ constexpr double kFullScale = 32768.0;
 StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
                                           std::span<const float> source,
                                           std::span<const lpc::Frame> frames) {
+  const std::vector<double> input(source.begin(), source.end());
+  return RenderEncodedAudio(synth, input, frames);
+}
+
+StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
+                                          std::span<const double> source,
+                                          std::span<const lpc::Frame> frames) {
   StatusOr<std::vector<std::uint8_t>> packed = lpc::FrameCodec::Pack(frames);
   if (!packed.IsOk()) {
     return packed.GetStatus();
@@ -59,7 +66,7 @@ StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
     return audio;
   }
   // The sound, idle at 0, lined up with the source after the encoder's
-  // 60 Hz high-pass, as PesqMetric does (speechqual.py measure()).
+  // 60 Hz high-pass (speechqual.py measure()).
   const auto last = std::ranges::find_if(std::views::reverse(codes),
                                          [](int c) { return c != kIdleCode; });
   std::vector<double> output;
@@ -67,8 +74,7 @@ StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
   for (auto it = first; it != last.base(); ++it) {
     output.push_back(static_cast<double>(*it) + 1.0);
   }
-  const std::vector<double> input(source.begin(), source.end());
-  const std::vector<double> reference = encoder::HighPass60Hz(input);
+  const std::vector<double> reference = encoder::HighPass60Hz(source);
   const int lag =
       RefineBySpectrum(reference, output, AlignByEnvelope(reference, output));
   // Source sample i lines up with output[i - lag], which is

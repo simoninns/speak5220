@@ -67,9 +67,9 @@ TEST_F(EncoderSettingsFormTest, HasAnEditorOfTheRightKindForEveryOption) {
 }
 
 TEST_F(EncoderSettingsFormTest, SlidersShowTheValueWithItsUnit) {
-  EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("20 codes"));
+  EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("24 codes"));
   EXPECT_EQ(form_.Slider("gate_db")->Text(), QStringLiteral("45 dB"));
-  EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("30 ms"));
+  EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("32 ms"));
   EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.3"));
   EXPECT_EQ(form_.Slider("compression")->Text(), QStringLiteral("off"));
   form_.Slider("compression")->MoveTo(2.5);
@@ -129,7 +129,7 @@ TEST_F(EncoderSettingsFormTest, MarksOptionsThatDifferFromTheBaseline) {
   EXPECT_FALSE(form_.ResetButton("gate_db")->isEnabled());
   EXPECT_TRUE(form_.ResetButton("target_rms")
                   ->toolTip()
-                  .contains(QStringLiteral("the project default (20)")));
+                  .contains(QStringLiteral("the project default (24)")));
 }
 
 TEST_F(EncoderSettingsFormTest, ResetButtonPutsAnOptionBackToTheBaseline) {

@@ -28,16 +28,18 @@
 #include "core/optimiser/optimiser.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "gui/encoder_panel/quality_scale_view.h"
+#include "gui/encoder_panel/quality_rating_view.h"
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/playback/player.h"
 #include "gui/support/gui_mocks.h"
 #include "gui/undo/project_edits.h"
 #include "support/project_builder.h"
+#include "support/quality_mocks.h"
 
 namespace speak5220::app {
 namespace {
@@ -69,16 +71,15 @@ class OptimiseSessionTest : public ::testing::Test {
           return core::encoder::EncodeResult{
               .frames = testing::FramesPackingTo(20), .details = std::nullopt};
         });
-    ON_CALL(encoding_.quality, Measure(_, _))
-        .WillByDefault(
-            [this](
-                std::span<const double>,
-                const core::encoder::EncodeResult&) -> core::StatusOr<double> {
-              if (cancel_after_ > 0 && ++measured_ == cancel_after_) {
-                session_.Cancel();
-              }
-              return 1.5 + (last_.target_rms / 40.0);
-            });
+    ON_CALL(encoding_.quality, Assess(_, _))
+        .WillByDefault([this](std::span<const double>,
+                              std::span<const core::lpc::Frame>)
+                           -> core::StatusOr<core::quality::QualityAssessment> {
+          if (cancel_after_ > 0 && ++measured_ == cancel_after_) {
+            session_.Cancel();
+          }
+          return testing::AssessmentScoring(0.2 + (last_.target_rms / 100.0));
+        });
   }
 
   core::Status Start(const std::vector<core::project::PhraseId>& ids) {
@@ -112,7 +113,6 @@ TEST_F(OptimiseSessionTest, AcceptKeepsTheBestAsOneUndoableStep) {
   const PhraseOptimisation& result = session_.Phrases().front();
   ASSERT_TRUE(result.best.has_value());
   EXPECT_GT(result.best->options.target_rms, 20.0);
-  EXPECT_EQ(result.anchor, TestEncoding::kAnchor);
   EXPECT_EQ(session_.ChangeCount(), 1);
   // Nothing changes before Accept.
   EXPECT_EQ(project_, before);
@@ -120,8 +120,11 @@ TEST_F(OptimiseSessionTest, AcceptKeepsTheBestAsOneUndoableStep) {
   ASSERT_TRUE(session_.Accept().IsOk());
   ASSERT_TRUE(Phrase(1).encoder.contains("target_rms"));
   ASSERT_TRUE(Phrase(1).encoding.has_value());
-  EXPECT_EQ(Phrase(1).encoding->pesq, result.best->score);
-  EXPECT_EQ(Phrase(1).encoding->anchor, TestEncoding::kAnchor);
+  // The best's figures are measured once more and stored with it (this
+  // mock scores the options encoded last, so the value is not the best's).
+  ASSERT_TRUE(Phrase(1).encoding->quality.has_value());
+  EXPECT_EQ(Phrase(1).encoding->quality->measures_version,
+            core::quality::kMeasuresVersion);
   ASSERT_EQ(stack_.count(), 1);
   EXPECT_EQ(stack_.text(0), QStringLiteral("Optimise HELLO"));
   stack_.undo();
@@ -215,8 +218,8 @@ TEST_F(OptimiseDialogTest, ShowsTheBestAgainstTheStartAndAccepts) {
   EXPECT_TRUE(dialog_.RevertButton()->isVisibleTo(&dialog_));
   EXPECT_FALSE(dialog_.CancelButton()->isVisibleTo(&dialog_));
   ASSERT_TRUE(dialog_.Quality()->Bar()->Before().has_value());
-  ASSERT_TRUE(dialog_.Quality()->Bar()->Position().has_value());
-  EXPECT_GT(*dialog_.Quality()->Bar()->Position(),
+  ASSERT_TRUE(dialog_.Quality()->Bar()->Score().has_value());
+  EXPECT_GT(*dialog_.Quality()->Bar()->Score(),
             *dialog_.Quality()->Bar()->Before());
   EXPECT_TRUE(
       dialog_.BestLabel()->text().contains(QStringLiteral("Target RMS")));

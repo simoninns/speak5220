@@ -667,7 +667,7 @@ void MainWindow::ReEncodeSelected() {
     auto failures = std::make_shared<QStringList>();
     for (const Input& input : inputs) {
       core::StatusOr<MeasuredEncoding> result =
-          EncodePhrase(tools, *synth, input.audio, input.options, std::nullopt);
+          EncodePhrase(tools, *synth, input.audio, input.options);
       if (result.IsOk()) {
         changes->emplace_back(
             input.id,

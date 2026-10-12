@@ -38,8 +38,9 @@ struct ReferenceEncoding {
   std::set<std::size_t> near_ties;
 };
 
-// The reference encoder's defaults: EncoderOptions{} with quiet_pauses
-// off, which the reference does not have.
+// The reference encoder's defaults, tms5220enc.py DEFAULTS, written out:
+// four of them differ from EncoderOptions{}, and quiet_pauses, which the
+// reference does not have, is off.
 core::encoder::EncoderOptions ReferenceEncoderOptions();
 
 // The option sets of option_sets.tsv, by name, as EncoderOptions over

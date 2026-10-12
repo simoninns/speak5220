@@ -1,0 +1,13 @@
+{
+  "name": "libfvad",
+  "version-date": "2024-02-19",
+  "description": "Voice activity detection library, from the WebRTC code (an overlay port: vcpkg has none)",
+  "homepage": "https://github.com/dpirch/libfvad",
+  "license": "BSD-3-Clause",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    }
+  ]
+}

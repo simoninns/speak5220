@@ -38,14 +38,15 @@ class QTimer;
 namespace speak5220::app {
 
 class EncoderSettingsForm;
-class QualityScaleView;
+class QualityRatingView;
 
 // Plan §5, "Encoder panel", and Phase 7: under the waveforms, the selected
 // phrase's encoding.
 //
 // - Statistics (FramesText(), KindsText(), LevelText()) and the quality
-//   scale (QualityScaleView): PESQ and the anchor stored with the
-//   encoding, or measured in the background for display when it has none.
+//   (QualityRatingView): the rating, components and figures stored with
+//   the encoding, or measured in the background for display when it has
+//   none.
 // - The settings form, for this phrase (over the project's defaults) or
 //   for the project's defaults themselves, chosen above it.
 // - A change of setting is applied after kDebounceMs without another
@@ -103,7 +104,7 @@ class EncoderPanel : public QWidget {
   int JobsRunning() const { return jobs_running_; }
 
   EncoderSettingsForm* Form() const { return form_; }
-  QualityScaleView* Quality() const { return quality_; }
+  QualityRatingView* Quality() const { return quality_; }
   QComboBox* ScopeBox() const { return scope_box_; }
   QLabel* StateLabel() const { return state_; }
   QLabel* FramesLabel() const { return frames_; }
@@ -139,18 +140,11 @@ class EncoderPanel : public QWidget {
   void ApplyPending();
   // Encodes the phrase shown with `options`, in the background.
   void StartEncode(const core::encoder::EncoderOptions& options);
-  // A phrase's anchor is of its source squelched by its squelch, so it
-  // is kept by both: the phrase and the squelch's text.
-  using AnchorKey = std::pair<core::project::PhraseId, std::string>;
-  static AnchorKey AnchorKeyOf(const core::project::PhraseId& id,
-                               const core::encoder::EncoderOptions& options);
-  std::optional<double> KnownAnchor(const AnchorKey& key) const;
-
-  void OnEncoded(int job, const AnchorKey& anchor_key, const QString& name,
-                 core::project::EncoderOverrides overrides,
+  void OnEncoded(int job, const core::project::PhraseId& id,
+                 const QString& name, core::project::EncoderOverrides overrides,
                  core::StatusOr<MeasuredEncoding> result);
   void StartMeasure();
-  void OnMeasured(const AnchorKey& anchor_key,
+  void OnMeasured(const core::project::PhraseId& id,
                   std::vector<core::lpc::Frame> frames, EncodingFacts facts);
   void SetDefaults(const core::encoder::EncoderOptions& options);
   // Shows the settings of the scope in the form.
@@ -172,7 +166,7 @@ class EncoderPanel : public QWidget {
   QLabel* frames_;
   QLabel* kinds_;
   QLabel* level_;
-  QualityScaleView* quality_;
+  QualityRatingView* quality_;
   EncoderSettingsForm* form_;
   QPushButton* re_encode_;
   QPushButton* optimise_;
@@ -206,7 +200,6 @@ class EncoderPanel : public QWidget {
   // Encodings running, by phrase.
   std::map<core::project::PhraseId, int> encodes_running_;
   std::map<core::project::PhraseId, Measured> measured_;
-  std::map<AnchorKey, double> anchors_;
   // Measurements running, by phrase.
   std::map<core::project::PhraseId, std::vector<core::lpc::Frame>> measuring_;
 };

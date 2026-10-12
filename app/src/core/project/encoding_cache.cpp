@@ -45,9 +45,6 @@ std::string EncodingCache::SettingsHash(std::span<const float> audio,
   hash.Add(encoder_version);
   hash.Add("\n");
   for (const encoder::EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
-    if (encoder::IsLeftOutAtDefault(options, info.field)) {
-      continue;
-    }
     hash.Add(info.field);
     hash.Add("=");
     hash.Add(encoder::EncoderOptionText(options, info.field));

@@ -44,16 +44,16 @@ class QWidget;
 namespace speak5220::app {
 
 class OptimiseSession;
-class QualityScaleView;
+class QualityRatingView;
 
 // Plan §3.3 and Phase 7, "Optimise in the GUI". Prepare() shows the
 // limits for the phrases chosen: an optional byte limit per phrase, and an
-// optional weight that trades PESQ for bit rate (PESQ less the weight per
-// kbit/s). Start runs the session; while it runs the window shows the
-// progress, the phrase's best so far on its quality scale with a mark for
-// its starting score, and the best settings' changes; every candidate can
-// be shown in a table. When it finishes, Accept keeps the results (one
-// undoable step) and Revert keeps the current settings. Cancel, or closing
+// optional weight that trades quality for bit rate (the overall score less
+// the weight per kbit/s). Start runs the session; while it runs the window
+// shows the progress, the phrase's best so far on the quality rating with
+// a mark for its starting score, and the best settings' changes; every
+// candidate can be shown in a table. When it finishes, Accept keeps the results
+// (one undoable step) and Revert keeps the current settings. Cancel, or closing
 // the window, stops the search and changes nothing.
 //
 // Before accepting, each changed phrase can be heard both ways: Original
@@ -93,7 +93,7 @@ class OptimiseDialog : public QDialog {
   QPushButton* RevertButton() const { return revert_; }
   QPushButton* CloseButton() const { return close_; }
   QProgressBar* Progress() const { return progress_; }
-  QualityScaleView* Quality() const { return quality_; }
+  QualityRatingView* Quality() const { return quality_; }
   QLabel* StatusLabel() const { return status_; }
   QLabel* BestLabel() const { return best_; }
   QCheckBox* HistoryBox() const { return show_history_; }
@@ -170,7 +170,7 @@ class OptimiseDialog : public QDialog {
   QDoubleSpinBox* weight_;
   QLabel* status_;
   QProgressBar* progress_;
-  QualityScaleView* quality_;
+  QualityRatingView* quality_;
   QLabel* best_;
   QCheckBox* show_history_;
   QTableWidget* history_;

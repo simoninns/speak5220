@@ -23,7 +23,7 @@
 #include "core/dsp/output_filter.h"
 #include "core/encoder/encoder.h"
 #include "core/project/phrase.h"
-#include "core/quality/quality_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/output_pin.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
@@ -131,38 +131,30 @@ struct TestPlayback {
 
 // Encoding tools over mocks, for windows and panels that are not testing
 // them: an encoder whose frames pack to kEncodedBytes whatever the
-// options, a PESQ of kScore, an anchor of kAnchor, a fake clock, and an
+// options, an assessor scoring every encoding kScore, a fake clock, and an
 // inline runner for Optimise's search.
 struct TestEncoding {
   static constexpr int kEncodedBytes = 20;
-  static constexpr double kScore = 2.0;
-  static constexpr double kAnchor = 2.5;
+  static constexpr double kScore = 0.6;
 
   TestEncoding() {
     ON_CALL(encoder, Encode(::testing::_, ::testing::_, ::testing::_))
         .WillByDefault(::testing::Return(core::encoder::EncodeResult{
             .frames = FramesPackingTo(kEncodedBytes),
             .details = std::nullopt}));
-    ON_CALL(quality, Measure(::testing::_, ::testing::_))
-        .WillByDefault(::testing::Return(kScore));
-    ON_CALL(quality, Direction())
-        .WillByDefault(
-            ::testing::Return(core::quality::MetricDirection::kHigherIsBetter));
-    ON_CALL(anchor, Score(::testing::_))
-        .WillByDefault(::testing::Return(kAnchor));
+    ON_CALL(quality, Assess(::testing::_, ::testing::_))
+        .WillByDefault(::testing::Return(AssessmentScoring(kScore)));
   }
 
   app::EncodingTools Tools() {
     return {.encoder = &encoder,
             .quality = &quality,
-            .anchor = &anchor,
             .clock = &clock,
             .optimiser_driver = &driver};
   }
 
   ::testing::NiceMock<MockEncoder> encoder;
-  ::testing::NiceMock<MockQualityMetric> quality;
-  ::testing::NiceMock<MockAnchorScorer> anchor;
+  ::testing::NiceMock<MockQualityAssessor> quality;
   FakeClock clock;
   core::InlineTaskRunner driver;
 };

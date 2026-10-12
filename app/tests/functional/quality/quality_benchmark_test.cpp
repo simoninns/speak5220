@@ -1,8 +1,8 @@
 /*
  * File:        quality_benchmark_test.cpp
  * Module:      quality tests
- * Purpose:     Times PESQ, the output alignment, the anchor and the cheap
- *              measures on one core
+ * Purpose:     Times the quality measures on the corpus subset, one file at
+ *              a time on one core
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -21,12 +21,7 @@
 #include <vector>
 
 #include "core/encoder/encoder.h"
-#include "core/encoder/encoder_filters.h"
-#include "core/quality/anchor_vocoder.h"
-#include "core/quality/cheap_measures.h"
-#include "core/quality/output_alignment.h"
-#include "core/quality/pesq.h"
-#include "core/quality/pesq_metric.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "gtest/gtest.h"
 #include "support/encoder_golden.h"
@@ -53,10 +48,10 @@ double Fastest(const std::function<void()>& f) {
 
 // Run by app/scripts/benchmark.sh, not by CTest: for the default encoding
 // of every WAV file in SPEAK5220_BENCHMARK_DIR (the corpus subset if
-// unset), times ScorePesq() alone, PesqMetric (synthesis, alignment and
-// PESQ), the anchor score and the cheap measures, one file at a time on
+// unset), times QualityAssessor (the synthesis, alignment, preparation,
+// the three measures with REAPER, and the score), one file at a time on
 // one core. Writes one row per file to SPEAK5220_BENCHMARK_REPORT, if set.
-// The plan sets no target; the rates are recorded in the HLD.
+// The plan sets no target; the rate is recorded in the HLD.
 TEST(QualityBenchmark, DISABLED_TimesTheQualityMeasures) {
   const char* dir_env = std::getenv("SPEAK5220_BENCHMARK_DIR");
   const std::filesystem::path dir = dir_env != nullptr
@@ -73,59 +68,35 @@ TEST(QualityBenchmark, DISABLED_TimesTheQualityMeasures) {
   if (const char* path = std::getenv("SPEAK5220_BENCHMARK_REPORT")) {
     report.open(path);
     ASSERT_TRUE(report.is_open()) << "cannot write " << path;
-    report << "name\tspeech_seconds\tpesq_seconds\tmetric_seconds\t"
-              "anchor_seconds\tcheap_seconds\n";
+    report << "name\tspeech_seconds\tquality_seconds\n";
   }
 
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
   double speech = 0.0;
-  double pesq_total = 0.0;
-  double metric_total = 0.0;
-  double anchor_total = 0.0;
-  double cheap_total = 0.0;
+  double total = 0.0;
   for (const auto& [name, path] : inputs) {
     const auto wav = ReadWavSamples(path);
     ASSERT_TRUE(wav.IsOk()) << wav.GetStatus().ToString();
     const auto encoding = encoder->Encode(wav->samples, wav->sample_rate, {});
-    ASSERT_TRUE(encoding.IsOk() && encoding->details.has_value());
+    ASSERT_TRUE(encoding.IsOk());
     // A fresh synth per run, so its cache does not hide the synthesis.
-    const auto measure = [&] {
+    const double took = Fastest([&] {
       core::synth::Synth synth;
-      core::quality::PesqMetric metric(synth);
-      return metric.MeasureFrames(wav->samples, encoding->frames);
-    };
-    const auto measured = measure();
-    ASSERT_TRUE(measured.IsOk()) << measured.GetStatus().ToString();
-    const std::vector<double> ref = core::encoder::HighPass60Hz(wav->samples);
-    const std::vector<double> degraded =
-        core::quality::AlignOutput(ref, measured->output).degraded;
-
-    const double pesq = Fastest(
-        [&] { ASSERT_TRUE(core::quality::ScorePesq(ref, degraded).IsOk()); });
-    const double metric = Fastest([&] { ASSERT_TRUE(measure().IsOk()); });
-    const double anchor = Fastest(
-        [&] { ASSERT_TRUE(core::quality::AnchorScore(wav->samples).IsOk()); });
-    const double cheap = Fastest([&] {
-      core::quality::MeasureCheap(*encoding->details, encoding->frames);
+      core::quality::QualityAssessor assessor(synth);
+      ASSERT_TRUE(assessor.Assess(wav->samples, encoding->frames).IsOk());
     });
     const double seconds =
         static_cast<double>(wav->samples.size()) / kSampleRate;
     speech += seconds;
-    pesq_total += pesq;
-    metric_total += metric;
-    anchor_total += anchor;
-    cheap_total += cheap;
+    total += took;
     if (report.is_open()) {
-      report << name << '\t' << seconds << '\t' << pesq << '\t' << metric
-             << '\t' << anchor << '\t' << cheap << '\n';
+      report << name << '\t' << seconds << '\t' << took << '\n';
     }
   }
   std::cout << "quality: " << inputs.size() << " files, " << speech
-            << " s of speech; per second of speech: PESQ "
-            << pesq_total / speech << " s, PesqMetric " << metric_total / speech
-            << " s, anchor " << anchor_total / speech << " s, cheap measures "
-            << cheap_total / speech << " s\n";
+            << " s of speech; " << total / speech
+            << " s per second of speech\n";
 }
 
 }  // namespace

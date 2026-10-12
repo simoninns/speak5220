@@ -71,7 +71,7 @@
   - **Never** change the emulator's reference data, unless the reference datasheet changes.
   - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after; the quality data in `app/golden/quality/` is regenerated with it.
   - Ask the user before changing any reference data (§12).
-- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`, `quality.py`), run by hand to create the reference data (TESTING.md).
+- Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`, `measures.py`), run by hand to create the reference data (TESTING.md).
 - By-hand checks (the full-corpus check, the benchmark) are functional tests with the `DISABLED_` prefix, run only by their scripts (`corpus-check.sh`, `benchmark.sh`) with `--gtest_also_run_disabled_tests`; CTest never runs them.
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
@@ -149,7 +149,7 @@
   - `// speak5220 datasheet §12.9: a Speak External stream needs at least 9 bytes.`
   - `// TI TMS5220 data manual, Table 3: coding table for K1.`
   - `// Acorn Speech System User Guide Section 6: OSBYTE &9F writes to the speech processor.`
-  - `// ITU-T P.862.1: mapping from raw PESQ to MOS-LQO.`
+  - `// Jensen and Taal 2016, Eq. (2): the normalised segment correlation.`
 - Supported sources: the speak5220 reference datasheet, TI data manuals (TMS5220, TMS6100), US patent 4,335,277, Acorn manuals (Speech System User Guide, DFS, BBC Micro User Guide), ITU-T, IEC.
 - Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared (plan §1.3).
 
@@ -167,7 +167,7 @@
 - Minimise copies: use references, move semantics, and `const` where possible.
 - Document Big-O complexity for public algorithms; note cache-locality assumptions where relevant.
 - Flag any change that increases memory use by >10 % or execution time by >5 % for design review. Measure with `app/scripts/benchmark.sh` (TESTING.md).
-- The hot paths are the emulator's per-slot step, the encoder's closed-loop synthesis and PESQ, all run many times by Optimise. Keep them free of allocation, and watch for virtual calls per sample or per slot in profiles.
+- The hot paths are the emulator's per-slot step, the encoder's closed-loop synthesis and the quality measures, all run many times by Optimise. Keep them free of allocation, and watch for virtual calls per sample or per slot in profiles.
 
 ---
 
@@ -299,7 +299,7 @@ Additional rules:
   TMS6100 data manuals, US patent 4,335,277). Use them where the reference
   datasheet says the original still applies.
 - **BBC Micro speech**: the [Acorn Speech System User Guide](https://chrisacorns.computinghistory.org.uk/docs/Acorn/Manuals/Acorn_SpeechSystemUG.pdf) (Sections 5–7).
-- **Speech quality**: ITU-T P.862 (PESQ) and P.862.1 (MOS-LQO mapping).
+- **Speech quality**: the measures of plan §3.3 and their sources: libfvad (WebRTC VAD), SPTK 4 (LPC analysis, REAPER, WORLD's Harvest), and pystoi with Jensen and Taal, "An Algorithm for Predicting the Intelligibility of Speech Masked by Modulated Noise Maskers" (2016) for ESTOI.
 - **Rule**: if code conflicts with assumptions, align code **and** tests to the
   reference datasheet first. The datasheet itself is changed only when the user
   asks.

@@ -11,8 +11,9 @@ add_library(
     encoder_golden.cpp
     frame_builder.cpp
     golden_data.cpp
+    measures_golden.cpp
     project_builder.cpp
-    quality_golden.cpp
+    quality_mocks.cpp
     synthetic_speech.cpp
 )
 target_include_directories(

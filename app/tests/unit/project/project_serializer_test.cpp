@@ -20,10 +20,12 @@
 #include <vector>
 
 #include "core/audio/wav_io.h"
+#include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_store.h"
+#include "core/quality/quality_assessor.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -126,6 +128,25 @@ std::string PhraseFile(int n, std::string_view name) {
   return "phrases/" + TestId(n) + "/" + std::string(name);
 }
 
+// Every encoder option at its default, as default_encoder's entries in a
+// hand-written project.yaml, which must list them all.
+std::string EveryOptionYaml() {
+  std::string yaml;
+  for (const encoder::EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+    yaml += "    " + std::string(info.field) + ": " +
+            encoder::EncoderOptionText(encoder::EncoderOptions{}, info.field) +
+            "\n";
+  }
+  return yaml;
+}
+
+// The head of a hand-written project.yaml that loads as Project().
+std::string MinimalProjectYaml() {
+  return "format: \"speak5220-project\"\nversion: 1\nproject:\n"
+         "  default_encoder:\n" +
+         EveryOptionYaml();
+}
+
 // A phrase entry for hand-written project.yaml files.
 std::string PhraseYaml(int n, std::string_view extra = "") {
   return "  - id: \"" + TestId(n) + "\"\n    name: \"P" + std::to_string(n) +
@@ -139,8 +160,16 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
                      {"pre_emphasis", "0.9375"},
                      {"target_peak", "none"},
                      {"repeats", "false"}};
-  encoded.encoding->pesq = 2.08;
-  encoded.encoding->anchor = 2.31;
+  encoded.encoding->quality =
+      CachedQuality{.measures_version = quality::kMeasuresVersion,
+                    .lsd_db = 3.25,
+                    .lsd_over_2db = 81.5,
+                    .lsd_over_4db = 27.75,
+                    .gross_pitch_error = 5.5,
+                    .f0_rmse_cents = 60.125,
+                    .voicing_error = 9.875,
+                    .estoi = 0.75,
+                    .score = 0.6875};
   encoded.encoding->frames = {
       lpc::Frame::Voiced(9, 34, {12, 20, 8, 7, 9, 8, 7, 4, 3, 2}),
       lpc::Frame::Repeat(9, 35), lpc::Frame::Unvoiced(4, {20, 18, 9, 6}),
@@ -228,7 +257,7 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
                                                  {"pre_emphasis", "chirp"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("    target_rms: 20\n    target_peak: null\n"));
+  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    target_peak: null\n"));
   EXPECT_THAT(yaml, HasSubstr("    repeats: true\n"));
   EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.3\n"));
@@ -237,11 +266,14 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
                               "      pre_emphasis: \"chirp\"\n"));
 }
 
-// The squelch came after the first project files: unset, it is left out,
-// so a project that does not use it saves as before.
-TEST_F(ProjectSerializerTest, SquelchIsWrittenOnlyWhenSet) {
+// Every option is written, so a project never depends on the defaults:
+// the squelch, unset, as null.
+TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
   Project project = ProjectWith({AudioPhrase(1, "A")});
-  EXPECT_THAT(ProjectYamlOf(project), Not(HasSubstr("squelch_db")));
+  const std::string defaults = ProjectYamlOf(project);
+  EXPECT_THAT(defaults, HasSubstr("    gate_db: 45\n    squelch_db: null\n"));
+  EXPECT_THAT(defaults, HasSubstr("    fade_unvoiced: true\n"
+                                  "    quiet_pauses: true\n"));
   ProjectSettings settings = project.Settings();
   settings.default_encoder.squelch_db = 30.0;
   ASSERT_TRUE(project.SetSettings(settings).IsOk());
@@ -265,8 +297,15 @@ TEST_F(ProjectSerializerTest, FramesAreWrittenOnePerLine) {
                  lpc::Frame::Repeat(9, 35),
                  lpc::Frame::Unvoiced(4, {20, 18, 9, 6}), lpc::Frame::Silence(),
                  lpc::Frame::Stop()},
-      .pesq = 2.08,
-      .anchor = std::nullopt,
+      .quality = CachedQuality{.measures_version = quality::kMeasuresVersion,
+                               .lsd_db = 3.25,
+                               .lsd_over_2db = 81.5,
+                               .lsd_over_4db = 27.75,
+                               .gross_pitch_error = 5.5,
+                               .f0_rmse_cents = 60.125,
+                               .voicing_error = 9.875,
+                               .estoi = std::nullopt,
+                               .score = 0.6875},
       .unknown = {},
       .quality_unknown = {}};
   const ProjectFiles files = Save(ProjectWith({phrase}));
@@ -283,7 +322,43 @@ TEST_F(ProjectSerializerTest, FramesAreWrittenOnePerLine) {
             "  - {energy: 0}\n"
             "  - {energy: 15}\n"
             "quality:\n"
-            "  pesq: 2.08\n");
+            "  measures_version: 1\n"
+            "  lsd_db: 3.25\n"
+            "  lsd_over_2db: 81.5\n"
+            "  lsd_over_4db: 27.75\n"
+            "  gross_pitch_error: 5.5\n"
+            "  f0_rmse_cents: 60.125\n"
+            "  voicing_error: 9.875\n"
+            "  score: 0.6875\n");
+}
+
+TEST_F(ProjectSerializerTest, QualityOfOtherMeasuresIsMeasuredAgain) {
+  Phrase phrase = EncodedPhrase(1, "A", 20);
+  phrase.encoding->quality =
+      CachedQuality{.measures_version = quality::kMeasuresVersion,
+                    .lsd_db = 3.0,
+                    .lsd_over_2db = 80.0,
+                    .lsd_over_4db = 25.0,
+                    .gross_pitch_error = 5.0,
+                    .f0_rmse_cents = 60.0,
+                    .voicing_error = 10.0,
+                    .estoi = 0.75,
+                    .score = 0.7};
+  ProjectFiles files = Save(ProjectWith({phrase}));
+  const StatusOr<Project> same = Load(files);
+  ASSERT_TRUE(same.IsOk()) << same.GetStatus().ToString();
+  EXPECT_EQ(same->Phrases()[0].encoding->quality, phrase.encoding->quality);
+
+  // Written by other measures: dropped, to be measured again.
+  std::vector<std::uint8_t>& bytes = files.at(PhraseFile(1, "frames.yaml"));
+  std::string text(bytes.begin(), bytes.end());
+  const std::string version = "measures_version: 1";
+  ASSERT_NE(text.find(version), std::string::npos);
+  text.replace(text.find(version), version.size(), "measures_version: 0");
+  bytes = Bytes(text);
+  const StatusOr<Project> older = Load(files);
+  ASSERT_TRUE(older.IsOk()) << older.GetStatus().ToString();
+  EXPECT_FALSE(older->Phrases()[0].encoding->quality.has_value());
 }
 
 TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
@@ -294,8 +369,8 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "project:\n"
       "  name: \"P\"\n"
       "  theme: \"dark\"\n"
-      "  default_encoder:\n"
-      "    target_rms: 20\n"
+      "  default_encoder:\n" +
+      EveryOptionYaml() +
       "    future_option: 7\n"
       "  phroms:\n"
       "    - number: 1\n"
@@ -362,6 +437,9 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       saved.at(PhraseFile(1, "frames.yaml"));
   const std::string frames(frames_bytes.begin(), frames_bytes.end());
   EXPECT_THAT(frames, HasSubstr("  stoi: 0.9\n"));
+  // PESQ, written before the quality measures, is dropped.
+  EXPECT_THAT(frames, Not(HasSubstr("pesq")));
+  EXPECT_FALSE(phrase.encoding->quality.has_value());
   EXPECT_THAT(frames, HasSubstr("notes: \"YES\"\n"));
   EXPECT_EQ(saved.at(PhraseFile(1, "notes.txt")), Bytes("phrase notes"));
   EXPECT_EQ(saved.at("README.txt"), Bytes("project notes"));
@@ -389,11 +467,34 @@ TEST_F(ProjectSerializerTest, RefusesAProjectFromANewerVersion) {
   EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("newer version"));
 }
 
-TEST_F(ProjectSerializerTest, LoadsTheCurrentVersionWithDefaults) {
-  const StatusOr<Project> loaded =
-      Load(WithProjectYaml("format: \"speak5220-project\"\nversion: 1\n"));
+TEST_F(ProjectSerializerTest, LoadsAProjectListingEveryOption) {
+  const StatusOr<Project> loaded = Load(WithProjectYaml(MinimalProjectYaml()));
   ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
   EXPECT_EQ(*loaded, Project());
+}
+
+// A project lists every encoder option, so changing a default never
+// changes it; one that does not, such as one saved before the squelch and
+// quiet pauses were always written, is refused.
+TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
+  const std::string head = "format: \"speak5220-project\"\nversion: 1\n";
+  const StatusOr<Project> bare = Load(WithProjectYaml(head));
+  ASSERT_FALSE(bare.IsOk());
+  EXPECT_EQ(bare.GetStatus().Code(), StatusCode::kDataLoss);
+  EXPECT_THAT(bare.GetStatus().Message(),
+              HasSubstr("project.default_encoder is missing"));
+
+  std::string older = MinimalProjectYaml();
+  for (const std::string line :
+       {"    squelch_db: none\n", "    quiet_pauses: true\n"}) {
+    ASSERT_NE(older.find(line), std::string::npos) << line;
+    older.erase(older.find(line), line.size());
+  }
+  const StatusOr<Project> loaded = Load(WithProjectYaml(older));
+  ASSERT_FALSE(loaded.IsOk());
+  EXPECT_THAT(loaded.GetStatus().Message(),
+              HasSubstr("does not list squelch_db, quiet_pauses"));
+  EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("cannot be opened"));
 }
 
 TEST_F(ProjectSerializerTest, ChecksTheTypeOfEveryValue) {
@@ -451,8 +552,8 @@ TEST_F(ProjectSerializerTest, RefusesAPhraseIdThatIsNotAUuid) {
 
 TEST_F(ProjectSerializerTest, PhraseWithASourceNeedsItsAudio) {
   const std::string yaml =
-      "format: \"speak5220-project\"\nversion: 1\nphrases:\n  - id: \"" +
-      TestId(1) + "\"\n    name: \"A\"\n    source: {file: \"a.wav\"}\n";
+      MinimalProjectYaml() + "phrases:\n  - id: \"" + TestId(1) +
+      "\"\n    name: \"A\"\n    source: {file: \"a.wav\"}\n";
   const StatusOr<Project> loaded = Load(WithProjectYaml(yaml));
   ASSERT_FALSE(loaded.IsOk());
   EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("source.wav"));

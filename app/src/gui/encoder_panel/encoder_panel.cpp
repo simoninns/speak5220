@@ -34,13 +34,15 @@
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/quality/cached_quality.h"
+#include "core/quality/quality_assessor.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/encoder_panel/encoding_summary.h"
 #include "gui/encoder_panel/phrase_encoder.h"
-#include "gui/encoder_panel/quality_scale_view.h"
+#include "gui/encoder_panel/quality_rating_view.h"
 #include "gui/undo/project_edits.h"
 
 namespace speak5220::app {
@@ -74,7 +76,7 @@ EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
       frames_(new QLabel(this)),
       kinds_(new QLabel(this)),
       level_(new QLabel(this)),
-      quality_(new QualityScaleView(this)),
+      quality_(new QualityRatingView(this)),
       form_(new EncoderSettingsForm(this)),
       re_encode_(new QPushButton(QStringLiteral("Re-&encode"), this)),
       optimise_(new QPushButton(QStringLiteral("&Optimise..."), this)),
@@ -273,44 +275,28 @@ void EncoderPanel::StartEncode(const EncoderOptions& options) {
   latest_job_[id_] = job;
   ++jobs_running_;
   ++encodes_running_[id_];
-  const AnchorKey anchor_key = AnchorKeyOf(id_, options);
-  const std::optional<double> anchor = KnownAnchor(anchor_key);
   // Plan §5: encoded and measured in the background; the result comes back
   // to this thread queued (AGENTS.md §4.3.3).
-  runner_->Post([this, job, anchor_key, name = name_, audio = audio_, options,
-                 overrides = project::OverridesFor(defaults_, options), anchor,
+  runner_->Post([this, job, id = id_, name = name_, audio = audio_, options,
+                 overrides = project::OverridesFor(defaults_, options),
                  tools = tools_, synth = synth_]() mutable {
     auto result = std::make_shared<core::StatusOr<MeasuredEncoding>>(
-        EncodePhrase(tools, *synth, audio, options, anchor));
+        EncodePhrase(tools, *synth, audio, options));
     QMetaObject::invokeMethod(
         this,
-        [this, job, anchor_key, name, overrides = std::move(overrides),
+        [this, job, id, name, overrides = std::move(overrides),
          result]() mutable {
-          OnEncoded(job, anchor_key, name, std::move(overrides),
-                    std::move(*result));
+          OnEncoded(job, id, name, std::move(overrides), std::move(*result));
         },
         Qt::QueuedConnection);
   });
   UpdateView();
 }
 
-EncoderPanel::AnchorKey EncoderPanel::AnchorKeyOf(
-    const project::PhraseId& id, const EncoderOptions& options) {
-  return {id, core::encoder::EncoderOptionText(options, "squelch_db")};
-}
-
-std::optional<double> EncoderPanel::KnownAnchor(const AnchorKey& key) const {
-  if (const auto found = anchors_.find(key); found != anchors_.end()) {
-    return found->second;
-  }
-  return std::nullopt;
-}
-
-void EncoderPanel::OnEncoded(int job, const AnchorKey& anchor_key,
+void EncoderPanel::OnEncoded(int job, const project::PhraseId& id,
                              const QString& name,
                              project::EncoderOverrides overrides,
                              core::StatusOr<MeasuredEncoding> result) {
-  const project::PhraseId& id = anchor_key.first;
   --jobs_running_;
   if (--encodes_running_[id] == 0) {
     encodes_running_.erase(id);
@@ -334,9 +320,6 @@ void EncoderPanel::OnEncoded(int job, const AnchorKey& anchor_key,
   }
   const EncodingFacts& facts = result->facts;
   measured_[id] = {.frames = result->encoding.frames, .facts = facts};
-  if (facts.anchor.has_value()) {
-    anchors_[anchor_key] = *facts.anchor;
-  }
   const bool unchanged = id == id_ && overrides == overrides_ &&
                          encoding_.has_value() &&
                          *encoding_ == result->encoding;
@@ -376,38 +359,24 @@ void EncoderPanel::StartMeasure() {
   }
   measuring_[id_] = encoding_->frames;
   ++jobs_running_;
-  const AnchorKey anchor_key = AnchorKeyOf(id_, *options);
-  // The anchor stored with the frames is of their squelch, which is the
-  // settings' only while they are current.
-  std::optional<double> anchor = current_ ? encoding_->anchor : std::nullopt;
-  if (const std::optional<double> known = KnownAnchor(anchor_key)) {
-    anchor = known;
-  }
-  runner_->Post([this, anchor_key, audio = audio_, frames = encoding_->frames,
-                 options = *options, anchor, tools = tools_, synth = synth_] {
+  runner_->Post([this, id = id_, audio = audio_, frames = encoding_->frames,
+                 options = *options, tools = tools_, synth = synth_] {
     auto facts = std::make_shared<EncodingFacts>(
-        MeasureFrames(tools, *synth, audio, options, frames, anchor));
+        MeasureFrames(tools, *synth, audio, options, frames));
     QMetaObject::invokeMethod(
-        this,
-        [this, anchor_key, frames, facts] {
-          OnMeasured(anchor_key, frames, *facts);
-        },
+        this, [this, id, frames, facts] { OnMeasured(id, frames, *facts); },
         Qt::QueuedConnection);
   });
   UpdateView();
 }
 
-void EncoderPanel::OnMeasured(const AnchorKey& anchor_key,
+void EncoderPanel::OnMeasured(const project::PhraseId& id,
                               std::vector<core::lpc::Frame> frames,
                               EncodingFacts facts) {
-  const project::PhraseId& id = anchor_key.first;
   --jobs_running_;
   if (const auto running = measuring_.find(id);
       running != measuring_.end() && running->second == frames) {
     measuring_.erase(running);
-  }
-  if (facts.anchor.has_value()) {
-    anchors_[anchor_key] = *facts.anchor;
   }
   measured_[id] = {.frames = std::move(frames), .facts = facts};
   UpdateView();
@@ -504,18 +473,18 @@ void EncoderPanel::UpdateView() {
     level_->setText(facts != nullptr
                         ? LevelText(facts->peak_code, facts->levels)
                         : QString());
-    std::optional<double> pesq = encoding_->pesq;
-    std::optional<double> anchor = encoding_->anchor;
-    if (facts != nullptr) {
-      pesq = pesq.has_value() ? pesq : facts->pesq;
-      anchor = anchor.has_value() ? anchor : facts->anchor;
+    std::optional<core::quality::QualityAssessment> quality;
+    if (encoding_->quality.has_value()) {
+      quality = core::quality::FromCachedQuality(*encoding_->quality);
+    } else if (facts != nullptr) {
+      quality = facts->quality;
     }
-    if (pesq.has_value()) {
-      quality_->SetScores(pesq, anchor);
+    if (quality.has_value()) {
+      quality_->SetAssessment(quality);
     } else if (measuring_.contains(id_)) {
       quality_->SetPlaceholder(QStringLiteral("Measuring quality..."));
     } else {
-      quality_->SetScores(std::nullopt, std::nullopt);
+      quality_->SetAssessment(std::nullopt);
     }
   } else {
     frames_->setText(has_phrase ? QStringLiteral("No frames") : QString());

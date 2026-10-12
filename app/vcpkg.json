@@ -8,12 +8,14 @@
       "name": "libsndfile",
       "default-features": false
     },
+    "libfvad",
     "libsamplerate",
     {
       "name": "libzip",
       "default-features": false
     },
     "pocketfft",
+    "sptk",
     "spdlog",
     "yaml-cpp"
   ]

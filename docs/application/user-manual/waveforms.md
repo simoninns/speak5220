@@ -39,8 +39,7 @@ recording as imported.
 The chip starts speaking about 25 ms after it reads the first frame, and
 the encoder leaves out silence at the start of the audio. So that the
 same sound is at the same place in both panes, the encoded audio is lined
-up with the original by the same search that the quality measure (PESQ)
-uses. Time in both panes counts from the start of the original audio; the
+up with the original by the same search that the quality measures use. Time in both panes counts from the start of the original audio; the
 encoded pane can show a little before it (the chip's idle start) or after
 it.
 
@@ -51,7 +50,7 @@ codes take a quarter of full scale, and the encoder aims for a moderate
 level (`target_rms`, see the [encoder options](../reference/encoder-options.md)).
 So that the two compare like with like, the encoded pane is shown and
 played at the original's level: its loudness over the speech is matched
-to the original's, as the quality measure (PESQ) does. The note beside
+to the original's. The note beside
 the pane's title gives the gain, for example
 **level matched to the original (14.6 dB)**. Only the display and playback
 change; the frames, and anything exported, are as the chip makes them.
@@ -74,8 +73,8 @@ Only the clipping is modelled, not the uneven steps of the real DAC. The
 level match above is measured on the unclipped codes, so it is the same
 for both pins. Like the output filter below, the choice changes the
 encoded pane and the encoded audio played in the main window and in the
-Optimise window, but not the frames, the quality measure (PESQ) or
-anything exported. Changing it stops the encoded audio if it is playing.
+Optimise window, but not the frames, the quality measures or anything
+exported. Changing it stops the encoded audio if it is playing.
 
 ## Output filter
 
@@ -109,7 +108,7 @@ still draws one point per 8 kHz sample: the filtered output averaged over
 that sample's period.
 
 The filter only affects what you see and hear. The frames, the quality
-measure (PESQ) and anything exported are unchanged. The window remembers
+measures and anything exported are unchanged. The window remembers
 the choice for next time. Changing it stops the encoded audio if it is
 playing.
 

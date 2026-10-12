@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Writes app/src/core/dsp/filter_constants.h.
 
-The encoder filters only 8 kHz audio, with fixed Butterworth corners
-(application plan §3.2), so its second-order sections are designed once, by
-SciPy, and committed as constants. This script writes them, with the
+The encoder and the quality measures filter only 8 kHz audio, with fixed
+Butterworth corners (application plan §3.2, §3.3), so their second-order
+sections are designed once, by SciPy, and committed as constants. This script writes them, with the
 steady-state initial conditions (scipy.signal.sosfilt_zi) and the edge
 padding length that scipy.signal.sosfiltfilt uses for each filter, so the
 C++ filtfilt gives the same results without SciPy.
@@ -31,27 +31,43 @@ ROOT = Path(__file__).resolve().parents[1]
 HEADER = ROOT / "src" / "core" / "dsp" / "filter_constants.h"
 RATE = 8000.0
 
-# (C++ name, what tms5220enc.py designs it for, kind, corner Hz, order)
+# (C++ name, what it is for, kind, corner Hz or (low, high), order)
 FILTERS = [
     (
         "kHighPass60Hz",
-        '_butter("highpass", 60.0, 2): removes rumble before analysis',
+        'tms5220enc.py _butter("highpass", 60.0, 2): removes rumble before analysis',
         "highpass",
         60.0,
         2,
     ),
     (
         "kLowPass1kHz",
-        '_butter("lowpass", 1000.0): the band the pitch tracker uses',
+        'tms5220enc.py _butter("lowpass", 1000.0): the band the pitch tracker uses',
         "lowpass",
         1000.0,
+        4,
+    ),
+    (
+        "kQualityBand",
+        "the band both signals are limited to before the quality measures"
+        " (plan §3.3, app/scripts/golden/measures.py)",
+        "bandpass",
+        (80.0, 3600.0),
         4,
     ),
 ]
 
 
+def corners(hz):
+    """The corner or corners as text, in Hz."""
+    if isinstance(hz, tuple):
+        return "%g to %g Hz" % hz
+    return "%g Hz" % hz
+
+
 def design(kind, hz, order):
-    sos = butter(order, hz / (RATE / 2), btype=kind, output="sos")
+    wn = [f / (RATE / 2) for f in hz] if isinstance(hz, tuple) else hz / (RATE / 2)
+    sos = butter(order, wn, btype=kind, output="sos")
     zi = sosfilt_zi(sos)
     # scipy.signal.sosfiltfilt's default padding: odd extension of this length
     ntaps = 2 * len(sos) + 1
@@ -68,8 +84,9 @@ def header():
         "/*",
         " * File:        filter_constants.h",
         " * Module:      dsp",
-        " * Purpose:     The encoder's fixed Butterworth filters at 8 kHz, as",
-        " *              second-order sections with their filtfilt constants",
+        " * Purpose:     The fixed Butterworth filters of the encoder and the",
+        " *              quality measures at 8 kHz, as second-order sections",
+        " *              with their filtfilt constants",
         " *",
         " * SPDX-License-Identifier: GPL-3.0-or-later",
         " * SPDX-FileCopyrightText: (c) 2026 Simon Inns",
@@ -91,7 +108,7 @@ def header():
         sos, zi, padlen = design(kind, hz, order)
         out += [
             "",
-            "// Order-%d Butterworth %s at %g Hz; tms5220enc.py" % (order, kind, hz),
+            "// Order-%d Butterworth %s at %s;" % (order, kind, corners(hz)),
             "// %s." % why,
             "inline constexpr SosFilter<%d> %s = {" % (len(sos), name),
             "    .sections = {{",

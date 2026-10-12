@@ -10,6 +10,7 @@
 
 #include "core/encoder/encoder_options.h"
 
+#include <cmath>
 #include <limits>
 #include <set>
 #include <string>
@@ -24,27 +25,29 @@ namespace speak5220::core::encoder {
 namespace {
 
 // tms5220enc.py DEFAULTS.
-TEST(EncoderOptionsTest, DefaultsMatchReferenceEncoder) {
+// The reference encoder's defaults, but for four chosen on the corpus
+// (HLD §9).
+TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFourChosenOnes) {
   const EncoderOptions o;
-  EXPECT_EQ(o.target_rms, 20.0);
+  EXPECT_EQ(o.target_rms, 24.0);
   EXPECT_FALSE(o.target_peak.has_value());
   EXPECT_EQ(o.peak_limit, 120.0);
   EXPECT_TRUE(o.repeats);
   EXPECT_EQ(o.repeat_lambda, 70.0);
   EXPECT_EQ(o.gate_db, 45.0);
   EXPECT_EQ(o.pre_emphasis, PreEmphasis::Chirp());
-  EXPECT_EQ(o.window, 240);
+  EXPECT_EQ(o.window, 256);
   EXPECT_EQ(o.lag_window_hz, 60.0);
   EXPECT_EQ(o.voicing_threshold, 0.3);
-  EXPECT_EQ(o.voicing_evidence, 4.0);
+  EXPECT_EQ(o.voicing_evidence, 5.0);
   EXPECT_EQ(o.iterations, 5);
   EXPECT_TRUE(o.fade_unvoiced);
-  EXPECT_EQ(o.level_agc, 1.0);
+  EXPECT_EQ(o.level_agc, 1.25);
   EXPECT_EQ(o.compression, 1.0);
 }
 
-// The squelch is not in the reference encoder, so it is off by default
-// and the defaults encode as the reference does.
+// The squelch is not in the reference encoder, and is off by default: it
+// did not raise the score on the corpus (HLD §9).
 TEST(EncoderOptionsTest, SquelchIsOffByDefault) {
   EXPECT_FALSE(EncoderOptions{}.squelch_db.has_value());
 }
@@ -59,15 +62,24 @@ TEST(EncoderOptionsTest, QuietPausesAreOnByDefault) {
   EXPECT_EQ(EncoderOptionText(o, "quiet_pauses"), "false");
 }
 
-TEST(EncoderOptionsTest, LaterOptionsAreLeftOutAtTheirDefaults) {
-  EncoderOptions o;
-  EXPECT_TRUE(IsLeftOutAtDefault(o, "squelch_db"));
-  EXPECT_TRUE(IsLeftOutAtDefault(o, "quiet_pauses"));
-  EXPECT_FALSE(IsLeftOutAtDefault(o, "target_rms"));
-  o.squelch_db = 30.0;
-  o.quiet_pauses = false;
-  EXPECT_FALSE(IsLeftOutAtDefault(o, "squelch_db"));
-  EXPECT_FALSE(IsLeftOutAtDefault(o, "quiet_pauses"));
+// The GUI shows default_text and resets to EncoderOptions{}, so they must
+// agree; and a default lies on its slider's steps, so the slider can
+// return to it.
+TEST(EncoderOptionsTest, DefaultTextIsTheDefaultOnTheSlidersSteps) {
+  const EncoderOptions o;
+  for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
+    const std::string text = EncoderOptionText(o, info.field);
+    EXPECT_EQ(info.default_text.empty() ? std::string(kUnsetOptionText)
+                                        : std::string(info.default_text),
+              text)
+        << info.field;
+    if (info.type == EncoderOptionType::kReal ||
+        info.type == EncoderOptionType::kInteger) {
+      const double value = std::stod(text);
+      const double steps = (value - info.typical_minimum) / info.step;
+      EXPECT_NEAR(steps, std::round(steps), 1e-9) << info.field;
+    }
+  }
 }
 
 TEST(EncoderOptionsTest, DefaultsAreValid) {
@@ -200,9 +212,9 @@ TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
 
 TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
   EncoderOptions options;
-  EXPECT_EQ(EncoderOptionText(options, "target_rms"), "20");
+  EXPECT_EQ(EncoderOptionText(options, "target_rms"), "24");
   EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.3");
-  EXPECT_EQ(EncoderOptionText(options, "window"), "240");
+  EXPECT_EQ(EncoderOptionText(options, "window"), "256");
   EXPECT_EQ(EncoderOptionText(options, "repeats"), "true");
   EXPECT_EQ(EncoderOptionText(options, "target_peak"), "none");
   EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "chirp");

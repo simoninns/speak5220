@@ -38,8 +38,8 @@ struct EncodedAudio {
   // past the end.
   int source_offset = 0;
   // The gain that brings `samples` (as fractions of 16-bit full scale) to
-  // the source's level: the mean power over the source's speech, as PESQ
-  // matches levels (LevelMatchGain()). 1 with no source or no sound.
+  // the source's level: the mean power over the source's speech
+  // (LevelMatchGain()). 1 with no source or no sound.
   double level_gain = 1.0;
 };
 
@@ -47,13 +47,17 @@ struct EncodedAudio {
 // where the output lines up with `source` (8 kHz). The offset is the
 // chip's start latency plus wherever the encoder put its first frame (it
 // leaves out leading silence, and the project does not record where), so
-// it is found by the alignment PESQ uses (AlignOutput()'s lag) rather than
-// assumed. The level gain is measured on the output so placed. With no
-// source, or an output that never leaves idle, the offset is
-// kFirstFrameStretch (frame 0's stretch starts at source sample 0) and the
-// gain 1.
-// Fails if the frames cannot be packed or spoken. About 0.04 s per second
-// of speech; not on the GUI thread. Thread-safe if the synth is.
+// it is found by speechqual.py's alignment (AlignOutput()'s lag) rather
+// than assumed; the quality measures use the same placement. The level gain is
+// measured on the output so placed. With no source, or an output that never
+// leaves idle, the offset is kFirstFrameStretch (frame 0's stretch starts at
+// source sample 0) and the gain 1. Fails if the frames cannot be packed or
+// spoken. About 0.04 s per second of speech; not on the GUI thread. Thread-safe
+// if the synth is.
+StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
+                                          std::span<const double> source,
+                                          std::span<const lpc::Frame> frames);
+// The same, for a phrase's audio as the project keeps it.
 StatusOr<EncodedAudio> RenderEncodedAudio(synth::ISynth& synth,
                                           std::span<const float> source,
                                           std::span<const lpc::Frame> frames);

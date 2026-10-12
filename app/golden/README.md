@@ -1,15 +1,14 @@
 # Reference data
 
-What the retired reference emulator (`investigation/emulator/`), encoder
-(`investigation/encoder/tms5220enc.py`) and quality tools
-(`investigation/tools/speechqual.py`, `investigation/encoder/evaluate.py`)
-produced, for the application's functional tests to compare against
+What the retired reference emulator (`investigation/emulator/`) and
+encoder (`investigation/encoder/tms5220enc.py`) produced, and what
+independent implementations of the quality measures give, for the application's functional tests to compare against
 (application plan §1.4). The build and tests read only these files.
 
 Written by `app/scripts/golden/generate_golden.py` (`emulator/`,
 `packaging/`), `app/scripts/golden/encoder.py` (`encoder/`) and
-`app/scripts/golden/quality.py` (`quality/`), run by hand in the default Nix
-shell. `REFERENCE.tsv` in each directory records the last
+`app/scripts/golden/measures.py` (`quality/measures/`), run by hand in the
+default Nix shell. `REFERENCE.tsv` in each directory records the last
 commit that changed the references and the SHA-256 of each reference
 source.
 
@@ -30,8 +29,9 @@ nix develop --command python3 app/scripts/golden/generate_golden.py --check
 | `encoder/frames/SET.tsv` | For each option set, every corpus file's frame count, near-tie frames (`-` for none) and packed frames (hex) |
 | `encoder/inputs/NAME.wav` | WAV copies of the corpus subset (public-domain and CC0 voices only) |
 | `encoder/intermediates/NAME.json` | `encodeDetailed()`'s intermediate values for each subset file, default options |
-| `quality/scores/SET.tsv` | For each option set, every corpus file's reference encoding measured: the lag and length of the emulator's output, PESQ as `speechqual.py` measures it (P.862 narrowband as P.862.1 MOS-LQO), and `evaluate.py`'s level error and spectral distance (dB) |
-| `quality/anchor.tsv` | Every corpus file's anchor score: the PESQ of `speechqual.py`'s floating-point LPC-10 vocoder (`--anchor`, noise seed 1) |
+| `quality/measures/scores/SET.tsv` | For each option set, each subset file's reference encoding measured by independent implementations of the quality measures (plan §3.3): the alignment lag, the frames the voice activity mask keeps, the mean log spectral distortion and its percentages of frames over 2 and 4 dB, REAPER's and Harvest's gross pitch error, F0 RMSE (cents) and voicing decision error, and ESTOI |
+| `quality/measures/masks/SET.tsv` | Each subset file's voice activity mask, from py-webrtcvad, one character per 10 ms frame (`1` for speech) |
+| `quality/measures/tracks/SET/NAME.tsv` | Each subset file's F0 tracks every 10 ms (0 where unvoiced), of the prepared original and output, from REAPER's command-line tool and from Harvest through pyworld |
 
 The encoder's data is written by `app/scripts/golden/encoder.py`:
 
@@ -44,11 +44,13 @@ input is disturbed at the level of floating-point noise (a relative 1e-9);
 the C++ encoder may differ from the reference there, and only there (plan
 §3.2). The script's docstring gives the disturbances.
 
-The quality data is written by `app/scripts/golden/quality.py`, which runs
-the built reference emulator (`make -C investigation/emulator` first):
+The quality measures' data is written by `app/scripts/golden/measures.py`,
+which runs the built reference emulator (`make -C investigation/emulator`
+first), REAPER's command-line tool and the Python packages of the default
+Nix shell (py-webrtcvad, pystoi, pyworld):
 
 ```bash
-nix develop --command python3 app/scripts/golden/quality.py --check
+nix develop --command python3 app/scripts/golden/measures.py --check
 ```
 
 The emulator's data never changes unless the reference datasheet does, and
