@@ -56,7 +56,7 @@ class PhraseWaveforms;
 // (EncoderPanel); the status bar shows the project's size in KB and
 // PHROMs. Menus: File (new, open, recent, save, save as, quit), Edit
 // (undo, redo), Phrase (add, remove, move up and down, sort A-Z,
-// re-encode, optimise), Help.
+// re-encode, optimise), Export, Audio (chip output, output filter), Help.
 //
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
@@ -117,6 +117,14 @@ class MainWindow : public QMainWindow {
   // Batch re-encodings started and not yet finished.
   int EncodesRunning() const { return encodes_running_; }
 
+  // Asks for an export (IDialogs::AskExport(), which asks before
+  // replacing existing files), then runs it in the background and writes
+  // its files, reporting failures. Phrases must be encoded with
+  // their current settings first (core::project::CheckEncodingsCurrent()).
+  void ExportProject();
+  // Exports started and not yet finished.
+  int ExportsRunning() const { return exports_running_; }
+
   // Hears and shows the chip's output through `filter` (Audio > Output
   // Filter): the encoded waveform, and the encoded audio played here and
   // in the Optimise window. Remembered between sessions.
@@ -136,6 +144,8 @@ class MainWindow : public QMainWindow {
   void ImportFinished();
   // A batch re-encoding finished.
   void EncodeFinished();
+  // An export finished, successfully or not.
+  void ExportFinished();
 
  protected:
   void closeEvent(QCloseEvent* event) override;
@@ -190,8 +200,13 @@ class MainWindow : public QMainWindow {
   core::dsp::SincResampler resampler_;
   core::FileSha256Digest digest_;
   core::project::PhraseImporter importer_{wav_reader_, resampler_, digest_};
+  // The WAV export's encoder; stateless, so export jobs can share it.
+  core::audio::SndfileWavCodec wav_codec_;
   int imports_running_ = 0;
   int encodes_running_ = 0;
+  int exports_running_ = 0;
+  // The folder of the last export, offered for the next.
+  QString last_export_directory_;
   // Counts the projects opened, so an import finishing after another
   // project was opened is dropped.
   int generation_ = 0;
@@ -229,6 +244,7 @@ class MainWindow : public QMainWindow {
   QAction* sort_action_ = nullptr;
   QAction* re_encode_action_ = nullptr;
   QAction* optimise_action_ = nullptr;
+  QAction* export_action_ = nullptr;
   QAction* about_action_ = nullptr;
 };
 

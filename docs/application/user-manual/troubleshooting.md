@@ -25,10 +25,17 @@ prints them on stderr, prefixed `speak5220-cli:`.
 
 | Message | Meaning |
 |---|---|
-| `HELLO is not encoded with its current settings: run "speak5220-cli encode" first` | Export uses the stored frames, so they must be up to date |
+| `HELLO is not encoded with its current settings: re-encode it first` (Export), `... run "speak5220-cli encode" first` (`speak5220-cli export`) | Export uses the stored frames, so they must be up to date. Only a WAV export of the original audio needs no encoding |
 | `HELLO has not been encoded yet, so it cannot be exported` | As above, for a phrase with no frames at all |
+| `HELLO has no source audio, so its original cannot be exported` | A WAV export of the original audio needs the phrase's audio, and a locked phrase made from frames alone (such as a word from a PHROM image) has none |
 | `HELLO is locked: its frames are never re-encoded` | Locked phrases keep their frames; their encoder settings cannot be changed |
-| `export format "c-header" is not supported yet (only "acorn-phrom")` | Only Acorn PHROM images can be exported so far |
+| `export format "c-header" is not one of "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav"` | The preset or `--format` names a format Speak5220 does not have; see [Export formats](../reference/export-formats.md) |
+| `the layout "concatenated" does not apply to the format "wav"` | A preset holds an option of another format (`layout` belongs to `acorn-phrom`, `licence` to the C headers, `audio` to `wav`). Remove it |
+| `export scope "selected" needs the phrases it exports` | A preset of scope `selected` must list its `phrases` |
+| `the export names a phrase the project does not have: HELLO` | A preset's `phrases`, or `--phrase`, names a phrase that was renamed or removed. Edit the preset |
+| `exported files cannot be named from "../out": use a name without / \ : * ? " < > \|` | The exported files are named after the preset (or the project file), so the name must be a plain file name |
+| `the licence "MIT */" is not an SPDX identifier (letters, digits, spaces and ". + - ( )")` | A C header's licence is written in its comment, so only an SPDX identifier or expression is accepted |
+| `HELLO needs 70000 bytes, more than a C header's stream holds (65535)` | A Speak External header gives each phrase's length as a 16-bit number. Shorten the phrase |
 | `the project has no export presets: give --format` | `speak5220-cli export` without `--preset` or `--format` runs the project's presets, and there are none |
 
 ## The encoder and Optimise

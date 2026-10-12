@@ -37,3 +37,6 @@ exports:
     format: "acorn-phrom"
     scope: "all"
     layout: "separate"
+  - name: "header"
+    format: "c-header-phrom"
+    scope: "all"

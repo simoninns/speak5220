@@ -12,6 +12,7 @@ add_library(
     encoder_panel/option_slider.cpp
     encoder_panel/phrase_encoder.cpp
     encoder_panel/quality_rating_view.cpp
+    export/export_dialog.cpp
     main_window/dialogs.cpp
     main_window/main_window.cpp
     main_window/project_document.cpp

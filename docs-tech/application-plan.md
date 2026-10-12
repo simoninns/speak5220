@@ -249,7 +249,7 @@ app/                            the Speak5220 application (new)
       synth/                    renders frames to 8 kHz samples with the emulator classes
       quality/                  signal preparation, voice activity mask, the quality measures, overall rating
       util/                     Status/StatusOr, hashing, logging setup (spdlog, §2.6)
-      packaging/                Acorn PHROM, TI indexed, Speak External, C header, .bin
+      packaging/                Acorn PHROM, TI indexed, Speak External, C header
       bbc/                      BBC BASIC tokeniser, DFS disc image writer
       project/                  project model, (de)serialisation
     gui/                        Qt Widgets GUI: the "speak5220" executable
@@ -285,7 +285,7 @@ no code copied from `investigation/`.
 | `Synth` | Runs `Tms5220` on a frame list through the VSM path or the Speak External path; returns codes and 16-bit samples |
 | `Quality` | Prepares the original and the chip output alike, masks them to speech-active frames, and measures spectral envelope, pitch and voicing, and intelligibility (ESTOI); an overall score and rating from *Poor* to *Good* (§3.3). PESQ until Phase 8 |
 | `Optimiser` | Searches encoder options for the best overall score (§3.3), within the 64-PHROM project budget, optionally with a per-phrase byte limit |
-| `Packager` | Acorn PHROM image, TI indexed image, Speak External stream, raw `.bin`, C header |
+| `Packager` | Acorn PHROM image, TI indexed image, Speak External stream, C header |
 | `BbcExport` | A double-sided Acorn DFS disc image (`.dsd`): the fixed player program, and each PHROM's phrase data and index |
 | `Project` | Phrases, their audio, settings and cached encodings; the editing operations (§2.5); load/save |
 
@@ -670,7 +670,7 @@ phrases/<uuid>/frames.yaml      cached encoding (frames, encoder version, settin
 ```
 
 The cached packed bytes are not stored, because they are rebuilt from the
-frames. **Export → Raw data** gives them for inspection.
+frames.
 
 The metadata files are **YAML 1.2**, read and written with yaml-cpp. Keys
 are `snake_case`, the same names as the C++ fields they map to.
@@ -704,11 +704,20 @@ phrases:
       voicing_threshold: 0.35
     locked: false
     play_start: 0
-exports:                          # presets remembered by the Export dialog, run by the CLI
+exports:                          # presets, written in the file and run by the CLI
   - name: "phrom"
     format: "acorn-phrom"
     scope: "all"
     layout: "separate"            # one .bin per PHROM, or "concatenated"
+  - name: "words"
+    format: "c-header-speak-external"
+    scope: "selected"              # or "all"
+    phrases: ["HELLO", "SEVEN"]
+    licence: "CC0-1.0"            # C headers; default GPL-3.0-or-later
+  - name: "chip"
+    format: "wav"
+    scope: "all"
+    audio: "encoded"              # or "original"
   - name: "bbc-disc"
     format: "bbc-dsd"
     scope: "all"
@@ -882,15 +891,14 @@ more speech than one PHROM (decision D4):
 | Export | Scope | Contents |
 |---|---|---|
 | **Acorn PHROM images** (`.bin`, 16 KB each) | Selected phrases or all | `acornPhrom()` layout (§12.8): header strings, ASCII map, pointer table, bit-reversed names before each word. One image per PHROM (§4.1), either as separate files (`name_1.bin`, `name_2.bin`, …) or as one concatenated file (n × 16 KB) |
-| **TI indexed images** (`.bin`) | Selected or all | `tiIndexed()` layout (§12.8), one per PHROM, at most 255 words each |
-| **Raw data** (`.bin`) | One phrase | The packed bytes to the stop code; option for the Speak External form (≥ 9 bytes, §12.9) |
 | **C header, PHROM** (`.h`) | Selected or all | One `const uint8_t name_phrom_N[16384]` per PHROM, plus an `enum`/table giving each word's PHROM, number, name, offset and length |
 | **C header, Speak External** (`.h`) | Selected or all | One `const uint8_t` array per phrase (Speak External form), with a length constant and a lookup table |
 | **WAV** | Selected or all | The encoded (emulator) output, or the 8 kHz original; one file per phrase, named from the phrase name |
 | **BBC Micro DFS disc** (`.dsd`) | Selected or all, at most 8 PHROMs | See below |
 
 Header generation uses include guards, a generated-file comment with the
-project name and date, and an SPDX header. The licence of the generated file
+project name, and an SPDX header. The comment has no date, so the same
+project always gives the same header and the output hashes hold. The licence of the generated file
 is configurable, because users own their speech data; the default is
 `GPL-3.0-or-later`.
 
@@ -1565,26 +1573,26 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
       - unit tests: the removed options are refused as unknown, and a
         project that lists them opens and saves them back.
 
-### Phase 9: Export: binary, C and audio
+### Phase 9: Export: C and audio
 
 Depends on: Phase 7.
 
-1. **Binary exports.** Acorn PHROM images (separate or concatenated), TI
-   indexed images, and raw `.bin` in plain or Speak External form (§6).
-   - **Acceptance:** functional tests match the reference data byte for
-     byte for the same frames.
-2. **C headers.** The PHROM and Speak External forms (§6), with the
+TI indexed images and raw `.bin` files were dropped from the exports
+(2026-10-12): there is no practical way to test their output. Acorn PHROM
+images are already exported (Phase 4).
+
+1. **C headers.** The PHROM and Speak External forms (§6), with the
    identifier mapping comment, the SPDX header and a configurable licence.
    - **Acceptance:** functional tests compile the generated headers with
      the C and C++ compilers.
-3. **WAV export.** The encoded output or the 8 kHz original.
+2. **WAV export.** The encoded output or the 8 kHz original.
    - **Acceptance:** functional tests reload the files with the expected
      rate and length.
-4. **Export dialog and presets.** Scope, format and per-format options, the
+3. **Export dialog and presets.** Scope, format and per-format options, the
    size checks of §4.1, and the `exports:` presets that the CLI can run.
    - **Acceptance:** GUI unit tests map dialog settings to presets; a
      functional test runs a preset through the CLI.
-5. **Output hashes.** `app/scripts/run-projects.sh` and
+4. **Output hashes.** `app/scripts/run-projects.sh` and
    `app/scripts/output-hashes.sh`, with a recorded baseline for the
    `general` and `phrom` suites.
    - **Acceptance:** rerunning matches the baseline; a deliberate change to

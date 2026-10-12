@@ -65,6 +65,11 @@ exports:
     format: "acorn-phrom"
     scope: "all"
     layout: "separate"
+  - name: "words"
+    format: "c-header-speak-external"
+    scope: "selected"
+    phrases: ["HELLO"]
+    licence: "CC0-1.0"
 ```
 
 ### Top level
@@ -124,12 +129,20 @@ needs resampling again.
 
 ### exports
 
+Each entry is an export [preset](../user-manual/export.md#presets), written
+by hand, which `speak5220-cli export` runs. A key that does not
+apply to the preset's format is left out; a preset that has one anyway
+is refused when it runs, with a message naming it.
+
 | Key | Type | Meaning |
 |---|---|---|
-| `name` | String | The preset's name, unique in the project. The exported files are named after it |
-| `format` | String | `"acorn-phrom"`: Acorn PHROM images (datasheet §12.8). Other formats are not available yet |
-| `scope` | String | `"all"`: every phrase |
-| `layout` | String | For PHROM images: `"separate"` (one 16 KB file per PHROM, `NAME_1.bin`, `NAME_2.bin`, ...) or `"concatenated"` (one file, `NAME.bin`) |
+| `name` | String | The preset's name, unique in the project. The exported files are named after it, so it cannot be empty, `.` or `..`, or hold `/ \ : * ? " < > \|` |
+| `format` | String | `"acorn-phrom"` (Acorn PHROM images), `"c-header-phrom"` (a C header of the PHROM images), `"c-header-speak-external"` (a C header of each phrase's Speak External stream) or `"wav"` (one WAV file per phrase). The layouts are in [Export formats](export-formats.md) |
+| `scope` | String | `"all"`: every phrase. `"selected"`: the phrases in `phrases` |
+| `phrases` | List of strings | With scope `"selected"` only: the names of the phrases to export, at least one. They are exported in the project's list order, whatever the order here. A name the project does not have is refused when the preset runs |
+| `layout` | String | `acorn-phrom` only: `"separate"` (one 16 KB file per PHROM, `NAME_1.bin`, `NAME_2.bin`, ...; the default) or `"concatenated"` (one file, `NAME.bin`) |
+| `licence` | String | The C headers only: the [SPDX](https://spdx.org/licenses/) licence identifier, or expression, written in the header: letters, digits, spaces and `. + - ( )`. Default `"GPL-3.0-or-later"` |
+| `audio` | String | `wav` only: `"encoded"` (the chip's output; the default) or `"original"` (the phrase's 8 kHz source) |
 
 ## frames.yaml
 

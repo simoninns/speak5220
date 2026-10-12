@@ -20,21 +20,22 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `lpc/` (tables, frames, bit stream, frame statistics) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
-| `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External) | Implemented |
+| `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
-| `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, PHROM export) | Implemented |
+| `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
-| Reference data in `app/golden/` (emulator, packaging, encoder, quality) | Implemented |
+| Reference data in `app/golden/` (emulator, packaging, encoder, quality, output hashes) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`, `benchmark/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17) |
-| `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (Acorn PHROM images), `--output`; version and logging options |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
+| `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
-| The other export formats, BBC export, the GUI's Export dialog | Planned |
+| Export: Acorn PHROM images, C headers, WAV, presets, the output hashes (§18) | Implemented |
+| BBC export | Planned |
 
 ---
 
@@ -68,7 +69,8 @@ app/
                                 FrameStatistics
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
       synth/                    Synth, ReferenceSynthesizer, OutputPin
-      packaging/                AcornPhrom, TiIndexed, SpeakExternalStream
+      packaging/                AcornPhrom, TiIndexed, SpeakExternalStream,
+                                CHeader (§18)
       audio/                    WAV interfaces, the libsndfile adapters, the
                                 24-bit grid of project audio
       dsp/                      resampler and FFT interfaces and adapters;
@@ -83,7 +85,8 @@ app/
                                 RenderEncodedAudio (§16)
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
-                                stores, PhraseImporter, the PHROM export (§14)
+                                stores, PhraseImporter, the exports (§14,
+                                §18)
       optimiser/                Optimiser (§17)
     gui/                        library "speak5220_gui" + the "speak5220" executable
       main_window/              MainWindow, ProjectDocument, IDialogs, the
@@ -95,6 +98,7 @@ app/
                                 QualityRatingView, the encode-and-measure
                                 helpers and text (§17)
       optimise/                 OptimiseSession, OptimiseDialog (§17)
+      export/                   ExportDialog (§18)
       waveform/                 PhraseWaveforms, WaveformPane, WaveformView,
                                 PeakCache, TimeAxis, the frame map (§16)
       playback/                 Player, IAudioOutput, QtAudioOutput,
@@ -116,11 +120,9 @@ app/
 Planned additions, each created with its first code (plan §2.1):
 
 - `src/core/`: `bbc/`;
-- `src/gui/`: `export/`;
 - `app/projects/bbc/` (fixture projects),
   `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
-  WiX/CPack, macOS);
-- more scripts in `app/scripts/`: `run-projects.sh`, `output-hashes.sh`.
+  WiX/CPack, macOS).
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
 the shared command-line options). All DSP, emulation, encoding, packaging and
@@ -330,6 +332,7 @@ Plan §2.2, with the names as built.
 | `ReferenceSynthesizer` | **Implemented** (`core/synth/reference_synthesizer`): the encoder's reference-algorithm synthesiser (`synthesize()` in the Python), which matches the emulator's VSM path |
 | `OutputPin`, `PinSamples()`, `ClippedSamples()` | **Implemented** (`core/synth/output_pin`): the encoded audio from the SPEAKER pin, each code clipped to the DAC's −128…+127 (`emulator::kDacMin`, `kDacMax`), or from the I/O pin's unclipped 10-bit codes, for listening and display only (§16) |
 | `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's |
+| `CHeader` | **Implemented** (`core/packaging/c_header`): PHROM images or Speak External streams as a C header (§18) |
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
 | `SndfileWavCodec` (`IWavCodec`) | **Implemented** (`core/audio/sndfile_wav_io`): the same, to and from bytes in memory (libsndfile's virtual I/O), with integer PCM read and 24-bit PCM written exactly (§14) |
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
@@ -357,8 +360,8 @@ Plan §2.2, with the names as built.
 | `ProjectSerializer`, `ZipProjectStore`, `DirectoryProjectStore` (`IProjectStore`) | **Implemented** (`core/project/`): the `.s5proj` file (§14) |
 | `PhraseImporter` | **Implemented** (`core/project/phrase_importer`): plan §3.1 over `IWavReader`, `IResampler` and `IFileDigest`, inline or through `ITaskRunner` (§14) |
 | `InlineTaskRunner`, `ThreadPoolTaskRunner` (`ITaskRunner`) | **Implemented** (`core/util/task_runner`): background jobs (§14) |
-| `RunExport()`, `BuildAcornPhroms()` | **Implemented** (`core/project/project_export`): a project's Acorn PHROM images (§14) |
-| TI, raw `.bin`, C header and WAV export | Planned |
+| `RunExport()`, `BuildAcornPhroms()`, `ExportFileNames()`, `CheckEncodingsCurrent()`, `WriteExportedFiles()` | **Implemented** (`core/project/project_export`): a preset's Acorn PHROM images, C headers or WAV files (§18) |
+| `ExportDialog` | **Implemented** (`gui/export/`): the Export dialog (§18) |
 | `BbcExport` | Planned: a double-sided Acorn DFS `.dsd` image with the fixed player program, and each PHROM's phrase data and index |
 
 Classes depend on `I`-prefixed interfaces, injected through their
@@ -916,7 +919,8 @@ Both executables are thin front ends over `s5core`.
   `export`, each a thin sequence of core calls: `MakeProjectStore()` and
   `ProjectSerializer` to open and save, `PhraseImporter` and
   `Project::InsertPhrases()` to add, `EncodingCache::Refresh()` to encode,
-  `RunExport()` to export. `--output DIR` writes the project (or the
+  `CheckEncodingsCurrent()`, `RunExport()` and `WriteExportedFiles()` to
+  export (§18). `--output DIR` writes the project (or the
   exported files) into a directory of the caller's choosing, so the fixture
   projects can be encoded and exported without being changed (TESTING.md).
   It imports sequentially and encodes inline: there is nothing to wait for.
@@ -1024,6 +1028,11 @@ tests read only these files and never run anything in `investigation/`.
     and voicing errors of both trackers, and ESTOI from pystoi. Scores are
     written to 12 significant digits, since NumPy's sums can differ in the
     last bit from run to run.
+- `golden/output-hashes/SUITE.sha256`, written by
+  `app/scripts/output-hashes.sh --record`: not data from the retired
+  references, but the SHA-256 of every file the `general` and `phrom`
+  fixture suites' presets export (§18), so a change can be shown to leave
+  the exports byte-identical.
 - The emulator's data is never regenerated unless the datasheet changes;
   the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).
@@ -1207,23 +1216,18 @@ thread pool does the same without linking Qt Concurrent into `s5core`.
 spaces, and refuses an empty name, more than 16 characters, or a character
 outside A–Z, 0–9, space and `' ( ) , - .`, naming the character.
 `CIdentifiersForNames()` derives the C identifiers for the header exports
-(plan §4), with `_2`, `_3`, … for clashes; nothing uses them until the C
-header export (Phase 9).
+(plan §4), with `_2`, `_3`, … for clashes; the C headers and the WAV
+files' names use them (§18).
 
-**Export** (`RunExport()`). Only the `acorn-phrom` format exists so far,
-built from the allocation: one `AcornPhrom::Build()` per PHROM, with the
-project's header strings and the PHROM number appended to the second (or
-that PHROM's own strings), and the ASCII entries whose phrase the PHROM
-holds. Layouts `separate` (`NAME_1.bin`, …) and `concatenated`
-(`NAME.bin`). A phrase with no frames, or too large for a PHROM, fails the
-export; the CLI also refuses stale encodings. The other formats and the
-Export dialog are Phase 9.
+**Export** (`RunExport()`) is described in §18.
 
 **Fixtures** (`app/projects/`, unpacked; TESTING.md): `general/one-phrase`,
 `general/many-phrases` (Acorn-style names with punctuation, an ASCII map, an
-override, two presets), `general/frame-kinds` (a locked phrase with every
-frame kind), `phrom/one-phrom` (exactly 16 384 bytes),
-`phrom/two-phroms` (spills into a second PHROM) and
+override, six presets: every format, both PHROM layouts, both scopes and
+both WAV forms), `general/frame-kinds` (a locked phrase with every
+frame kind; a Speak External header and encoded WAV), `phrom/one-phrom`
+(exactly 16 384 bytes), `phrom/two-phroms` (spills into a second PHROM;
+a PHROM header too) and
 `benchmark/synthetic-speech` (two speech-like clips of 1.5 and 3.4 s, for
 timing Optimise, §17). The phrases with audio were
 added and encoded with `speak5220-cli` from synthetic clips; the locked
@@ -1372,8 +1376,8 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
 - The plan's mocked `IProjectEditor` cannot also supply the list's
   contents, so the model reads a `Project` value (built by the test
   helpers) and sends its edits to the mock through `ProjectEdits`.
-- The plan has no Export menu yet; it comes with the Export dialog
-  (Phase 9), and is left out rather than shown disabled.
+- The Export menu came with the Export dialog (Phase 9, §18), between
+  Phrase and Audio; until then it was left out rather than shown disabled.
 - `speak5220 [PROJECT]` opens a project at start-up; the plan does not
   mention it.
 
@@ -1817,3 +1821,145 @@ stale frames, or a change waiting.
   phrases, the history, the byte limit, and cancelling leaves the
   settings unchanged; the window's stages;
 - `corpus-check.sh` and `benchmark.sh` run Optimise (results above).
+
+---
+
+## 18. Export
+
+**Implemented** (plan §4, §6, Phase 9) in `core/packaging/c_header`,
+`core/project/project_export` and `gui/export/`. The user's view is
+[`docs/application/user-manual/export.md`](../../docs/application/user-manual/export.md),
+the layouts
+[`docs/application/reference/export-formats.md`](../../docs/application/reference/export-formats.md).
+
+**Structure.**
+
+```
+ExportDialog ── Project (read), ExportFileNames(), CheckEncodingsCurrent(),
+                the folder (the files that exist)
+MainWindow::ExportProject()
+ ├── IDialogs::AskExport() ─ ExportRequest (preset, folder); the
+ │   dialog asks before replacing files (confirm_overwrite)
+ └── ITaskRunner job: RunExport() ── ISynth, IWavCodec (WAV only)
+                      WriteExportedFiles()
+speak5220-cli export ── CheckExportPreset(), CheckEncodingsCurrent(),
+                        RunExport(), WriteExportedFiles()
+RunExport(project, preset, base, ExportTools)
+ ├── CheckExportBase(), CheckExportPreset(), PhrasesInScope()
+ ├── acorn-phrom: BuildAcornPhroms() ── AllocatePhroms(), AcornPhrom
+ ├── c-header-phrom: BuildAcornPhroms(), CHeader::ForPhroms()
+ ├── c-header-speak-external: SpeakExternalStream, CHeader::ForStreams()
+ └── wav: FrameCodec, ISynth (VSM path), PinSamples(SPEAKER), IWavCodec
+```
+
+**Presets** (`ExportPreset`, the `exports:` list of `project.yaml`):
+`name`, `format`, `scope`, and as the format needs them `phrases` (scope
+`selected`), `layout` (`acorn-phrom`), `licence` (the C headers) and
+`audio` (`wav`). The serializer writes only the keys that are set; the
+format version stays 1, since older files read unchanged and an older
+Speak5220 keeps the new keys as unknown keys. `CheckExportPreset()`
+refuses an unknown format or scope, a bad value, and an option the format
+does not take, so a mistyped preset fails rather than being half applied.
+`ExportFormats()` lists the formats, their labels and the options each
+takes, for the dialog and the checks.
+
+**Behaviour.**
+
+- **Names.** Files are named from the base: the preset's name (or the
+  project file's, for `--format` and the dialog's default).
+  `CheckExportBase()` keeps it one file name (no `/ \ : * ? " < > |`,
+  control characters, `.` or `..`), so a preset in a project file cannot
+  write outside the chosen folder. WAV files take the phrase's C
+  identifier, unique within the export.
+- **Scope.** `selected` exports the named phrases in list order. For the
+  PHROM formats they are allocated afresh (`BuildAcornPhroms()` over the
+  subset), as the whole project would be, so word numbers start at 127 in
+  each PHROM.
+- **C headers** (`CHeader`). An SPDX line with the preset's licence
+  (default `GPL-3.0-or-later`; letters, digits, spaces and `. + - ( )`,
+  so it cannot break the comment), the project's name (with `*/` and line
+  breaks defused), the name-to-identifier list, an include guard and
+  `<stdint.h>`. The PHROM header has one `static const uint8_t
+  n_phrom_N[16384]` per image, an enum of the words and a table of each
+  word's PHROM, number, offset, length and name; the Speak External header
+  one array per phrase with a `N_LENGTH_ID` constant, an enum and a table
+  of name, data and length (`uint16_t`, so a stream over 65 535 bytes is
+  refused). Phrase constants all start `N_WORD_` or `N_LENGTH_` and nothing
+  else does, so names cannot clash whatever the phrases are called. There
+  is no date (below).
+- **WAV.** `encoded`: the packed frames spoken through `ISynth`'s VSM
+  path, each sample through `PinSamples(kSpeaker)` (the DAC's clipping),
+  as 16-bit PCM at 8 kHz: the encoded waveform with the Audio menu at its
+  defaults. `original`: the phrase's audio as held, 24-bit, so it
+  round-trips exactly. Both go through `IWavCodec` into bytes, so
+  `RunExport()` writes no file itself.
+- **Stale encodings.** `CheckEncodingsCurrent()` refuses a phrase in scope
+  whose encoding is not current (the WAV of the original excepted). The
+  CLI and the main window check it before running; the dialog shows it.
+- **The dialog** (`ExportDialog`) shows only the chosen format's
+  options, and lists the files the export will write (`ExportFileNames()`:
+  the same checks as `RunExport()`, without speaking any phrase or
+  writing a header) or why it cannot run; Export is enabled only for an
+  export that can run, into a chosen folder. It neither loads nor saves
+  presets: they are written in the project file for the CLI, and the GUI
+  keeps them when it saves. `IDialogs::AskExport()` shows it, so the main
+  window's tests answer without a modal dialog.
+- **Existing files.** The dialog's `accept()` looks for the files the
+  export will write in the folder (`ExistingFiles()`); if any exist it
+  asks (`ExportStart::confirm_overwrite`, a question box from
+  `QtDialogs`), and if the user declines the dialog stays open with its
+  settings, so the name or folder can be changed. With no one to ask,
+  existing files are never replaced. The CLI replaces files without
+  asking, as a script expects.
+- **Running.** `MainWindow::ExportProject()` runs the export on the
+  `ITaskRunner` with a copy of the project, and writes the files there; the result comes back
+  queued, to the status bar or an error. The folder is offered again next
+  time.
+- **Scripts.** `run-projects.sh` encodes a copy of each fixture of a suite
+  (`encode --output`) and runs its presets into
+  `build/app/project-output/SUITE/NAME/export/`, recording the files each
+  run wrote in `written.txt`, so nothing needs deleting between runs.
+  `output-hashes.sh` hashes those files and compares the manifest with
+  `app/golden/output-hashes/SUITE.sha256` (`--record` records it).
+
+**Deviations from the plan.**
+
+- Plan §6 puts the date in a header's comment. A date changes the bytes
+  every day, which would defeat the output hashes, so headers carry the
+  project's name and no date (decided with the user).
+- The TI indexed and raw `.bin` exports were dropped from the plan, since
+  their output cannot practically be tested; `TiIndexed` stays in
+  `core/packaging/`, unused by the exports.
+- The plan has one "C header" export in two forms; they are two formats,
+  `c-header-phrom` and `c-header-speak-external`, so a preset names one
+  format and the options it takes (decided with the user).
+- The dialog does not load or save presets (decided with the user);
+  presets are for the CLI.
+
+**Acceptance** (plan Phase 9, met):
+
+- C headers: unit tests read the arrays back byte for byte, and check the
+  table, the names and their mapping, the comment, the licence and prefix
+  checks and the stream limit; a functional test compiles both headers of
+  `general/many-phrases`, included twice, as C11 and C++17 with
+  `-Wall -Wextra -Wpedantic -Werror` (`/W4 /WX` with MSVC), using every
+  table.
+- WAV: unit tests with a mocked synth and codec check the SPEAKER clipping,
+  16- and 24-bit and the names; functional tests reload the files at
+  8 kHz with the chip output's length, and the original sample for
+  sample.
+- Export dialog and presets: GUI unit tests map the dialog's fields to
+  presets (each format's options, both scopes), and check the summary and
+  when Export is enabled; main window tests cover a cancelled export and
+  a refused stale phrase; GUI functional tests write a header into a
+  temporary folder, and check that the dialog asks before replacing an
+  existing file and stays open when the user declines (a new name then
+  goes ahead without asking), accepts when the user agrees, and keeps
+  the file with no one to ask. Functional tests run presets of every format through
+  the CLI, `--format` with `--phrase`, `--licence` and `--audio`, and
+  refuse an unknown phrase, an option of another format and a preset name
+  that leaves the folder.
+- Output hashes: the baseline for `general` (15 files) and `phrom` (4) is
+  recorded; rerunning matches it, and changing the header's bytes per
+  line from 12 to 16 was reported as a difference in exactly the four
+  headers.

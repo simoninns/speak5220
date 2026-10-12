@@ -10,6 +10,7 @@
 
 #include "gui/main_window/dialogs.h"
 
+#include <QDir>
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QString>
@@ -97,6 +98,39 @@ bool QtDialogs::AskNormalise(const QStringList& files) {
                  .arg(NameList(files)),
              QMessageBox::Yes | QMessageBox::No,
              QMessageBox::Yes) == QMessageBox::Yes;
+}
+
+std::optional<ExportRequest> QtDialogs::AskExport(const ExportStart& start) {
+  // The question is parented to the dialog, which stays open if the user
+  // declines.
+  QWidget* question_parent = parent_;
+  ExportStart asking = start;
+  asking.confirm_overwrite = [&question_parent](const QString& directory,
+                                                const QStringList& names) {
+    return ConfirmOverwrite(question_parent, directory, names);
+  };
+  ExportDialog dialog(asking, parent_);
+  question_parent = &dialog;
+  if (dialog.exec() != QDialog::Accepted) {
+    return std::nullopt;
+  }
+  return dialog.Request();
+}
+
+bool QtDialogs::ConfirmOverwrite(QWidget* parent, const QString& directory,
+                                 const QStringList& names) {
+  const QString question =
+      names.size() == 1
+          ? QStringLiteral("%1 already exists in %2. Replace it?")
+                .arg(names.front(), QDir::toNativeSeparators(directory))
+          : QStringLiteral(
+                "These %1 files already exist in %2:\n\n%3\n\n"
+                "Replace them?")
+                .arg(names.size())
+                .arg(QDir::toNativeSeparators(directory), NameList(names));
+  return QMessageBox::question(parent, QStringLiteral("Replace Files"),
+                               question, QMessageBox::Yes | QMessageBox::Cancel,
+                               QMessageBox::Cancel) == QMessageBox::Yes;
 }
 
 void QtDialogs::ShowError(const QString& title, const QString& message) {

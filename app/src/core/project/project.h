@@ -39,15 +39,25 @@ struct PhromHeader {
   friend bool operator==(const PhromHeader& a, const PhromHeader& b) = default;
 };
 
-// An export the Export dialog remembers and the CLI can run (plan §4).
+// An export the CLI can run (plan §4).
 struct ExportPreset {
   std::string name = {};
-  // "acorn-phrom", ... (plan §6).
+  // "acorn-phrom", "c-header-phrom", "c-header-speak-external" or "wav"
+  // (plan §6).
   std::string format = {};
-  // "all" phrases.
+  // "all" phrases, or the "selected" ones in `phrases`.
   std::string scope = "all";
+  // For scope "selected": the phrases' names. They are exported in list
+  // order, whatever the order here.
+  std::vector<std::string> phrases = {};
   // For PHROM images: "separate" (one file per PHROM) or "concatenated".
   std::string layout = {};
+  // For C headers: the SPDX licence identifier of the generated file;
+  // empty for GPL-3.0-or-later.
+  std::string licence = {};
+  // For WAV: "encoded" (the chip's output) or "original" (the 8 kHz
+  // source); empty for "encoded".
+  std::string audio = {};
   UnknownKeys unknown = {};
 
   friend bool operator==(const ExportPreset& a,

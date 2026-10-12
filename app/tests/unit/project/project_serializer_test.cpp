@@ -187,13 +187,20 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
                       .header_strings = {"(C)2026 Simon Inns", "Second", "1"},
                       .unknown = {}}};
   ASSERT_TRUE(project.SetSettings(settings).IsOk());
-  ASSERT_TRUE(project
-                  .SetExports({{.name = "phrom",
-                                .format = "acorn-phrom",
-                                .scope = "all",
-                                .layout = "separate",
-                                .unknown = {}}})
-                  .IsOk());
+  ASSERT_TRUE(
+      project
+          .SetExports({{.name = "phrom",
+                        .format = "acorn-phrom",
+                        .scope = "all",
+                        .layout = "separate",
+                        .unknown = {}},
+                       {.name = "words",
+                        .format = "c-header-speak-external",
+                        .scope = "selected",
+                        .phrases = {"NO", "O'CLOCK"},
+                        .licence = "CC0-1.0"},
+                       {.name = "chip", .format = "wav", .audio = "original"}})
+          .IsOk());
 
   const ProjectFiles files = Save(project);
   EXPECT_TRUE(files.contains(PhraseFile(1, "source.wav")));
@@ -206,6 +213,40 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   EXPECT_EQ(*loaded, project);
   // And saving the loaded project gives the same files.
   EXPECT_EQ(Save(*loaded), files);
+}
+
+TEST_F(ProjectSerializerTest, PresetsWriteOnlyTheOptionsTheySet) {
+  Project project = ProjectWith({AudioPhrase(1, "NO")});
+  ASSERT_TRUE(project
+                  .SetExports({{.name = "words",
+                                .format = "c-header-phrom",
+                                .scope = "selected",
+                                .phrases = {"NO"},
+                                .licence = "MIT"},
+                               {.name = "chip", .format = "wav"}})
+                  .IsOk());
+  const std::string yaml = ProjectYamlOf(project);
+  EXPECT_THAT(yaml, HasSubstr("  - name: \"words\"\n"
+                              "    format: \"c-header-phrom\"\n"
+                              "    scope: \"selected\"\n"
+                              "    phrases: [\"NO\"]\n"
+                              "    licence: \"MIT\"\n"));
+  EXPECT_THAT(yaml, HasSubstr("  - name: \"chip\"\n"
+                              "    format: \"wav\"\n"
+                              "    scope: \"all\"\n"));
+  EXPECT_THAT(yaml, Not(HasSubstr("audio:")));
+  EXPECT_THAT(yaml, Not(HasSubstr("layout:")));
+}
+
+TEST_F(ProjectSerializerTest, RefusesPresetPhrasesThatAreNotAList) {
+  const std::string yaml = MinimalProjectYaml() +
+                           "exports:\n"
+                           "  - name: \"e\"\n"
+                           "    format: \"wav\"\n"
+                           "    phrases: \"NO\"\n";
+  const StatusOr<Project> loaded = Load(WithProjectYaml(yaml));
+  ASSERT_FALSE(loaded.IsOk());
+  EXPECT_THAT(loaded.GetStatus().Message(), HasSubstr("phrases"));
 }
 
 TEST_F(ProjectSerializerTest, AudioGoesThroughTheCodecAs24BitAt8kHz) {
@@ -394,7 +435,7 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "exports:\n"
       "  - name: \"e\"\n"
       "    format: \"acorn-phrom\"\n"
-      "    licence: \"MIT\"\n";
+      "    compress: \"MIT\"\n";
   const std::string frames_yaml =
       "encoder_version: \"1.0.0\"\n"
       "settings_hash: \"h\"\n"
@@ -434,7 +475,7 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_THAT(yaml, HasSubstr("      bits: 24\n"));
   EXPECT_THAT(yaml, HasSubstr("      new_thing: \"on\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    rating: 5\n"));
-  EXPECT_THAT(yaml, HasSubstr("    licence: \"MIT\"\n"));
+  EXPECT_THAT(yaml, HasSubstr("    compress: \"MIT\"\n"));
   const std::vector<std::uint8_t>& frames_bytes =
       saved.at(PhraseFile(1, "frames.yaml"));
   const std::string frames(frames_bytes.begin(), frames_bytes.end());

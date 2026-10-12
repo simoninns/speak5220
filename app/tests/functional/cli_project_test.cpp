@@ -184,12 +184,16 @@ TEST_F(CliProjectTest, ExportRunsTheProjectsPresets) {
   ASSERT_EQ(RunCli({QStringLiteral("encode"), Q(path)}).exit_code, 0);
   core::StatusOr<project::Project> loaded = Load(path);
   ASSERT_TRUE(loaded.IsOk());
-  ASSERT_TRUE(loaded
-                  ->SetExports({{.name = "phrom", .format = "acorn-phrom"},
-                                {.name = "joined",
-                                 .format = "acorn-phrom",
-                                 .layout = "concatenated"}})
-                  .IsOk());
+  ASSERT_TRUE(
+      loaded
+          ->SetExports(
+              {{.name = "phrom", .format = "acorn-phrom"},
+               {.name = "joined",
+                .format = "acorn-phrom",
+                .layout = "concatenated"},
+               {.name = "header", .format = "c-header-phrom", .licence = "MIT"},
+               {.name = "chip", .format = "wav"}})
+          .IsOk());
   ASSERT_TRUE(
       serializer_.Save(*loaded, *project::MakeProjectStore(path)).IsOk());
 
@@ -200,6 +204,10 @@ TEST_F(CliProjectTest, ExportRunsTheProjectsPresets) {
   EXPECT_TRUE(fs::exists(Path("all") / "joined.bin"));
   EXPECT_EQ(ReadAll(Path("all") / "phrom_1.bin"),
             ReadAll(Path("all") / "joined.bin"));
+  const std::vector<char> header = ReadAll(Path("all") / "header.h");
+  EXPECT_THAT(std::string(header.begin(), header.end()),
+              HasSubstr("SPDX-License-Identifier: MIT\n"));
+  EXPECT_TRUE(fs::exists(Path("all") / "chip_HELLO.wav"));
 
   run = RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
                 Q(Path("one")), QStringLiteral("--preset"),
@@ -207,6 +215,60 @@ TEST_F(CliProjectTest, ExportRunsTheProjectsPresets) {
   ASSERT_EQ(run.exit_code, 0) << run.err;
   EXPECT_TRUE(fs::exists(Path("one") / "joined.bin"));
   EXPECT_FALSE(fs::exists(Path("one") / "phrom_1.bin"));
+}
+
+TEST_F(CliProjectTest, ExportsEachFormatFromTheCommandLine) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  ASSERT_EQ(RunCli({QStringLiteral("encode"), Q(path)}).exit_code, 0);
+  CliRun run =
+      RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+              Q(Path("h")), QStringLiteral("--format"),
+              QStringLiteral("c-header-speak-external"),
+              QStringLiteral("--phrase"), QStringLiteral("HELLO"),
+              QStringLiteral("--licence"), QStringLiteral("CC0-1.0")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  const std::vector<char> header = ReadAll(Path("h") / "test.h");
+  const std::string text(header.begin(), header.end());
+  EXPECT_THAT(text, HasSubstr("SPDX-License-Identifier: CC0-1.0\n"));
+  EXPECT_THAT(text, HasSubstr("TEST_LENGTH_HELLO"));
+
+  run = RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+                Q(Path("w")), QStringLiteral("--format"), QStringLiteral("wav"),
+                QStringLiteral("--audio"), QStringLiteral("original")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  const core::StatusOr<core::audio::DecodedWav> wav =
+      core::audio::SndfileWavReader().Read(Path("w") / "test_HELLO.wav");
+  ASSERT_TRUE(wav.IsOk()) << wav.GetStatus().ToString();
+  EXPECT_EQ(wav->sample_rate, 8000);
+}
+
+TEST_F(CliProjectTest, ExportRefusesUnknownPhrasesAndBadPresets) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  ASSERT_EQ(RunCli({QStringLiteral("encode"), Q(path)}).exit_code, 0);
+  CliRun run =
+      RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+              Q(Path("x")), QStringLiteral("--format"), QStringLiteral("wav"),
+              QStringLiteral("--phrase"), QStringLiteral("NOPE")});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("NOPE"));
+  run = RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+                Q(Path("x")), QStringLiteral("--format"), QStringLiteral("wav"),
+                QStringLiteral("--layout"), QStringLiteral("concatenated")});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("layout"));
+
+  core::StatusOr<project::Project> loaded = Load(path);
+  ASSERT_TRUE(loaded.IsOk());
+  ASSERT_TRUE(
+      loaded->SetExports({{.name = "../up", .format = "acorn-phrom"}}).IsOk());
+  ASSERT_TRUE(
+      serializer_.Save(*loaded, *project::MakeProjectStore(path)).IsOk());
+  run = RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+                Q(Path("x"))});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_FALSE(fs::exists(Path("up_1.bin")));
 }
 
 TEST_F(CliProjectTest, ExportRefusesPhrasesThatAreNotEncoded) {
@@ -259,6 +321,11 @@ TEST_F(CliProjectTest, UnusableCommandLinesExitWithCode2) {
   EXPECT_EQ(RunCli({QStringLiteral("new")}).exit_code, 2);
   EXPECT_EQ(RunCli({QStringLiteral("add"), Q(Path("p"))}).exit_code, 2);
   EXPECT_EQ(RunCli({QStringLiteral("export"), Q(Path("p"))}).exit_code, 2);
+  EXPECT_EQ(RunCli({QStringLiteral("export"), Q(Path("p")),
+                    QStringLiteral("--output"), Q(Path("o")),
+                    QStringLiteral("--licence"), QStringLiteral("MIT")})
+                .exit_code,
+            2);
   EXPECT_EQ(RunCli({QStringLiteral("add"), Q(Path("p")),
                     QStringLiteral("a.wav"), QStringLiteral("b.wav"),
                     QStringLiteral("--name"), QStringLiteral("X")})

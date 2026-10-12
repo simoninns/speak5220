@@ -53,7 +53,20 @@ Nix shell (py-webrtcvad, pystoi, pyworld):
 nix develop --command python3 app/scripts/golden/measures.py --check
 ```
 
+`output-hashes/SUITE.sha256` is different: not reference data from the
+retired implementations, but the application's own exports, recorded so a
+change can be shown to leave them byte-identical. Each line is the SHA-256
+and path (`FIXTURE/FILE`) of a file that the export presets of the
+`general` or `phrom` fixture suite (`app/projects/`) write: PHROM images,
+C headers and WAV files. `app/scripts/output-hashes.sh` compares the
+exports with it, and `--record` records it again:
+
+```bash
+nix develop .#app --command app/scripts/output-hashes.sh
+```
+
 The emulator's data never changes unless the reference datasheet does, and
 the encoder's only for an intended improvement, with the quality data that
-measures it (AGENTS.md §3.1). Ask before
+measures it (AGENTS.md §3.1). The output hashes are recorded again only for
+an intended change to an exporter or to the fixtures' presets. Ask before
 regenerating any of it.

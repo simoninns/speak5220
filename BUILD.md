@@ -106,14 +106,16 @@ nix develop --command python3 app/scripts/generate_filter_constants.py          
 
 ### Corpus check and benchmark
 
-Two scripts check the encoder and the quality measures by hand, from the repository root, after building the functional tests:
+Scripts check the encoder, the quality measures and the exports by hand, from the repository root, after building the functional tests (and `speak5220-cli`):
 
 ```bash
 nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames and quality measures (plan §3.2, Phase 3), and Optimise on it (Phase 7)
 nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core; Optimise on one thread and on every core
+nix develop .#app --command app/scripts/run-projects.sh   # encodes copies of the fixture projects and runs their export presets
+nix develop .#app --command app/scripts/output-hashes.sh  # checks those exports against the recorded hashes in app/golden/output-hashes/
 ```
 
-`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`.
+`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`, and the fixtures' exports to `build/app/project-output/SUITE/`.
 
 ### Format and lint
 

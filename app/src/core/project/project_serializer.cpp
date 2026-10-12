@@ -263,9 +263,19 @@ void EmitExport(YAML::Emitter& out, const ExportPreset& preset) {
   EmitQuoted(out, preset.format);
   out << YAML::Key << "scope" << YAML::Value;
   EmitQuoted(out, preset.scope);
-  if (!preset.layout.empty()) {
-    out << YAML::Key << "layout" << YAML::Value;
-    EmitQuoted(out, preset.layout);
+  if (!preset.phrases.empty()) {
+    out << YAML::Key << "phrases" << YAML::Value;
+    EmitStringList(out, preset.phrases);
+  }
+  const std::array<std::pair<const char*, const std::string*>, 3>
+      optional_fields = {{{"layout", &preset.layout},
+                          {"licence", &preset.licence},
+                          {"audio", &preset.audio}}};
+  for (const auto& [key, value] : optional_fields) {
+    if (!value->empty()) {
+      out << YAML::Key << key << YAML::Value;
+      EmitQuoted(out, *value);
+    }
   }
   EmitUnknown(out, preset.unknown);
   out << YAML::EndMap;
@@ -798,6 +808,18 @@ Status ReadExport(const YAML::Node& node, const Where& where,
           field = &preset.scope;
         } else if (key == "layout") {
           field = &preset.layout;
+        } else if (key == "licence") {
+          field = &preset.licence;
+        } else if (key == "audio") {
+          field = &preset.audio;
+        } else if (key == "phrases") {
+          StatusOr<std::vector<std::string>> names =
+              ReadStringList(value, where.Key(key));
+          if (!names.IsOk()) {
+            return names.GetStatus();
+          }
+          preset.phrases = *std::move(names);
+          return OkStatus();
         }
         if (field == nullptr) {
           preset.unknown.emplace_back(key, NodeText(value));

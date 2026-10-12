@@ -15,6 +15,8 @@
 #include <QStringList>
 #include <optional>
 
+#include "gui/export/export_dialog.h"
+
 class QWidget;
 
 namespace speak5220::app {
@@ -45,6 +47,11 @@ class IDialogs {
   // These files clip or are very quiet: normalise them to -1 dBFS?
   virtual bool AskNormalise(const QStringList& files) = 0;
 
+  // The export to run, chosen in the Export dialog (ExportDialog) from
+  // `start`, which asks before replacing files that already exist.
+  // Nothing if cancelled.
+  virtual std::optional<ExportRequest> AskExport(const ExportStart& start) = 0;
+
   // Something the user asked for failed.
   virtual void ShowError(const QString& title, const QString& message) = 0;
 };
@@ -63,9 +70,14 @@ class QtDialogs : public IDialogs {
   SaveChoice AskSaveChanges(const QString& name) override;
   bool ConfirmRemove(const QStringList& names) override;
   bool AskNormalise(const QStringList& files) override;
+  std::optional<ExportRequest> AskExport(const ExportStart& start) override;
   void ShowError(const QString& title, const QString& message) override;
 
  private:
+  // These files (names) already exist in `directory`: replace them?
+  static bool ConfirmOverwrite(QWidget* parent, const QString& directory,
+                               const QStringList& names);
+
   QWidget* parent_;
 };
 

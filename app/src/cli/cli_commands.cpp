@@ -15,7 +15,6 @@
 #include <QStringList>
 #include <QTextStream>
 #include <filesystem>
-#include <fstream>
 #include <memory>
 #include <optional>
 #include <set>
@@ -35,6 +34,7 @@
 #include "core/project/project_export.h"
 #include "core/project/project_serializer.h"
 #include "core/project/project_store.h"
+#include "core/synth/synth.h"
 #include "core/util/file_digest.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -97,7 +97,8 @@ const QCommandLineOption& FormatOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("format"),
       QStringLiteral("export: export in this format instead of the presets "
-                     "(acorn-phrom)."),
+                     "(acorn-phrom, c-header-phrom, c-header-speak-external "
+                     "or wav)."),
       QStringLiteral("format"));
   return kOption;
 }
@@ -108,6 +109,32 @@ const QCommandLineOption& LayoutOption() {
       QStringLiteral("export --format acorn-phrom: separate (default) or "
                      "concatenated."),
       QStringLiteral("layout"));
+  return kOption;
+}
+
+const QCommandLineOption& PhraseOption() {
+  static const QCommandLineOption kOption(
+      QStringLiteral("phrase"),
+      QStringLiteral("export --format: export only this phrase "
+                     "(repeatable)."),
+      QStringLiteral("name"));
+  return kOption;
+}
+
+const QCommandLineOption& LicenceOption() {
+  static const QCommandLineOption kOption(
+      QStringLiteral("licence"),
+      QStringLiteral("export --format c-header-...: the SPDX licence of the "
+                     "header (default GPL-3.0-or-later)."),
+      QStringLiteral("spdx"));
+  return kOption;
+}
+
+const QCommandLineOption& AudioOption() {
+  static const QCommandLineOption kOption(
+      QStringLiteral("audio"),
+      QStringLiteral("export --format wav: encoded (default) or original."),
+      QStringLiteral("audio"));
   return kOption;
 }
 
@@ -320,28 +347,21 @@ int RunEncode(const QCommandLineParser& parser, const QStringList& arguments) {
   return report.failures.empty() ? kExitSuccess : kExitFailure;
 }
 
-core::Status WriteExportedFile(const fs::path& directory,
-                               const project::ExportedFile& file) {
-  const fs::path path = directory / file.name;
-  std::ofstream stream(path, std::ios::binary | std::ios::trunc);
-  const std::string bytes(file.bytes.begin(), file.bytes.end());
-  stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size()));
-  stream.close();
-  if (!stream) {
-    return core::UnavailableError("cannot write " + PathText(path));
-  }
-  Out() << "wrote " << ToQString(PathText(path)) << Qt::endl;
-  return core::OkStatus();
-}
-
 int RunExport(const QCommandLineParser& parser, const QStringList& arguments) {
   if (arguments.size() != 1 || !parser.isSet(OutputOption())) {
     return Usage(
         "usage: speak5220-cli export PROJECT --output DIR [--preset NAME]... "
-        "| [--format acorn-phrom [--layout separate|concatenated]]");
+        "| [--format FORMAT [--phrase NAME]... [--layout LAYOUT] "
+        "[--licence SPDX] [--audio encoded|original]]");
   }
   if (parser.isSet(FormatOption()) && parser.isSet(PresetOption())) {
     return Usage("give --preset or --format, not both");
+  }
+  const bool format_options =
+      parser.isSet(PhraseOption()) || parser.isSet(LayoutOption()) ||
+      parser.isSet(LicenceOption()) || parser.isSet(AudioOption());
+  if (format_options && !parser.isSet(FormatOption())) {
+    return Usage("--phrase, --layout, --licence and --audio need --format");
   }
   const fs::path input = Normalised(ToPath(arguments.front()));
   core::StatusOr<project::Project> loaded = LoadProject(input);
@@ -349,28 +369,21 @@ int RunExport(const QCommandLineParser& parser, const QStringList& arguments) {
     return Fail(loaded.GetStatus());
   }
   const project::Project& opened = *loaded;
-  for (const project::Phrase& phrase : opened.Phrases()) {
-    core::StatusOr<bool> current = project::EncodingCache::IsCurrent(
-        phrase, opened.Settings().default_encoder);
-    if (!current.IsOk()) {
-      return Fail(current.GetStatus());
-    }
-    if (!*current) {
-      return Fail(phrase.name +
-                  " is not encoded with its current settings: run "
-                  "\"speak5220-cli encode\" first");
-    }
-  }
 
   // The presets to run, each with the base name of its files.
   std::vector<std::pair<project::ExportPreset, std::string>> runs;
   if (parser.isSet(FormatOption())) {
-    project::ExportPreset preset{
-        .name = "command line",
-        .format = parser.value(FormatOption()).toStdString(),
-        .scope = std::string(project::kScopeAll),
-        .layout = parser.value(LayoutOption()).toStdString(),
-        .unknown = {}};
+    project::ExportPreset preset;
+    preset.name = "command line";
+    preset.format = parser.value(FormatOption()).toStdString();
+    for (const QString& name : parser.values(PhraseOption())) {
+      preset.phrases.push_back(name.toStdString());
+    }
+    preset.scope = std::string(
+        preset.phrases.empty() ? project::kScopeAll : project::kScopeSelected);
+    preset.layout = parser.value(LayoutOption()).toStdString();
+    preset.licence = parser.value(LicenceOption()).toStdString();
+    preset.audio = parser.value(AudioOption()).toStdString();
     runs.emplace_back(std::move(preset), PathText(input.stem()));
   } else if (parser.isSet(PresetOption())) {
     for (const QString& name : parser.values(PresetOption())) {
@@ -395,26 +408,36 @@ int RunExport(const QCommandLineParser& parser, const QStringList& arguments) {
       return Fail("the project has no export presets: give --format");
     }
   }
+  for (const auto& [preset, base] : runs) {
+    if (core::Status status = project::CheckExportPreset(preset);
+        !status.IsOk()) {
+      return Fail("export \"" + preset.name + "\": " + status.Message());
+    }
+    if (core::Status status = project::CheckEncodingsCurrent(opened, preset);
+        !status.IsOk()) {
+      return Fail("export \"" + preset.name + "\": " + status.Message() +
+                  ": run \"speak5220-cli encode\" first");
+    }
+  }
 
   const fs::path directory = ToPath(parser.value(OutputOption()));
-  std::error_code error;
-  fs::create_directories(directory, error);
-  if (error) {
-    return Fail("cannot create " + PathText(directory) + ": " +
-                error.message());
-  }
+  core::synth::Synth synth({}, core::synth::SynthCache::kOff);
+  core::audio::SndfileWavCodec wav_codec;
+  const project::ExportTools tools{.synth = &synth, .wav_codec = &wav_codec};
   for (const auto& [preset, base] : runs) {
     core::StatusOr<std::vector<project::ExportedFile>> files =
-        project::RunExport(opened, preset, base);
+        project::RunExport(opened, preset, base, tools);
     if (!files.IsOk()) {
       return Fail("export \"" + preset.name +
                   "\": " + files.GetStatus().Message());
     }
+    if (core::Status status = project::WriteExportedFiles(directory, *files);
+        !status.IsOk()) {
+      return Fail(status);
+    }
     for (const project::ExportedFile& file : *files) {
-      if (core::Status status = WriteExportedFile(directory, file);
-          !status.IsOk()) {
-        return Fail(status);
-      }
+      Out() << "wrote " << ToQString(PathText(directory / file.name))
+            << Qt::endl;
     }
   }
   return kExitSuccess;
@@ -441,6 +464,9 @@ void AddCommandOptions(QCommandLineParser& parser) {
   parser.addOption(PresetOption());
   parser.addOption(FormatOption());
   parser.addOption(LayoutOption());
+  parser.addOption(PhraseOption());
+  parser.addOption(LicenceOption());
+  parser.addOption(AudioOption());
 }
 
 int RunCommand(const QCommandLineParser& parser, const QStringList& arguments) {

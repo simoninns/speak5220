@@ -102,8 +102,8 @@ the project past its budget.
 
 ## Exporting
 
-So far a project exports Acorn PHROM images (datasheet §12.8): one 16 KB
-image per PHROM, as separate files or concatenated into one. Export presets
-saved in the project are run by `speak5220-cli export`. Every phrase must be
-encoded with its current settings first. The other formats (TI images, raw
-data, C headers, WAV and the BBC Micro disc) come later.
+A project exports Acorn PHROM images (datasheet §12.8), C headers of
+those images or of each phrase's Speak External stream, and WAV files of
+the encoded or original audio, from the [Export dialog](export.md) or
+`speak5220-cli export`. Exports can be saved in the project as presets.
+The BBC Micro disc comes later.

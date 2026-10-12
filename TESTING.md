@@ -216,13 +216,13 @@ way its callers can be unit tested.
 | `ISampleSink` | `Synth`'s recorder, `ChipDriver` | `Tms5220` output |
 | `ITms5220Observer` | `Synth`'s recorder, the test runner's event log | `Tms5220` events (VSM functions, host cycles, flags) |
 | `IWavReader`, `IWavWriter` | `SndfileWavReader`, `SndfileWavWriter` (libsndfile) | The import pipeline, the WAV export |
-| `IWavCodec` | `SndfileWavCodec` (libsndfile, in memory) | `ProjectSerializer` |
+| `IWavCodec` | `SndfileWavCodec` (libsndfile, in memory) | `ProjectSerializer`, the WAV export (`RunExport()`) |
 | `IFileDigest` | `FileSha256Digest` | The import pipeline |
 | `IResampler` | `SincResampler` (libsamplerate) | The import pipeline |
 | `IFft` | `PocketFft` (pocketfft) | Encoder stages |
 | `IFrameAnalyser`, `IPitchTracker`, `IVoicingClassifier`, `IRepeatSearch`, `ILevelSetter` | `FrameAnalyser`, `YinPitchTracker`, `VoicingClassifier`, `RepeatSearch`, `LevelSetter` | `Encoder` (orchestration only) |
 | `IEncoder` | `Encoder` | `Optimiser`, the project's re-encode logic (`EncodingCache`), the GUI's encoder panel and Optimise |
-| `ISynth` | `Synth` | `QualityAssessor`, `RenderEncodedAudio()`, `PhraseWaveforms`, `Optimiser` |
+| `ISynth` | `Synth` | `QualityAssessor`, `RenderEncodedAudio()`, `PhraseWaveforms`, `Optimiser`, the WAV export (`RunExport()`) |
 | `IQualityMetric` | `OverallQualityMetric` | `Optimiser` |
 | `IQualityAssessor` | `QualityAssessor` | The GUI's encoder panel and Optimise |
 | `IVoiceActivity` | `FvadVoiceActivity` (libfvad) | The quality measures' voice activity mask |
@@ -230,7 +230,7 @@ way its callers can be unit tested.
 | `IPitchEstimator` | `SptkPitchEstimator` (SPTK 4's REAPER or Harvest) | The pitch and voicing measures |
 | `IProjectStore` | `ZipProjectStore` (libzip), `DirectoryProjectStore` | `ProjectSerializer` |
 | `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails`, `PhraseWaveforms` |
-| `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`) | `MainWindow`: file choices, the save prompt, confirmations, errors |
+| `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`, `ExportDialog`) | `MainWindow`: file choices, the save prompt, confirmations, the export to run, errors |
 | `IRecentFilesStore` | `SettingsRecentFilesStore` (`QSettings`) | `MainWindow`'s recent-file list |
 | `ITaskRunner` | `ThreadPoolTaskRunner` (a `QThreadPool`); `InlineTaskRunner` runs jobs at once | `Optimiser`, background jobs such as the import and the rendering of encoded audio (run inline in tests) |
 | `IAudioOutput` | `QtAudioOutput` (`QAudioSink`) | `Player`, the playhead |
@@ -239,7 +239,7 @@ way its callers can be unit tested.
 
 Code with no dependencies is unit tested directly, in memory, with no
 mocks. That covers `FrameCodec` (pack/parse, bit order), `Booth`, the tables,
-`AcornPhrom`, `TiIndexed`, `SpeakExternalStream`, the PHROM allocator, the
+`AcornPhrom`, `TiIndexed`, `SpeakExternalStream`, `CHeader`, the PHROM allocator, the
 BASIC tokeniser, the DFS image writer, the YAML mapping, and the
 name/identifier rules.
 
@@ -337,6 +337,7 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
 | `app/golden/packaging/` | The Python encoder's Acorn PHROM and TI indexed images and Speak External streams |
 | `app/golden/encoder/` | The Python encoder's frames for the whole corpus with four option sets, with each file's near-tie frames; `encodeDetailed()` intermediates and WAV inputs for a corpus subset |
 | `app/golden/quality/measures/` | Independent implementations of the quality measures of plan §3.3 on the corpus subset's reference encodings: the voice activity masks, the pitch tracks and the scores |
+| `app/golden/output-hashes/` | The SHA-256 of every file the `general` and `phrom` fixture suites' export presets write, recorded by `output-hashes.sh --record` |
 
 - **Fixture projects are stored unpacked**, as a directory with the same
   layout as a `.s5proj` ZIP (`project.yaml`, `phrases/<uuid>/…`). That way
@@ -384,17 +385,25 @@ Everything writes through an output directory chosen by the caller (the
 CLI's `--output DIR`), never into `app/projects/`, `app/golden/` or
 `app/tests/`.
 The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`,
-`encoder.py` and `measures.py`), which write `app/golden/` themselves; they are run by
+`encoder.py` and `measures.py`), which write `app/golden/` themselves, and
+`output-hashes.sh --record`, which writes `app/golden/output-hashes/`; they are run by
 hand, and only to create or, by agreement, regenerate the reference data
 (AGENTS.md §3.1).
 
-- `app/scripts/run-projects.sh [general|phrom|bbc]` runs a fixture suite end to
-  end through `speak5220-cli`. It encodes each fixture and runs its export
-  presets (`exports:` in `project.yaml`) into `build/app/project-output/<suite>/`.
-- `app/scripts/output-hashes.sh` regenerates those suites and compares SHA-256
-  manifests of every export (PHROM images, C headers, `.dsd` disc images, WAV)
-  against a recorded baseline (`--record` to record one). This is how a
-  change is shown to leave the output byte-identical.
+- `app/scripts/run-projects.sh [general|phrom|bbc|all]` runs a fixture suite end to
+  end through `speak5220-cli`. It encodes each fixture into a copy (the
+  fixtures are never written) and runs the copy's export presets
+  (`exports:` in `project.yaml`) into
+  `build/app/project-output/<suite>/<fixture>/export/`, listing the files
+  each run wrote in `written.txt` beside it.
+- `app/scripts/output-hashes.sh` runs the `general` and `phrom` suites and
+  compares SHA-256 manifests of every file they export (PHROM images, C
+  headers, WAV; the `.dsd` disc images once the `bbc` suite exists)
+  against the recorded baseline in `app/golden/output-hashes/`, showing any
+  difference and exiting 1. `--record` records the manifests as the
+  baseline, for an intended change to an exporter or to the fixtures'
+  presets, by agreement. This is how a change is shown to leave the output
+  byte-identical.
 - `app/scripts/corpus-check.sh` runs the encoder over the full generated
   corpus with every option set and checks the plan's acceptance criteria
   (§3.2): at least 99% of encodings identical to the reference, the rest

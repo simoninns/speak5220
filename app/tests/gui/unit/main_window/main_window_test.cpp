@@ -27,12 +27,14 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/project/phrase.h"
+#include "core/project/project.h"
 #include "core/synth/output_pin.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "gui/encoder_panel/encoder_panel.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
+#include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_editor/phrase_details.h"
@@ -274,6 +276,37 @@ TEST_F(MainWindowTest, RemoveAsksFirst) {
   EXPECT_EQ(window_.Model().PhraseCount(), 2);
   remove->trigger();
   EXPECT_EQ(window_.Model().PhraseCount(), 1);
+}
+
+TEST_F(MainWindowTest, ExportOffersTheSelectionAndCanBeCancelled) {
+  AddPhrases({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});
+  window_.Panel()->Select({TestId(2)});
+  const int steps = window_.Document().UndoStack().count();
+  EXPECT_CALL(dialogs_, AskExport(_))
+      .WillOnce(
+          [this](const ExportStart& start) -> std::optional<ExportRequest> {
+            EXPECT_EQ(start.project, &window_.Document().Project());
+            EXPECT_EQ(start.selected, QStringList{QStringLiteral("TWO")});
+            EXPECT_EQ(start.base, QStringLiteral("Untitled"));
+            return std::nullopt;
+          });
+  window_.ExportProject();
+  EXPECT_EQ(window_.ExportsRunning(), 0);
+  EXPECT_EQ(window_.Document().UndoStack().count(), steps);
+}
+
+TEST_F(MainWindowTest, ExportRefusesStalePhrases) {
+  AddPhrases({AudioPhrase(1, "ONE")});
+  EXPECT_CALL(dialogs_, AskExport(_))
+      .WillOnce(Return(
+          ExportRequest{.preset = {.name = "words", .format = "c-header-phrom"},
+                        .directory = QStringLiteral("/out")}));
+  EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Export"), _))
+      .WillOnce([](const QString&, const QString& message) {
+        EXPECT_TRUE(message.contains(QStringLiteral("ONE is not encoded")));
+      });
+  window_.ExportProject();
+  EXPECT_EQ(window_.ExportsRunning(), 0);
 }
 
 TEST_F(MainWindowTest, ClosingWithUnsavedChangesCanBeCancelled) {

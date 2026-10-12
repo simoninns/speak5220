@@ -24,6 +24,8 @@
 #include <fstream>
 #include <memory>
 #include <numbers>
+#include <optional>
+#include <string>
 #include <vector>
 
 #include "core/audio/sndfile_wav_io.h"
@@ -32,6 +34,7 @@
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
 #include "gui/main_window/project_document.h"
@@ -143,6 +146,31 @@ TEST_F(MainWindowProjectTest, OpensAFixtureProject) {
   EXPECT_THAT(window_.StatusText().toStdString(), HasSubstr("1 PHROM of 64"));
   EXPECT_EQ(window_.RecentPaths().front(), QDir(path).absolutePath());
   EXPECT_EQ(recent_.paths, window_.RecentPaths());
+}
+
+TEST_F(MainWindowProjectTest, ExportWritesTheFilesIntoTheChosenFolder) {
+  const QString path = ProjectsDir() + QStringLiteral("/general/many-phrases");
+  ASSERT_TRUE(window_.OpenProject(path));
+  const QString out = Temp(QStringLiteral("out"));
+  EXPECT_CALL(dialogs_, AskExport(_))
+      .WillOnce([&](const ExportStart& start) -> std::optional<ExportRequest> {
+        EXPECT_EQ(start.base, QStringLiteral("many-phrases"));
+        EXPECT_EQ(
+            start.directory,
+            QDir(ProjectsDir() + QStringLiteral("/general")).absolutePath());
+        return ExportRequest{
+            .preset = {.name = "speech", .format = "c-header-phrom"},
+            .directory = out};
+      });
+  window_.ExportProject();
+  QCoreApplication::processEvents();
+  EXPECT_EQ(window_.ExportsRunning(), 0);
+  std::ifstream header(ToPath(out + QStringLiteral("/speech.h")));
+  ASSERT_TRUE(header.good());
+  std::string first;
+  std::getline(header, first);
+  EXPECT_EQ(first, "/*");
+  EXPECT_FALSE(window_.isWindowModified());
 }
 
 TEST_F(MainWindowProjectTest, OpensAnUnpackedProjectThroughItsProjectYaml) {

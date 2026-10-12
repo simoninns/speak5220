@@ -34,6 +34,7 @@ add_library(
     lpc/frame_statistics.cpp
     optimiser/optimiser.cpp
     packaging/acorn_phrom.cpp
+    packaging/c_header.cpp
     packaging/speak_external_stream.cpp
     packaging/ti_indexed.cpp
     project/c_identifier.cpp

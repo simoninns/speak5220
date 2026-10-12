@@ -7,10 +7,6 @@ and the project's size in the status bar. To open a project at start-up, give it
 `speak5220 greetings.s5proj`. The window follows the desktop's light or
 dark setting (see [light and dark](waveforms.md#light-and-dark)).
 
-!!! note
-    Export comes later. So far, projects are exported with the
-    [command-line tool](cli.md).
-
 ## Projects
 
 The **File** menu works on the project as a whole:
@@ -102,6 +98,12 @@ as you type:
 If the name is already taken (or a longer name would need a 65th PHROM),
 the message says so and the name goes back to what it was. The
 description is free text, kept only in the project.
+
+## The Export menu
+
+**Export > Export...** (Ctrl+Shift+E) opens the Export dialog, which
+writes PHROM images, C headers or WAV files. See [Export](export.md). It is available once
+the project has a phrase.
 
 ## The Audio menu
 

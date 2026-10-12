@@ -1,8 +1,8 @@
 # Command-line tool
 
 `speak5220-cli` is the application's command-line tool. It creates
-projects, imports WAV files into them, encodes them and exports PHROM
-images, with the same results as the GUI will give. Run on its own, it
+projects, imports WAV files into them, encodes them and exports them,
+with the same results as the GUI gives. Run on its own, it
 prints its name and version.
 
 ```bash
@@ -22,6 +22,8 @@ speak5220-cli add words.s5proj hello.wav goodbye.wav
 speak5220-cli add words.s5proj seven.wav --name SEVEN --normalise
 speak5220-cli encode words.s5proj
 speak5220-cli export words.s5proj --output out --format acorn-phrom
+speak5220-cli export words.s5proj --output out --format c-header-speak-external --phrase HELLO --licence CC0-1.0
+speak5220-cli export words.s5proj --output out --preset phrom
 ```
 
 - **`new PROJECT`** creates an empty project. `--name` sets its name (by
@@ -37,12 +39,17 @@ speak5220-cli export words.s5proj --output out --format acorn-phrom
   project past its [budget](projects.md#phroms-and-the-project-budget) keeps
   its previous encoding, and is reported; the others are still encoded and
   saved.
-- **`export PROJECT --output DIR`** runs the project's export presets into
-  `DIR`, or only those named by `--preset` (which may be repeated). Instead
-  of the presets, `--format acorn-phrom` exports PHROM images named after
-  the project, with `--layout separate` (one file per PHROM, the default) or
-  `--layout concatenated`. Every phrase must be encoded with its current
-  settings first.
+- **`export PROJECT --output DIR`** runs the project's
+  [export presets](export.md#presets) into `DIR`, or only those named by
+  `--preset` (which may be repeated). Instead of the presets, `--format`
+  exports in one format, with files named after the project file:
+  `acorn-phrom` (with `--layout separate`, one file per PHROM, the
+  default, or `--layout concatenated`), `c-header-phrom` or
+  `c-header-speak-external` (with `--licence`, the header's SPDX licence),
+  or `wav` (with `--audio encoded`, the default, or `--audio original`).
+  `--phrase NAME`, which may be repeated, exports only those phrases. Every
+  phrase exported must be encoded with its current settings first, except
+  for the original audio. Existing files of the same names are replaced.
 
 `new`, `add` and `encode` save the project in place, keeping the previous
 version as `PROJECT~`. With `--output DIR` they write the project into

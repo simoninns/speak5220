@@ -28,7 +28,7 @@ no command, `speak5220-cli` prints its name and version.
 | `new` | `PROJECT` | `--name`, `--output` | Creates an empty project. Fails if `PROJECT` exists |
 | `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
 | `encode` | `PROJECT` | `--force`, `--output` | Encodes the phrases whose frames are out of date, and saves |
-| `export` | `PROJECT` | `--output` (required), `--preset`, `--format`, `--layout` | Writes exported files into the `--output` directory |
+| `export` | `PROJECT` | `--output` (required), `--preset`, or `--format` with `--phrase`, `--layout`, `--licence`, `--audio` | Writes exported files into the `--output` directory. Every phrase exported must be encoded with its current settings, except for the original audio |
 
 ## Command options
 
@@ -40,8 +40,11 @@ no command, `speak5220-cli` prints its name and version.
 | `--description` | text | `add` | The phrase's description, a note kept in the project only (default: none) |
 | `--output` | a directory | all | `new`, `add`, `encode`: saves the project into this directory, under its own name, instead of in place. `export`: the directory for the exported files. Created if missing |
 | `--preset` | a preset name | `export` | Runs this export preset of the project; may be given more than once. Without `--preset` or `--format`, every preset runs |
-| `--format` | `acorn-phrom` | `export` | Exports in this format instead of running presets; the files are named after the project |
+| `--format` | `acorn-phrom`, `c-header-phrom`, `c-header-speak-external` or `wav` | `export` | Exports in this format instead of running presets; the files are named after the project file ([Export formats](export-formats.md)) |
+| `--phrase` | a phrase name | `export --format` | Exports only this phrase; may be given more than once. Default: every phrase |
 | `--layout` | `separate` or `concatenated` | `export --format acorn-phrom` | One 16 KB file per PHROM (`NAME_1.bin`, `NAME_2.bin`, ...; the default), or all PHROMs in one file (`NAME.bin`) |
+| `--licence` | an SPDX licence identifier | `export --format c-header-phrom` or `c-header-speak-external` | The licence written in the header (default `GPL-3.0-or-later`) |
+| `--audio` | `encoded` or `original` | `export --format wav` | The chip's output (the default), or the phrase's 8 kHz source |
 
 ## Logging
 
@@ -72,4 +75,4 @@ Line formats:
 |---|---|
 | 0 | Success |
 | 1 | The command failed: a project or file that cannot be read or written, an invalid or taken name, a phrase that cannot be encoded or would exceed the budget, or an export that cannot run. The message is on stderr |
-| 2 | The command line cannot be used: an unknown command or level, missing arguments, `--name` or `--description` with more than one file, `export` without `--output`, `--preset` with `--format`, `--no-console-log` without `--log-file`, or a log file that cannot be opened |
+| 2 | The command line cannot be used: an unknown command or level, missing arguments, `--name` or `--description` with more than one file, `export` without `--output`, `--preset` with `--format`, `--phrase`, `--layout`, `--licence` or `--audio` without `--format`, `--no-console-log` without `--log-file`, or a log file that cannot be opened |

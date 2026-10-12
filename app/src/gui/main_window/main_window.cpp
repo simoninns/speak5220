@@ -47,6 +47,7 @@
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/project/project_export.h"
 #include "core/project/project_store.h"
 #include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
@@ -57,6 +58,7 @@
 #include "gui/encoder_panel/encoder_panel.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/encoder_panel/phrase_encoder.h"
+#include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
@@ -335,6 +337,13 @@ void MainWindow::CreateActions() {
   connect(optimise_action_, &QAction::triggered, this,
           [this] { Optimise(EncodableSelection()); });
 
+  export_action_ = new QAction(QStringLiteral("&Export..."), this);
+  export_action_->setToolTip(QStringLiteral(
+      "Export PHROM images, C headers or WAV files, or run a saved preset"));
+  export_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
+  connect(export_action_, &QAction::triggered, this,
+          &MainWindow::ExportProject);
+
   about_action_ = new QAction(QStringLiteral("&About Speak5220"), this);
   about_action_->setMenuRole(QAction::AboutRole);
   connect(about_action_, &QAction::triggered, this, &MainWindow::ShowAbout);
@@ -365,6 +374,9 @@ void MainWindow::CreateMenus() {
   phrase->addSeparator();
   phrase->addAction(re_encode_action_);
   phrase->addAction(optimise_action_);
+
+  QMenu* exports = menuBar()->addMenu(QStringLiteral("E&xport"));
+  exports->addAction(export_action_);
 
   QMenu* audio = menuBar()->addMenu(QStringLiteral("&Audio"));
   QMenu* output_pin = audio->addMenu(QStringLiteral("Chip &Output"));
@@ -594,6 +606,7 @@ void MainWindow::UpdateActions() {
   sort_action_->setEnabled(model_.PhraseCount() > 1);
   re_encode_action_->setEnabled(!StaleSelection().empty());
   optimise_action_->setEnabled(!EncodableSelection().empty());
+  export_action_->setEnabled(model_.PhraseCount() > 0);
 }
 
 std::vector<project::PhraseId> MainWindow::EncodableSelection() const {
@@ -702,6 +715,68 @@ void MainWindow::ReEncodeSelected() {
                       failures->join(QLatin1Char('\n')));
           }
           emit EncodeFinished();
+        },
+        Qt::QueuedConnection);
+  });
+}
+
+void MainWindow::ExportProject() {
+  QStringList selected;
+  for (const int row : panel_->SelectedRows()) {
+    selected << model_.index(row).data().toString();
+  }
+  const QString& path = document_.Path();
+  const ExportStart start{
+      .project = &document_.Project(),
+      .selected = selected,
+      .base = QFileInfo(document_.DisplayName()).completeBaseName(),
+      .directory = !last_export_directory_.isEmpty() || path.isEmpty()
+                       ? last_export_directory_
+                       : QFileInfo(path).absolutePath(),
+      // IDialogs::AskExport() asks the user.
+      .confirm_overwrite = {}};
+  const std::optional<ExportRequest> request = dialogs_->AskExport(start);
+  if (!request.has_value()) {
+    return;
+  }
+  last_export_directory_ = request->directory;
+  const project::ExportPreset& preset = request->preset;
+  if (const core::Status status =
+          project::CheckEncodingsCurrent(document_.Project(), preset);
+      !status.IsOk()) {
+    ShowError(QStringLiteral("Export"), QStringLiteral("%1: re-encode it first")
+                                            .arg(ToQString(status.Message())));
+    return;
+  }
+  ++exports_running_;
+  statusBar()->showMessage(QStringLiteral("Exporting..."));
+  runner_->Post([this, project = document_.Project(), request = *request,
+                 synth = synth_, codec = &wav_codec_] {
+    core::StatusOr<std::vector<project::ExportedFile>> files =
+        project::RunExport(project, request.preset, request.preset.name,
+                           {.synth = synth, .wav_codec = codec});
+    const core::Status status =
+        files.IsOk()
+            ? project::WriteExportedFiles(
+                  std::filesystem::path(request.directory.toStdU16String()),
+                  *files)
+            : files.GetStatus();
+    const std::size_t count = files.IsOk() ? files->size() : 0;
+    QMetaObject::invokeMethod(
+        this,
+        [this, status, count, directory = request.directory] {
+          --exports_running_;
+          statusBar()->clearMessage();
+          if (status.IsOk()) {
+            statusBar()->showMessage(
+                QStringLiteral("Exported %1 file(s) to %2")
+                    .arg(count)
+                    .arg(QDir::toNativeSeparators(directory)),
+                kStatusMessageMs);
+          } else {
+            ShowError(QStringLiteral("Export"), ToQString(status.Message()));
+          }
+          emit ExportFinished();
         },
         Qt::QueuedConnection);
   });

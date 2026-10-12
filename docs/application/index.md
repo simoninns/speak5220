@@ -11,15 +11,18 @@ So far the application has:
   and describes them with undo and redo, and shows how many PHROMs they
   fill; it shows each phrase's original and encoded
   [waveforms](user-manual/waveforms.md) and plays them, in light or dark
-  as the desktop is set; and it encodes phrases, shows their quality, and
+  as the desktop is set; it encodes phrases, shows their quality, and
   [optimises](user-manual/encoder.md) their settings within the budget;
+  and it [exports](user-manual/export.md) them;
 - a command-line tool, `speak5220-cli`, that creates
   [projects](user-manual/projects.md), imports WAV files into them as
-  phrases, encodes them and exports Acorn PHROM images, described in the
+  phrases, encodes them and exports them, described in the
   [command-line tool](user-manual/cli.md) page and the
   [command-line options](reference/cli-options.md) reference;
 - the project file, `.s5proj`, described in the
   [project file](reference/project-file.md) reference;
+- exports of Acorn PHROM images, C headers and WAV files, described in the
+  [export formats](reference/export-formats.md) reference;
 - an encoder that turns 8 kHz speech into TMS5220 frames, whose options are
   in the [encoder options](reference/encoder-options.md) reference;
 - logging options shared by both executables.

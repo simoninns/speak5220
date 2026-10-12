@@ -52,6 +52,8 @@ class MockDialogs : public app::IDialogs {
               (override));
   MOCK_METHOD(bool, ConfirmRemove, (const QStringList& names), (override));
   MOCK_METHOD(bool, AskNormalise, (const QStringList& files), (override));
+  MOCK_METHOD(std::optional<app::ExportRequest>, AskExport,
+              (const app::ExportStart& start), (override));
   MOCK_METHOD(void, ShowError, (const QString& title, const QString& message),
               (override));
 };

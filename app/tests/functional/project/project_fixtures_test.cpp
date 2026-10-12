@@ -27,6 +27,7 @@
 #include "core/project/project.h"
 #include "core/project/project_export.h"
 #include "core/project/project_serializer.h"
+#include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "gtest/gtest.h"
 #include "support/project_builder.h"
@@ -62,6 +63,7 @@ class ProjectFixturesTest : public ::testing::Test {
   }
 
   audio::SndfileWavCodec codec_;
+  synth::Synth synth_;
   ProjectSerializer serializer_{codec_};
 };
 
@@ -91,7 +93,8 @@ TEST_F(ProjectFixturesTest, EveryEncodingIsCurrentAndEveryPresetRuns) {
     ASSERT_FALSE(project.Contents().exports.empty()) << name;
     for (const ExportPreset& preset : project.Contents().exports) {
       const StatusOr<std::vector<ExportedFile>> files =
-          RunExport(project, preset, preset.name);
+          RunExport(project, preset, preset.name,
+                    {.synth = &synth_, .wav_codec = &codec_});
       ASSERT_TRUE(files.IsOk()) << name << ": " << files.GetStatus().ToString();
       EXPECT_FALSE(files->empty()) << name;
     }
@@ -126,7 +129,13 @@ TEST_F(ProjectFixturesTest, ManyPhrasesHasAcornNamesAndAnAsciiMap) {
   }
   ASSERT_NE(seven, nullptr);
   EXPECT_EQ(seven->encoder.at("gate_db"), "40");
-  EXPECT_EQ(project.Contents().exports.size(), 2U);
+  // A preset per format and PHROM layout, and both scopes and WAV forms.
+  std::set<std::string> formats;
+  for (const ExportPreset& preset : project.Contents().exports) {
+    formats.insert(preset.format);
+  }
+  EXPECT_EQ(formats.size(), ExportFormats().size());
+  EXPECT_EQ(project.Contents().exports.size(), 6U);
 }
 
 TEST_F(ProjectFixturesTest, FrameKindsHasEveryKindOfFrame) {
