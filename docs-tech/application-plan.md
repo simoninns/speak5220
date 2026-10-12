@@ -97,7 +97,8 @@ Other source files carry the two SPDX lines in their own comment syntax:
 
 - In Phase 13, GitHub Actions builds a Flatpak (Linux), an MSI (Windows)
   and a DMG (macOS). CMake stays the single build description. Nix supplies
-  the dependencies on Linux. On Windows and macOS, CI installs Qt with
+  the dependencies on Linux (and a development shell on Apple silicon
+  macOS). On Windows and macOS, CI installs Qt with
   `aqtinstall` and the other libraries with vcpkg (manifest mode, pinned
   baseline).
 

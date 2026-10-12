@@ -28,6 +28,8 @@ The flake requires Nix with flakes enabled (`experimental-features = nix-command
 
 A smaller shell, `nix develop .#app`, has only the application's tools and libraries (Qt 6, the libraries of the plan's §2.4, Google Test, and the format and lint tools). CI uses it. Both shells install the application's pre-commit hooks into `.git/hooks` when entered.
 
+The flake supports Linux (x86-64 and ARM64) and macOS on Apple silicon. On macOS, `nix develop` leaves out KiCad and Piper, which nixpkgs does not build there (install KiCad separately), and `nix build .#speak5220` installs `speak5220.app` and `bin/speak5220-cli`.
+
 ## The Speak5220 application
 
 The application is in `app/`, built with CMake and Ninja. Build directories go outside `app/` (conventionally `build/app`): configuring inside `app/` is refused.
@@ -56,7 +58,7 @@ CMake options:
 | `SPEAK5220_BUILD_TESTS` | `ON` | Builds the Google Test suites (needs Google Test) |
 | `SPEAK5220_SANITIZE` | `OFF` | Builds with AddressSanitizer and UBSan (GCC or Clang); use with `-DCMAKE_BUILD_TYPE=Debug` in a separate build directory |
 
-Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`). Every build compiles with `-ffp-contract=off` (GCC, Clang), so the encoder's floating point gives the same frames on every platform.
+Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`). Every build compiles with `-ffp-contract=off` (GCC, Clang), so the encoder's floating point gives the same frames on every platform. SPTK is built the same way, by the flake and by its vcpkg port, so its pitch tracks match the reference data on ARM64 too.
 
 ### Windows and macOS
 
@@ -223,7 +225,7 @@ python -m unittest discover -s investigation/encoder -p 'test_*.py'
 
 ## Capture tools
 
-The Python tools in `investigation/tools/` need no build. Capturing also needs PicoScope 7 installed: it provides `libps3000a.so`, which is found next to the `picoscope` executable (set `PS3000A_LIB` to use a different copy). The dev shell sets `PICO_DRIVER_DEPS` to the driver's libusb and libstdc++ dependencies.
+The Python tools in `investigation/tools/` need no build. Capturing also needs PicoScope 7 installed: it provides `libps3000a.so`, which is found next to the `picoscope` executable (set `PS3000A_LIB` to use a different copy). On Linux, the dev shell sets `PICO_DRIVER_DEPS` to the driver's libusb and libstdc++ dependencies.
 
 ## Documentation
 

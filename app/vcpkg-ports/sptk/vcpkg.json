@@ -1,6 +1,7 @@
 {
   "name": "sptk",
   "version": "4.4",
+  "port-version": 1,
   "description": "Speech Signal Processing Toolkit, with its copies of REAPER and WORLD (an overlay port: vcpkg has none)",
   "homepage": "https://github.com/sp-nitech/SPTK",
   "license": "Apache-2.0",

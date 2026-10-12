@@ -13,6 +13,14 @@ vcpkg_from_github(
     HEAD_REF master
 )
 
+# Compiled as the application is, without fused multiply-add contraction
+# (app/cmake/CompilerWarnings.cmake), so its REAPER and Harvest give the same
+# pitch tracks on every platform. MSVC does not contract by default.
+if(NOT VCPKG_TARGET_IS_WINDOWS)
+    string(APPEND VCPKG_C_FLAGS " -ffp-contract=off")
+    string(APPEND VCPKG_CXX_FLAGS " -ffp-contract=off")
+endif()
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS

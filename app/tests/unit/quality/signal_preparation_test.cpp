@@ -122,7 +122,8 @@ TEST(SignalPreparationTest, LevelGainMatchesPowerOverTheMaskOnly) {
   // 0.9. Only frame 0 is speech.
   std::vector<double> original(std::size_t{2} * kVoiceActivityFrame, 0.4);
   std::vector<double> output(std::size_t{2} * kVoiceActivityFrame, 0.1);
-  for (int i = kVoiceActivityFrame; i < 2 * kVoiceActivityFrame; ++i) {
+  for (std::size_t i = kVoiceActivityFrame;
+       i < std::size_t{2} * kVoiceActivityFrame; ++i) {
     original[i] = 0.1;
     output[i] = 0.9;
   }

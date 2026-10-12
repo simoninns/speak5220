@@ -14,6 +14,7 @@ add_library(
     encoder_panel/quality_rating_view.cpp
     export/export_dialog.cpp
     main_window/dialogs.cpp
+    main_window/grip_splitter.cpp
     main_window/main_window.cpp
     main_window/project_document.cpp
     main_window/recent_files.cpp
@@ -62,6 +63,14 @@ endif()
 
 add_executable(speak5220 WIN32 MACOSX_BUNDLE main.cpp)
 target_link_libraries(speak5220 PRIVATE speak5220_gui speak5220_compile_options)
+# macOS shows its open and save panels only for a bundle with an identifier:
+# without one, QFileDialog returns at once with no file
+set_target_properties(
+    speak5220
+    PROPERTIES
+        MACOSX_BUNDLE_GUI_IDENTIFIER io.github.simoninns.speak5220
+        MACOSX_BUNDLE_BUNDLE_NAME Speak5220
+)
 
 install(
     TARGETS speak5220

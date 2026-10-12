@@ -22,6 +22,7 @@
       systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "aarch64-darwin"
       ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
@@ -83,12 +84,26 @@
             };
           };
 
+          # SPTK compiled as the application is, without fused multiply-add
+          # contraction (app/cmake/CompilerWarnings.cmake), so its REAPER
+          # and Harvest give the same pitch tracks on every platform
+          sptk = pkgs.sptk.overrideAttrs (old: {
+            env = (old.env or { }) // {
+              NIX_CFLAGS_COMPILE = toString [
+                (old.env.NIX_CFLAGS_COMPILE or "")
+                "-ffp-contract=off"
+              ];
+            };
+          });
+
           # Libraries the application links (plan §2.4). SPTK 4 brings its
           # own copies of REAPER and WORLD (HLD §10).
           libraries = [
             pkgs.qt6.qtbase
             pkgs.qt6.qtmultimedia
-            pkgs.qt6.qtwayland
+          ]
+          ++ lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.qt6.qtwayland
+          ++ [
             pkgs.libsndfile
             pkgs.libsamplerate
             pocketfft
@@ -96,7 +111,7 @@
             pkgs.yaml-cpp
             pkgs.spdlog
             libfvad
-            pkgs.sptk
+            sptk
           ];
 
           # Format and lint tools (plan §1.3)
@@ -148,12 +163,21 @@
               runHook postCheck
             '';
 
+            # On macOS, wrapQtAppsHook's search for programs to wrap
+            # intermittently crashes bash in the build sandbox, so the two
+            # programs are wrapped by name instead
+            dontWrapQtApps = pkgs.stdenv.hostPlatform.isDarwin;
+            postFixup = lib.optionalString pkgs.stdenv.hostPlatform.isDarwin ''
+              wrapQtApp $out/bin/speak5220-cli
+              wrapQtApp $out/speak5220.app/Contents/MacOS/speak5220
+            '';
+
             meta = {
               description = "Creates TMS5220 LPC speech data and builds PHROMs";
               homepage = "https://github.com/simoninns/speak5220";
               license = lib.licenses.gpl3Plus;
               mainProgram = "speak5220";
-              platforms = lib.platforms.linux;
+              platforms = lib.platforms.linux ++ lib.platforms.darwin;
             };
           });
 
@@ -308,11 +332,13 @@
             ++ shellHooks.enabledPackages;
 
             # Lets the GUI built in build/app find its Qt plugins
-            QT_PLUGIN_PATH = lib.makeSearchPath pkgs.qt6.qtbase.qtPluginPrefix [
-              pkgs.qt6.qtbase
-              pkgs.qt6.qtmultimedia
-              pkgs.qt6.qtwayland
-            ];
+            QT_PLUGIN_PATH = lib.makeSearchPath pkgs.qt6.qtbase.qtPluginPrefix (
+              [
+                pkgs.qt6.qtbase
+                pkgs.qt6.qtmultimedia
+              ]
+              ++ lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.qt6.qtwayland
+            );
 
             # Installs the pre-commit hooks into .git/hooks
             shellHook = shellHooks.shellHook;
@@ -422,33 +448,39 @@
             inputsFrom = [ app ];
             inherit (app) QT_PLUGIN_PATH;
 
-            packages = with pkgs; [
-              # Hardware design
-              kicad
-              python
-              reaper-f0
-              git
+            packages =
+              with pkgs;
+              [
+                python
+                reaper-f0
+                git
 
-              # Text to speech for the encoder's test inputs (investigation/tools/ttsgen.py)
-              piper-tts
-              # Speech recognition, for the intelligibility check (investigation/tools/asrcheck.py)
-              whisper-cpp
+                # Speech recognition, for the intelligibility check (investigation/tools/asrcheck.py)
+                whisper-cpp
 
-              # Raspberry Pi Pico 2 (RP2350) firmware
-              cmake
-              ninja
-              gcc-arm-embedded
-              picotool
-              openocd-rp2040 # Raspberry Pi's OpenOCD fork (supports RP2350)
-              minicom
-            ];
+                # Raspberry Pi Pico 2 (RP2350) firmware
+                cmake
+                ninja
+                gcc-arm-embedded
+                picotool
+                openocd-rp2040 # Raspberry Pi's OpenOCD fork (supports RP2350)
+                minicom
+              ]
+              # Not available on macOS in nixpkgs (install KiCad separately there)
+              ++ lib.optionals stdenv.hostPlatform.isLinux [
+                # Hardware design
+                kicad
+                # Text to speech for the encoder's test inputs (investigation/tools/ttsgen.py)
+                piper-tts
+              ];
 
             PICO_SDK_PATH = "${pico-sdk}/lib/pico-sdk";
             picotool_DIR = "${pkgs.picotool}/lib/cmake/picotool";
 
             # Runtime dependencies of PicoScope 7's libps3000a.so, preloaded by
             # investigation/tools/ps3000a.py (the driver itself comes from the PicoScope install)
-            PICO_DRIVER_DEPS = "${pkgs.libusb1}/lib/libusb-1.0.so.0:${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6";
+            # (Linux only)
+            PICO_DRIVER_DEPS = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux "${pkgs.libusb1}/lib/libusb-1.0.so.0:${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6";
 
             shellHook = ''
               if [ ! -e investigation/kicad/libraries/ki-lime-pi-pico/MCU_Module_RaspberryPi_Pico.kicad_sym ]; then

@@ -393,13 +393,16 @@ void PhraseWaveforms::FollowPlayStart() {
 
 void PhraseWaveforms::Render(const std::vector<lpc::Frame>& frames) {
   ++renders_running_;
-  runner_->Post([this, id = id_, audio = audio_, frames, synth = synth_] {
+  // The frames are copied into a non-const capture, so the lambdas move
+  // them rather than copying
+  runner_->Post([this, id = id_, audio = audio_, rendered_frames = frames,
+                 synth = synth_] {
     auto result = std::make_shared<core::StatusOr<quality::EncodedAudio>>(
-        quality::RenderEncodedAudio(*synth, audio, frames));
+        quality::RenderEncodedAudio(*synth, audio, rendered_frames));
     QMetaObject::invokeMethod(
         this,
-        [this, id, frames, result] {
-          OnRendered(id, frames, std::move(*result));
+        [this, id, rendered_frames, result] {
+          OnRendered(id, rendered_frames, std::move(*result));
         },
         Qt::QueuedConnection);
   });

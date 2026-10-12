@@ -81,7 +81,8 @@ Bytes FileOf(const Bytes& side, const std::string& name) {
     if (entry == name) {
       const std::size_t info = kSector + 8 + 8 * i;
       const auto length = static_cast<std::size_t>(Little16(side, info + 4));
-      const std::size_t start = side[info + 7] | ((side[info + 6] & 3) << 8);
+      const auto start = static_cast<std::size_t>(side[info + 7] |
+                                                  ((side[info + 6] & 3) << 8));
       const auto from =
           side.begin() + static_cast<std::ptrdiff_t>(start * kSector);
       return {from, from + static_cast<std::ptrdiff_t>(length)};

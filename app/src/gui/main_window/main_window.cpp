@@ -24,7 +24,6 @@
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMetaObject>
-#include <QSplitter>
 #include <QStatusBar>
 #include <QString>
 #include <QStringList>
@@ -60,6 +59,7 @@
 #include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
+#include "gui/main_window/grip_splitter.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/main_window/status_text.h"
@@ -411,8 +411,9 @@ void MainWindow::CreateWidgets() {
   auto* central = new QWidget(this);
   auto* layout = new QVBoxLayout(central);
   details_ = new PhraseDetails(document_.Edits(), central);
-  // The waveforms above the encoder panel, with a splitter between them.
-  auto* splitter = new QSplitter(Qt::Vertical, central);
+  // The waveforms above the encoder panel, with a splitter between them
+  // (GripSplitter, so its handle can be seen in every style).
+  auto* splitter = new GripSplitter(Qt::Vertical, central);
   waveforms_ = new PhraseWaveforms(document_.Edits(), *player_, *synth_,
                                    *runner_, splitter);
   encoder_panel_ =
@@ -759,7 +760,8 @@ void MainWindow::ExportProject() {
     core::StatusOr<std::vector<project::ExportedFile>> files =
         project::RunExport(project, request.preset, request.preset.name,
                            {.synth = synth, .wav_codec = codec});
-    const core::Status status =
+    // Not const, so the queued lambda below moves it rather than copying
+    core::Status status =
         files.IsOk()
             ? project::WriteExportedFiles(
                   std::filesystem::path(request.directory.toStdU16String()),

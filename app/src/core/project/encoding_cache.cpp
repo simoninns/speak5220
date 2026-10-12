@@ -56,7 +56,8 @@ std::string EncodingCache::SettingsHash(std::span<const float> audio,
   for (const float sample : audio) {
     const auto code = static_cast<std::uint32_t>(audio::ToPcm24(sample));
     for (int i = 0; i < kCodeBytes; ++i) {
-      codes.push_back(static_cast<std::uint8_t>(code >> (8U * i)));
+      codes.push_back(
+          static_cast<std::uint8_t>(code >> (8U * static_cast<unsigned>(i))));
     }
   }
   hash.Add(codes);

@@ -183,7 +183,8 @@ StatusOr<std::vector<std::uint8_t>> DfsDisc::DoubleSided(const DfsSide& side0,
   for (int track = 0; track < kTracks; ++track) {
     for (const std::vector<std::uint8_t>& side : sides) {
       const auto from =
-          side.begin() + static_cast<std::ptrdiff_t>(track * kTrackBytes);
+          side.begin() + static_cast<std::ptrdiff_t>(
+                             static_cast<std::size_t>(track) * kTrackBytes);
       image.insert(image.end(), from,
                    from + static_cast<std::ptrdiff_t>(kTrackBytes));
     }

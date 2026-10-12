@@ -106,6 +106,10 @@ site/
 # Application build directories (BUILD.md: cmake -S app -B build/app)
 build/
 
+# nix build's links to its outputs in the Nix store (result, result-*)
+/result
+/result-*
+
 # Written by the dev shell's git-hooks.nix setup (flake.nix); a link into the Nix store
 .pre-commit-config.yaml
 

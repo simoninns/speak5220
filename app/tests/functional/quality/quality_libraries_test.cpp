@@ -102,7 +102,8 @@ TEST(QualityLibrariesTest, SptkEnvelopePeaksAtTheFormant) {
   for (int i = 0; i < kFrame; ++i) {
     const double w =
         0.54 - 0.46 * std::cos(2.0 * std::numbers::pi * i / (kFrame - 1));
-    frame[i] = vowel[300 + static_cast<std::size_t>(i)] * w;
+    const auto n = static_cast<std::size_t>(i);
+    frame[n] = vowel[300 + n] * w;
   }
   SptkLpcAnalysis lpc;
   const StatusOr<LpcFit> fit = lpc.Analyse(frame, 10);

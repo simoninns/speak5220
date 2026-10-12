@@ -116,9 +116,9 @@ TEST(MeasuresCorpusCheck, DISABLED_WritesTheCalibrationData) {
       core::encoder::MakeEncoder();
   core::ThreadPoolTaskRunner files;
   int index = 0;
-  for (const auto& [name, path] : inputs) {
+  for (const auto& [input_name, input_path] : inputs) {
     const bool optimise = index++ % stride == 0;
-    files.Post([&, name = name, path = path, optimise] {
+    files.Post([&, name = input_name, path = input_path, optimise] {
       core::synth::Synth synth({}, core::synth::SynthCache::kOff);
       quality::FvadVoiceActivity vad(quality::kSpeechDetectorMode);
       quality::SptkLpcAnalysis lpc;

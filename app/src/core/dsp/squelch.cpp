@@ -58,7 +58,8 @@ std::vector<double> SquelchGain(std::span<const double> samples,
   }
   const double loudest = *std::ranges::max_element(levels);
   if (loudest <= 0.0) {
-    return std::vector<double>(n, 1.0);
+    std::vector<double> unity(n, 1.0);
+    return unity;
   }
   const double threshold = loudest * std::pow(10.0, -below_db / 20.0);
 
