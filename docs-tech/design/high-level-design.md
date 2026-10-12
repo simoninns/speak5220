@@ -21,13 +21,14 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
+| `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
-| Reference data in `app/golden/` (emulator, packaging, encoder, quality, output hashes) | Implemented |
-| Fixture projects in `app/projects/` (`general/`, `phrom/`, `benchmark/`) | Implemented |
+| Reference data in `app/golden/` (emulator, packaging, encoder, quality, BBC BASIC II tokenisations, output hashes) | Implemented |
+| Fixture projects in `app/projects/` (`general/`, `phrom/`, `bbc/`, `benchmark/`) | Implemented |
 | `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
@@ -35,7 +36,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
 | Export: Acorn PHROM images, C headers, WAV, presets, the output hashes (§18) | Implemented |
-| BBC export | Planned |
+| Export: the BBC Micro disc (§19) | Implemented; checked on MAME's emulated BBC Micro. The BBC Micro hardware checks (plan Phase 10, tasks 1 and 6) are still to be run |
 
 ---
 
@@ -47,19 +48,25 @@ app/
   .clang-format  .clang-tidy  CPPLINT.cfg  .gersemirc
   vcpkg.json                    the libraries for Windows and macOS (§3)
   cmake/                        CompilerWarnings.cmake, Dependencies.cmake,
-                                QualityTargets.cmake
+                                QualityTargets.cmake, GitVersion.cmake,
+                                EmbedText.cmake (§19)
   scripts/                      check-spdx.sh, check-header-guards.sh,
                                 clang-format-check.sh, clang-tidy.sh,
                                 format.sh, lint.sh; corpus-check.sh,
                                 benchmark.sh, arctic-project.sh,
                                 generate_corpus.py,
-                                generate_filter_constants.py (§8)
+                                generate_filter_constants.py (§8);
+                                run-projects.sh, output-hashes.sh (§18),
+                                bbc-check.sh (§19)
+    bbc/                        the MAME scripts of the BBC Micro check:
+                                player.lua, tokenise.lua, basic_in_mame.py,
+                                emulator_check.py (§19)
     golden/                     generate_golden.py and its scenario scripts,
-                                encoder.py, measures.py (offline, run by
-                                hand: §13)
+                                encoder.py, measures.py, basic_programs.py
+                                (offline, run by hand: §13, §19)
   golden/                       reference data from the retired references (§13)
   projects/                     fixture projects, unpacked: general/, phrom/,
-                                benchmark/ (§14, §17)
+                                bbc/, benchmark/ (§14, §17, §19)
   src/
     core/                       library "s5core" (QtCore at most)
       util/                     Status/StatusOr, logging, logging options, version,
@@ -83,6 +90,8 @@ app/
                                 QualityAssessor, the anchor vocoder (§9),
                                 the output alignment and
                                 RenderEncodedAudio (§16)
+      bbc/                      BasicTokeniser, DfsDisc, BbcDisc and the
+                                player's source, speak.bas (§19)
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
                                 stores, PhraseImporter, the exports (§14,
@@ -110,7 +119,9 @@ app/
     cli/                        the "speak5220-cli" executable and its commands
   tests/
     .clang-tidy                 the app's settings, plus one test exception
-    support/                    speak5220_test_support (helpers, mocks, golden readers)
+    support/                    speak5220_test_support (helpers, mocks, golden
+                                readers); dfs_catalogue.py, the independent
+                                DFS reader (§19)
     unit/  functional/          speak5220_unit_tests, speak5220_functional_tests
     gui/support/                speak5220_gui_test_main (QApplication, offscreen),
                                 the GUI's mocks and fakes, test palettes
@@ -119,9 +130,7 @@ app/
 
 Planned additions, each created with its first code (plan §2.1):
 
-- `src/core/`: `bbc/`;
-- `app/projects/bbc/` (fixture projects),
-  `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
+- `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
   WiX/CPack, macOS).
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
@@ -1030,9 +1039,13 @@ tests read only these files and never run anything in `investigation/`.
     last bit from run to run.
 - `golden/output-hashes/SUITE.sha256`, written by
   `app/scripts/output-hashes.sh --record`: not data from the retired
-  references, but the SHA-256 of every file the `general` and `phrom`
-  fixture suites' presets export (§18), so a change can be shown to leave
-  the exports byte-identical.
+  references, but the SHA-256 of every file the `general`, `phrom` and
+  `bbc` fixture suites' presets export (§18, §19), so a change can be
+  shown to leave the exports byte-identical.
+- `golden/bbc/programs/`, written by `app/scripts/golden/basic_programs.py`:
+  not from the retired references either, but BBC BASIC II's own
+  tokenisation of three test programs, typed in on MAME's emulated BBC
+  Micro (§19).
 - The emulator's data is never regenerated unless the datasheet changes;
   the encoder's only for an intended improvement, from the C++ itself
   (AGENTS.md §3.1).
@@ -1849,7 +1862,8 @@ RunExport(project, preset, base, ExportTools)
  ├── acorn-phrom: BuildAcornPhroms() ── AllocatePhroms(), AcornPhrom
  ├── c-header-phrom: BuildAcornPhroms(), CHeader::ForPhroms()
  ├── c-header-speak-external: SpeakExternalStream, CHeader::ForStreams()
- └── wav: FrameCodec, ISynth (VSM path), PinSamples(SPEAKER), IWavCodec
+ ├── wav: FrameCodec, ISynth (VSM path), PinSamples(SPEAKER), IWavCodec
+ └── bbc-dsd: BuildBbcDiscPhroms(), bbc::BbcDisc (§19)
 ```
 
 **Presets** (`ExportPreset`, the `exports:` list of `project.yaml`):
@@ -1963,3 +1977,172 @@ takes, for the dialog and the checks.
   recorded; rerunning matches it, and changing the header's bytes per
   line from 12 to 16 was reported as a difference in exactly the four
   headers.
+
+---
+
+## 19. The BBC Micro disc
+
+**Implemented** (plan §6, Phase 10) in `core/bbc/` and
+`core/project/project_export` (`BuildBbcDiscPhroms()`, the `bbc-dsd`
+format). The user's view is
+[`docs/application/user-manual/bbc-disc.md`](../../docs/application/user-manual/bbc-disc.md),
+the layout
+[`docs/application/reference/export-formats.md`](../../docs/application/reference/export-formats.md#bbc-micro-disc).
+
+**Structure.**
+
+```
+RunExport(bbc-dsd) ── BuildBbcDiscPhroms() ── BuildAcornPhroms() (placement,
+                      │                       the size checks), PhromHeaderStrings(),
+                      │                       SpeakExternalStream
+                      └── BbcDisc::Build(project name, PHROMs)
+                           ├── BasicTokeniser::Tokenise(PlayerSource())  → SPEAK
+                           ├── BbcDisc::PhromData(), BbcDisc::Index()    → PHROMn, INDEXn
+                           └── DfsDisc::DoubleSided(side 0, side 1)      → NAME.dsd
+speak.bas ── cmake/EmbedText.cmake (at build time) ── player_source.h (kPlayerSource)
+```
+
+**Components.**
+
+- **`BasicTokeniser`** turns BBC BASIC II text into the bytes SAVE writes:
+  `0x0D`, the line number (high byte first), the line's length, its
+  tokens; `0x0D 0xFF` at the end. Its rules are BASIC II's own: the keyword
+  table in the ROM's order (first match wins, so `ENDPROC` before `END`),
+  with each keyword's flags: conditional (not tokenised before a letter,
+  digit or `_`: `ENDX`), start and middle of statement (a pseudo-variable
+  takes its statement token, +0x40, at the start: `TIME=0`), FN/PROC
+  names copied, REM and DATA copying the rest of the line, and line
+  numbers after GOTO, GOSUB, THEN, ELSE, RESTORE, TRACE and the like,
+  continuing after commas and spaces. A line number reference is encoded
+  (`0x8D` and three bytes) only up to 32767; a larger one stays as digits
+  and ends line-number mode. Strings, `&` hex numbers, and a star command
+  at the start of a statement are copied. Names are skipped whole, so a
+  keyword inside one is not tokenised, but one starting a name is
+  (`TOTAL` is `TO TAL`), as in BASIC II. Abbreviations (`P.`) are
+  accepted. It refuses lines that are unnumbered, out of order, above
+  32767, empty, not printable ASCII, or over 255 bytes once tokenised.
+  The rules were found by typing programs into BASIC II on MAME and
+  reading back what it stored; the unit tests hold single lines of that,
+  and the functional test whole programs (`golden/bbc/`).
+- **`DfsDisc`** writes Acorn DFS sides of 400 sectors: the catalogue in
+  sectors 0 and 1 (title split 8 + 4, entries × 8, boot option, the
+  sector count 0x190), entries in descending order of start sector, the
+  18-bit load, exec and length with their top bits packed into byte 6,
+  and the files from sector 2 in whole sectors. Titles are padded with
+  spaces. `DoubleSided()` interleaves the sides' tracks. It refuses bad
+  names (1-7 printable characters, none of `space # * . : "`), duplicate
+  names, more than 31 files, files that do not fit, titles over 12
+  characters and boot options over 3.
+- **`BbcDisc`** builds `PHROMn` (the streams in order), `INDEXn` (a 32-byte
+  header: the title in bytes 0-29, the count in 30-31; 20-byte records:
+  the name in 0-15, the stream's offset and length, little-endian) and the
+  disc: `!BOOT` (`CHAIN "SPEAK"`, boot option 3), `SPEAK` (load &FF1900,
+  exec &FF8023, as SAVE gives a program at PAGE &1900), PHROMs 1-4 on side
+  0 and 5-8 on side 1, both titled with the project's name. A PHROM's data
+  over 16 KB, a name over 16 characters and more than 8 PHROMs are
+  refused.
+- **`BuildBbcDiscPhroms()`** places the phrases as `BuildAcornPhroms()`
+  does (so the size checks and word order are the same), titles each
+  PHROM with the second of its header strings, and refuses more than 8
+  PHROMs with a message that `ExportFileNames()` also gives, so the Export
+  dialog says so before the user exports. The format takes no options.
+- **The player** (`speak.bas`, about 3.5 KB tokenised): MODE 7; checks for
+  the speech system (OSBYTE &EB, X = 0 without it); keeps a 16 KB buffer
+  at HIMEM − &4000, lowering HIMEM to it, and stops with a message if
+  fewer than &900 bytes are left above TOP, saying how low PAGE must be;
+  assembles its routine with BASIC's inline assembler; reads `INDEX1`-`4`
+  on drive 0, and `INDEX5`-`8` on drive 2 only if `INDEX4` exists (so a
+  disc of 4 PHROMs or fewer works in a single-sided drive); lists the
+  PHROMs; on a choice, opens its index and `*LOAD`s its `PHROMn` into the
+  buffer; lists 16 phrases a page, reading only their records; speaks a
+  phrase by letter, or all in order on RETURN. An ON ERROR handler makes
+  Escape stop play all (back to the page) or go back to the PHROM list;
+  any other error closes the files and reports itself.
+- **The routine** (the plan's §6 method): Speak External (&60) with
+  OSBYTE &9F, the first 16 bytes, then 8 more each time OSBYTE &9E shows
+  Buffer Low, nothing after the last byte; then it waits for Talk Status
+  to set (a stream of 16 bytes or fewer starts only at the next frame
+  boundary, datasheet §12.9, so the status can still be clear: without
+  this wait, play all would send the next Speak External while a short
+  phrase spoke), with a timeout of 65 536 polls, and then for it to
+  clear. Bytes go unreversed, one OSBYTE call each. Zero page &70-&76.
+
+**Hardware spike (plan Phase 10, task 1)**, run on MAME 0.287's BBC Micro
+Model B (OS 1.20, BASIC II, Acorn DNFS 1.20, the Acorn speech system),
+with ARCTIC prompt a0023 encoded (834 bytes, 4.70 s):
+
+- **Bit order:** the stream sent unreversed is our emulator's output for
+  that phrase: the recorded envelope correlates with ours at 0.92, and it
+  took 4.71 s by the BBC's clock against our 4.70 s. Sent bit-reversed it
+  is noise (0.22). Unreversed is right, as §6 reasoned from the guide.
+- **Buffer Low refill:** 834 bytes, about a hundred refills of 8, with no
+  gap or early end.
+- **The MOS interrupt handler** does not interfere: with its own speech
+  queue empty it only reads the status, and the phrases' lengths match.
+- **Memory:** with the player, PAGE &1900, TOP &26AC, HIMEM lowered to
+  &3C00: 5460 bytes for variables, stack and routine, of which at least
+  4352 stayed free through the 8-PHROM check (measured from BASIC's stack
+  pointer, to within 255 bytes on the safe side).
+- **Not yet confirmed on hardware**: the same checks on a BBC Micro with
+  the speech upgrade and Acorn DFS, with the exported discs, are still to
+  be run.
+
+**PHROM images on a BBC Micro (plan Phase 10, task 6).** On MAME, with an
+exported Acorn PHROM image in place of the PHROM A (`cm62024.bin`), OS
+1.20's own speech code (`SOUND -1,W,0,0`) speaks the image's words 127,
+133 and 153 and the ASCII entry for `1`, each matching our emulator's
+output (lengths within 4 ms; envelope correlation 0.94 and 0.98). That is
+the MOS reading the image's header, pointers and ASCII entries as we
+write them; it says nothing about the chip, PHROM or wiring, so the
+hardware test is still to be run, and Appendix B of the datasheet is
+unchanged until it has been and the user agrees (AGENTS.md §9.4).
+
+**The emulator check** (`app/scripts/bbc-check.sh`, by hand: MAME and its
+ROM set are not in the repository). `player.lua` boots each disc with
+Shift+Break, runs a list of steps (wait for text, type, press ESCAPE,
+which MAME's natural keyboard does not type), and logs the status line
+and screens with emulated times; `emulator_check.py` checks the screens
+against the disc's index files, the phrases spoken against those asked
+for, and the recording of each phrase against our emulator's output:
+its length to within 60 ms, and its envelope to a correlation of at least
+0.75 at the best lag within 25 ms (MAME's output passes through the BBC's
+audio stage and a 48 kHz mixer). Our chip driver gives up after 60 s of
+chip time (`ChipDriver::kMaxWaitSlots`), so the WAV of a longer phrase,
+such as `both-sides`' 64 s LONGEST, is cut short; such a phrase is
+checked against its frame count instead.
+
+**Deviations from the plan.**
+
+- Plan §6 loads each phrase from `PHROMn` with OSGBPB just before it is
+  spoken. Acorn DFS reads OSGBPB data a sector per revolution: on MAME a
+  16 KB phrase took about 14 s to load, a 1 KB one about 1 s. The player
+  instead `*LOAD`s the whole `PHROMn` into the same 16 KB buffer when the
+  PHROM is chosen (2.6 s for a full one), and speaks from there, so play
+  all has no gaps (decided with the user). Memory use is unchanged.
+- The plan's spike and player checks name "an emulator with speech
+  support"; that is MAME, driven by scripts, with its ROMs kept in
+  git-ignored `local/mame/roms/`. The tokeniser's reference programs were
+  saved from MAME's BASIC II rather than from a real BBC Micro (both
+  decided with the user).
+
+**Acceptance** (plan Phase 10):
+
+- Task 1: met on MAME (above); the hardware run is outstanding.
+- Task 2: the unit tests' lines and the three reference programs match
+  BASIC II byte for byte, and `bbc-check.sh` checks that the disc's SPEAK
+  is what BASIC II makes of `speak.bas`.
+- Task 3: unit tests check the catalogue's fields, the entry order, where
+  each file and each side's tracks lie, and the refusals; a functional
+  test exports both `bbc` fixtures through the CLI and reads them back
+  with `tests/support/dfs_catalogue.py` (Python, written from the DFS
+  layout, not from the C++), comparing every file's SHA-256.
+- Task 4: on MAME, with discs of 1, 5 and 8 PHROMs, the player lists the
+  PHROMs, pages through 27 phrases, speaks each phrase asked for, plays
+  all in order, stops play all on Escape after the phrase being spoken,
+  speaks the largest phrase a PHROM holds, and says so on a machine
+  without the speech system. The Gotek check by hand is outstanding.
+- Task 5: unit tests check the data and index layouts, the file placement
+  and the 8-PHROM limit (9 refused with a message, in the export and the
+  dialog); `bbc-check.sh` builds an 8-PHROM disc and has 9 refused by the
+  CLI; the `bbc` suite is in the hash baseline (3 discs).
+- Task 6: the MAME result above; the hardware test is outstanding.

@@ -67,6 +67,7 @@ speak5220_add_test_lane(
     functional
     LIBRARIES s5core Qt6::Core speak5220::sndfile libzip::zip GTest::gmock_main
 )
+find_package(Python3 COMPONENTS Interpreter QUIET)
 # The functional lane reads the committed reference data in app/golden/ and
 # the fixture projects in app/projects/, and runs the CLI end to end
 # (TESTING.md).
@@ -80,6 +81,11 @@ target_compile_definitions(
         # that builds the tests, as C and as C++.
         SPEAK5220_CXX_COMPILER="${CMAKE_CXX_COMPILER}"
         SPEAK5220_CXX_COMPILER_ID="${CMAKE_CXX_COMPILER_ID}"
+        # The BBC Micro disc is read back by an independent reader in
+        # Python (support/dfs_catalogue.py); without Python those tests
+        # are skipped.
+        SPEAK5220_PYTHON="${Python3_EXECUTABLE}"
+        SPEAK5220_TEST_SUPPORT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/support"
 )
 add_dependencies(speak5220_functional_tests speak5220-cli)
 

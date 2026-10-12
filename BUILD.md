@@ -77,7 +77,7 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Fixture projects
 
-`app/projects/` holds small projects in the unpacked (directory) form, which the functional tests load: `general/` (one phrase, several phrases with Acorn-style names and an ASCII map, and a locked phrase with every kind of frame), `phrom/` (a project that fills exactly one PHROM, and one that spills into a second) and `benchmark/` (two speech-like clips, for timing Optimise with `benchmark.sh`). The phrases with audio were added and encoded with `speak5220-cli` from short synthetic clips; the locked phrases' frames were written directly. When the encoder's output changes, the fixtures' encodings must be redone (`speak5220-cli encode --force` on each), or the functional tests report them as stale.
+`app/projects/` holds small projects in the unpacked (directory) form, which the functional tests load: `general/` (one phrase, several phrases with Acorn-style names and an ASCII map, and a locked phrase with every kind of frame), `phrom/` (a project that fills exactly one PHROM, and one that spills into a second), `bbc/` (BBC Micro disc fixtures: one PHROM with two pages of phrases, and five PHROMs, on both sides of the disc) and `benchmark/` (two speech-like clips, for timing Optimise with `benchmark.sh`). The phrases with audio were added and encoded with `speak5220-cli` from short synthetic clips; the locked phrases' frames were written directly. When the encoder's output changes, the fixtures' encodings must be redone (`speak5220-cli encode --force` on each), or the functional tests report them as stale.
 
 ### Reference data
 
@@ -93,9 +93,16 @@ nix develop --command python3 app/scripts/golden/measures.py --check          # 
 nix develop --command python3 app/scripts/golden/measures.py                  # rewrite app/golden/quality/measures/
 ```
 
+`app/golden/bbc/` holds BBC BASIC II's own tokenisation of three test programs, made on MAME's emulated BBC Micro (below) by a fourth script:
+
+```bash
+nix develop --command python3 app/scripts/golden/basic_programs.py --check    # tokenise the programs again and compare
+nix develop --command python3 app/scripts/golden/basic_programs.py            # rewrite app/golden/bbc/programs/*.bin
+```
+
 The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's (with the quality data that measures it) only for an intended improvement; see [`TESTING.md`](TESTING.md).
 
-Copies of copyrighted reference texts, such as the ITU-T P.862 Recommendation, can be kept in `local/` at the repository root, which git ignores. They are never committed.
+Copies of copyrighted reference texts, such as the ITU-T P.862 Recommendation, can be kept in `local/` at the repository root, which git ignores. They are never committed. So is the ROM set for MAME's BBC Micro Model B, in `local/mame/roms/`: `bbcb/` (`os12.rom`, `basic2.rom`, and `cm62024.bin`, the Acorn PHROM A), `saa5050/saa5050` and `bbc_acorn8271/dnfs120.rom`, with the checksums `mame -listroms bbcb` gives.
 
 The encoder's two fixed Butterworth filters are constants in `app/src/core/dsp/filter_constants.h`, designed by SciPy:
 
@@ -113,7 +120,10 @@ nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus 
 nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core; Optimise on one thread and on every core
 nix develop .#app --command app/scripts/run-projects.sh   # encodes copies of the fixture projects and runs their export presets
 nix develop .#app --command app/scripts/output-hashes.sh  # checks those exports against the recorded hashes in app/golden/output-hashes/
+nix develop --command app/scripts/bbc-check.sh            # boots the BBC Micro discs on MAME's emulated BBC Micro and drives the player
 ```
+
+`bbc-check.sh` needs MAME, which it takes from `PATH` or else runs with `nix shell nixpkgs#mame` (MAME is not in the dev shells: it is large and used only here), and the ROM set in `local/mame/roms/`. Its recordings, logs and summary go to `build/app/bbc-check/`.
 
 `corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`, and the fixtures' exports to `build/app/project-output/SUITE/`.
 

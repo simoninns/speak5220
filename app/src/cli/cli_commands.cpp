@@ -97,8 +97,8 @@ const QCommandLineOption& FormatOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("format"),
       QStringLiteral("export: export in this format instead of the presets "
-                     "(acorn-phrom, c-header-phrom, c-header-speak-external "
-                     "or wav)."),
+                     "(acorn-phrom, c-header-phrom, c-header-speak-external, "
+                     "wav or bbc-dsd)."),
       QStringLiteral("format"));
   return kOption;
 }

@@ -70,6 +70,7 @@ nav:
           - Waveforms and playback: application/user-manual/waveforms.md
           - The encoder and Optimise: application/user-manual/encoder.md
           - Export: application/user-manual/export.md
+          - BBC Micro disc: application/user-manual/bbc-disc.md
           - Command-line tool: application/user-manual/cli.md
           - Troubleshooting: application/user-manual/troubleshooting.md
       - Reference:

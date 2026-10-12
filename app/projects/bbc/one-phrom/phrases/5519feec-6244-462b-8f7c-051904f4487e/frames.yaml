@@ -1,0 +1,18 @@
+encoder_version: "1.1.0"
+settings_hash: "2aeafa790936a35a13eb57de77adeb2bb09c19149457c820dd2ddf0e652b909f"
+frames:
+  - {energy: 1, repeat: 0, pitch: 37, k: [4, 23, 9, 6, 6, 7, 10, 4, 2, 2]}
+  - {energy: 6, repeat: 1, pitch: 39}
+  - {energy: 7, repeat: 1, pitch: 39}
+  - {energy: 7, repeat: 1, pitch: 39}
+  - {energy: 6, repeat: 1, pitch: 39}
+  - {energy: 3, repeat: 0, pitch: 39, k: [15, 18, 10, 7, 4, 5, 9, 3, 2, 3]}
+  - {energy: 8, repeat: 0, pitch: 40, k: [16, 21, 11, 8, 6, 6, 10, 3, 1, 2]}
+  - {energy: 8, repeat: 1, pitch: 40}
+  - {energy: 8, repeat: 1, pitch: 41}
+  - {energy: 8, repeat: 1, pitch: 42}
+  - {energy: 8, repeat: 1, pitch: 42}
+  - {energy: 8, repeat: 1, pitch: 43}
+  - {energy: 7, repeat: 1, pitch: 43}
+  - {energy: 1, repeat: 1, pitch: 44}
+  - {energy: 15}

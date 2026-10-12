@@ -16,6 +16,7 @@ the project's list order.
 | `c-header-phrom` | `NAME.h` |
 | `c-header-speak-external` | `NAME.h` |
 | `wav` | `NAME_IDENTIFIER.wav` per phrase |
+| `bbc-dsd` | `NAME.dsd` |
 
 ## Acorn PHROM images
 
@@ -166,3 +167,46 @@ One mono WAV file per phrase, at 8000 Hz:
 |---|---|---|
 | `encoded` (the default) | The chip's output through the VSM path (a PHROM word spoken with Speak), from the sample in which the first frame is read until the output has been idle for 25 samples and a frame more. Each output code is scaled by 64 and clipped to the DAC's range (−128 to +127, the SPEAKER pin), so full scale is a quarter of 16-bit full scale | 16-bit PCM |
 | `original` | The phrase's audio as the project holds it: its source, resampled to 8 kHz and mixed to mono when it was imported | 24-bit PCM |
+
+## BBC Micro disc
+
+An Acorn DFS disc image of 204 800 bytes: two sides of 40 tracks of ten
+256-byte sectors, with the tracks interleaved (track 0 of side 0, track 0
+of side 1, track 1 of side 0, ...), as BBC Micro emulators and floppy
+emulators read a `.dsd` file. Each side is a DFS drive (side 0 is drive
+0, side 1 drive 2) with its own catalogue in sectors 0 and 1 (Acorn DFS
+Manual), both titled with the project's name: printable ASCII, other
+characters made `?`, cut to 12 characters. Files start at sector 2, each
+in whole sectors, in the order below, all in directory `$`.
+
+| Drive | File | Contents | Load, exec |
+|---|---|---|---|
+| 0 | `!BOOT` | `CHAIN "SPEAK"` and a carriage return. The side's boot option is 3 (`*EXEC !BOOT`), so Shift+Break runs the player | 0, 0 |
+| 0 | `SPEAK` | The player, a BBC BASIC II program tokenised as BASIC II stores it | &FF1900, &FF8023 |
+| 0 | `PHROM1`, `INDEX1` ... `PHROM4`, `INDEX4` | PHROMs 1 to 4 | 0, 0 |
+| 2 | `PHROM5`, `INDEX5` ... `PHROM8`, `INDEX8` | PHROMs 5 to 8 | 0, 0 |
+
+Only the PHROMs the phrases fill are written; side 1 has an empty
+catalogue when they fill 4 or fewer. The phrases are placed in PHROMs as
+for the Acorn PHROM images, and more than 8 PHROMs are refused.
+
+**`PHROMn`** holds the Speak External stream of each of PHROM n's phrases
+([datasheet §12.9](../../technical/datasheet/authoring.md#129-speak-external-streams)),
+in its order, one after another: no header, pointers or names. The
+streams are in the order the chip's FIFO takes them, so they are sent
+unreversed. A file is at most 16 384 bytes.
+
+**`INDEXn`** describes PHROM n. Numbers are little-endian; text is ASCII,
+padded with spaces.
+
+| Bytes | Contents |
+|---|---|
+| 0-29 | The PHROM's title: the second of its header strings (with its number appended, unless the project sets that PHROM's own strings), cut to 30 characters |
+| 30-31 | The number of phrases |
+| 32 onwards | 20 bytes per phrase, in order: |
+| +0-15 | The phrase's name |
+| +16-17 | The offset of its stream in `PHROMn` |
+| +18-19 | The length of its stream |
+
+The records are of fixed size, so the player reads only those of the
+page it shows.

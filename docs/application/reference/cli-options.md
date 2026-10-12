@@ -40,7 +40,7 @@ no command, `speak5220-cli` prints its name and version.
 | `--description` | text | `add` | The phrase's description, a note kept in the project only (default: none) |
 | `--output` | a directory | all | `new`, `add`, `encode`: saves the project into this directory, under its own name, instead of in place. `export`: the directory for the exported files. Created if missing |
 | `--preset` | a preset name | `export` | Runs this export preset of the project; may be given more than once. Without `--preset` or `--format`, every preset runs |
-| `--format` | `acorn-phrom`, `c-header-phrom`, `c-header-speak-external` or `wav` | `export` | Exports in this format instead of running presets; the files are named after the project file ([Export formats](export-formats.md)) |
+| `--format` | `acorn-phrom`, `c-header-phrom`, `c-header-speak-external`, `wav` or `bbc-dsd` | `export` | Exports in this format instead of running presets; the files are named after the project file ([Export formats](export-formats.md)) |
 | `--phrase` | a phrase name | `export --format` | Exports only this phrase; may be given more than once. Default: every phrase |
 | `--layout` | `separate` or `concatenated` | `export --format acorn-phrom` | One 16 KB file per PHROM (`NAME_1.bin`, `NAME_2.bin`, ...; the default), or all PHROMs in one file (`NAME.bin`) |
 | `--licence` | an SPDX licence identifier | `export --format c-header-phrom` or `c-header-speak-external` | The licence written in the header (default `GPL-3.0-or-later`) |

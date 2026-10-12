@@ -22,10 +22,13 @@ is_source_file() {
   local path=$1 name
   name=$(basename "$path")
   case "$path" in
+  # The BBC Micro player's BASIC source carries its header in REM lines;
+  # the reference programs under app/golden/ are data.
+  app/src/*.bas) return 0 ;;
   app/*)
     case "$name" in
     # YAML under app/ (projects, golden data) is data, not source.
-    *.cpp | *.h | *.cmake | CMakeLists.txt | *.nix | *.sh | *.py | *.ui | *.qrc) return 0 ;;
+    *.cpp | *.h | *.cmake | CMakeLists.txt | *.nix | *.sh | *.py | *.lua | *.ui | *.qrc) return 0 ;;
     *) return 1 ;;
     esac
     ;;

@@ -192,10 +192,10 @@ TEST(ProjectExportTest, EveryFormatIsListedOnce) {
     EXPECT_TRUE(keys.insert(format.key).second) << format.key;
     EXPECT_EQ(FindExportFormat(format.key), &format);
   }
-  EXPECT_EQ(keys,
-            (std::set<std::string_view>{"acorn-phrom", "c-header-phrom",
-                                        "c-header-speak-external", "wav"}));
-  EXPECT_EQ(FindExportFormat("bbc-dsd"), nullptr);
+  EXPECT_EQ(keys, (std::set<std::string_view>{"acorn-phrom", "c-header-phrom",
+                                              "c-header-speak-external", "wav",
+                                              "bbc-dsd"}));
+  EXPECT_EQ(FindExportFormat("ssd"), nullptr);
 }
 
 TEST(ProjectExportTest, RefusesAnOptionItsFormatDoesNotTake) {
@@ -333,7 +333,8 @@ TEST(ProjectExportTest, FileNamesAreThoseTheExportWrites) {
       {.name = "p", .format = "acorn-phrom"},
       {.name = "p", .format = "acorn-phrom", .layout = "concatenated"},
       {.name = "p", .format = "c-header-phrom"},
-      {.name = "p", .format = "c-header-speak-external"}};
+      {.name = "p", .format = "c-header-speak-external"},
+      {.name = "p", .format = "bbc-dsd"}};
   for (const ExportPreset& preset : presets) {
     const StatusOr<std::vector<ExportedFile>> files =
         RunExport(project, preset, "words");

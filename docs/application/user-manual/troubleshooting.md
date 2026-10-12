@@ -29,7 +29,7 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `HELLO has not been encoded yet, so it cannot be exported` | As above, for a phrase with no frames at all |
 | `HELLO has no source audio, so its original cannot be exported` | A WAV export of the original audio needs the phrase's audio, and a locked phrase made from frames alone (such as a word from a PHROM image) has none |
 | `HELLO is locked: its frames are never re-encoded` | Locked phrases keep their frames; their encoder settings cannot be changed |
-| `export format "c-header" is not one of "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav"` | The preset or `--format` names a format Speak5220 does not have; see [Export formats](../reference/export-formats.md) |
+| `export format "c-header" is not one of "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav", "bbc-dsd"` | The preset or `--format` names a format Speak5220 does not have; see [Export formats](../reference/export-formats.md) |
 | `the layout "concatenated" does not apply to the format "wav"` | A preset holds an option of another format (`layout` belongs to `acorn-phrom`, `licence` to the C headers, `audio` to `wav`). Remove it |
 | `export scope "selected" needs the phrases it exports` | A preset of scope `selected` must list its `phrases` |
 | `the export names a phrase the project does not have: HELLO` | A preset's `phrases`, or `--phrase`, names a phrase that was renamed or removed. Edit the preset |
@@ -37,6 +37,17 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `the licence "MIT */" is not an SPDX identifier (letters, digits, spaces and ". + - ( )")` | A C header's licence is written in its comment, so only an SPDX identifier or expression is accepted |
 | `HELLO needs 70000 bytes, more than a C header's stream holds (65535)` | A Speak External header gives each phrase's length as a 16-bit number. Shorten the phrase |
 | `the project has no export presets: give --format` | `speak5220-cli export` without `--preset` or `--format` runs the project's presets, and there are none |
+| `these phrases fill 9 PHROMs, and a BBC Micro disc holds at most 8: export fewer phrases` | A [BBC Micro disc](bbc-disc.md) holds 8 PHROMs. Export only some of the phrases (**Selected phrases**, or `--phrase`) |
+
+## The BBC Micro disc
+
+What the [disc's player](bbc-disc.md) says on the BBC Micro:
+
+| Message | Meaning |
+|---|---|
+| `This BBC Micro has no speech system.` | The operating system found no speech chip. The player needs the Acorn speech system (the TMS5220; no PHROM is needed) |
+| `Not enough memory: PAGE must be &2554 or lower.` | Another filing system or ROM has raised PAGE, leaving too little memory beside the player's 16 KB buffer. Turn off ROMs that claim workspace, or use Acorn DFS |
+| `None: the disc has no INDEX files.` | The disc holds no PHROMs: it was not written by the BBC Micro disc export, or its files were deleted |
 
 ## The encoder and Optimise
 

@@ -18,8 +18,10 @@
 #include <vector>
 
 #include "core/audio/sndfile_wav_io.h"
+#include "core/bbc/bbc_disc.h"
 #include "core/lpc/frame.h"
 #include "core/packaging/phrom_image.h"
+#include "core/packaging/speak_external_stream.h"
 #include "core/project/directory_project_store.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
@@ -37,9 +39,10 @@ namespace {
 
 namespace fs = std::filesystem;
 
-constexpr std::array<const char*, 6> kFixtures = {
-    "general/one-phrase", "general/many-phrases", "general/frame-kinds",
-    "phrom/one-phrom",    "phrom/two-phroms",     "benchmark/synthetic-speech"};
+constexpr std::array<const char*, 8> kFixtures = {
+    "general/one-phrase", "general/many-phrases",      "general/frame-kinds",
+    "phrom/one-phrom",    "phrom/two-phroms",          "bbc/one-phrom",
+    "bbc/both-sides",     "benchmark/synthetic-speech"};
 
 fs::path FixturePath(const std::string& name) {
   return fs::path(SPEAK5220_PROJECTS_DIR) / name;
@@ -129,12 +132,14 @@ TEST_F(ProjectFixturesTest, ManyPhrasesHasAcornNamesAndAnAsciiMap) {
   }
   ASSERT_NE(seven, nullptr);
   EXPECT_EQ(seven->encoder.at("gate_db"), "40");
-  // A preset per format and PHROM layout, and both scopes and WAV forms.
+  // A preset per format and PHROM layout, and both scopes and WAV forms;
+  // the BBC Micro disc has fixtures of its own (bbc/).
   std::set<std::string> formats;
   for (const ExportPreset& preset : project.Contents().exports) {
     formats.insert(preset.format);
   }
-  EXPECT_EQ(formats.size(), ExportFormats().size());
+  EXPECT_FALSE(formats.contains(std::string(kBbcDiscFormat)));
+  EXPECT_EQ(formats.size(), ExportFormats().size() - 1);
   EXPECT_EQ(project.Contents().exports.size(), 6U);
 }
 
@@ -178,6 +183,43 @@ TEST_F(ProjectFixturesTest, TwoPhromsSpillsIntoASecond) {
       BuildAcornPhroms(project);
   ASSERT_TRUE(images.IsOk());
   EXPECT_EQ(images->size(), 2U);
+}
+
+TEST_F(ProjectFixturesTest, BbcOnePhromHasTwoPagesOfPhrases) {
+  const Project project = LoadFixture("bbc/one-phrom");
+  EXPECT_EQ(project.Allocation().PhromsUsed(), 1);
+  // The player lists 16 phrases a page.
+  EXPECT_EQ(project.Phrases().size(), 27U);
+  // SHORT's stream is padded to the 9 bytes speech needs to start.
+  const Phrase* shortest = nullptr;
+  for (const Phrase& phrase : project.Phrases()) {
+    if (phrase.name == "SHORT") {
+      shortest = &phrase;
+    }
+  }
+  ASSERT_NE(shortest, nullptr);
+  EXPECT_EQ(
+      packaging::SpeakExternalStream::Build(shortest->encoding->frames)->size(),
+      packaging::SpeakExternalStream::kMinimumBytes);
+}
+
+TEST_F(ProjectFixturesTest, BbcBothSidesFillsFivePhroms) {
+  const Project project = LoadFixture("bbc/both-sides");
+  const PhromAllocation allocation = project.Allocation();
+  ASSERT_EQ(allocation.PhromsUsed(), 5);
+  // PHROM 1 holds the largest phrase a PHROM can.
+  EXPECT_EQ(project.Phrases()[0].name, "LONGEST");
+  EXPECT_EQ(allocation.phrases[0].cost, kPhromWordCapacity);
+  std::vector<const Phrase*> phrases;
+  for (const Phrase& phrase : project.Phrases()) {
+    phrases.push_back(&phrase);
+  }
+  const StatusOr<std::vector<bbc::BbcDiscPhrom>> phroms =
+      BuildBbcDiscPhroms(project.Settings(), phrases);
+  ASSERT_TRUE(phroms.IsOk()) << phroms.GetStatus().ToString();
+  EXPECT_EQ((*phroms)[2].title, "The third PHROM");
+  // PHROM 5, the first on side 1, holds three phrases.
+  EXPECT_EQ((*phroms)[4].phrases.size(), 3U);
 }
 
 // The 64-PHROM budget project is made here rather than committed: its

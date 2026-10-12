@@ -1,0 +1,200 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "One PHROM"
+  header_strings: ["(C)2026 speak5220", "Speech", "1.00"]
+  ascii_map:
+    " ": "(TONE 1)"
+    "1": "ONE,WON"
+    "2": "2- (TWEN-)"
+    "7": "SEVEN"
+  default_encoder:
+    target_rms: 20
+    repeat_lambda: 70
+    gate_db: 45
+    squelch_db: null
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    resonance_hold_db: null
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    level_agc: 1
+phrases:
+  - id: "5519feec-6244-462b-8f7c-051904f4487e"
+    name: "ONE,WON"
+    description: "A number, and the words that sound like it"
+    source:
+      file: "one.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.4
+      sha256: "4efae645c89693db5b85a9ae5b9d34041cf38ff99ca13cbcee9b12753700e926"
+    locked: false
+    play_start: 0
+  - id: "756740d5-694f-439e-a17c-86065ff2c9e1"
+    name: "2- (TWEN-)"
+    description: ""
+    source:
+      file: "twenty.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.52
+      sha256: "f6bd170f064a84ba2b6a60b0a239b4f638fe7f2a714dc32524038e2927203149"
+    locked: false
+    play_start: 0
+  - id: "15ca37e0-e607-4990-a373-297992338efa"
+    name: "O'CLOCK"
+    description: ""
+    source:
+      file: "oclock.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.47
+      sha256: "b46ff41dcde8ee4267cd0bcc7f6381a13bcaacf1d4f8e6b82efcd813a5704e4b"
+    locked: false
+    play_start: 0
+  - id: "40f95cfb-2ba3-4a31-b527-931f9b8dc82c"
+    name: "-ING"
+    description: ""
+    source:
+      file: "ing.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.33
+      sha256: "137ca29203ac67ab028b2a6a5847286459a65bbb59e74d920744268f14a42c93"
+    locked: false
+    play_start: 0
+  - id: "b304d68b-78aa-4d23-aeb5-3eea0ef9e3ae"
+    name: "(TONE 1)"
+    description: ""
+    source:
+      file: "tone.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.36
+      sha256: "982d59b05d4e8e88643a792ae32c029ff8804183a9dc9c651e69eed80b80a3df"
+    locked: false
+    play_start: 0
+  - id: "3505933c-96a7-44bb-b3fc-88152be0f903"
+    name: "SEVEN"
+    description: "Encoded with a lower silence gate"
+    source:
+      file: "seven.wav"
+      rate: 8000
+      channels: 1
+      duration: 0.48
+      sha256: "f19a92d8fdb1dffa736d8ba956e55bbb4f941f8c0827119e9398b35be278756f"
+    encoder:
+      gate_db: 40
+    locked: false
+    play_start: 0
+  - id: "50cef9b9-b66d-566b-b081-fccf1b1b058a"
+    name: "SHORT"
+    description: "Locked: one frame and the stop, so its stream is padded to 9 bytes"
+    locked: true
+    play_start: 0
+  - id: "4bc70542-f737-596a-a665-fc58196abb6d"
+    name: "BEEP 1"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "77eedf3f-6f4d-53ff-80a0-33d7117b004a"
+    name: "BEEP 2"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "3df546f3-a2f3-5fb1-afdf-207614a01d23"
+    name: "BEEP 3"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "8b9efe92-da1a-5d93-a7a8-d2f63def670d"
+    name: "BEEP 4"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "d250a543-eb96-53cd-aec7-65bc3a016c4d"
+    name: "BEEP 5"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "13d50f62-85f3-5dbe-b792-d508eede10cc"
+    name: "BEEP 6"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "7012c730-2870-5c8c-8cff-efed5780ee45"
+    name: "BEEP 7"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "85be101d-3f3f-5222-befd-89a692849648"
+    name: "BEEP 8"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "9078fe85-5530-51b7-83fb-8721b15fb017"
+    name: "BEEP 9"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "434c01fc-9120-52de-9816-029cbc4a2a15"
+    name: "BEEP 10"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "3c3d1e38-c081-5156-81b7-8b437112c70d"
+    name: "BEEP 11"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "b4ef7ffc-a867-5030-8f76-ad878624b5aa"
+    name: "BEEP 12"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "790514c5-4e7b-54d1-b3e9-87696de11799"
+    name: "BEEP 13"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "938f625f-2f5c-5e26-b046-ff579521372b"
+    name: "BEEP 14"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "66e37071-5de9-59c8-94ec-c85a2dd8f075"
+    name: "BEEP 15"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "5a6406aa-8fd4-57d8-aa5b-235ab6691d82"
+    name: "BEEP 16"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "08c7f2b7-d5c8-5723-943a-37c47e8bc947"
+    name: "BEEP 17"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "e56ef7da-4084-58e5-9da3-97610b33a731"
+    name: "BEEP 18"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "aca91bf6-4bd6-59f5-9b04-c8f8ea01e35f"
+    name: "BEEP 19"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "c40b4a0e-f950-5df3-af97-66bee8c77141"
+    name: "BEEP 20"
+    description: ""
+    locked: true
+    play_start: 0
+exports:
+  - name: "disc"
+    format: "bbc-dsd"
+    scope: "all"

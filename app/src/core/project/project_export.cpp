@@ -2,7 +2,7 @@
  * File:        project_export.cpp
  * Module:      project
  * Purpose:     Runs a project's export presets: Acorn PHROM images, C
- *              headers and WAV files
+ *              headers, WAV files and the BBC Micro disc
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -40,7 +40,7 @@
 namespace speak5220::core::project {
 namespace {
 
-constexpr std::array<ExportFormatInfo, 4> kFormats = {{
+constexpr std::array<ExportFormatInfo, 5> kFormats = {{
     {.key = kAcornPhromFormat,
      .label = "Acorn PHROM images",
      .takes_layout = true,
@@ -61,6 +61,11 @@ constexpr std::array<ExportFormatInfo, 4> kFormats = {{
      .takes_layout = false,
      .takes_licence = false,
      .takes_audio = true},
+    {.key = kBbcDiscFormat,
+     .label = "BBC Micro disc",
+     .takes_layout = false,
+     .takes_licence = false,
+     .takes_audio = false},
 }};
 
 // A 16-bit sample as a fraction of full scale, exact in a float.
@@ -266,6 +271,23 @@ StatusOr<std::vector<ExportedFile>> WavFiles(
   return files;
 }
 
+StatusOr<std::vector<ExportedFile>> BbcDiscFiles(
+    const Project& project, std::span<const Phrase* const> phrases,
+    std::string_view base) {
+  StatusOr<std::vector<bbc::BbcDiscPhrom>> phroms =
+      BuildBbcDiscPhroms(project.Settings(), phrases);
+  if (!phroms.IsOk()) {
+    return phroms.GetStatus();
+  }
+  StatusOr<std::vector<std::uint8_t>> disc =
+      bbc::BbcDisc::Build(project.Settings().name, *phroms);
+  if (!disc.IsOk()) {
+    return disc.GetStatus();
+  }
+  return std::vector<ExportedFile>{
+      {.name = fmt::format("{}.dsd", base), .bytes = *std::move(disc)}};
+}
+
 }  // namespace
 
 std::span<const ExportFormatInfo> ExportFormats() { return kFormats; }
@@ -466,6 +488,56 @@ StatusOr<std::vector<packaging::PhromImage>> BuildAcornPhroms(
   return BuildAcornPhroms(project.Settings(), phrases);
 }
 
+StatusOr<std::vector<bbc::BbcDiscPhrom>> BuildBbcDiscPhroms(
+    const ProjectSettings& settings, std::span<const Phrase* const> phrases) {
+  StatusOr<std::vector<packaging::PhromImage>> images =
+      BuildAcornPhroms(settings, phrases);
+  if (!images.IsOk()) {
+    return images.GetStatus();
+  }
+  if (images->size() > static_cast<std::size_t>(bbc::BbcDisc::kMaxPhroms)) {
+    return ResourceExhaustedError(fmt::format(
+        "these phrases fill {} PHROMs, and a BBC Micro disc holds at most {}: "
+        "export fewer phrases",
+        images->size(), bbc::BbcDisc::kMaxPhroms));
+  }
+  std::map<std::string, const Phrase*> by_name;
+  for (const Phrase* phrase : phrases) {
+    by_name.emplace(phrase->name, phrase);
+  }
+  std::vector<bbc::BbcDiscPhrom> phroms;
+  phroms.reserve(images->size());
+  for (std::size_t i = 0; i < images->size(); ++i) {
+    const std::vector<std::string> strings =
+        PhromHeaderStrings(settings, static_cast<int>(i) + 1);
+    bbc::BbcDiscPhrom phrom{.title = strings.size() > 1 ? strings[1] : "",
+                            .phrases = {}};
+    for (const packaging::WordTableEntry& word : (*images)[i].table) {
+      const auto found = by_name.find(word.name);
+      if (found == by_name.end()) {
+        return InternalError(word.name + " was placed but is not exported");
+      }
+      // A placed phrase always has frames.
+      StatusOr<const std::vector<lpc::Frame>*> frames =
+          FramesOf(*found->second);
+      if (!frames.IsOk()) {
+        return frames.GetStatus();
+      }
+      StatusOr<std::vector<std::uint8_t>> stream =
+          packaging::SpeakExternalStream::Build(**frames);
+      if (!stream.IsOk()) {
+        return Status(
+            stream.GetStatus().Code(),
+            fmt::format("{}: {}", word.name, stream.GetStatus().Message()));
+      }
+      phrom.phrases.push_back(
+          {.name = word.name, .stream = *std::move(stream)});
+    }
+    phroms.push_back(std::move(phrom));
+  }
+  return phroms;
+}
+
 StatusOr<std::vector<ExportedFile>> RunExport(const Project& project,
                                               const ExportPreset& preset,
                                               std::string_view base,
@@ -488,6 +560,8 @@ StatusOr<std::vector<ExportedFile>> RunExport(const Project& project,
     files = PhromHeaderFiles(project, preset, *phrases, base);
   } else if (preset.format == kCHeaderSpeakExternalFormat) {
     files = StreamHeaderFiles(project, preset, *phrases, base);
+  } else if (preset.format == kBbcDiscFormat) {
+    files = BbcDiscFiles(project, *phrases, base);
   } else {
     files = WavFiles(preset, *phrases, base, tools);
   }
@@ -514,6 +588,15 @@ StatusOr<std::vector<std::string>> ExportFileNames(const Project& project,
     return phrases.GetStatus();
   }
   std::vector<std::string> names;
+  if (preset.format == kBbcDiscFormat) {
+    if (StatusOr<std::vector<bbc::BbcDiscPhrom>> phroms =
+            BuildBbcDiscPhroms(project.Settings(), *phrases);
+        !phroms.IsOk()) {
+      return phroms.GetStatus();
+    }
+    names.push_back(fmt::format("{}.dsd", base));
+    return names;
+  }
   if (preset.format == kAcornPhromFormat ||
       preset.format == kCHeaderPhromFormat) {
     StatusOr<std::vector<packaging::PhromImage>> images =

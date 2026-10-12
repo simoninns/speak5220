@@ -7,6 +7,9 @@ add_library(
     s5core
     STATIC
     audio/sndfile_wav_io.cpp
+    bbc/basic_tokeniser.cpp
+    bbc/bbc_disc.cpp
+    bbc/dfs_disc.cpp
     dsp/array_math.cpp
     dsp/fft.cpp
     dsp/iir_filter.cpp
@@ -102,6 +105,25 @@ add_custom_target(
     VERBATIM
 )
 add_dependencies(s5core s5version)
+
+# The BBC Micro disc's player program, kept as BASIC text and built into
+# s5core as a string (core/bbc/bbc_disc.h).
+set(_player_header "${_version_dir}/core/bbc/player_source.h")
+add_custom_command(
+    OUTPUT "${_player_header}"
+    COMMAND
+        "${CMAKE_COMMAND}" "-DINPUT=${CMAKE_CURRENT_SOURCE_DIR}/bbc/speak.bas"
+        "-DOUTPUT=${_player_header}"
+        "-DGUARD=SPEAK5220_CORE_BBC_PLAYER_SOURCE_H_"
+        "-DNAMESPACE=speak5220::core::bbc" "-DNAME=kPlayerSource" -P
+        "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/bbc/speak.bas"
+        "${PROJECT_SOURCE_DIR}/cmake/EmbedText.cmake"
+    COMMENT "Embedding the BBC Micro disc's player program"
+    VERBATIM
+)
+target_sources(s5core PRIVATE "${_player_header}")
 target_include_directories(s5core PRIVATE "${_version_dir}")
 target_link_libraries(
     s5core

@@ -1,0 +1,65 @@
+format: "speak5220-project"
+version: 1
+project:
+  name: "Both sides"
+  header_strings: ["(C)2026 speak5220", "Both sides", "1.00"]
+  ascii_map: {}
+  default_encoder:
+    target_rms: 20
+    repeat_lambda: 70
+    gate_db: 45
+    squelch_db: null
+    pre_emphasis: "chirp"
+    window: 240
+    lag_window_hz: 60
+    resonance_hold_db: null
+    voicing_threshold: 0.3
+    voicing_evidence: 4
+    level_agc: 1
+  phroms:
+    - number: 3
+      header_strings: ["(C)2026 speak5220", "The third PHROM", "1.00"]
+phrases:
+  - id: "234ee289-d1ef-505f-bbd3-7295eb04e441"
+    name: "LONGEST"
+    description: "Locked: the largest phrase a PHROM holds"
+    locked: true
+    play_start: 0
+  - id: "c9436abd-2af2-54a5-ad28-d3926c96a9b4"
+    name: "SECOND"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "aac798db-a45a-5580-8913-bc384f195284"
+    name: "THIRD"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "04cdbf87-3aee-5931-8405-423c6fdb1ab6"
+    name: "FOURTH"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "831c7d1c-46e5-56af-a8d5-e82e7c038c45"
+    name: "FIFTH"
+    description: "Locked: the first phrase on side 1"
+    locked: true
+    play_start: 0
+  - id: "3d15419b-3ac9-504c-a168-a8f448f5b554"
+    name: "SIXTH"
+    description: ""
+    locked: true
+    play_start: 0
+  - id: "71af2f28-22f8-50cf-9ce7-ad85e7b28a31"
+    name: "SEVENTH"
+    description: ""
+    locked: true
+    play_start: 0
+exports:
+  - name: "disc"
+    format: "bbc-dsd"
+    scope: "all"
+  - name: "side-zero"
+    format: "bbc-dsd"
+    scope: "selected"
+    phrases: ["SECOND", "SIXTH", "SEVENTH"]

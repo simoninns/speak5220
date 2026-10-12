@@ -137,7 +137,7 @@ is refused when it runs, with a message naming it.
 | Key | Type | Meaning |
 |---|---|---|
 | `name` | String | The preset's name, unique in the project. The exported files are named after it, so it cannot be empty, `.` or `..`, or hold `/ \ : * ? " < > \|` |
-| `format` | String | `"acorn-phrom"` (Acorn PHROM images), `"c-header-phrom"` (a C header of the PHROM images), `"c-header-speak-external"` (a C header of each phrase's Speak External stream) or `"wav"` (one WAV file per phrase). The layouts are in [Export formats](export-formats.md) |
+| `format` | String | `"acorn-phrom"` (Acorn PHROM images), `"c-header-phrom"` (a C header of the PHROM images), `"c-header-speak-external"` (a C header of each phrase's Speak External stream), `"wav"` (one WAV file per phrase) or `"bbc-dsd"` (a BBC Micro disc). The layouts are in [Export formats](export-formats.md) |
 | `scope` | String | `"all"`: every phrase. `"selected"`: the phrases in `phrases` |
 | `phrases` | List of strings | With scope `"selected"` only: the names of the phrases to export, at least one. They are exported in the project's list order, whatever the order here. A name the project does not have is refused when the preset runs |
 | `layout` | String | `acorn-phrom` only: `"separate"` (one 16 KB file per PHROM, `NAME_1.bin`, `NAME_2.bin`, ...; the default) or `"concatenated"` (one file, `NAME.bin`) |

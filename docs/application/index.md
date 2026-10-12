@@ -21,8 +21,9 @@ So far the application has:
   [command-line options](reference/cli-options.md) reference;
 - the project file, `.s5proj`, described in the
   [project file](reference/project-file.md) reference;
-- exports of Acorn PHROM images, C headers and WAV files, described in the
-  [export formats](reference/export-formats.md) reference;
+- exports of Acorn PHROM images, C headers, WAV files and a
+  [BBC Micro disc](user-manual/bbc-disc.md) that speaks the phrases,
+  described in the [export formats](reference/export-formats.md) reference;
 - an encoder that turns 8 kHz speech into TMS5220 frames, whose options are
   in the [encoder options](reference/encoder-options.md) reference;
 - logging options shared by both executables.

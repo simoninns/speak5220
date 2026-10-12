@@ -111,6 +111,31 @@ TEST_F(ExportDialogTest, EachFormatTakesOnlyItsOwnOptions) {
   EXPECT_TRUE(dialog.AudioBox()->isVisibleTo(&dialog));
 }
 
+TEST_F(ExportDialogTest, BbcDiscTakesNoOptions) {
+  ExportDialog dialog(Start());
+  SelectFormat(dialog, QStringLiteral("bbc-dsd"));
+  EXPECT_EQ(
+      dialog.Request().preset,
+      (ExportPreset{.name = "speech", .format = "bbc-dsd", .scope = "all"}));
+  EXPECT_FALSE(dialog.LayoutBox()->isVisibleTo(&dialog));
+  EXPECT_FALSE(dialog.LicenceEdit()->isVisibleTo(&dialog));
+  EXPECT_FALSE(dialog.AudioBox()->isVisibleTo(&dialog));
+  EXPECT_TRUE(dialog.CanExport());
+  EXPECT_EQ(dialog.Summary(), QStringLiteral("Writes 1 file: speech.dsd"));
+}
+
+TEST_F(ExportDialogTest, BbcDiscSaysWhenThereAreTooManyPhroms) {
+  std::vector<Phrase> phrases;
+  for (int i = 1; i <= 9; ++i) {
+    phrases.push_back(LockedPhrase(i, "P" + std::to_string(i), 9000));
+  }
+  project_ = ProjectWith(std::move(phrases));
+  ExportDialog dialog(Start());
+  SelectFormat(dialog, QStringLiteral("bbc-dsd"));
+  EXPECT_FALSE(dialog.CanExport());
+  EXPECT_TRUE(dialog.Summary().contains(QStringLiteral("at most 8")));
+}
+
 TEST_F(ExportDialogTest, SelectedScopeExportsTheSelection) {
   ExportDialog dialog(Start({QStringLiteral("A"), QStringLiteral("C")}));
   EXPECT_EQ(dialog.SelectedButton()->text(),

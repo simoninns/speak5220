@@ -53,12 +53,18 @@ Nix shell (py-webrtcvad, pystoi, pyworld):
 nix develop --command python3 app/scripts/golden/measures.py --check
 ```
 
+`bbc/programs/NAME.bas` are BBC BASIC programs that use every keyword and the tokeniser's special cases; `NAME.bin` beside each is the program BBC BASIC II stored when it was typed in (the bytes SAVE writes), on MAME's emulated BBC Micro, by `app/scripts/golden/basic_programs.py`; `bbc/REFERENCE.tsv` records the SHA-256 of the BASIC and MOS ROMs. The tokeniser's functional test compares with them. They change only if the programs do:
+
+```bash
+nix develop --command python3 app/scripts/golden/basic_programs.py --check
+```
+
 `output-hashes/SUITE.sha256` is different: not reference data from the
 retired implementations, but the application's own exports, recorded so a
 change can be shown to leave them byte-identical. Each line is the SHA-256
 and path (`FIXTURE/FILE`) of a file that the export presets of the
-`general` or `phrom` fixture suite (`app/projects/`) write: PHROM images,
-C headers and WAV files. `app/scripts/output-hashes.sh` compares the
+`general`, `phrom` or `bbc` fixture suite (`app/projects/`) write: PHROM
+images, C headers, WAV files and BBC Micro discs. `app/scripts/output-hashes.sh` compares the
 exports with it, and `--record` records it again:
 
 ```bash

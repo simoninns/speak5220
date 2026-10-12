@@ -1,7 +1,8 @@
 # Export
 
 A project's phrases are exported as Acorn PHROM images, as C headers for
-programs that drive the TMS5220 themselves, or as WAV files. Export
+programs that drive the TMS5220 themselves, as WAV files, or as a BBC
+Micro disc. Export
 writes the frames the project holds, so every phrase exported must be
 encoded with its current settings first. The only exception is a WAV export
 of the original audio. The byte layout of each format is in the
@@ -15,6 +16,7 @@ of the original audio. The byte layout of each format is in the
 | **C header, PHROM images** | One `.h` file with each image as an array, and a table of every phrase's PHROM, word number, offset and length | Firmware that reads PHROM images from its own memory |
 | **C header, Speak External streams** | One `.h` file with each phrase's bytes as an array, ready to write to the chip with Speak External, with its length and a table | Firmware that speaks phrases with Speak External (datasheet §12.9) |
 | **WAV audio** | One WAV file per phrase: the chip's output (16-bit, 8 kHz) or the phrase's 8 kHz original (24-bit) | Listening, comparing, or using the sound elsewhere |
+| **BBC Micro disc** | One double-sided DFS disc image (`.dsd`) holding the phrases of up to 8 PHROMs and a player program | Speaking the phrases on a BBC Micro with the speech system; see [BBC Micro disc](bbc-disc.md) |
 
 The PHROM images, and the PHROM header, hold the phrases in PHROM order:
 the phrases are placed as the [project budget](projects.md#phroms-and-the-project-budget)
@@ -43,9 +45,12 @@ until the output has been quiet for a while.
 | Name | What the files are named after: `NAME.h`, `NAME_1.bin`, `NAME_HELLO.wav`. It starts as the project file's name |
 | Folder | Where the files are written. **Browse...** chooses it. It starts as the project's folder, then the last folder exported to |
 
+The BBC Micro disc has no options of its own.
+
 Below the fields the dialog lists the files the export will write, or
 says why it cannot run: a phrase not encoded with its current settings, a
-phrase too large for a PHROM, or a name that cannot name files. **Export**
+phrase too large for a PHROM, more PHROMs than a BBC Micro disc holds, or
+a name that cannot name files. **Export**
 is available only when the export can run and a folder is chosen. The
 export runs in the background, and the status bar says how many files
 were written.

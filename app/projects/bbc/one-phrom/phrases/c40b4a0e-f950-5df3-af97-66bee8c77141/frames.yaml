@@ -1,0 +1,7 @@
+encoder_version: ""
+settings_hash: ""
+frames:
+  - {energy: 8, repeat: 0, pitch: 60, k: [8, 18, 8, 7, 9, 8, 7, 4, 3, 2]}
+  - {energy: 8, repeat: 1, pitch: 60}
+  - {energy: 8, repeat: 1, pitch: 60}
+  - {energy: 15}

@@ -42,8 +42,8 @@ struct PhromHeader {
 // An export the CLI can run (plan §4).
 struct ExportPreset {
   std::string name = {};
-  // "acorn-phrom", "c-header-phrom", "c-header-speak-external" or "wav"
-  // (plan §6).
+  // "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav" or
+  // "bbc-dsd" (plan §6).
   std::string format = {};
   // "all" phrases, or the "selected" ones in `phrases`.
   std::string scope = "all";

@@ -3,13 +3,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Shows that a change leaves the exported files byte-identical
-# (TESTING.md): runs the general and phrom fixture suites through
+# (TESTING.md): runs the general, phrom and bbc fixture suites through
 # run-projects.sh, writes a SHA-256 manifest of every file their export
-# presets wrote (PHROM images, C headers, WAV), and compares it with the
-# recorded baseline in app/golden/output-hashes/SUITE.sha256. With
-# --record it records the manifests as the new baseline instead; do that
-# only for an intended change to an exporter, with the user's agreement
-# (AGENTS.md §3.1).
+# presets wrote (PHROM images, C headers, WAV, BBC Micro discs), and
+# compares it with the recorded baseline in
+# app/golden/output-hashes/SUITE.sha256. With --record it records the
+# manifests as the new baseline instead; do that only for an intended
+# change to an exporter, with the user's agreement (AGENTS.md §3.1).
 #
 # Usage: output-hashes.sh [--record] [BUILD_DIR]
 # BUILD_DIR defaults to build/app (speak5220-cli must be built). The
@@ -29,7 +29,7 @@ fi
 build_dir=${1:-build/app}
 script_dir=$(dirname "${BASH_SOURCE[0]}")
 baseline_dir=$script_dir/../golden/output-hashes
-suites=(general phrom)
+suites=(general phrom bbc)
 
 status=0
 for suite in "${suites[@]}"; do
