@@ -206,6 +206,25 @@ encoded before quiet pauses existed are shown as *stale*; re-encode them
     where the window plays a faint whine in it (datasheet §12.2). Judge
     the pauses on a real chip, not by ear in the window.
 
+## The resonance hold
+
+A high voice can make the encoder give a voiced frame a filter with one
+very strong, narrow resonance, low in pitch, and a low energy to match.
+The chip glides from one voiced frame's settings to the next, but out of
+such a filter most of the change in loudness comes at the very start of
+the glide: when the next frame's filter is an ordinary one, the sound
+drops suddenly, heard as a pop.
+
+**Resonance hold**, an advanced setting on at 14 dB by default, finds
+these places: where the sound is fading and the next frame's filter has
+more than that many dB less gain, the resonant filter is kept for that
+frame instead, and the sound fades out through it. The filter changes a
+frame later, when the sound is already quieter. It costs no bits (the
+held frame is a repeat, which is shorter) and changes about one encoding
+in ten. A lower value catches more places, at a small cost in how closely
+the sound follows the recording; switch it off only when the frames must
+match another encoder's exactly. Optimise leaves the setting as it is.
+
 ## Re-encoding several phrases
 
 **Phrase > Re-encode** (Ctrl+E) encodes, in the background, every

@@ -187,4 +187,26 @@ std::vector<PlanEntry> RepeatSearch::Plan(
   return plan;
 }
 
+void HoldResonantFilters(std::vector<PlanEntry>& plan,
+                         std::span<const double> levels, double drop_db) {
+  const auto log = Logger(kLogModuleEncoder);
+  int held = 0;
+  for (std::size_t j = 1; j < plan.size(); ++j) {
+    const PlanEntry& before = plan[j - 1];
+    const PlanEntry& entry = plan[j];
+    const bool before_voiced =
+        before.kind != PlanKind::kSilence && before.k.size() == kLpcOrder;
+    if (entry.kind != PlanKind::kVoiced || !before_voiced ||
+        levels[j] >= levels[j - 1] ||
+        FilterGainDb(before.k) - FilterGainDb(entry.k) <= drop_db) {
+      continue;
+    }
+    plan[j] = {.kind = PlanKind::kRepeat, .k = before.k, .pitch = entry.pitch};
+    ++held;
+    // The frame after a held one changes the filter from it.
+    ++j;
+  }
+  log->debug("resonance hold: {} frames held", held);
+}
+
 }  // namespace speak5220::core::encoder

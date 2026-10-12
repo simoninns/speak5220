@@ -29,7 +29,7 @@ using enum EncoderOptionType;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
+constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
     {.key = "targetRms",
      .field = "target_rms",
      .label = "Target RMS",
@@ -163,6 +163,23 @@ constexpr std::array<EncoderOptionInfo, 17> kInfos = {{
      .typical_minimum = 0.0,
      .typical_maximum = 200.0,
      .step = 5.0,
+     .advanced = true},
+    {.key = "resonanceHoldDb",
+     .field = "resonance_hold_db",
+     .label = "Resonance hold",
+     .help = "If set, where a fading voiced sound moves from a strongly "
+             "resonant filter to one with this many dB less gain, the "
+             "resonant filter is kept for one more frame. Without it the "
+             "chip's interpolation drops the level suddenly, heard as a "
+             "pop.",
+     .type = kOptionalReal,
+     .minimum = 3.0,
+     .maximum = 40.0,
+     .default_text = "14",
+     .unit = "dB",
+     .typical_minimum = 6.0,
+     .typical_maximum = 30.0,
+     .step = 0.5,
      .advanced = true},
     {.key = "voicingThreshold",
      .field = "voicing_threshold",
@@ -302,9 +319,11 @@ constexpr std::array<BooleanField, 3> kBooleanFields = {{
     {.field = "fade_unvoiced", .member = &EncoderOptions::fade_unvoiced},
     {.field = "quiet_pauses", .member = &EncoderOptions::quiet_pauses},
 }};
-constexpr std::array<OptionalRealField, 2> kOptionalRealFields = {{
+constexpr std::array<OptionalRealField, 3> kOptionalRealFields = {{
     {.field = "target_peak", .member = &EncoderOptions::target_peak},
     {.field = "squelch_db", .member = &EncoderOptions::squelch_db},
+    {.field = "resonance_hold_db",
+     .member = &EncoderOptions::resonance_hold_db},
 }};
 
 template <typename Table>

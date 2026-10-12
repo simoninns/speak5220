@@ -187,8 +187,9 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
 // Run by hand when choosing the default options (plan Phase 8, task 14):
 // encodes every WAV file in SPEAK5220_CORPUS_DIR with the options in
 // SPEAK5220_OPTIONS (as "target_rms=18,squelch_db=30"; unset for the
-// defaults) and writes each one's size and overall score, against its
-// squelched source and the source as recorded, to SPEAK5220_OPTIONS_REPORT.
+// defaults) and writes each one's size, encoding time and overall score,
+// against its squelched source and the source as recorded, to
+// SPEAK5220_OPTIONS_REPORT.
 TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
   const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");
   const char* report_path = std::getenv("SPEAK5220_OPTIONS_REPORT");
@@ -201,7 +202,8 @@ TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
   ASSERT_FALSE(inputs.empty()) << "no WAV files in " << corpus;
   std::ofstream report(report_path);
   ASSERT_TRUE(report.is_open()) << "cannot write " << report_path;
-  report << "name\tspeech_seconds\tbytes\tscore\tplain_score\n";
+  report << "name\tspeech_seconds\tbytes\tencode_seconds\tscore\tplain_"
+            "score\n";
 
   const std::unique_ptr<core::encoder::IEncoder> encoder =
       core::encoder::MakeEncoder();
@@ -210,8 +212,11 @@ TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
   for (const auto& [name, path] : inputs) {
     const auto wav = ReadWavSamples(path);
     ASSERT_TRUE(wav.IsOk()) << wav.GetStatus().ToString();
+    const auto start = std::chrono::steady_clock::now();
     const auto encoding =
         encoder->Encode(wav->samples, wav->sample_rate, options);
+    const std::chrono::duration<double> encode_time =
+        std::chrono::steady_clock::now() - start;
     ASSERT_TRUE(encoding.IsOk()) << name;
     const std::vector<double> source =
         core::encoder::SquelchedSource(wav->samples, options);
@@ -222,7 +227,8 @@ TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
     report << name << '\t'
            << static_cast<double>(wav->samples.size()) / kSampleRate << '\t'
            << core::lpc::SummariseFrames(encoding->frames).bytes << '\t'
-           << scored->score.overall << '\t' << plain->score.overall << '\n';
+           << encode_time.count() << '\t' << scored->score.overall << '\t'
+           << plain->score.overall << '\n';
   }
 }
 

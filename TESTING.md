@@ -415,7 +415,7 @@ hand, and only to create or, by agreement, regenerate the reference data
   `SPEAK5220_OPTIMISE_START` (such as `squelch_db=30`) changes where it
   starts. `OptionsCorpusCheck.DISABLED_ScoresTheOptions` encodes the corpus
   with the options in `SPEAK5220_OPTIONS` (the same form; unset for the
-  defaults) and writes each file's size and score to
+  defaults) and writes each file's size, encoding time and score to
   `SPEAK5220_OPTIONS_REPORT`. Both are run by hand from the functional
   test binary, with `SPEAK5220_CORPUS_DIR` set to the generated corpus.
 - `app/scripts/benchmark.sh` times encoding on one core, against the target

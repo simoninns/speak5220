@@ -46,6 +46,19 @@ TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFourChosenOnes) {
   EXPECT_EQ(o.compression, 1.0);
 }
 
+// The resonance hold is not in the reference encoder either, and is on
+// by default: it removes pops a high voice can give (HLD §9).
+TEST(EncoderOptionsTest, ResonanceHoldIsOnByDefault) {
+  EXPECT_EQ(EncoderOptions{}.resonance_hold_db, 14.0);
+  EncoderOptions o;
+  ASSERT_TRUE(SetEncoderOption(o, "resonance_hold_db", "none").IsOk());
+  EXPECT_FALSE(o.resonance_hold_db.has_value());
+  EXPECT_EQ(EncoderOptionText(o, "resonance_hold_db"), "none");
+  ASSERT_TRUE(SetEncoderOption(o, "resonance_hold_db", "20").IsOk());
+  EXPECT_EQ(o.resonance_hold_db, 20.0);
+  EXPECT_FALSE(SetEncoderOption(o, "resonance_hold_db", "1").IsOk());
+}
+
 // The squelch is not in the reference encoder, and is off by default: it
 // did not raise the score on the corpus (HLD §9).
 TEST(EncoderOptionsTest, SquelchIsOffByDefault) {
@@ -74,7 +87,9 @@ TEST(EncoderOptionsTest, DefaultTextIsTheDefaultOnTheSlidersSteps) {
               text)
         << info.field;
     if (info.type == EncoderOptionType::kReal ||
-        info.type == EncoderOptionType::kInteger) {
+        info.type == EncoderOptionType::kInteger ||
+        (info.type == EncoderOptionType::kOptionalReal &&
+         !info.default_text.empty())) {
       const double value = std::stod(text);
       const double steps = (value - info.typical_minimum) / info.step;
       EXPECT_NEAR(steps, std::round(steps), 1e-9) << info.field;
@@ -94,7 +109,7 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
     EXPECT_FALSE(info.help.empty()) << info.key;
     EXPECT_LE(info.minimum, info.maximum) << info.key;
   }
-  EXPECT_EQ(keys.size(), 17U);
+  EXPECT_EQ(keys.size(), 18U);
   EXPECT_EQ(EncoderOptionInfos().front().key, "targetRms");
   EXPECT_EQ(EncoderOptionInfos().back().key, "compression");
 }

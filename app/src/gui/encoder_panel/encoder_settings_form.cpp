@@ -55,15 +55,19 @@ constexpr std::string_view kRatioUnit = ":1";
 constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
 // What the optional options' and the coefficient's sliders show before
-// one is set: a moderate peak, a squelch under most breaths, and the
-// coefficient Optimise tries.
+// one is set: a moderate peak, a squelch under most breaths, the default
+// resonance hold, and the coefficient Optimise tries.
 constexpr double kUnsetPeak = 100.0;
 constexpr double kUnsetSquelch = 30.0;
+constexpr double kUnsetResonanceHold = 14.0;
 constexpr double kUnsetMu = 0.9;
 
 // The slider's value for an optional option that is unset.
 double UnsetValue(std::string_view field) {
-  return field == "squelch_db" ? kUnsetSquelch : kUnsetPeak;
+  if (field == "squelch_db") {
+    return kUnsetSquelch;
+  }
+  return field == "resonance_hold_db" ? kUnsetResonanceHold : kUnsetPeak;
 }
 
 QString ToQString(std::string_view text) {

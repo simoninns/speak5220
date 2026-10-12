@@ -161,7 +161,8 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   log->debug(
       "encoding {} samples: targetRms {}, targetPeak {}, peakLimit {}, "
       "repeats {}, repeatLambda {}, gateDb {}, squelchDb {}, preEmphasis {}, "
-      "window {}, lagWindowHz {}, voicingThreshold {}, voicingEvidence {}, "
+      "window {}, lagWindowHz {}, resonanceHoldDb {}, voicingThreshold {}, "
+      "voicingEvidence {}, "
       "iterations {}, fadeUnvoiced {}, quietPauses {}, levelAgc {}, "
       "compression {}",
       samples.size(), options.target_rms,
@@ -173,9 +174,13 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
                                      : std::string("none"),
       options.pre_emphasis.chirp ? std::string("chirp")
                                  : std::to_string(options.pre_emphasis.mu),
-      options.window, options.lag_window_hz, options.voicing_threshold,
-      options.voicing_evidence, options.iterations, options.fade_unvoiced,
-      options.quiet_pauses, options.level_agc, options.compression);
+      options.window, options.lag_window_hz,
+      options.resonance_hold_db.has_value()
+          ? std::to_string(*options.resonance_hold_db)
+          : std::string("none"),
+      options.voicing_threshold, options.voicing_evidence, options.iterations,
+      options.fade_unvoiced, options.quiet_pauses, options.level_agc,
+      options.compression);
 
   // The squelched source, or the samples as given when there is no
   // squelch (without a copy).
@@ -217,6 +222,9 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
       all_levels.begin() + trim.lead,
       all_levels.begin() + trim.lead +
           static_cast<std::ptrdiff_t>(plan.size()));
+  if (options.resonance_hold_db.has_value()) {
+    HoldResonantFilters(plan, raw_levels, *options.resonance_hold_db);
+  }
   std::vector<double> levels =
       level_setter_->ShapeLevels(raw_levels, plan, options);
 

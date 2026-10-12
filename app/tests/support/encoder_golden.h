@@ -39,8 +39,8 @@ struct ReferenceEncoding {
 };
 
 // The reference encoder's defaults, tms5220enc.py DEFAULTS, written out:
-// four of them differ from EncoderOptions{}, and quiet_pauses, which the
-// reference does not have, is off.
+// four of them differ from EncoderOptions{}, and quiet_pauses and
+// resonance_hold_db, which the reference does not have, are off.
 core::encoder::EncoderOptions ReferenceEncoderOptions();
 
 // The option sets of option_sets.tsv, by name, as EncoderOptions over

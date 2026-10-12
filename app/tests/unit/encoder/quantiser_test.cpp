@@ -92,6 +92,17 @@ TEST(QuantiserTest, CoordinateSearchLowersThePredictionError) {
   EXPECT_NE(q.indices, nearest);
 }
 
+TEST(QuantiserTest, FilterGainIsThatOfTheReflectionCoefficients) {
+  const std::vector<int> one = {0};
+  const double k = -501.0 / 512.0;
+  EXPECT_NEAR(FilterGainDb(one), -10.0 * std::log10(1.0 - (k * k)), 1e-12);
+  const std::vector<int> two = {0, 31};
+  const double k2 = 506.0 / 512.0;
+  EXPECT_NEAR(FilterGainDb(two),
+              FilterGainDb(one) - (10.0 * std::log10(1.0 - (k2 * k2))), 1e-12);
+  EXPECT_LT(FilterGainDb(NearestZero(10)), 0.1);
+}
+
 TEST(QuantiserTest, PitchIndexFindsExactPeriods) {
   for (std::size_t i = 1; i < lpc::kPitchTable.size(); ++i) {
     EXPECT_EQ(PitchIndex(lpc::kPitchTable[i] + 1.0), static_cast<int>(i));

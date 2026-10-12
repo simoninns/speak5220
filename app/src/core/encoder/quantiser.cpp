@@ -87,6 +87,14 @@ double QuantisedPredictionError(std::span<const int> indices,
   return dsp::PredictionError(dsp::StepUp(k), r);
 }
 
+double FilterGainDb(std::span<const int> indices) {
+  double gain_db = 0.0;
+  for (const double k : KValues(indices)) {
+    gain_db -= 10.0 * std::log10(1.0 - (k * k));
+  }
+  return gain_db;
+}
+
 QuantisedK QuantiseK(std::span<const double> k, std::span<const double> r) {
   const std::size_t order = k.size();
   std::vector<int> indices(order);

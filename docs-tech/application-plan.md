@@ -1525,6 +1525,25 @@ score, and remove PESQ. Task 13 removes the quality scale of task 1.
         explicitly (`ReferenceEncoderOptions()`), so the reference data
         does not change; the fixtures list every option, with the values
         they were made with, and their encodings stay current.
+15. **The resonance hold** (added 2026-10-12, from a user's recording that
+    popped). Where a fading voiced sound moves from a strongly resonant
+    filter (K near ±1) to an ordinary one, the chip's interpolation drops
+    the level suddenly. A new option, `resonance_hold_db` (on, 14 dB, by
+    default), keeps the resonant filter for one more frame there
+    (HLD §8). Limiting each filter's gain or pole bandwidth in the K
+    search, and softening voiced onsets, were tried first and did not
+    remove the pops by ear. Projects list the new option like the others;
+    the fixtures list it unset, so their encodings stay current.
+    - **Acceptance:**
+      - the user confirms by ear that the pops on the recording are no
+        longer noticeable;
+      - the corpus scores, size and encoding time with the hold are
+        recorded in the HLD (§9), and the encoding time does not rise more
+        than 5%;
+      - unit tests: frames are held only out of a larger gain drop as the
+        level falls, never across a change the chip does not interpolate,
+        and never twice; the default and its text agree; the comparisons
+        with the reference encoder keep the hold off.
 
 ### Phase 9: Export: binary, C and audio
 

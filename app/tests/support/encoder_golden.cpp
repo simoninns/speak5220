@@ -108,6 +108,7 @@ EncoderOptions ReferenceEncoderOptions() {
   options.voicing_evidence = 4.0;
   options.level_agc = 1.0;
   options.quiet_pauses = false;
+  options.resonance_hold_db.reset();
   return options;
 }
 

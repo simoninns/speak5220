@@ -274,6 +274,8 @@ TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
   EXPECT_THAT(defaults, HasSubstr("    gate_db: 45\n    squelch_db: null\n"));
   EXPECT_THAT(defaults, HasSubstr("    fade_unvoiced: true\n"
                                   "    quiet_pauses: true\n"));
+  EXPECT_THAT(defaults, HasSubstr("    lag_window_hz: 60\n"
+                                  "    resonance_hold_db: 14\n"));
   ProjectSettings settings = project.Settings();
   settings.default_encoder.squelch_db = 30.0;
   ASSERT_TRUE(project.SetSettings(settings).IsOk());

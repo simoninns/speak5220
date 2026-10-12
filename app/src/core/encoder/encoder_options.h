@@ -38,7 +38,8 @@ struct PreEmphasis {
 // Everything that controls an encoding. The defaults are those of
 // tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence and
 // level_agc, chosen for the best median quality score on the corpus (HLD
-// §9), and quiet_pauses, on, which the reference does not have. Projects
+// §9), and quiet_pauses, on, and resonance_hold_db, 14, which the
+// reference does not have. Projects
 // list every option (plan §4), so changing a default never changes a
 // project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
@@ -65,6 +66,12 @@ struct EncoderOptions {
   int window = 256;
   // Bandwidth of the Gaussian lag window, in Hz.
   double lag_window_hz = 60.0;
+  // If set, a voiced frame whose filter gain is more than this many dB
+  // below the voiced frame before it, as the sound fades, repeats that
+  // frame's filter (HoldResonantFilters()), so the level does not fall
+  // suddenly (a pop). Not in the reference encoder; 14 catches the pops
+  // heard on the corpus at little cost to its score (HLD §9).
+  std::optional<double> resonance_hold_db = 14.0;
   // CMNDF level at which voiced and unvoiced cost the same.
   double voicing_threshold = 0.3;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
@@ -91,7 +98,8 @@ enum class EncoderOptionType {
   kReal,
   kInteger,
   kBoolean,
-  // A real value that may also be unset (target_peak, squelch_db).
+  // A real value that may also be unset (target_peak, squelch_db,
+  // resonance_hold_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
   kPreEmphasis,

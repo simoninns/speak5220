@@ -445,7 +445,9 @@ sets the gain (by `targetRms`, or by a first pass with the limit at 511 for
 `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`, from
 `_toFrames()`, `_guardK510()` and `_addFades()`), and last, with
 `quiet_pauses`, `QuietPauses()` (below), which the reference does not
-have. The quantisers
+have. Before the levels are set, with `resonance_hold_db`, it holds
+resonant filters through a fade (`HoldResonantFilters()`, in
+`repeat_search`; below), which the reference does not have either. The quantisers
 (`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
 fixed filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
 `encoder_filters`.
@@ -461,15 +463,16 @@ the plan, the shaped levels, the energies and the limiter's statistics.
 options outside their ranges (`ValidateEncoderOptions()`).
 
 **Options.** `EncoderOptions` has the 15 options of `tms5220enc.py`
-`DEFAULTS`, and two the reference does not have: the squelch
-(`squelch_db`, off by default) and quiet pauses (`quiet_pauses`, on by
-default). Its defaults are the reference's but for four chosen on the
+`DEFAULTS`, and three the reference does not have: the squelch
+(`squelch_db`, off by default), quiet pauses (`quiet_pauses`, on by
+default) and the resonance hold (`resonance_hold_db`, 14 dB by default). Its defaults are the reference's but for four chosen on the
 corpus for the overall quality score (§9, "Default settings"):
 `target_rms` 24, `window` 256, `voicing_evidence` 5 and `level_agc` 1.25.
 The reference data is compared with the reference's own defaults written
-out, quiet pauses off (`ReferenceEncoderOptions()` in the test support,
-§13), so it does not depend on the application's. `EncoderOptionInfos()` gives each one's key (the Python name, or
-`squelchDb` and `quietPauses` in its style), label, help text, type,
+out, quiet pauses and the resonance hold off (`ReferenceEncoderOptions()`
+in the test support, §13), so it does not depend on the application's.
+`EncoderOptionInfos()` gives each one's key (the Python name, or
+`squelchDb`, `quietPauses` and `resonanceHoldDb` in its style), label, help text, type,
 range and default, for the GUI's settings form and for project files,
 and marks the options the GUI shows only with its advanced settings
 (`advanced`).
@@ -505,6 +508,32 @@ is left alone. Over the 243 corpus files with a 30 dB squelch, 110 have
 such pauses (288 in all); the encodings grow by 1.7%, and PESQ (the
 measure then) was unchanged within its noise (median change +0.0003; 53
 files higher, 48 lower). Optimise does not search it.
+
+**The resonance hold** (datasheet §8.7). A high voice can make the LPC
+fit lock onto a harmonic: a voiced frame with K1 near −1 and K2 near +1,
+a resonance 30 to 50 dB high whose filter gain to white noise,
+1 / ∏(1 − kᵢ²) (`FilterGainDb()`), reaches 20 dB, with the energy low to
+match. From one voiced frame to the next the chip interpolates the K
+values in eight equal steps, but that gain changes steeply as a K nears
+±1, so moving from such a filter to an ordinary one loses most of the gain
+in the first step: on `cfch_small.wav` (a user's recording) the level fell
+26 dB in 9 ms where the source fell 10, heard as a pop, twice in 3 s.
+Lowering the energy of the frame or limiting each filter's gain or pole
+bandwidth in the K search did not remove the pops by ear;
+keeping the resonant filter for the next frame did. So
+`HoldResonantFilters()`, on the plan before the levels are set, turns a
+full voiced frame into a repeat of the voiced frame before it when that
+frame's filter gain is more than `resonance_hold_db` above its own and the
+level is falling (its frame level below the one before): the sound fades
+through the resonant filter, the level setter gives the held frame its
+energy as usual (often silence, at the end of a sound), and the change of
+filter comes a frame later from a lower level. A held frame is not held
+again. Changes the chip does not interpolate (from unvoiced or silence)
+are left alone. On `cfch_small.wav` both pops became too faint to notice
+by ear. The default, 14 dB, catches both of that file's drops (19.2 and
+16.7 dB) with a margin; over the corpus, 101 of 9,554 voiced-to-voiced
+changes drop more than 12 dB, in 58 files (§9, "The resonance hold").
+Optimise does not search it.
 
 **The squelch.** Breaths and room noise 20 to 35 dB down sit above the
 encoder's 45 dB gate, so the encoder reproduces them; PESQ, the measure
@@ -547,8 +576,8 @@ the reference's order of floating-point operations where that is cheap:
   `app/golden/encoder/option_sets.tsv`, the frames are identical to the
   Python reference's for every encoding (972 of 972), against the
   criterion of 99%. The option sets are taken over
-  `ReferenceEncoderOptions()` (the defaults with quiet pauses off), since
-  the reference has no quiet pauses. No near-tie frames are needed: at a relative disturbance
+  `ReferenceEncoderOptions()` (the defaults with quiet pauses and the
+  resonance hold off), since the reference has neither. No near-tie frames are needed: at a relative disturbance
   of 1e-9 the reference changes no frame on any file (§13).
 - Every intermediate value of the corpus subset agrees with the reference
   to a relative 1e-9.
@@ -763,6 +792,23 @@ with the new defaults takes 4 % longer (0.0109 s per second of speech
 against 0.0105, one core). Optimise from them took 5 % longer (1.72 s per
 second of speech on 16 threads, against 1.64), trying a median of 310
 candidates against 294.
+
+**The resonance hold** (2026-10-12; §8). Thresholds of 8 to 20 dB were
+scored over the corpus with the other defaults; the score measures
+neither pops nor their absence, so the threshold was chosen by ear on
+`cfch_small.wav` and kept where the score barely moved:
+
+| Threshold | Files changed | Median, mean score | Good / Fair / Poor | Files falling over 0.02 (worst) | Total size |
+|---|---|---|---|---|---|
+| Off | — | 0.720, 0.7098 | 141 / 93 / 9 | — | 100,591 bytes |
+| 8 dB | 122 | 0.716, 0.7068 | 134 / 100 / 9 | 19 (−0.24) | 99,436 bytes |
+| 12 dB | 49 | 0.717, 0.7091 | 138 / 96 / 9 | 6 (−0.08) | 100,173 bytes |
+| 14 dB (the default) | 27 | 0.718, 0.7091 | 138 / 96 / 9 | 3 (−0.08) | 100,358 bytes |
+| 16 dB | 17 | 0.718, 0.7095 | 140 / 94 / 9 | 2 (−0.08) | 100,460 bytes |
+| 20 dB | 2 | 0.720, 0.7098 | 141 / 93 / 9 | 0 | 100,581 bytes |
+
+16 dB would only just catch `cfch_small.wav`'s second pop (16.7 dB), so
+14 dB was taken. The hold costs no measurable time: encoding the corpus took 0.0109 s per second of speech with it and 0.0110 without (one core).
 
 ---
 

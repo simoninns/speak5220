@@ -5,13 +5,13 @@ TMS5220 frames. The encoder reproduces the frames of the project's reference
 encoder (`investigation/encoder/tms5220enc.py`) exactly, so these options
 mean what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md). The
-exceptions are `squelch_db` and `quiet_pauses`, which the reference does
-not have. Four defaults differ from the reference's, chosen because they
+exceptions are `squelch_db`, `quiet_pauses` and `resonance_hold_db`, which
+the reference does not have. Four defaults differ from the reference's, chosen because they
 give the best typical [quality rating](../user-manual/encoder.md#the-quality-rating)
 over a corpus of 243 recordings: `target_rms` 24 (the reference's is 20),
 `window` 256 (240), `voicing_evidence` 5 (4) and `level_agc` 1.25 (1).
-With the reference's values, the squelch off and quiet pauses off, the
-encoder gives the reference's frames.
+With the reference's values, and the squelch, quiet pauses and the
+resonance hold off, the encoder gives the reference's frames.
 
 Options are set in the [project file](project-file.md): `default_encoder`
 holds the project's values, every option written out, and a phrase's
@@ -20,7 +20,8 @@ keeps its settings, and its encodings, when a later version of Speak5220
 changes a default. In the main window they are set in the
 [encoder panel](../user-manual/encoder.md#the-settings), for a phrase or
 for the project, and [Optimise](../user-manual/encoder.md#optimise)
-searches them, all but `squelch_db` and `quiet_pauses`.
+searches them, all but `squelch_db`, `quiet_pauses` and
+`resonance_hold_db`.
 
 The encoder panel shows six of them at first, the **basic** options:
 `target_rms`, `repeat_lambda`, `squelch_db`, `pre_emphasis`,
@@ -41,6 +42,7 @@ Project files and the command line treat the two groups alike.
 | `pre_emphasis` | `preEmphasis` | Pre-emphasis for the voiced analysis: `"chirp"` whitens the chip's excitation pulse; a number μ uses 1 − μz⁻¹ | `"chirp"` or a number | `"chirp"` | μ from 0 to 0.99 | μ from 0.5 to 0.99, steps of 0.01 |
 | `window` (*Advanced*) | `window` | Length of the analysis window, in samples at 8 kHz | Whole number | 256 (32 ms) | 80 to 480 | 120 to 400 (15 to 50 ms), steps of 8 |
 | `lag_window_hz` (*Advanced*) | `lagWindowHz` | Bandwidth of the Gaussian lag window, in Hz, which widens the formant peaks | Number | 60 | 0 to 400 | 0 to 200 Hz, steps of 5 |
+| `resonance_hold_db` (*Advanced*) | none (`resonanceHoldDb`) | If set, where a fading voiced sound moves from a strongly resonant filter to one with more than this many dB less gain, the resonant filter is kept for one more frame, so the level does not drop suddenly with a pop ([the resonance hold](../user-manual/encoder.md#the-resonance-hold)) | Number, or `null` (unset) | 14 | 3 to 40 | 6 to 30 dB, steps of 0.5 |
 | `voicing_threshold` | `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.3 | 0 to 1 | 0.05 to 0.7, steps of 0.01 |
 | `voicing_evidence` (*Advanced*) | `voicingEvidence` | Weight of spectral tilt and zero crossings in the voicing decision; 0 uses periodicity alone | Number | 5 | 0 to 20 | 0 to 12, steps of 0.25 |
 | `iterations` (*Advanced*) | `iterations` | Closed-loop passes that adjust each frame's energy against the synthesised output | Whole number | 5 | 1 to 20 | 1 to 10 |
@@ -50,8 +52,9 @@ Project files and the command line treat the two groups alike.
 | `compression` | `compression` | Per-frame level compression ratio around the median level; 1 is off | Number | 1 | 1 to 10 | 1 (off) to 6, steps of 0.1 |
 
 The key is the option's name in project files. The second column is its
-name in the reference encoder and its documentation (`squelchDb` and
-`quietPauses`, which the reference does not have, are named in its style). The last column is
+name in the reference encoder and its documentation (`squelchDb`,
+`quietPauses` and `resonanceHoldDb`, which the reference does not have,
+are named in its style). The last column is
 what the [encoder panel](../user-manual/encoder.md#the-settings)'s
 slider covers: where useful values lie. Any value in the full range can
 be set in the project file, and the slider widens to show it.

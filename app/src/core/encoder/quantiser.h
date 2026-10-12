@@ -31,6 +31,11 @@ std::vector<double> KValues(std::span<const int> indices);
 double QuantisedPredictionError(std::span<const int> indices,
                                 std::span<const double> r);
 
+// The gain of the lattice filter of K indices `indices` to white noise,
+// 1 / prod(1 - k_i^2), in dB. It grows without bound as any |k_i| nears
+// 1. O(n).
+double FilterGainDb(std::span<const int> indices);
+
 // K indices for reflection coefficients `k`: the nearest table entries in
 // log-area ratio, then up to three passes of a coordinate search (each
 // index moved by 1 or 2) that lowers the prediction error on `r` by more

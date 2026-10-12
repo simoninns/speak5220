@@ -15,6 +15,7 @@ project:
     pre_emphasis: "chirp"
     window: 240
     lag_window_hz: 60
+    resonance_hold_db: null
     voicing_threshold: 0.3
     voicing_evidence: 4
     iterations: 5

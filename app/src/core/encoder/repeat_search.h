@@ -54,6 +54,20 @@ class RepeatSearch : public IRepeatSearch {
                               const EncoderOptions& options) override;
 };
 
+// speak5220 datasheet §8.7: from one voiced frame to the next the chip
+// interpolates the K values in equal steps, but a filter's gain to white
+// noise (FilterGainDb()) changes steeply as a K nears +-1, so out of a
+// strongly resonant filter most of a large gain drop comes in the first
+// step, and the level falls suddenly, heard as a pop. So where a full
+// voiced frame follows a voiced frame whose filter gain is more than
+// `drop_db` above its own, and the sound is fading (its level in
+// `levels`, one per plan entry, is below the frame before's), it becomes
+// a repeat of the frame before: the sound fades out through the resonant
+// filter, and the change of filter comes a frame later, from a lower
+// level. A held frame is not held again. Not in the reference encoder.
+void HoldResonantFilters(std::vector<PlanEntry>& plan,
+                         std::span<const double> levels, double drop_db);
+
 }  // namespace speak5220::core::encoder
 
 #endif  // SPEAK5220_CORE_ENCODER_REPEAT_SEARCH_H_
