@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+[Desktop Entry]
+Type=Application
+Name=Speak5220
+Comment=Create TMS5220 speech data and build PHROMs
+Exec=speak5220 %f
+Icon=io.github.simoninns.speak5220
+Terminal=false
+Categories=AudioVideo;Audio;

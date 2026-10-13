@@ -21,11 +21,13 @@
 #include <QPainter>
 #include <QPalette>
 #include <QPen>
+#include <QPixmap>
 #include <QPointF>
 #include <QPolygonF>
 #include <QRectF>
 #include <QResizeEvent>
 #include <QSize>
+#include <QSizeF>
 #include <QString>
 #include <QToolTip>
 #include <QWheelEvent>
@@ -67,6 +69,12 @@ constexpr double kScrollPixelsPerNotch = 40.0;
 // How much of the background veils a shaded stretch's waveform: enough to
 // dim it, not to hide it.
 constexpr int kShadeAlpha = 170;
+// The backdrop's opacity, enough to be seen without drawing the eye, and
+// its largest share of the view's width and height.
+constexpr double kBackdropOpacity = 0.15;
+constexpr double kBackdropShare = 0.6;
+// The gap between the backdrop and the placeholder under it, in pixels.
+constexpr int kBackdropGap = 8;
 
 }  // namespace
 
@@ -81,17 +89,19 @@ void WaveformView::SetSamples(std::vector<float> samples, int source_offset) {
   peaks_ = PeakCache(std::move(samples));
   source_offset_ = source_offset;
   placeholder_.clear();
+  backdrop_ = QPixmap();
   extent_ = ContentExtent();
   Fit();
   update();
 }
 
-void WaveformView::Clear(const QString& placeholder) {
+void WaveformView::Clear(const QString& placeholder, QPixmap backdrop) {
   peaks_ = PeakCache();
   source_offset_ = 0;
   frames_.clear();
   shading_.clear();
   placeholder_ = placeholder;
+  backdrop_ = std::move(backdrop);
   playhead_.reset();
   update();
 }
@@ -266,6 +276,10 @@ void WaveformView::paintEvent(QPaintEvent* /*event*/) {
   QPainter painter(this);
   painter.fillRect(rect(), palette().base());
   if (!HasSamples()) {
+    if (HasBackdrop()) {
+      PaintBackdrop(painter);
+      return;
+    }
     painter.setPen(palette().color(QPalette::PlaceholderText));
     painter.drawText(rect(), Qt::AlignCenter | Qt::TextWordWrap, placeholder_);
     return;
@@ -280,6 +294,29 @@ void WaveformView::paintEvent(QPaintEvent* /*event*/) {
     painter.setPen(QPen(palette().color(QPalette::Highlight), 0));
     painter.drawRect(rect().adjusted(0, 0, -1, -1));
   }
+}
+
+void WaveformView::PaintBackdrop(QPainter& painter) const {
+  // Its own aspect, as large as fits the share of the view but no larger
+  // than its own size, so it is never blurred by enlarging; centred.
+  const QSizeF natural = backdrop_.deviceIndependentSize();
+  const QSizeF size =
+      natural.scaled(std::min(width() * kBackdropShare, natural.width()),
+                     std::min(height() * kBackdropShare, natural.height()),
+                     Qt::KeepAspectRatio);
+  const QRectF target(
+      QPointF((width() - size.width()) / 2.0, (height() - size.height()) / 2.0),
+      size);
+  painter.save();
+  painter.setRenderHint(QPainter::SmoothPixmapTransform);
+  painter.setOpacity(kBackdropOpacity);
+  painter.drawPixmap(target, backdrop_, QRectF(backdrop_.rect()));
+  painter.restore();
+  painter.setPen(palette().color(QPalette::PlaceholderText));
+  const QRectF below(0.0, target.bottom() + kBackdropGap, width(),
+                     height() - target.bottom() - kBackdropGap);
+  painter.drawText(below, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap,
+                   placeholder_);
 }
 
 void WaveformView::Apply(const TimeAxis& axis, bool fitted) {

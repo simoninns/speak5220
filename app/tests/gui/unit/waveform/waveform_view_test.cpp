@@ -16,6 +16,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QObject>
+#include <QPixmap>
 #include <QPointF>
 #include <QString>
 #include <QWidget>
@@ -164,6 +165,23 @@ TEST_F(WaveformViewTest, ClearShowsThePlaceholderAndNoClicks) {
                    [&requested] { ++requested; });
   Click(view_, 100.0);
   EXPECT_EQ(requested, 0);
+}
+
+// The backdrop (the logo, with no phrase) is drawn under the placeholder,
+// and goes when a waveform is shown or the view is cleared without one.
+TEST_F(WaveformViewTest, BackdropShowsOnlyWithNoWaveform) {
+  QPixmap backdrop(40, 20);
+  backdrop.fill(Qt::black);
+  view_.Clear(QStringLiteral("Select one phrase to see it"), backdrop);
+  EXPECT_TRUE(view_.HasBackdrop());
+  QImage drawn(view_.size(), QImage::Format_ARGB32);
+  view_.render(&drawn);
+  EXPECT_NE(drawn.pixelColor(kWidth / 2, kHeight / 2), drawn.pixelColor(2, 2));
+
+  view_.SetSamples(std::vector<float>(2000, 0.25F), kOffset);
+  EXPECT_FALSE(view_.HasBackdrop());
+  view_.Clear(QStringLiteral("Not encoded yet"));
+  EXPECT_FALSE(view_.HasBackdrop());
 }
 
 }  // namespace

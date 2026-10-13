@@ -1,0 +1,5 @@
+// SPDX-FileCopyrightText: (c) 2026 Simon Inns
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// The icon Windows shows for speak5220.exe in Explorer and the taskbar.
+IDI_ICON1 ICON "speak5220.ico"

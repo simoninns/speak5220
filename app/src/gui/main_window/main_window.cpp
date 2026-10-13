@@ -556,13 +556,22 @@ void MainWindow::RemoveSelected() {
 }
 
 void MainWindow::ShowAbout() {
-  QMessageBox::about(
-      this, QStringLiteral("About Speak5220"),
-      QStringLiteral("<p><b>Speak5220</b> %1</p>"
+  // The logo heads the text, at its width in device-independent pixels; Qt
+  // picks the @2x image on a high-density screen. The logo carries the
+  // icon, so the box shows no icon of its own.
+  QMessageBox box(this);
+  box.setWindowTitle(QStringLiteral("About Speak5220"));
+  box.setIcon(QMessageBox::NoIcon);
+  box.setTextFormat(Qt::RichText);
+  box.setText(
+      QStringLiteral("<p><img src=\":/speak5220/speak5220-logo.png\"></p>"
+                     "<p><b>Speak5220</b> %1</p>"
                      "<p>Creates TMS5220 speech data and builds PHROMs.</p>"
                      "<p>Licensed under the GNU General Public License, "
                      "version 3 or later.</p>")
           .arg(ToQString(core::Version()).toHtmlEscaped()));
+  box.setStandardButtons(QMessageBox::Ok);
+  box.exec();
 }
 
 void MainWindow::OnProjectChanged() {

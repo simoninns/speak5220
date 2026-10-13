@@ -13,6 +13,7 @@
 #ifndef SPEAK5220_GUI_WAVEFORM_PHRASE_WAVEFORMS_H_
 #define SPEAK5220_GUI_WAVEFORM_PHRASE_WAVEFORMS_H_
 
+#include <QPixmap>
 #include <QString>
 #include <QWidget>
 #include <array>
@@ -117,9 +118,10 @@ class PhraseWaveforms : public QWidget {
   PhraseWaveforms& operator=(const PhraseWaveforms&) = delete;
 
   // Shows `phrase`, or clears every waveform when null (no phrase, or
-  // several, selected). Showing the phrase already shown keeps the zoom,
-  // and renders again only if its frames changed. `encoded_note` is shown
-  // beside the encoded waveform's title (such as "stale").
+  // several, selected), showing the logo faintly in their place. Showing
+  // the phrase already shown keeps the zoom, and renders again only if its
+  // frames changed. `encoded_note` is shown beside the encoded waveform's
+  // title (such as "stale").
   void ShowPhrase(const core::project::Phrase* phrase,
                   const QString& encoded_note = QString());
 
@@ -284,6 +286,9 @@ class PhraseWaveforms : public QWidget {
   // In PhraseTab order.
   std::array<Track, 3> tracks_;
   QCheckBox* grid_ = nullptr;
+  // The logo the waveforms show faintly with no phrase; null where the
+  // executable's resources are not linked in (the tests).
+  QPixmap logo_;
 
   // The phrase shown: its id, audio, play start and frames.
   core::project::PhraseId id_;

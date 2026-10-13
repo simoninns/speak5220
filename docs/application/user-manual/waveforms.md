@@ -23,7 +23,7 @@ The tabs:
 
 Each tab's controls are a play button for its waveform, the play-start
 reset, and the zoom controls (with **Frame grid** on the Encode tab).
-With several phrases selected, or none, the waveforms are empty. Speak5220 remembers the tab last shown between sessions.
+With several phrases selected, or none, the waveforms are empty, and show the Speak5220 logo faintly in their place. Speak5220 remembers the tab last shown between sessions.
 
 !!! note
     The encoded waveform shows the frames stored in the project. A phrase

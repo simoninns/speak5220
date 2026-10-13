@@ -121,6 +121,10 @@ app/
       undo/                     one QUndoCommand per editing operation,
                                 ProjectEdits
     cli/                        the "speak5220-cli" executable and its commands
+  resources/                    the icon set (hicolor PNGs, .ico, .icns),
+                                the About box's logo, the .qrc, the Windows
+                                .rc and the Linux .desktop file, generated
+                                by scripts/generate-icons.sh from assets/logo/
   tests/
     .clang-tidy                 the app's settings, plus one test exception
     support/                    speak5220_test_support (helpers, mocks, golden
@@ -134,7 +138,7 @@ app/
 
 Planned additions, each created with its first code (plan §2.1):
 
-- `app/resources/` (icons, `.desktop`, metainfo), `app/packaging/` (Flatpak,
+- The AppStream metainfo in `app/resources/`, and `app/packaging/` (Flatpak,
   WiX/CPack, macOS).
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
@@ -1658,6 +1662,10 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   with fit, clamp, zoom about a pixel and scroll). A view's own samples
   are placed by a source offset: sample `s + offset` is drawn at source
   time `s`. The original's offset is 0.
+- **No phrase.** With no phrase shown, each view shows a placeholder under
+  a faint backdrop (`WaveformView::Clear()`): the logo, which comes from
+  the executable's resources (`app/resources/speak5220.qrc`), so the GUI
+  tests, which do not link them, draw none. Any samples take it away.
 - **Encoded audio.** `RenderEncodedAudio()` packs the cached frames,
   speaks them through `ISynth`'s VSM path and finds the offset: the sound
   (first to last non-idle code, idle at 0) is lined up with the source

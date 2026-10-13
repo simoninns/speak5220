@@ -113,6 +113,14 @@ nix develop --command python3 app/scripts/generate_filter_constants.py --check  
 nix develop --command python3 app/scripts/generate_filter_constants.py           # rewrite the header (then clang-format it)
 ```
 
+The application's icons (the PNG sizes, `.ico` and `.icns`) and the About box's logo in `app/resources/` are generated from the artwork in `assets/logo/`. After changing the artwork, regenerate them and commit the result:
+
+```bash
+nix shell nixpkgs#librsvg nixpkgs#imagemagick nixpkgs#libicns --command app/scripts/generate-icons.sh
+```
+
+The build puts the icon in the executable on Windows (`speak5220.rc`) and in the bundle on macOS (`speak5220.icns`). On Linux and the BSDs, `cmake --install` installs the `.desktop` file and the icon theme's sizes under `share/`.
+
 ### Corpus check and benchmark
 
 Scripts check the encoder, the quality measures and the exports by hand, from the repository root, after building the functional tests (and `speak5220-cli`):

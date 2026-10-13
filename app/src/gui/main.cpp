@@ -9,6 +9,7 @@
 
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QIcon>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
@@ -53,6 +54,11 @@ int main(int argc, char* argv[]) {
   // advanced encoder settings shown or not).
   QApplication::setOrganizationName(ToQString(core::kApplicationName));
   QApplication::setApplicationVersion(ToQString(core::Version()));
+  // The icon of every window, and of the Dock on macOS. On Wayland the
+  // desktop takes it from the .desktop file named here instead.
+  QApplication::setWindowIcon(
+      QIcon(QStringLiteral(":/speak5220/speak5220-icon.png")));
+  QApplication::setDesktopFileName(QStringLiteral(SPEAK5220_APP_ID));
 
   QCommandLineParser parser;
   parser.addHelpOption();

@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_GUI_WAVEFORM_WAVEFORM_VIEW_H_
 #define SPEAK5220_GUI_WAVEFORM_WAVEFORM_VIEW_H_
 
+#include <QPixmap>
 #include <QSize>
 #include <QString>
 #include <QWidget>
@@ -46,7 +47,8 @@ namespace speak5220::app {
 //
 // A click asks for the marker there (MarkerRequested); Space asks to play
 // or pause; Ctrl+wheel zooms about the pointer, the wheel scrolls; hovering
-// over a frame shows its indices. The view stays fitted to its extent
+// over a frame shows its indices. With no waveform it shows a placeholder,
+// under a faint backdrop if it has one. The view stays fitted to its extent
 // until zoomed or scrolled. Colours follow the palette (ColoursFor()).
 // GUI thread only.
 class WaveformView : public QWidget {
@@ -61,9 +63,12 @@ class WaveformView : public QWidget {
   // Shows `samples` (8 kHz, full scale +-1), with source sample s at
   // samples[s + source_offset], and fits the view to them.
   void SetSamples(std::vector<float> samples, int source_offset);
-  // Shows no waveform, but `placeholder` in its place.
-  void Clear(const QString& placeholder);
+  // Shows no waveform, but `placeholder` in its place, under a faint
+  // `backdrop` (such as the logo) if one is given. Showing samples takes
+  // both away.
+  void Clear(const QString& placeholder, QPixmap backdrop = QPixmap());
   bool HasSamples() const { return peaks_.Size() > 0; }
+  bool HasBackdrop() const { return !backdrop_.isNull(); }
   int SourceOffset() const { return source_offset_; }
   QString Placeholder() const { return placeholder_; }
 
@@ -136,10 +141,13 @@ class WaveformView : public QWidget {
   void PaintWave(QPainter& painter) const;
   void PaintShading(QPainter& painter) const;
   void PaintMarks(QPainter& painter) const;
+  // The backdrop, faint and centred, and the placeholder under it.
+  void PaintBackdrop(QPainter& painter) const;
 
   PeakCache peaks_;
   int source_offset_ = 0;
   QString placeholder_;
+  QPixmap backdrop_;
   std::vector<core::lpc::Frame> frames_;
   std::vector<TimeExtent> shading_;
   bool frame_grid_ = true;

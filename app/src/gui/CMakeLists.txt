@@ -62,19 +62,62 @@ if(TARGET Qt6::DBus)
     )
 endif()
 
-add_executable(speak5220 WIN32 MACOSX_BUNDLE main.cpp)
+# The icon set and the About box's logo, generated from assets/logo/ by
+# app/scripts/generate-icons.sh
+set(SPEAK5220_RESOURCES "${PROJECT_SOURCE_DIR}/resources")
+set(SPEAK5220_APP_ID io.github.simoninns.speak5220)
+
+add_executable(
+    speak5220
+    WIN32
+    MACOSX_BUNDLE
+    main.cpp
+    "${SPEAK5220_RESOURCES}/speak5220.qrc"
+)
 target_link_libraries(speak5220 PRIVATE speak5220_gui speak5220_compile_options)
 # macOS shows its open and save panels only for a bundle with an identifier:
 # without one, QFileDialog returns at once with no file
 set_target_properties(
     speak5220
     PROPERTIES
-        MACOSX_BUNDLE_GUI_IDENTIFIER io.github.simoninns.speak5220
+        AUTORCC ON
+        MACOSX_BUNDLE_GUI_IDENTIFIER ${SPEAK5220_APP_ID}
         MACOSX_BUNDLE_BUNDLE_NAME Speak5220
+        MACOSX_BUNDLE_ICON_FILE speak5220.icns
 )
+target_compile_definitions(
+    speak5220
+    PRIVATE SPEAK5220_APP_ID="${SPEAK5220_APP_ID}"
+)
+
+# The icon the desktop shows for the program file and its windows: in the
+# executable on Windows, in the bundle's Resources on macOS
+if(WIN32)
+    target_sources(speak5220 PRIVATE "${SPEAK5220_RESOURCES}/speak5220.rc")
+elseif(APPLE)
+    set(SPEAK5220_ICNS "${SPEAK5220_RESOURCES}/speak5220.icns")
+    target_sources(speak5220 PRIVATE "${SPEAK5220_ICNS}")
+    set_source_files_properties(
+        "${SPEAK5220_ICNS}"
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources
+    )
+endif()
 
 install(
     TARGETS speak5220
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     BUNDLE DESTINATION .
 )
+
+# Linux and the BSDs: the menu entry and the icon theme's sizes, named by
+# the application id
+if(UNIX AND NOT APPLE)
+    install(
+        FILES "${SPEAK5220_RESOURCES}/${SPEAK5220_APP_ID}.desktop"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+    install(
+        DIRECTORY "${SPEAK5220_RESOURCES}/icons/"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/icons
+    )
+endif()

@@ -19,6 +19,7 @@
 #include <QIcon>
 #include <QLabel>
 #include <QMetaObject>
+#include <QPixmap>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSplitter>
@@ -77,6 +78,10 @@ constexpr int kSettingsStretch = 2;
 constexpr double kFullScale = 32768.0;
 // Decibels per decade of amplitude.
 constexpr double kDecibelsPerDecade = 20.0;
+// The logo shown with no phrase (app/resources/speak5220.qrc), drawn at
+// twice its size in pixels for high-density screens.
+constexpr const char* kLogoPath = ":/speak5220/speak5220-logo@2x.png";
+constexpr double kLogoPixelRatio = 2.0;
 
 QToolButton* MakeButton(const QString& text, const QString& tip,
                         QWidget* parent) {
@@ -190,6 +195,8 @@ PhraseWaveforms::PhraseWaveforms(ProjectEdits& edits, Player& player,
           &PhraseWaveforms::OnPlayerStateChanged);
   connect(player_, &Player::PositionChanged, this,
           &PhraseWaveforms::OnPlayerPositionChanged);
+  logo_ = QPixmap(QString::fromLatin1(kLogoPath));
+  logo_.setDevicePixelRatio(kLogoPixelRatio);
   ShowPhrase(nullptr);
 }
 
@@ -325,7 +332,8 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     frames_.clear();
     encoded_shown_ = false;
     for (const Track& track : tracks_) {
-      track.pane->View()->Clear(QStringLiteral("Select one phrase to see it"));
+      track.pane->View()->Clear(QStringLiteral("Select one phrase to see it"),
+                                logo_);
     }
     UpdatePreprocessedLabels();
     UpdateEncodedNote();
