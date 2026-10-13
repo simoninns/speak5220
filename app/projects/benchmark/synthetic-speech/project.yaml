@@ -5,7 +5,8 @@ project:
   header_strings: ["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]
   ascii_map: {}
   default_preprocess:
-    squelch_db: null
+    noise_gate_db: null
+    noise_gate_ms: 100
     bass_cut_hz: null
     treble_tilt: 0
   default_encoder:

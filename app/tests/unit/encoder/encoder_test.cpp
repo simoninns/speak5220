@@ -145,13 +145,13 @@ TEST_F(EncoderTest, NoSoundGivesALoneStop) {
   EXPECT_FALSE(result->details.has_value());
 }
 
-// The stages are given the recording preprocessed: here, squelched.
-TEST_F(EncoderTest, StagesWorkOnTheSquelchedSource) {
+// The stages are given the recording preprocessed: here, gated.
+TEST_F(EncoderTest, StagesWorkOnTheGatedSource) {
   // Loud, then 60 dB quieter, half a second each.
   std::vector<double> samples(8000, 0.5);
   std::fill(samples.begin() + 4000, samples.end(), 0.0005);
   EncoderOptions options;
-  options.preprocess.squelch_db = 30.0;
+  options.preprocess.noise_gate_db = 30.0;
   std::vector<double> seen;
   EXPECT_CALL(analyser_, Segment(_, _))
       .WillOnce([&seen](std::span<const double> x,

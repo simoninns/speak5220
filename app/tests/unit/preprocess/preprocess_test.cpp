@@ -1,7 +1,7 @@
 /*
  * File:        preprocess_test.cpp
  * Module:      preprocess tests
- * Purpose:     Unit tests of the preprocessing: the squelch, the bass cut
+ * Purpose:     Unit tests of the preprocessing: the noise gate, the bass cut
  *              and the treble tilt, the Butterworth high-pass behind the
  *              cut, and the presets
  *
@@ -18,7 +18,7 @@
 #include <vector>
 
 #include "core/dsp/iir_filter.h"
-#include "core/dsp/squelch.h"
+#include "core/dsp/noise_gate.h"
 #include "gtest/gtest.h"
 
 namespace speak5220::core::preprocess {
@@ -67,12 +67,17 @@ TEST(PreprocessTest, WithEverythingOffBothAreTheOriginal) {
   EXPECT_EQ(audio.voicing, x);
 }
 
-TEST(PreprocessTest, SquelchMutesTheQuietStretchOfBoth) {
+TEST(PreprocessTest, NoiseGateMutesTheQuietStretchOfBoth) {
   const std::vector<double> x = LoudThenQuiet();
-  const PreprocessedAudio audio = Preprocess(x, {.squelch_db = 30.0});
-  EXPECT_EQ(audio.samples, dsp::Squelch(x, kPreprocessSampleRate, 30.0));
+  const PreprocessedAudio audio = Preprocess(x, {.noise_gate_db = 30.0});
+  EXPECT_EQ(audio.samples, dsp::NoiseGate(x, kPreprocessSampleRate, 30.0,
+                                          kDefaultNoiseGateMs));
   EXPECT_EQ(audio.voicing, audio.samples);
   EXPECT_EQ(audio.samples.back(), 0.0);
+  // The gate closes at the speed asked for.
+  EXPECT_EQ(
+      Preprocess(x, {.noise_gate_db = 30.0, .noise_gate_ms = 250.0}).samples,
+      dsp::NoiseGate(x, kPreprocessSampleRate, 30.0, 250.0));
 }
 
 TEST(PreprocessTest, BassCutIsSixDecibelsDownAtTheCutAndZeroPhase) {
@@ -94,27 +99,28 @@ TEST(PreprocessTest, TrebleTiltLiftsTheTreble) {
   EXPECT_GT(high / low, 2.0);
 }
 
-// The filters come after the squelch, and the voicing recording is the
-// squelched one before them.
-TEST(PreprocessTest, FiltersFollowTheSquelchAndLeaveTheVoicingRecording) {
+// The filters come after the noise gate, and the voicing recording is the
+// gated one before them.
+TEST(PreprocessTest, FiltersFollowTheNoiseGateAndLeaveTheVoicingRecording) {
   const std::vector<double> x = LoudThenQuiet();
   const PreprocessOptions options{
-      .squelch_db = 30.0, .bass_cut_hz = 150.0, .treble_tilt = 0.3};
+      .noise_gate_db = 30.0, .bass_cut_hz = 150.0, .treble_tilt = 0.3};
   const PreprocessedAudio audio = Preprocess(x, options);
-  const std::vector<double> squelched =
-      dsp::Squelch(x, kPreprocessSampleRate, 30.0);
-  EXPECT_EQ(audio.voicing, squelched);
-  EXPECT_EQ(audio.samples,
-            Preprocess(squelched, {.bass_cut_hz = 150.0, .treble_tilt = 0.3})
-                .samples);
+  const std::vector<double> gated =
+      dsp::NoiseGate(x, kPreprocessSampleRate, 30.0, kDefaultNoiseGateMs);
+  EXPECT_EQ(audio.voicing, gated);
+  EXPECT_EQ(
+      audio.samples,
+      Preprocess(gated, {.bass_cut_hz = 150.0, .treble_tilt = 0.3}).samples);
   EXPECT_NE(audio.samples, audio.voicing);
 }
 
-TEST(SquelchedSpansTest, AreTheSquelchsSpansOrNoneWithoutIt) {
+TEST(GatedSpansTest, AreTheGatesSpansOrNoneWithoutIt) {
   const std::vector<double> x = LoudThenQuiet();
-  EXPECT_TRUE(SquelchedSpans(x, {}).empty());
-  EXPECT_EQ(SquelchedSpans(x, {.squelch_db = 30.0}),
-            dsp::SquelchedSpans(x, kPreprocessSampleRate, 30.0));
+  EXPECT_TRUE(GatedSpans(x, {}).empty());
+  EXPECT_EQ(
+      GatedSpans(x, {.noise_gate_db = 30.0}),
+      dsp::GatedSpans(x, kPreprocessSampleRate, 30.0, kDefaultNoiseGateMs));
 }
 
 TEST(PreprocessPresetsTest, AreNoneAndBbcMicro) {
@@ -133,7 +139,18 @@ TEST(PreprocessPresetsTest, MatchingPresetFindsTheOneWithTheseOptions) {
             "BBC Micro");
   EXPECT_EQ(MatchingPreset({.bass_cut_hz = 210.0, .treble_tilt = 0.4}),
             nullptr);
-  EXPECT_EQ(MatchingPreset({.squelch_db = 30.0}), nullptr);
+  EXPECT_EQ(MatchingPreset({.noise_gate_db = 30.0}), nullptr);
+}
+
+// The gate's speed does nothing while the gate is off, so it does not stop
+// a preset matching.
+TEST(PreprocessPresetsTest, GatesSpeedMattersOnlyWithTheGate) {
+  EXPECT_EQ(MatchingPreset({.noise_gate_ms = 300.0})->name, "None");
+  EXPECT_EQ(
+      MatchingPreset(
+          {.noise_gate_ms = 300.0, .bass_cut_hz = 200.0, .treble_tilt = 0.4})
+          ->name,
+      "BBC Micro");
 }
 
 }  // namespace

@@ -45,9 +45,9 @@ class IQualityAssessor {
   virtual ~IQualityAssessor() = default;
 
   // Assesses `frames` (ending in a stop), made from `source` (8 kHz,
-  // -1..1, as given to the encoder, squelched when the encoder squelched
-  // it). Fails if the frames cannot be spoken, the source holds no speech,
-  // or a measure cannot be taken.
+  // -1..1, as given to the encoder, gated when the encoder gated it).
+  // Fails if the frames cannot be spoken, the source holds no speech, or a
+  // measure cannot be taken.
   virtual StatusOr<QualityAssessment> Assess(
       std::span<const double> source, std::span<const lpc::Frame> frames) = 0;
 };

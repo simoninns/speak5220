@@ -47,10 +47,12 @@ class OptionSlider;
 // Editors by type: a slider (OptionSlider) over the option's typical range
 // and step for real and whole numbers, with the value and unit beside it
 // and a tick at the baseline's value; for an option that can be off (the
-// squelch, the resonance hold), a check box that turns it on and a slider;
-// for the pre-emphasis, a choice of chirp or first order, and a slider for the
-// coefficient. Values the sliders cannot show exactly (off their steps)
-// are kept until that option is edited. GUI thread only.
+// noise gate, the resonance hold), a check box that turns it on and a
+// slider; for the pre-emphasis, a choice of chirp or first order, and a
+// slider for the coefficient. An option with no effect while another is
+// off (the gate's speed) is disabled while it is. Values the sliders
+// cannot show exactly (off their steps) are kept until that option is
+// edited. GUI thread only.
 class EncoderSettingsForm : public QWidget {
   Q_OBJECT
 
@@ -71,8 +73,8 @@ class EncoderSettingsForm : public QWidget {
   QWidget* Editor(std::string_view field) const;
   // The slider of `field` (the coefficient's for the pre-emphasis).
   OptionSlider* Slider(std::string_view field) const;
-  // The check box that turns an optional option (squelch_db, bass_cut_hz,
-  // resonance_hold_db) on; nullptr for other options.
+  // The check box that turns an optional option (noise_gate_db,
+  // bass_cut_hz, resonance_hold_db) on; nullptr for other options.
   QCheckBox* OnBox(std::string_view field) const;
   QToolButton* ResetButton(std::string_view field) const;
   // Whether the row of `field` differs from the baseline.

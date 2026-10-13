@@ -160,17 +160,40 @@ TEST_F(EncoderSettingsFormTest, ResonanceHoldIsTurnedOffByItsCheckBox) {
   EXPECT_DOUBLE_EQ(*form_.Options().resonance_hold_db, 20.0);
 }
 
-TEST_F(EncoderSettingsFormTest, SquelchIsTurnedOnByItsCheckBox) {
-  EXPECT_FALSE(form_.OnBox("squelch_db")->isChecked());
-  EXPECT_FALSE(form_.Slider("squelch_db")->isEnabled());
-  form_.OnBox("squelch_db")->setChecked(true);
-  ASSERT_TRUE(form_.Options().preprocess.squelch_db.has_value());
-  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.squelch_db, 30.0);
-  form_.Slider("squelch_db")->MoveTo(24.0);
-  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.squelch_db, 24.0);
-  form_.OnBox("squelch_db")->setChecked(false);
-  EXPECT_FALSE(form_.Options().preprocess.squelch_db.has_value());
+TEST_F(EncoderSettingsFormTest, NoiseGateIsTurnedOnByItsCheckBox) {
+  EXPECT_FALSE(form_.OnBox("noise_gate_db")->isChecked());
+  EXPECT_FALSE(form_.Slider("noise_gate_db")->isEnabled());
+  form_.OnBox("noise_gate_db")->setChecked(true);
+  ASSERT_TRUE(form_.Options().preprocess.noise_gate_db.has_value());
+  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.noise_gate_db, 30.0);
+  form_.Slider("noise_gate_db")->MoveTo(24.0);
+  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.noise_gate_db, 24.0);
+  form_.OnBox("noise_gate_db")->setChecked(false);
+  EXPECT_FALSE(form_.Options().preprocess.noise_gate_db.has_value());
   EXPECT_EQ(form_.OnBox("target_rms"), nullptr);
+}
+
+// The gate's speed does nothing without the gate, so it is disabled until
+// the gate is on.
+TEST_F(EncoderSettingsFormTest, GateSpeedIsUsableOnlyWithTheGate) {
+  OptionSlider* speed = form_.Slider("noise_gate_ms");
+  ASSERT_NE(speed, nullptr);
+  EXPECT_FALSE(speed->isEnabled());
+  form_.OnBox("noise_gate_db")->setChecked(true);
+  EXPECT_TRUE(speed->isEnabled());
+  speed->MoveTo(250.0);
+  EXPECT_DOUBLE_EQ(form_.Options().preprocess.noise_gate_ms, 250.0);
+  form_.SetEditable(false);
+  EXPECT_FALSE(speed->isEnabled());
+  form_.SetEditable(true);
+  EXPECT_TRUE(speed->isEnabled());
+  form_.OnBox("noise_gate_db")->setChecked(false);
+  EXPECT_FALSE(speed->isEnabled());
+
+  EncoderOptions gated;
+  gated.preprocess.noise_gate_db = 40.0;
+  form_.SetOptions(gated, {}, QStringLiteral("the project default"));
+  EXPECT_TRUE(speed->isEnabled());
 }
 
 TEST_F(EncoderSettingsFormTest, PreEmphasisIsChirpOrAFirstOrderCoefficient) {
@@ -255,7 +278,7 @@ TEST_F(EncoderSettingsFormTest, AdvancedButtonCountsHiddenChanges) {
 // the advanced button counts only the encoder's.
 TEST_F(EncoderSettingsFormTest, PreprocessingOptionsAreAlwaysShown) {
   for (const std::string_view field :
-       {"squelch_db", "bass_cut_hz", "treble_tilt"}) {
+       {"noise_gate_db", "noise_gate_ms", "bass_cut_hz", "treble_tilt"}) {
     EXPECT_TRUE(form_.Editor(field)->isVisibleTo(&form_)) << field;
   }
   EncoderOptions options;

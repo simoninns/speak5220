@@ -39,8 +39,8 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/noise_gate.h"
 #include "core/dsp/output_filter.h"
-#include "core/dsp/squelch.h"
 #include "core/lpc/frame.h"
 #include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
@@ -89,8 +89,8 @@ QToolButton* MakeButton(const QString& text, const QString& tip,
 }
 
 // The preprocessing's filters in words, for the preprocessed waveform's
-// note: "bass cut 200 Hz, treble tilt 0.4". The squelch has a note of its
-// own.
+// note: "bass cut 200 Hz, treble tilt 0.4". The noise gate has a note of
+// its own.
 QString DescribeFilters(const core::preprocess::PreprocessOptions& options) {
   QStringList parts;
   if (options.bass_cut_hz.has_value()) {
@@ -753,21 +753,24 @@ void PhraseWaveforms::UpdatePreprocessedLabels() {
   }
   QStringList notes;
   std::vector<TimeExtent> shading;
-  if (preprocessing_.squelch_db.has_value()) {
+  if (preprocessing_.noise_gate_db.has_value()) {
     const std::vector<double> samples(audio_.begin(), audio_.end());
     for (const core::dsp::SampleSpan& span :
-         core::preprocess::SquelchedSpans(samples, preprocessing_)) {
+         core::preprocess::GatedSpans(samples, preprocessing_)) {
       shading.push_back({.begin = static_cast<double>(span.begin),
                          .end = static_cast<double>(span.end)});
     }
-    const QString level =
-        QString::fromStdString(core::FormatNumber(*preprocessing_.squelch_db));
+    const QString gate =
+        QStringLiteral("noise gate %1 dB, %2 ms")
+            .arg(QString::fromStdString(
+                     core::FormatNumber(*preprocessing_.noise_gate_db)),
+                 QString::fromStdString(
+                     core::FormatNumber(preprocessing_.noise_gate_ms)));
     notes << (shading.empty()
-                  ? QStringLiteral(
-                        "squelch %1 dB: nothing is quiet enough to mute")
-                        .arg(level)
-                  : QStringLiteral("squelch %1 dB: shaded stretches are muted")
-                        .arg(level));
+                  ? QStringLiteral("%1: nothing is quiet enough to gate")
+                        .arg(gate)
+                  : QStringLiteral("%1: shaded stretches are turned down")
+                        .arg(gate));
   }
   if (const QString filters = DescribeFilters(preprocessing_);
       !filters.isEmpty()) {

@@ -22,8 +22,8 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
 | `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
-| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the squelch, the output filters) | Implemented |
-| `s5core`: `preprocess/` (the squelch, bass cut and treble tilt before encoding, and their presets) | Implemented (§8, plan Phase 11) |
+| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the noise gate, the output filters) | Implemented |
+| `s5core`: `preprocess/` (the noise gate, bass cut and treble tilt before encoding, and their presets) | Implemented (§8, plan Phase 11) |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
@@ -84,7 +84,7 @@ app/
       dsp/                      resampler and FFT interfaces and adapters;
                                 SOS/FIR filters and their constants,
                                 NumPy-ordered sums and windows, LPC analysis,
-                                the squelch
+                                the noise gate
       preprocess/               Preprocess(), PreprocessOptions and the
                                 presets (§8)
       encoder/                  Encoder and its stages, EncoderOptions (§8)
@@ -352,7 +352,7 @@ Plan §2.2, with the names as built.
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `OutputFilter`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at 48 kHz through a computer's audio stage (none, or the BBC Micro's), for listening and display only (§16) |
-| `Squelch()`, `SquelchGain()`, `SquelchedSpans()` | **Implemented** (`core/dsp/squelch`): mutes stretches below a level relative to the loudest, for the `squelch_db` option (§8), and reports them for the waveform's shading (§16) |
+| `NoiseGate()`, `NoiseGateGain()`, `GatedSpans()` | **Implemented** (`core/dsp/noise_gate`): turns down stretches below a level relative to the loudest, softly and at a set speed, for the `noise_gate_db` and `noise_gate_ms` options (§8), and reports the stretches it turns down by more than 6 dB for the waveform's shading (§16) |
 | `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`, `IViewPreferences`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
@@ -361,7 +361,7 @@ Plan §2.2, with the names as built.
 | `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
-| `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the squelch, bass cut and treble tilt that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
+| `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the noise gate, bass cut and treble tilt that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `QualityAssessor` (`IQualityAssessor`), `OverallQualityMetric` (`IQualityMetric`), `ScoreQuality()` | **Implemented** (`core/quality/`): the quality measures, the overall score and the rating (§9) |
 | `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best overall quality score, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
@@ -447,17 +447,19 @@ function's comment names its Python original.
 **Three stages** (plan Phase 11). A phrase is shown and measured as the
 original recording, the **preprocessed** recording made from it, and the
 encoding of that. `core/preprocess/` holds the preprocessing, which the
-reference does not have: `PreprocessOptions` (`squelch_db`,
-`bass_cut_hz`, `treble_tilt`, all off by default) and `Preprocess()`,
-which squelches the original (`dsp::Squelch()`), then cuts its bass
+reference does not have: `PreprocessOptions` (`noise_gate_db` and its
+speed `noise_gate_ms`, `bass_cut_hz`, `treble_tilt`, all off by default)
+and `Preprocess()`, which gates the original (`dsp::NoiseGate()`), then
+cuts its bass
 (`ButterworthHighPass()`, an order-2 Butterworth high-pass designed as
 `scipy.signal.butter()` does, run forwards and backwards: −6 dB at the
 cut, 24 dB per octave below it), then lifts its treble (1 − μz⁻¹). It
 returns two signals: `samples`, the preprocessed recording, and
-`voicing`, the squelched recording before the filters.
+`voicing`, the gated recording before the filters.
 `PreprocessPresets()` gives the GUI's presets, *None* and *BBC Micro*
 (200 Hz, 0.4; §9, "Voicing and source shaping, from Acorn's PHROM"), and
-`MatchingPreset()` the preset some options match. Everything that
+`MatchingPreset()` the preset some options match (ignoring the gate's
+speed while the gate is off). Everything that
 measures an encoding (the quality measures in the GUI, Optimise, the
 corpus checks) compares it with `Preprocess(...).samples`.
 
@@ -536,7 +538,7 @@ compared with the reference's own defaults written out (`voicing_threshold`
 reference's frames with their pauses quietened (`ReferenceFrames()`), so
 it does not depend on the application's defaults. `EncoderOptionInfos()`
 gives each one's key (the Python name, or one in its style, such as
-`squelchDb`, for an option it does not have), label, help text, type,
+`noiseGateDb`, for an option it does not have), label, help text, type,
 range and default, for the GUI's settings form and for project files,
 its stage (`stage`), and marks the encoder options the GUI shows only
 with its advanced settings (`advanced`). An option that a value turns
@@ -553,9 +555,9 @@ The emulator rings too, but not reliably where the chip does: in one
 measured pause it is silent where the chip rings, and rings after the
 neutral frame where the chip is silent (datasheet §8.8, evidence p12-07
 and p12-08). So the chip, not the emulator, decides the design: on the
-chip the neutral frame silenced all three pauses measured. The
-squelch made this common, since squelched pauses become long runs of
-silence frames. `QuietPauses()` replaces the second silence frame of
+chip the neutral frame silenced all three pauses measured. A noise gate
+(at first a hard squelch) makes this common, since gated pauses become
+long runs of silence frames. `QuietPauses()` replaces the second silence frame of
 every pause of three or more (`kMinQuietPause`, `kQuietPauseAt`) with
 `NeutralFrame()`: voiced, energy 1, the last voiced pitch, every K at its
 Table 8-6 entry nearest zero. The chip then holds neutral K, and the rest
@@ -570,7 +572,8 @@ from the neutral frame. A repeat straight after a quietened pause is sent
 in full with the K it would have had (an unvoiced repeat as an unvoiced
 frame, which zeroes K5–K10 as the repeat would); a pause before a voiced
 repeat of an unvoiced frame, whose K5–K10 zeroing no full frame can give,
-is left alone. Over the 243 corpus files with a 30 dB squelch, 110 have
+is left alone. Over the 243 corpus files with a 30 dB squelch (the hard
+gate the noise gate replaced), 110 have
 such pauses (288 in all); the encodings grow by 1.7%, and PESQ (the
 measure then) was unchanged within its noise (median change +0.0003; 53
 files higher, 48 lower). It was an option, on by default, until the
@@ -603,22 +606,32 @@ by ear. The default, 14 dB, catches both of that file's drops (19.2 and
 changes drop more than 12 dB, in 58 files (§9, "The resonance hold").
 Optimise does not search it.
 
-**The squelch.** Breaths and room noise 20 to 35 dB down sit above the
+**The noise gate.** Breaths and room noise 20 to 35 dB down sit above the
 encoder's 45 dB gate, so the encoder reproduces them; PESQ, the measure
-when the squelch was added, even rewarded it. When `squelch_db` is set,
-the preprocessing's first step (`dsp::Squelch()`) mutes the source's
-stretches more than that many dB below its loudest
-10 ms block (blocks every 2.5 ms), keeping 60 ms after the sound and
-10 ms before it so word endings and onsets survive, with 5 ms ramps so
-the cut makes no click. The encoder applies it before its first stage,
-and every measurement against the source uses the same preprocessed
-source: `MeasureFrames()` and the `Optimiser`'s candidates. The quality measures
+when this was first tried, even rewarded it. When `noise_gate_db` is set,
+the preprocessing's first step (`dsp::NoiseGate()`) turns down the
+source's stretches more than that many dB below its loudest level, the
+RMS of a 20 ms window centred on each sample (long enough to span a low
+voice's pitch period, so the level does not ripple). Below the level the
+gate is a downward expander, 3 dB of gain lost for each dB under it, down
+to −80 dB, where the sample is made silent (about 27 dB under the
+level): a soft knee, so sound just under the level is only turned down
+a little. The gain then moves no faster than the gate's speed allows,
+linearly in dB: it closes from open to −80 dB over `noise_gate_ms`
+(100 ms by default) after the sound falls, so word endings fade, and
+opens over a quarter of that, before the sound rises (the whole
+recording is known), so onsets are not cut. It replaced a squelch that
+muted below the level outright, with a 60 ms hold and 5 ms ramps, which
+was too hard: soft word endings and the gaps between words were cut off
+abruptly. The encoder applies it before its first stage, and every
+measurement against the source uses the same preprocessed source:
+`MeasureFrames()` and the `Optimiser`'s candidates. The quality measures
 leave out what their voice activity mask does not count as speech, so a
-muted breath is not asked of an encoding. The squelch is not searched by
-Optimise, since scores against differently squelched sources do not
-compare. Loudness alone cannot tell a breath from a soft
-"h" or a trailing "s"; the hold keeps word endings, and the user chooses
-the level.
+gated breath is not asked of an encoding. The gate is not searched by
+Optimise, since scores against differently gated sources do not compare.
+Loudness alone cannot tell a breath from a soft "h" or a trailing "s";
+the soft knee and the slow close keep word endings, and the user chooses
+the level and the speed.
 
 **Matching NumPy and SciPy.** The aim is the same frames, so the C++ follows
 the reference's order of floating-point operations where that is cheap:
@@ -831,7 +844,8 @@ paying attention to the pairs either side of each threshold (0.497 and
 
 **Default settings** (plan Phase 8, task 14; 2026-10-12). Optimise was run
 over the corpus from the old defaults (the reference's), and from them
-with the squelch at 30 and 40 dB, each file's limit at its default
+with the squelch (the hard gate the noise gate later replaced) at 30 and
+40 dB, each file's limit at its default
 encoding's size, and the best options studied across files. Optimise
 raised `target_rms` on 156 files (most often to 24), turned `level_agc`
 on for 89, lengthened `window` on 79 (shortened it on 19) and moved
@@ -1296,9 +1310,12 @@ gives the same values as before.
   lacks an option of its stage, naming the missing ones. Before the
   application's first release the format changes without a new version
   (plan Phase 8, task 14, and Phase 11): the squelch and quiet pauses
-  were once left out while at their defaults, and the preprocessing
-  options were once in `default_encoder`, so a project saved before is
-  refused rather than read with whatever the defaults have become.
+  were once left out while at their defaults, the preprocessing
+  options were once in `default_encoder`, and the squelch (`squelch_db`)
+  was replaced by the noise gate (`noise_gate_db`, `noise_gate_ms`), so a
+  project saved before is refused rather than read with whatever the
+  defaults have become. A leftover `squelch_db` is an unknown key, kept
+  but ignored.
 - Phrase ids must be canonical lower-case UUIDs before they are used as
   paths.
 
@@ -1663,16 +1680,19 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   (`RedrawPreprocessed()`) and stops it if it is playing. The note names
   the filters ("bass cut 200 Hz, treble tilt 0.4"), or says there is no
   preprocessing.
-- **Squelch shading.** On the preprocessed recording, where the squelch
-  mutes, `PhraseWaveforms` finds the stretches
-  `preprocess::SquelchedSpans()` lowers (gain under 1) when the squelch
-  or the phrase changes, gives them to its view's
-  `WaveformView::SetShading()`, and puts the squelch first in the note
-  ("squelch 30 dB: shaded stretches are muted", or that nothing is quiet
-  enough). The view veils them with the base colour at alpha 170 over
-  the waveform, so it is dimmed, not hidden, and hatches them with the
-  palette's Mid colour, so they read without colour; hovering says they
-  are squelched. The original is never shaded.
+- **Noise gate shading.** On the preprocessed recording, where the gate
+  acts, `PhraseWaveforms` finds the stretches
+  `preprocess::GatedSpans()` turns down by more than 6 dB (gain under
+  `dsp::kGatedGain`, 0.5) when the gate or the phrase changes, gives them
+  to its view's `WaveformView::SetShading()`, and puts the gate first in
+  the note ("noise gate 30 dB, 100 ms: shaded stretches are turned down",
+  or that nothing is quiet enough to gate). A soft gate turns sound down
+  by degrees, so 6 dB marks where it has clearly taken hold; the
+  waveform itself shows the fades. The view veils the stretches with the
+  base colour at alpha 170 over the waveform, so it is dimmed, not
+  hidden, and hatches them with the palette's Mid colour, so they read
+  without colour; hovering says they are gated. The original is never
+  shaded.
 - **Play start.** A click asks for the marker at that source sample;
   `PhraseWaveforms` rounds and limits it to the audio and applies
   `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
@@ -1895,8 +1915,10 @@ window in milliseconds; a ratio reads "off" at 1). Its positions are the
 typical range in steps; a value outside it widens the range to include
 it, and a value off the steps is shown exactly and kept until the slider
 moves. Real and whole-number options get a slider; the optional ones
-(the squelch, the bass cut, the resonance hold) a check box and a slider; the pre-emphasis
-a chirp/first-order chooser and a slider for μ. Values are read back
+(the noise gate, the bass cut, the resonance hold) a check box and a slider; the pre-emphasis
+a chirp/first-order chooser and a slider for μ. An option with no effect
+while another is unset (`EncoderOptionInfo::enabled_by`: the gate's
+speed needs the gate) has its label and slider disabled while it is. Values are read back
 through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
 options it was given and changes only the edited one.
 
@@ -2006,9 +2028,10 @@ stale frames, or a change waiting.
   fake clock); Reset restores the project's defaults as one undoable
   step; the defaults scope; a refused change; the quality stored with
   the encoding, and cached quality shown without measuring; the rating's
-  text, components, figures, tooltip and marks; the squelch turned on by
-  its check box; a phrase measured against its preprocessed source (the
-  squelch, and the BBC Micro preset); the preprocessing reported as the
+  text, components, figures, tooltip and marks; the noise gate turned on
+  by its check box, and its speed usable only with it; a phrase measured
+  against its preprocessed source (the noise gate, and the BBC Micro
+  preset); the preprocessing reported as the
   form has it, shown on the waveform and shaded on the original; the
   preset chooser; Reset restoring both sections; the mark's contrast with every band in light and dark;
 - GUI unit tests of Optimise with inline runners: accepting is one

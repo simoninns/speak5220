@@ -40,8 +40,9 @@ namespace speak5220::app {
 // (encoded audio only), the zero line, the waveform (one line per pixel
 // from the PeakCache, each reaching the last sample of the pixel before so
 // the trace is unbroken; or, closer than 4 samples per pixel, the samples
-// joined), the shaded stretches (dimmed and hatched: what the squelch
-// mutes, on the original audio), the play-start marker and the playhead.
+// joined), the shaded stretches (dimmed and hatched: what the noise gate
+// turns down, on the preprocessed audio), the play-start marker and the
+// playhead.
 //
 // A click asks for the marker there (MarkerRequested); Space asks to play
 // or pause; Ctrl+wheel zooms about the pointer, the wheel scrolls; hovering
@@ -67,7 +68,7 @@ class WaveformView : public QWidget {
   QString Placeholder() const { return placeholder_; }
 
   // Stretches to shade, in source samples, or none; hovering over one
-  // says it is squelched.
+  // says it is gated.
   void SetShading(std::vector<TimeExtent> spans);
   const std::vector<TimeExtent>& Shading() const { return shading_; }
 
@@ -106,7 +107,7 @@ class WaveformView : public QWidget {
   // The frame under pixel `x`, or none.
   std::optional<int> FrameAtX(double x) const;
   // The hover text at pixel `x`: the frame's description, that the
-  // stretch is squelched, or empty.
+  // stretch is gated, or empty.
   QString ToolTipAt(double x) const;
 
   QSize sizeHint() const override;

@@ -149,16 +149,16 @@ TEST(OptimiserTest, KeepsThePreprocessingAndScoresAgainstItsResult) {
   std::vector<double> source(8000, 0.5);
   std::fill(source.begin() + 4000, source.end(), 0.0005);
   EncoderOptions start;
-  start.preprocess.squelch_db = 30.0;
+  start.preprocess.noise_gate_db = 30.0;
   start.preprocess.treble_tilt = 0.4;
-  const std::vector<double> squelched =
+  const std::vector<double> gated =
       preprocess::Preprocess(source, start.preprocess).samples;
-  int unsquelched = 0;
+  int ungated = 0;
   ON_CALL(search.Metric(), Measure(_, _))
       .WillByDefault([&](std::span<const double> reference,
                          const encoder::EncodeResult&) -> StatusOr<double> {
-        if (!std::ranges::equal(reference, squelched)) {
-          ++unsquelched;
+        if (!std::ranges::equal(reference, gated)) {
+          ++ungated;
         }
         return 2.0;
       });
@@ -167,7 +167,7 @@ TEST(OptimiserTest, KeepsThePreprocessingAndScoresAgainstItsResult) {
   request.plan.max_evaluations = 30;
   const StatusOr<OptimiseResult> result = search.Run(request);
   ASSERT_TRUE(result.IsOk());
-  EXPECT_EQ(unsquelched, 0);
+  EXPECT_EQ(ungated, 0);
   for (const Candidate& c : result->history) {
     EXPECT_EQ(c.options.preprocess, start.preprocess);
   }

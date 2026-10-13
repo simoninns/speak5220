@@ -2,8 +2,8 @@
  * File:        preprocess.cpp
  * Module:      preprocess
  * Purpose:     The preprocessing of a phrase's recording before it is
- *              encoded: the squelch, the bass cut and the treble tilt, and
- *              their presets
+ *              encoded: the noise gate, the bass cut and the treble tilt,
+ *              and their presets
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -19,7 +19,7 @@
 #include <vector>
 
 #include "core/dsp/iir_filter.h"
-#include "core/dsp/squelch.h"
+#include "core/dsp/noise_gate.h"
 
 namespace speak5220::core::preprocess {
 namespace {
@@ -46,8 +46,13 @@ constexpr std::array<PreprocessPreset, 2> kPresets = {{
 std::span<const PreprocessPreset> PreprocessPresets() { return kPresets; }
 
 const PreprocessPreset* MatchingPreset(const PreprocessOptions& options) {
+  // The gate's speed does nothing while it is off.
+  PreprocessOptions effective = options;
+  if (!effective.noise_gate_db.has_value()) {
+    effective.noise_gate_ms = kDefaultNoiseGateMs;
+  }
   for (const PreprocessPreset& preset : kPresets) {
-    if (preset.options == options) {
+    if (preset.options == effective) {
       return &preset;
     }
   }
@@ -58,8 +63,9 @@ PreprocessedAudio Preprocess(std::span<const double> original,
                              const PreprocessOptions& options) {
   PreprocessedAudio audio;
   audio.voicing =
-      options.squelch_db.has_value()
-          ? dsp::Squelch(original, kPreprocessSampleRate, *options.squelch_db)
+      options.noise_gate_db.has_value()
+          ? dsp::NoiseGate(original, kPreprocessSampleRate,
+                           *options.noise_gate_db, options.noise_gate_ms)
           : std::vector<double>(original.begin(), original.end());
   audio.samples = audio.voicing;
   if (options.bass_cut_hz.has_value() &&
@@ -75,13 +81,13 @@ PreprocessedAudio Preprocess(std::span<const double> original,
   return audio;
 }
 
-std::vector<dsp::SampleSpan> SquelchedSpans(std::span<const double> original,
-                                            const PreprocessOptions& options) {
-  if (!options.squelch_db.has_value()) {
+std::vector<dsp::SampleSpan> GatedSpans(std::span<const double> original,
+                                        const PreprocessOptions& options) {
+  if (!options.noise_gate_db.has_value()) {
     return {};
   }
-  return dsp::SquelchedSpans(original, kPreprocessSampleRate,
-                             *options.squelch_db);
+  return dsp::GatedSpans(original, kPreprocessSampleRate,
+                         *options.noise_gate_db, options.noise_gate_ms);
 }
 
 dsp::SosSection ButterworthHighPass(double cutoff_hz) {

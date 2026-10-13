@@ -75,14 +75,14 @@ TEST(EncodingCacheTest, HashDependsOnAudioOptionsAndVersion) {
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, other_options,
                                               encoder::kEncoderVersion));
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, defaults, "0.0.1"));
-  encoder::EncoderOptions squelched;
-  squelched.preprocess.squelch_db = 30.0;
-  const std::string squelched_hash =
-      EncodingCache::SettingsHash(audio, squelched, encoder::kEncoderVersion);
-  EXPECT_NE(hash, squelched_hash);
-  squelched.preprocess.squelch_db = 24.0;
-  EXPECT_NE(squelched_hash, EncodingCache::SettingsHash(
-                                audio, squelched, encoder::kEncoderVersion));
+  encoder::EncoderOptions gated;
+  gated.preprocess.noise_gate_db = 30.0;
+  const std::string gated_hash =
+      EncodingCache::SettingsHash(audio, gated, encoder::kEncoderVersion);
+  EXPECT_NE(hash, gated_hash);
+  gated.preprocess.noise_gate_db = 24.0;
+  EXPECT_NE(gated_hash, EncodingCache::SettingsHash(audio, gated,
+                                                    encoder::kEncoderVersion));
 }
 
 // Every option counts, the preprocessing's as much as the encoder's.

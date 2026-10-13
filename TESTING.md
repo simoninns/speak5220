@@ -441,7 +441,7 @@ hand, and only to create or, by agreement, regenerate the reference data
   Nix shell, not by CTest.
 - For choosing the encoder's defaults (plan Phase 8, task 14), the
   Optimise corpus check also writes each file's best options, and
-  `SPEAK5220_OPTIMISE_START` (such as `squelch_db=30`) changes where it
+  `SPEAK5220_OPTIMISE_START` (such as `noise_gate_db=30`) changes where it
   starts. `OptionsCorpusCheck.DISABLED_ScoresTheOptions` encodes the corpus
   with the options in `SPEAK5220_OPTIONS` (the same form; unset for the
   defaults) and writes each file's size, encoding time and score to

@@ -2,8 +2,8 @@
  * File:        preprocess.h
  * Module:      preprocess
  * Purpose:     The preprocessing of a phrase's recording before it is
- *              encoded: the squelch, the bass cut and the treble tilt, and
- *              their presets
+ *              encoded: the noise gate, the bass cut and the treble tilt,
+ *              and their presets
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -18,12 +18,15 @@
 #include <vector>
 
 #include "core/dsp/iir_filter.h"
-#include "core/dsp/squelch.h"
+#include "core/dsp/noise_gate.h"
 
 namespace speak5220::core::preprocess {
 
 // The rate of the audio preprocessed: a project's (plan §3.1).
 inline constexpr int kPreprocessSampleRate = 8000;
+
+// The noise gate's default speed: how long it takes to close, in ms.
+inline constexpr double kDefaultNoiseGateMs = 100.0;
 
 // How a phrase's recording is preprocessed (plan Phase 11). The encoding
 // is made from the preprocessed recording and measured against it. Each
@@ -31,9 +34,13 @@ inline constexpr int kPreprocessSampleRate = 8000;
 // (encoder::EncoderOptionInfos(), the preprocessing stage). All off by
 // default. A plain value type.
 struct PreprocessOptions {
-  // If set, stretches this many dB below the recording's loudest sound,
-  // such as breaths, are made silent (dsp::Squelch()).
-  std::optional<double> squelch_db = std::nullopt;
+  // If set, stretches quieter than this many dB below the recording's
+  // loudest sound, such as breaths, are turned down, those well below it
+  // to silence (dsp::NoiseGate()).
+  std::optional<double> noise_gate_db = std::nullopt;
+  // How long the noise gate takes to close, in ms, after the sound falls;
+  // it opens in a quarter of this. No effect without noise_gate_db.
+  double noise_gate_ms = kDefaultNoiseGateMs;
   // If set, the bass is cut below this many Hz: ButterworthHighPass()
   // forwards and backwards (zero phase, so -6 dB at the cut and 24 dB per
   // octave below it).
@@ -56,7 +63,8 @@ struct PreprocessPreset {
 // spectrum of Acorn's PHROM phrases; HLD §9).
 std::span<const PreprocessPreset> PreprocessPresets();
 
-// The preset whose options are `options`, or nullptr (a custom set).
+// The preset whose options have the same effect as `options`, or nullptr
+// (a custom set). The noise gate's speed is ignored while it is off.
 const PreprocessPreset* MatchingPreset(const PreprocessOptions& options);
 
 // A recording preprocessed.
@@ -64,24 +72,25 @@ struct PreprocessedAudio {
   // The preprocessed recording: what the encoder aims at and an encoding
   // is measured against.
   std::vector<double> samples;
-  // The recording squelched but not filtered: what the encoder finds the
+  // The recording gated but not filtered: what the encoder finds the
   // speech's extent, pitch and voicing in, since the bass cut and treble
   // tilt would make voiced sounds look unvoiced. The same as samples when
   // neither filter is on.
   std::vector<double> voicing;
 };
 
-// Preprocesses `original` (8 kHz): squelched, then bass cut, then treble
+// Preprocesses `original` (8 kHz): gated, then bass cut, then treble
 // tilted, as `options` asks. With everything off, both are copies of
 // `original`. The options must be valid (encoder::ValidateEncoderOptions()).
 // Pure; O(n).
 PreprocessedAudio Preprocess(std::span<const double> original,
                              const PreprocessOptions& options);
 
-// The stretches of `original` (8 kHz) that the squelch lowers, for showing
-// what it mutes; none without a squelch. Pure; O(n).
-std::vector<dsp::SampleSpan> SquelchedSpans(std::span<const double> original,
-                                            const PreprocessOptions& options);
+// The stretches of `original` (8 kHz) that the noise gate turns down by
+// more than 6 dB (dsp::GatedSpans()), for showing what it mutes; none
+// without a noise gate. Pure; O(n).
+std::vector<dsp::SampleSpan> GatedSpans(std::span<const double> original,
+                                        const PreprocessOptions& options);
 
 // The order-2 Butterworth high-pass at `cutoff_hz` (8 kHz), by the
 // bilinear transform with the corner prewarped, as scipy.signal.butter()

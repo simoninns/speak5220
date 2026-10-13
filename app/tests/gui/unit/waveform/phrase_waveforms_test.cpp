@@ -218,9 +218,10 @@ TEST_F(PhraseWaveformsTest, AreasKeepTheirSizesAcrossTabs) {
   EXPECT_GT(area->verticalScrollBar()->maximum(), 0);
 }
 
-// The squelch is shown on the preprocessed recording, where it mutes: the
-// stretches are shaded and the note gives the level.
-TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
+// The noise gate is shown on the preprocessed recording, where it mutes: the
+// stretches it turns down are shaded and the note gives its level and
+// speed.
+TEST_F(PhraseWaveformsTest, ShadesWhatTheNoiseGateMutes) {
   // Loud for the first half, 60 dB quieter after.
   std::fill(phrase_.audio.begin() + (kAudioSamples / 2), phrase_.audio.end(),
             0.0001F);
@@ -230,32 +231,36 @@ TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
   EXPECT_EQ(pane->Note(),
             QStringLiteral("no preprocessing: the same as the original"));
 
-  waveforms_.SetPreprocessing({.squelch_db = 30.0});
+  waveforms_.SetPreprocessing({.noise_gate_db = 30.0});
   ASSERT_THAT(Preprocessed()->Shading(), SizeIs(1));
   const TimeExtent shaded = Preprocessed()->Shading().front();
-  // Inside the quiet half, after the hold, to the end.
+  // Inside the quiet half, once the gate has begun to close, to the end.
   EXPECT_GT(shaded.begin, kAudioSamples / 2);
   EXPECT_DOUBLE_EQ(shaded.end, kAudioSamples);
   EXPECT_EQ(pane->Note(),
-            QStringLiteral("squelch 30 dB: shaded stretches are muted"));
+            QStringLiteral(
+                "noise gate 30 dB, 100 ms: shaded stretches are turned down"));
   // Neither the original nor the encoded audio is shaded.
   EXPECT_TRUE(Original()->Shading().empty());
   EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
   EXPECT_TRUE(Encoded()->Shading().empty());
 
-  // Too low a squelch to mute anything says so.
-  waveforms_.SetPreprocessing({.squelch_db = 70.0});
+  // Too low a noise gate to mute anything says so.
+  waveforms_.SetPreprocessing({.noise_gate_db = 70.0});
   EXPECT_TRUE(Preprocessed()->Shading().empty());
   EXPECT_EQ(pane->Note(),
-            QStringLiteral("squelch 70 dB: nothing is quiet enough to mute"));
+            QStringLiteral(
+                "noise gate 70 dB, 100 ms: nothing is quiet enough to gate"));
 
-  // The squelch's note comes first, then the filters.
-  waveforms_.SetPreprocessing({.squelch_db = 30.0, .treble_tilt = 0.4});
-  EXPECT_EQ(pane->Note(), QStringLiteral("squelch 30 dB: shaded stretches are "
-                                         "muted · treble tilt 0.4"));
+  // The noise gate's note comes first, then the filters.
+  waveforms_.SetPreprocessing(
+      {.noise_gate_db = 30.0, .noise_gate_ms = 250.0, .treble_tilt = 0.4});
+  EXPECT_EQ(pane->Note(),
+            QStringLiteral("noise gate 30 dB, 250 ms: shaded stretches are "
+                           "turned down · treble tilt 0.4"));
 
-  // Another phrase is shaded by the same squelch; none clears it.
-  waveforms_.SetPreprocessing({.squelch_db = 30.0});
+  // Another phrase is shaded by the same noise gate; none clears it.
+  waveforms_.SetPreprocessing({.noise_gate_db = 30.0});
   const Phrase other = EncodedPhrase(2, "OTHER", 50);
   waveforms_.ShowPhrase(&other);
   QCoreApplication::processEvents();

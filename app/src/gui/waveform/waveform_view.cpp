@@ -179,8 +179,8 @@ QString WaveformView::ToolTipAt(double x) const {
         return sample >= span.begin && sample < span.end;
       })) {
     return QStringLiteral(
-        "Squelched: muted before encoding, and left out of the quality "
-        "measure");
+        "Gated: turned down by the noise gate before encoding and the "
+        "quality measure");
   }
   return {};
 }

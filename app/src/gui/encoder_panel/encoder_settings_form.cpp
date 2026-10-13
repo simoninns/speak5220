@@ -60,18 +60,18 @@ constexpr std::string_view kRatioUnit = ":1";
 constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
 // What the optional options' and the coefficient's sliders show before
-// one is set: a squelch under most breaths, a bass cut like Acorn's own
+// one is set: a noise gate under most breaths, a bass cut like Acorn's own
 // phrases (HLD §9), the default resonance hold, and the coefficient
 // Optimise tries.
-constexpr double kUnsetSquelch = 30.0;
+constexpr double kUnsetNoiseGate = 30.0;
 constexpr double kUnsetBassCut = 200.0;
 constexpr double kUnsetResonanceHold = 14.0;
 constexpr double kUnsetMu = 0.9;
 
 // The slider's value for an optional option that is unset.
 double UnsetValue(std::string_view field) {
-  if (field == "squelch_db") {
-    return kUnsetSquelch;
+  if (field == "noise_gate_db") {
+    return kUnsetNoiseGate;
   }
   if (field == "bass_cut_hz") {
     return kUnsetBassCut;
@@ -549,6 +549,15 @@ void EncoderSettingsForm::UpdatePreset() {
 void EncoderSettingsForm::UpdateMarks() {
   for (const Row& row : rows_) {
     const std::string_view field = row.info->field;
+    // An option that needs another (the gate's speed, the gate) is
+    // disabled while that one is off.
+    if (!row.info->enabled_by.empty()) {
+      const bool active =
+          encoder::EncoderOptionText(options_, row.info->enabled_by) !=
+          encoder::kUnsetOptionText;
+      row.label->setEnabled(editable_ && active);
+      row.editor->setEnabled(editable_ && active);
+    }
     const bool marked = IsMarked(field);
     QFont font = row.label->font();
     font.setBold(marked);

@@ -184,7 +184,7 @@ TEST_F(MainWindowTest, ChipOutputStartsAsLastChosen) {
   EXPECT_EQ(window.Waveforms()->Pin(), OutputPin::kIo);
 }
 
-TEST_F(MainWindowTest, TurningTheSquelchOnShadesThePreprocessedAudio) {
+TEST_F(MainWindowTest, TurningTheNoiseGateOnShadesThePreprocessedAudio) {
   // Loud, then 60 dB quieter, a tenth of a second each.
   core::project::Phrase breath = AudioPhrase(1, "BREATH");
   breath.audio.assign(1600, 0.5F);
@@ -193,13 +193,13 @@ TEST_F(MainWindowTest, TurningTheSquelchOnShadesThePreprocessedAudio) {
   window_.Panel()->Select({TestId(1)});
   WaveformView* preprocessed = window_.Waveforms()->PreprocessedPane()->View();
   EXPECT_TRUE(preprocessed->Shading().empty());
-  window_.Encoder()->Form()->OnBox("squelch_db")->setChecked(true);
-  EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, 30.0);
+  window_.Encoder()->Form()->OnBox("noise_gate_db")->setChecked(true);
+  EXPECT_EQ(window_.Waveforms()->Preprocessing().noise_gate_db, 30.0);
   EXPECT_FALSE(preprocessed->Shading().empty());
   EXPECT_TRUE(window_.Waveforms()->OriginalPane()->View()->Shading().empty());
-  // Selecting several phrases shows none, and so no squelch.
+  // Selecting several phrases shows none, and so no noise gate.
   window_.Panel()->Select({TestId(1), TestId(2)});
-  EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, std::nullopt);
+  EXPECT_EQ(window_.Waveforms()->Preprocessing().noise_gate_db, std::nullopt);
   EXPECT_TRUE(preprocessed->Shading().empty());
 }
 

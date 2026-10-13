@@ -49,7 +49,7 @@ struct PreEmphasis {
 // changes a project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
-  // The preprocessing: the squelch, the bass cut and the treble tilt. Not
+  // The preprocessing: the noise gate, the bass cut and the treble tilt. Not
   // in the reference encoder.
   preprocess::PreprocessOptions preprocess;
   // RMS of the output over sounding frames, in codes.
@@ -99,7 +99,7 @@ enum class OptionStage {
 enum class EncoderOptionType {
   kReal,
   kInteger,
-  // A real value that may also be unset (squelch_db, bass_cut_hz,
+  // A real value that may also be unset (noise_gate_db, bass_cut_hz,
   // resonance_hold_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
@@ -110,7 +110,8 @@ enum class EncoderOptionType {
 struct EncoderOptionInfo {
   // The option's name in the reference encoder, tms5220enc.py (targetRms,
   // ...), as its documentation and the reference data use it; for an
-  // option the reference does not have (squelch_db), a name in its style.
+  // option the reference does not have (noise_gate_db), a name in its
+  // style.
   std::string_view key;
   // The name in project files and on the command line: the EncoderOptions
   // field (target_rms, ...), as plan §4 names YAML keys.
@@ -143,6 +144,10 @@ struct EncoderOptionInfo {
   // gives it, which the GUI shows as "off"; empty for an option that has
   // none, or one that can be unset (kOptionalReal) instead.
   std::string_view off_text = {};
+  // The optional option (kOptionalReal) without which this one has no
+  // effect, which the GUI disables while that one is unset
+  // (noise_gate_ms needs noise_gate_db); empty for none.
+  std::string_view enabled_by = {};
 };
 
 // One entry per option, in the order of the struct: the preprocessing
@@ -157,13 +162,14 @@ Status ValidateEncoderOptions(const EncoderOptions& options);
 // nullptr.
 const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
-// The text for an unset optional option (squelch_db, bass_cut_hz,
+// The text for an unset optional option (noise_gate_db, bass_cut_hz,
 // resonance_hold_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
 
 // Sets one option from text, as a user types it or a project file holds
 // it: a number ("18", "0.35"), "chirp" or a number for pre_emphasis, and
-// a number or "none" for squelch_db, bass_cut_hz and resonance_hold_db.
+// a number or "none" for noise_gate_db, bass_cut_hz and
+// resonance_hold_db.
 // Numbers use '.' as the decimal point, whatever the locale. Fails,
 // leaving `options` unchanged, for an unknown field, text of the wrong
 // type, a fractional value for a whole-number option, or a value outside

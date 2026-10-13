@@ -48,17 +48,19 @@ and the note says by how much (*scaled by −2.0 dB to fit*). Only the
 display and playback are scaled: the encoder's level comes from its own
 target RMS.
 
-## The squelch
+## The noise gate
 
-When the phrase has a [squelch](encoder.md#the-squelch), the stretches it
-mutes are silent on the preprocessed recording, and shaded there: dimmed
-and hatched. The note gives the level, for example *squelch 30 dB:
-shaded stretches are muted* (or that nothing is quiet enough to mute).
-Hovering over a shaded stretch says it is squelched. The shading follows
-the squelch's slider as it moves, before the change is encoded, so the
-level can be set by eye: low enough to cover the breaths, not so low
-that it eats into the words. The Original tab still shows and plays the
-recording as imported.
+When the phrase has a [noise gate](encoder.md#the-noise-gate), the
+stretches it turns down by more than 6 dB (to half their size or less)
+are shaded on the preprocessed recording: dimmed and hatched. The
+waveform itself shows the gate fading the sound down and back up. The
+note gives the gate's level and speed, for example *noise gate 30 dB,
+100 ms: shaded stretches are turned down* (or that nothing is quiet
+enough to gate). Hovering over a shaded stretch says it is gated. The
+shading follows the gate's sliders as they move, before the change is
+encoded, so the gate can be set by eye: low enough to cover the breaths,
+not so low that it eats into the words. The Original tab still shows and
+plays the recording as imported.
 
 ## Lining up the tabs
 

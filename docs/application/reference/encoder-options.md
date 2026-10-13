@@ -5,9 +5,10 @@ groups, as the [encoder panel](../user-manual/encoder.md#the-settings)
 shows them:
 
 - **[Preprocessing](#preprocessing)**: how the phrase's 8 kHz recording
-  is prepared before it is encoded (`squelch_db`, `bass_cut_hz`,
-  `treble_tilt`). The encoding aims at the preprocessed recording, and
-  its [quality](../user-manual/encoder.md#the-quality-rating) is measured
+  is prepared before it is encoded (`noise_gate_db`, `noise_gate_ms`,
+  `bass_cut_hz`, `treble_tilt`). The encoding aims at the preprocessed
+  recording, and its
+  [quality](../user-manual/encoder.md#the-quality-rating) is measured
   against it. All are off by default.
 - **[Encoder](#encoder)**: how the preprocessed recording is encoded into
   TMS5220 frames.
@@ -48,23 +49,26 @@ changes what the quality is measured against.
 
 In both tables the key is the option's name in project files. The second
 column is its name in the reference encoder and its documentation (the
-options the reference does not have, such as `squelchDb`, are named in
+options the reference does not have, such as `noiseGateDb`, are named in
 its style). The last column is what the encoder panel's slider covers:
 where useful values lie. Any value in the full range can be set in the
 project file, and the slider widens to show it.
 
 ## Preprocessing
 
-The panel always shows these three, with a chooser of
+The panel always shows these four, with a chooser of
 [presets](../user-manual/encoder.md#presets): **None** (all off) and
-**BBC Micro** (`bass_cut_hz` 200, `treble_tilt` 0.4). The squelch comes
-first, then the bass cut, then the treble tilt. The encoder finds the
+**BBC Micro** (`bass_cut_hz` 200, `treble_tilt` 0.4). Neither preset
+gates, and `noise_gate_ms` does not count towards a match while
+`noise_gate_db` is unset. The noise gate comes first, then the bass cut,
+then the treble tilt. The encoder finds the
 pitch and the voicing in the recording before the bass cut and treble
 tilt, and everything else in the preprocessed recording.
 
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
-| `squelch_db` | none (`squelchDb`) | If set, stretches of the recording this many dB below its loudest sound (breaths, room noise) are made silent ([the squelch](../user-manual/encoder.md#the-squelch)) | Number, or `null` (unset) | Unset | 6 to 80 | 12 to 50 dB, steps of 1 |
+| `noise_gate_db` | none (`noiseGateDb`) | If set, sound more than this many dB below the recording's loudest (breaths, room noise) is turned down by 3 dB for each dB under the level, and made silent from about 27 dB under it ([the noise gate](../user-manual/encoder.md#the-noise-gate)) | Number, or `null` (unset) | Unset | 6 to 80 | 12 to 60 dB, steps of 1 |
+| `noise_gate_ms` | none (`noiseGateMs`) | How long the noise gate takes to close, from open to silent, after the sound falls under its level; it opens in a quarter of this, ending as the sound rises. No effect while `noise_gate_db` is unset | Number | 100 | 5 to 2000 | 20 to 500 ms, steps of 10 |
 | `bass_cut_hz` | none (`bassCutHz`) | If set, the bass is cut below this frequency: a zero-phase order-2 Butterworth high-pass, −6 dB at the cut and 24 dB per octave below it ([bass cut and treble tilt](../user-manual/encoder.md#bass-cut-and-treble-tilt)) | Number, or `null` (unset) | Unset | 50 to 600 | 100 to 400 Hz, steps of 10 |
 | `treble_tilt` | none (`trebleTilt`) | The treble is lifted by 1 − μz⁻¹; 0 is off | Number | 0 | 0 to 0.95 | 0 to 0.9, steps of 0.05 |
 

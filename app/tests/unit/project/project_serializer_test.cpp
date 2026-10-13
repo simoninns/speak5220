@@ -170,7 +170,7 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   encoded.description = "Greeting, recorded 2026-10-10 \xc2\xb7 caf\xc3\xa9";
   encoded.encoder = {{"target_rms", "18"},
                      {"pre_emphasis", "0.9375"},
-                     {"squelch_db", "none"},
+                     {"noise_gate_db", "none"},
                      {"resonance_hold_db", "20"}};
   encoded.encoding->quality =
       CachedQuality{.measures_version = quality::kMeasuresVersion,
@@ -193,7 +193,7 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   settings.name = "My PHROM";
   settings.header_strings = {"(C)2026 Simon Inns", "My PHROM", "1.00"};
   settings.ascii_map = {{'A', "HELLO"}, {' ', "NO"}, {':', "O'CLOCK"}};
-  settings.default_encoder.preprocess.squelch_db = 30.0;
+  settings.default_encoder.preprocess.noise_gate_db = 30.0;
   settings.default_encoder.voicing_threshold = 0.35;
   settings.phroms = {{.number = 2,
                       .header_strings = {"(C)2026 Simon Inns", "Second", "1"},
@@ -320,13 +320,14 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
 }
 
 // Every option is written, so a project never depends on the defaults:
-// the preprocessing's under default_preprocess, the squelch, unset, as
+// the preprocessing's under default_preprocess, the noise gate, unset, as
 // null; the encoder's under default_encoder.
-TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
+TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheNoiseGateUnsetAsNull) {
   Project project = ProjectWith({AudioPhrase(1, "A")});
   const std::string defaults = ProjectYamlOf(project);
   EXPECT_THAT(defaults, HasSubstr("  default_preprocess:\n"
-                                  "    squelch_db: null\n"
+                                  "    noise_gate_db: null\n"
+                                  "    noise_gate_ms: 100\n"
                                   "    bass_cut_hz: null\n"
                                   "    treble_tilt: 0\n"
                                   "  default_encoder:\n"
@@ -337,14 +338,15 @@ TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheSquelchUnsetAsNull) {
   EXPECT_THAT(defaults, HasSubstr("    lag_window_hz: 60\n"
                                   "    resonance_hold_db: 14\n"));
   ProjectSettings settings = project.Settings();
-  settings.default_encoder.preprocess.squelch_db = 30.0;
+  settings.default_encoder.preprocess.noise_gate_db = 30.0;
   ASSERT_TRUE(project.SetSettings(settings).IsOk());
   ASSERT_TRUE(
-      project.SetEncoding(TestId(1), {.overrides = {{"squelch_db", "none"}}})
+      project.SetEncoding(TestId(1), {.overrides = {{"noise_gate_db", "none"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("  default_preprocess:\n    squelch_db: 30\n"));
-  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      squelch_db: null\n"));
+  EXPECT_THAT(yaml,
+              HasSubstr("  default_preprocess:\n    noise_gate_db: 30\n"));
+  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      noise_gate_db: null\n"));
   EXPECT_THAT(yaml, Not(HasSubstr("    encoder:\n")));
   const StatusOr<Project> loaded = Load(Save(project));
   ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
@@ -452,7 +454,7 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "      rate: 8000\n"
       "      bits: 24\n"
       "    preprocess:\n"
-      "      squelch_db: 30\n"
+      "      noise_gate_db: 30\n"
       "      new_filter: 2\n"
       "    encoder:\n"
       "      gate_db: 40\n"
@@ -485,7 +487,7 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_EQ(phrase.encoder_unknown, (UnknownKeys{{"new_thing", "\"on\""}}));
   EXPECT_EQ(phrase.preprocess_unknown, (UnknownKeys{{"new_filter", "2"}}));
   EXPECT_EQ(phrase.encoder.at("gate_db"), "40");
-  EXPECT_EQ(phrase.encoder.at("squelch_db"), "30");
+  EXPECT_EQ(phrase.encoder.at("noise_gate_db"), "30");
   EXPECT_EQ(loaded->Settings().default_encoder_unknown,
             (UnknownKeys{{"future_option", "7"}}));
   EXPECT_EQ(loaded->Settings().default_preprocess_unknown,
@@ -502,7 +504,7 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_THAT(yaml, HasSubstr("  theme: \"dark\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    future_option: 7\n"));
   EXPECT_THAT(yaml, HasSubstr("    treble_tilt: 0\n    future_filter: 3\n"));
-  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      squelch_db: 30\n"
+  EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      noise_gate_db: 30\n"
                               "      new_filter: 2\n    encoder:\n"));
   EXPECT_THAT(yaml, HasSubstr("      colour: \"NO\"\n"));
   EXPECT_THAT(yaml, HasSubstr("      bits: 24\n"));
@@ -550,8 +552,8 @@ TEST_F(ProjectSerializerTest, LoadsAProjectListingEveryOption) {
 }
 
 // A project lists every encoder option, so changing a default never
-// changes it; one that does not, such as one saved before the squelch and
-// the resonance hold were always written, is refused.
+// changes it; one that does not, such as one saved with the squelch the
+// noise gate replaced, is refused.
 TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
   const std::string head = "format: \"speak5220-project\"\nversion: 1\n";
   const StatusOr<Project> bare = Load(WithProjectYaml(head));
@@ -562,8 +564,11 @@ TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
 
   // Each mapping is checked for its own options.
   const std::vector<std::pair<std::vector<std::string>, std::string>> cases = {
-      {{"    squelch_db: none\n", "    treble_tilt: 0\n"},
-       "project.default_preprocess does not list squelch_db, treble_tilt"},
+      {{"    noise_gate_db: none\n", "    treble_tilt: 0\n"},
+       "project.default_preprocess does not list noise_gate_db, treble_tilt"},
+      {{"    noise_gate_db: none\n", "    noise_gate_ms: 100\n"},
+       "project.default_preprocess does not list noise_gate_db, "
+       "noise_gate_ms"},
       {{"    resonance_hold_db: 14\n", "    voicing_min_run: 2\n"},
        "project.default_encoder does not list resonance_hold_db, "
        "voicing_min_run"},

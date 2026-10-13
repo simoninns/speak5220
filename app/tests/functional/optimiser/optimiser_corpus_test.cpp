@@ -51,7 +51,7 @@ std::map<std::string, std::filesystem::path> CorpusFiles(const char* corpus) {
   return inputs;
 }
 
-// Options from text such as "target_rms=18,squelch_db=30" over the
+// Options from text such as "target_rms=18,noise_gate_db=30" over the
 // defaults; empty or unset text gives the defaults.
 core::encoder::EncoderOptions OptionsFromText(const char* text) {
   core::encoder::EncoderOptions options;
@@ -96,10 +96,10 @@ std::string OptionsColumns(const core::encoder::EncoderOptions& options) {
 // options on every core, with the per-phrase byte limit set to the
 // default encoding's size, so a better score cannot come from more bytes.
 // SPEAK5220_OPTIMISE_STRIDE=N takes every Nth file, and
-// SPEAK5220_OPTIMISE_START (as "squelch_db=30,...") changes the start
+// SPEAK5220_OPTIMISE_START (as "noise_gate_db=30,...") changes the start
 // options; the limit stays at the size of the default encoding. Writes one
 // row per file to SPEAK5220_OPTIMISE_REPORT, with the best options and
-// the best's score against the source without a squelch. Passes if the
+// the best's score against the source without a noise gate. Passes if the
 // best is within the limit on every file and scores above the start on
 // most of them.
 TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
@@ -171,7 +171,7 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
            << default_bytes.bytes << '\t' << best->score << '\t' << best->bytes
            << '\t' << result->history.size() << '\t' << seconds.count();
     // The best scored against the source as recorded, so runs with and
-    // without a squelch compare.
+    // without a noise gate compare.
     const auto plain = assessor.Assess(wav->samples, result->best_frames);
     ASSERT_TRUE(plain.IsOk()) << name << ": " << plain.GetStatus().ToString();
     report << '\t' << plain->score.overall << OptionsColumns(best->options)
@@ -187,9 +187,9 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
 
 // Run by hand when choosing the default options (plan Phase 8, task 14):
 // encodes every WAV file in SPEAK5220_CORPUS_DIR with the options in
-// SPEAK5220_OPTIONS (as "target_rms=18,squelch_db=30"; unset for the
+// SPEAK5220_OPTIONS (as "target_rms=18,noise_gate_db=30"; unset for the
 // defaults) and writes each one's size, encoding time and overall score,
-// against its squelched source and the source as recorded, to
+// against its gated source and the source as recorded, to
 // SPEAK5220_OPTIONS_REPORT.
 TEST(OptionsCorpusCheck, DISABLED_ScoresTheOptions) {
   const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");

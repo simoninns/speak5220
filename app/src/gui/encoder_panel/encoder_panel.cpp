@@ -376,7 +376,7 @@ void EncoderPanel::StartMeasure() {
       running != measuring_.end() && running->second == encoding_->frames) {
     return;
   }
-  // Measured against the source as the phrase's settings squelch it.
+  // Measured against the source as the phrase's settings preprocess it.
   const core::StatusOr<EncoderOptions> options =
       project::EffectiveEncoderOptions(defaults_, overrides_);
   if (!options.IsOk()) {

@@ -9,7 +9,8 @@ project:
     "2": "2- (TWEN-)"
     "7": "SEVEN"
   default_preprocess:
-    squelch_db: null
+    noise_gate_db: null
+    noise_gate_ms: 100
     bass_cut_hz: null
     treble_tilt: 0
   default_encoder:

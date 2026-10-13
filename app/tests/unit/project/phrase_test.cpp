@@ -27,17 +27,17 @@ TEST(PhraseTest, OverridesForNameOnlyTheOptionsThatDiffer) {
   encoder::EncoderOptions options = defaults;
   options.target_rms = 18.5;
   options.pre_emphasis = encoder::PreEmphasis::FirstOrder(0.9);
-  options.preprocess.squelch_db = 30.0;
+  options.preprocess.noise_gate_db = 30.0;
   const EncoderOverrides overrides = OverridesFor(defaults, options);
   EXPECT_EQ(overrides, (EncoderOverrides{{"pre_emphasis", "0.9"},
-                                         {"squelch_db", "30"},
+                                         {"noise_gate_db", "30"},
                                          {"target_rms", "18.5"}}));
 }
 
 TEST(PhraseTest, OverridesForApplyBackToTheSameOptions) {
   encoder::EncoderOptions defaults;
   defaults.resonance_hold_db.reset();
-  defaults.preprocess.squelch_db = 30.0;
+  defaults.preprocess.noise_gate_db = 30.0;
   encoder::EncoderOptions options;
   options.voicing_threshold = 0.35;
   const StatusOr<encoder::EncoderOptions> applied =

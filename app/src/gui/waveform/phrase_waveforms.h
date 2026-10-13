@@ -66,10 +66,10 @@ class WaveformView;
 //   preprocess::Preprocess()): what the encoder aims at and the quality is
 //   measured against. Where the preprocessing would take it past full
 //   scale, it is shown and played scaled down to fit, and the note says
-//   so. With a squelch, the stretches it mutes are shaded
-//   (preprocess::SquelchedSpans()) and the note gives its level, so what
-//   will be left out of the encoding and of the quality measure can be
-//   seen before encoding.
+//   so. With a noise gate, the stretches it turns down by more than 6 dB
+//   are shaded (preprocess::GatedSpans()) and the note gives its level and
+//   speed, so what will be muted in the encoding and the quality measure
+//   can be seen before encoding.
 // - Encode: the cached frames spoken through the emulator and lined up
 //   with the original (RenderEncodedAudio()), in the background on the
 //   ITaskRunner; the result comes back queued and is kept per phrase

@@ -38,7 +38,8 @@ project:
     " ": "(TONE 1)"
     "1": "ONE,WON"
   default_preprocess:
-    squelch_db: null
+    noise_gate_db: null
+    noise_gate_ms: 100
     bass_cut_hz: 200
     treble_tilt: 0.4
   default_encoder:
@@ -60,7 +61,7 @@ phrases:
       duration: 0.51
       sha256: "4efae645c896..."
     preprocess:
-      squelch_db: 30
+      noise_gate_db: 30
     encoder:
       gate_db: 40
     locked: false
@@ -94,7 +95,7 @@ exports:
 | `name` | String | The file name, for a project made by `speak5220-cli new` | The project's name |
 | `header_strings` | List of strings | `["(C)2026 speak5220", "Speak5220 PHROM", "1.00"]` | The strings in each PHROM's header. Each PHROM gets its number appended to the second string (`"My PHROM 2"`). Together, with a null after each, they must fit in 54 bytes, and they must be ASCII; the BBC Micro expects the first to start `(C)` |
 | `ascii_map` | Mapping | Empty | The "ASCII associated" words: each key is one printable ASCII character, each value a phrase name. A PHROM includes only the entries whose phrase it holds |
-| `default_preprocess` | Mapping | Required | The [preprocessing](encoder-options.md#preprocessing) every phrase's recording gets before it is encoded, unless the phrase sets its own: `squelch_db`, `bass_cut_hz` and `treble_tilt`, every one listed, as in `default_encoder` |
+| `default_preprocess` | Mapping | Required | The [preprocessing](encoder-options.md#preprocessing) every phrase's recording gets before it is encoded, unless the phrase sets its own: `noise_gate_db`, `noise_gate_ms`, `bass_cut_hz` and `treble_tilt`, every one listed, as in `default_encoder`. A project saved with the earlier `squelch_db` instead of the noise gate does not list them, so it is not opened |
 | `default_encoder` | Mapping | Required | The options every phrase is encoded with, unless it sets its own. Every [encoder option](encoder-options.md#encoder) must be listed, an unset one as `null`, so a project never depends on the defaults: a later version of Speak5220 that changes one does not change the project's encodings. A project that does not list them all, such as one saved by a development version before this rule, is not opened, and the message names the missing options. A preprocessing option here is refused, with a message saying it belongs under `default_preprocess` (and an encoder option under `default_preprocess` likewise) |
 | `phroms` | List | Empty | Header strings for single PHROMs: `number` (from 1) and `header_strings`, which replace the project's strings in that PHROM |
 

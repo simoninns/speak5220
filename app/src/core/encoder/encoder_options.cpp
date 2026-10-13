@@ -32,13 +32,13 @@ using enum OptionStage;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 14> kInfos = {{
-    {.key = "squelchDb",
-     .field = "squelch_db",
-     .label = "Squelch",
-     .help = "If set, stretches of the recording this many dB below its "
-             "loudest sound, such as breaths and room noise, are made "
-             "silent.",
+constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
+    {.key = "noiseGateDb",
+     .field = "noise_gate_db",
+     .label = "Noise gate",
+     .help = "If set, sound quieter than this many dB below the recording's "
+             "loudest, such as breaths and room noise, is turned down: a "
+             "little just under the level, and to silence well under it.",
      .stage = kPreprocess,
      .type = kOptionalReal,
      .minimum = 6.0,
@@ -46,8 +46,25 @@ constexpr std::array<EncoderOptionInfo, 14> kInfos = {{
      .default_text = "",
      .unit = "dB",
      .typical_minimum = 12.0,
-     .typical_maximum = 50.0,
+     .typical_maximum = 60.0,
      .step = 1.0},
+    {.key = "noiseGateMs",
+     .field = "noise_gate_ms",
+     .label = "Gate speed",
+     .help = "How long the noise gate takes to close after a sound ends; it "
+             "opens, just before a sound starts, in a quarter of this. "
+             "Shorter mutes more of the gaps; longer keeps soft word "
+             "endings.",
+     .stage = kPreprocess,
+     .type = kReal,
+     .minimum = 5.0,
+     .maximum = 2000.0,
+     .default_text = "100",
+     .unit = "ms",
+     .typical_minimum = 20.0,
+     .typical_maximum = 500.0,
+     .step = 10.0,
+     .enabled_by = "noise_gate_db"},
     {.key = "bassCutHz",
      .field = "bass_cut_hz",
      .label = "Bass cut",
@@ -243,7 +260,11 @@ using RealField = Field<double>;
 using IntegerField = Field<int>;
 using OptionalRealField = Field<std::optional<double>>;
 
-constexpr std::array<RealField, 8> kRealFields = {{
+constexpr std::array<RealField, 9> kRealFields = {{
+    {.field = "noise_gate_ms",
+     .member = [](EncoderOptions& o) -> double& {
+       return o.preprocess.noise_gate_ms;
+     }},
     {.field = "treble_tilt",
      .member = [](EncoderOptions& o) -> double& {
        return o.preprocess.treble_tilt;
@@ -272,9 +293,9 @@ constexpr std::array<IntegerField, 2> kIntegerFields = {{
      .member = [](EncoderOptions& o) -> int& { return o.voicing_min_run; }},
 }};
 constexpr std::array<OptionalRealField, 3> kOptionalRealFields = {{
-    {.field = "squelch_db",
+    {.field = "noise_gate_db",
      .member = [](EncoderOptions& o) -> std::optional<double>& {
-       return o.preprocess.squelch_db;
+       return o.preprocess.noise_gate_db;
      }},
     {.field = "bass_cut_hz",
      .member = [](EncoderOptions& o) -> std::optional<double>& {

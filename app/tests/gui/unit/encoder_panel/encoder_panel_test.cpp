@@ -182,14 +182,14 @@ TEST_F(EncoderPanelTest, PhraseIsMeasuredAgainstItsPreprocessedSource) {
   QCoreApplication::processEvents();
   EXPECT_EQ(measured, source);
 
-  panel_.Form()->OnBox("squelch_db")->setChecked(true);
+  panel_.Form()->OnBox("noise_gate_db")->setChecked(true);
   Tick(EncoderPanel::kDebounceMs);
-  const std::vector<double> squelched =
-      core::preprocess::Preprocess(source, {.squelch_db = 30.0}).samples;
-  ASSERT_NE(squelched, source);
-  EXPECT_EQ(measured, squelched);
+  const std::vector<double> gated =
+      core::preprocess::Preprocess(source, {.noise_gate_db = 30.0}).samples;
+  ASSERT_NE(gated, source);
+  EXPECT_EQ(measured, gated);
 
-  panel_.Form()->OnBox("squelch_db")->setChecked(false);
+  panel_.Form()->OnBox("noise_gate_db")->setChecked(false);
   Tick(EncoderPanel::kDebounceMs);
   EXPECT_EQ(measured, source);
 
@@ -207,15 +207,15 @@ TEST_F(EncoderPanelTest, ReportsThePreprocessingAsTheFormHasIt) {
   QObject::connect(
       &panel_, &EncoderPanel::PreprocessingChanged,
       [&reported](const core::preprocess::PreprocessOptions& options) {
-        reported.push_back(options.squelch_db);
+        reported.push_back(options.noise_gate_db);
       });
   Show(2);
   EXPECT_EQ(panel_.ShownPreprocessing(), core::preprocess::PreprocessOptions{});
   EXPECT_TRUE(reported.empty());
   // At once, before the change is applied, so the waveform can show it.
-  panel_.Form()->OnBox("squelch_db")->setChecked(true);
+  panel_.Form()->OnBox("noise_gate_db")->setChecked(true);
   EXPECT_EQ(reported, (std::vector<std::optional<double>>{30.0}));
-  Slider("squelch_db")->MoveTo(24.0);
+  Slider("noise_gate_db")->MoveTo(24.0);
   EXPECT_EQ(reported.back(), 24.0);
   Tick(EncoderPanel::kDebounceMs);
   EXPECT_EQ(reported.size(), 2U);
@@ -223,10 +223,10 @@ TEST_F(EncoderPanelTest, ReportsThePreprocessingAsTheFormHasIt) {
   EXPECT_EQ(panel_.ShownPreprocessing().treble_tilt, 0.4);
   EXPECT_EQ(reported.size(), 3U);
 
-  // The project's defaults do not change a squelch the phrase sets.
+  // The project's defaults do not change a noise gate the phrase sets.
   panel_.SetScope(EncoderPanel::Scope::kProjectDefaults);
-  panel_.Form()->OnBox("squelch_db")->setChecked(true);
-  EXPECT_EQ(panel_.ShownPreprocessing().squelch_db, 24.0);
+  panel_.Form()->OnBox("noise_gate_db")->setChecked(true);
+  EXPECT_EQ(panel_.ShownPreprocessing().noise_gate_db, 24.0);
   panel_.SetScope(EncoderPanel::Scope::kPhrase);
 
   // A locked phrase is never encoded, so it has none.
@@ -384,12 +384,12 @@ TEST_F(EncoderPanelTest, PreprocessPanelWorksAwayFromThePanel) {
   elsewhere.layout()->addWidget(panel_.PreprocessPanel());
   EXPECT_FALSE(panel_.isAncestorOf(panel_.PreprocessPanel()));
   Show(1);
-  QCheckBox* squelch = panel_.Form()->OnBox("squelch_db");
-  ASSERT_NE(squelch, nullptr);
-  EXPECT_TRUE(elsewhere.isAncestorOf(squelch));
-  squelch->setChecked(true);
+  QCheckBox* gate = panel_.Form()->OnBox("noise_gate_db");
+  ASSERT_NE(gate, nullptr);
+  EXPECT_TRUE(elsewhere.isAncestorOf(gate));
+  gate->setChecked(true);
   EXPECT_TRUE(panel_.HasPendingChange());
-  EXPECT_EQ(panel_.ShownPreprocessing().squelch_db, 30.0);
+  EXPECT_EQ(panel_.ShownPreprocessing().noise_gate_db, 30.0);
 }
 
 TEST_F(EncoderPanelTest, LockedPhrasesShowTheirStatisticsOnly) {

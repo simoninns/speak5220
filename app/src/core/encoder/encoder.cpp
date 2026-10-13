@@ -155,14 +155,16 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   }
   log->debug(
       "encoding {} samples: targetRms {}, repeatLambda {}, gateDb {}, "
-      "squelchDb {}, bassCutHz {}, trebleTilt {}, preEmphasis {}, window {}, "
+      "noiseGateDb {}, noiseGateMs {}, bassCutHz {}, trebleTilt {}, "
+      "preEmphasis {}, window {}, "
       "lagWindowHz {}, resonanceHoldDb {}, voicingThreshold {}, "
       "voicingEvidence {}, voicingMinRun {}, levelAgc {}",
       samples.size(), options.target_rms, options.repeat_lambda,
       options.gate_db,
-      options.preprocess.squelch_db.has_value()
-          ? std::to_string(*options.preprocess.squelch_db)
+      options.preprocess.noise_gate_db.has_value()
+          ? std::to_string(*options.preprocess.noise_gate_db)
           : std::string("none"),
+      options.preprocess.noise_gate_ms,
       options.preprocess.bass_cut_hz.has_value()
           ? std::to_string(*options.preprocess.bass_cut_hz)
           : std::string("none"),

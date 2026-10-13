@@ -84,11 +84,11 @@ TEST_F(WaveformViewTest, NoFramesNoHoverText) {
   EXPECT_EQ(view_.FrameAtX(200.0), std::nullopt);
 }
 
-TEST_F(WaveformViewTest, ShadedStretchesSayTheyAreSquelched) {
+TEST_F(WaveformViewTest, ShadedStretchesSayTheyAreGated) {
   // Source samples 500-900.
   view_.SetShading({{.begin = 500.0, .end = 900.0}});
   EXPECT_THAT(view_.ToolTipAt(view_.Axis().SampleToX(700.0)).toStdString(),
-              ::testing::StartsWith("Squelched"));
+              ::testing::StartsWith("Gated"));
   EXPECT_TRUE(view_.ToolTipAt(view_.Axis().SampleToX(300.0)).isEmpty());
   EXPECT_TRUE(view_.ToolTipAt(view_.Axis().SampleToX(950.0)).isEmpty());
   // It draws, and clearing the view clears it.

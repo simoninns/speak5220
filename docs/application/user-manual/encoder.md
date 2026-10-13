@@ -12,7 +12,7 @@ A phrase is made in three stages:
 
 1. **The original**: the recording as imported, never changed.
 2. **The preprocessed recording**: the original with the
-   [preprocessing](#preprocessing) applied (a squelch, a bass cut, a
+   [preprocessing](#preprocessing) applied (a noise gate, a bass cut, a
    treble tilt), or the original itself when there is none.
 3. **The encoding**: the frames the encoder makes from the preprocessed
    recording.
@@ -123,14 +123,15 @@ to see. A slider covers the range where useful values lie (the reference
 gives each one); a value outside it, from the project file or Optimise,
 widens the slider to include it. Click a slider and use the arrow keys
 for single steps, Page Up and Page Down for larger ones. The
-[squelch](#the-squelch), the [bass cut](#bass-cut-and-treble-tilt) and
-the [resonance hold](#the-resonance-hold) have a check box that turns
+[noise gate](#the-noise-gate), the [bass cut](#bass-cut-and-treble-tilt)
+and the [resonance hold](#the-resonance-hold) have a check box that turns
 them on or off, and the pre-emphasis a choice of chirp or first order,
-whose coefficient the slider beside it sets.
+whose coefficient the slider beside it sets. The noise gate's
+**Gate speed** is greyed out while the gate is off.
 
 The **Preprocessing** section, on the Preprocess tab, always shows its
-three settings: the [squelch](#the-squelch), and the [bass cut and
-treble tilt](#bass-cut-and-treble-tilt). The **Encoder** section, on
+four settings: the [noise gate and its speed](#the-noise-gate), and the
+[bass cut and treble tilt](#bass-cut-and-treble-tilt). The **Encoder** section, on
 the Encode tab, first shows
 its four **basic settings**, the ones that change the sound or the size
 most clearly: the target RMS (loudness), the repeat trade-off (bytes
@@ -193,40 +194,53 @@ change on the Encode tab does.
 
 ### Presets
 
-**Preset** at the top of the section sets all three settings at once:
+**Preset** at the top of the section sets all its settings at once:
 
-| Preset | Squelch | Bass cut | Treble tilt | For |
+| Preset | Noise gate | Bass cut | Treble tilt | For |
 |---|---|---|---|---|
 | None | off | off | off | The recording as it is |
 | BBC Micro | off | 200 Hz | 0.4 | Phrases played on a BBC Micro's small speaker, balanced like Acorn's own |
 
-Choosing a preset replaces the three settings; the encoder's settings
-are left as they are. When the settings match no preset, for example
-after moving a slider, the chooser shows **Custom**.
+Choosing a preset replaces the preprocessing settings (turning the noise
+gate off and its speed back to 100 ms); the encoder's settings are left
+as they are. When the settings match no preset, for example after moving
+a slider, the chooser shows **Custom**. The gate's speed does not count
+while the gate is off.
 
-### The squelch
+### The noise gate
 
-**Squelch**, off by default, makes the quiet stretches of the recording
-silent: everything more than the set number of dB below the recording's
-loudest sound, such as breaths, lip noise and room noise. Tick its check
-box to turn it on (it starts at `30 dB`).
+**Noise gate**, off by default, turns down the quiet stretches of the
+recording, such as breaths, lip noise and room noise, while leaving the
+speech alone. Tick its check box to turn it on (it starts at `30 dB`).
+It has two settings:
 
-- A lower number squelches more: `20 dB` mutes anything a tenth as loud
-  as the loudest sound; `40 dB` only sounds a hundredth as loud.
-- Sound is kept for 60 ms after it falls below the level and from 10 ms
-  before it rises above it, with a short fade, so word endings and
-  onsets are not clipped. Loudness alone cannot tell a breath from a soft
-  *h* or a trailing *s*, though: if a word loses its ending, raise the
-  number.
-- The squelch is not the **Silence gate**, which only decides which
-  frames of the encoding are silent (45 dB below the loudest frame by
-  default) and does not change the preprocessed recording.
+- **Noise gate** is the level, in dB below the recording's loudest
+  sound, under which the gate starts to close. A lower number gates
+  more: at `20 dB` anything under a tenth as loud as the loudest sound
+  is turned down; at `40 dB` only sound under a hundredth as loud.
+- **Gate speed** is how long the gate takes to close, in milliseconds,
+  once the sound falls under the level (`100 ms` by default). It opens
+  in a quarter of that time, starting just before the sound rises, so an
+  onset is never cut. A shorter time mutes more of the gaps between
+  words; a longer one lets soft word endings, such as a trailing *s*,
+  fade out naturally.
 
-On the Preprocess tab's waveform the stretches the squelch mutes are
-silent and [shaded](waveforms.md#the-squelch), and the shading follows
-the slider as it moves, so the level can be set by eye: breaths are
-often 25 to 35 dB below the loudest sound, so a breath that `30 dB`
-leaves unshaded may need `25 dB` or less.
+The gate is soft. Sound just under the level is only turned down a
+little (by 3 dB for each dB it is under the level), and only sound well
+under it, about 27 dB or more, is made silent. The gate fades between
+open and closed rather than switching, so it makes no clicks and does not
+chop words. Loudness alone cannot tell a breath from a soft *h*, though:
+if a word loses its ending, lower the number or make the gate slower.
+
+The noise gate is not the **Silence gate**, which only decides which
+frames of the encoding are silent (45 dB below the loudest frame by
+default) and does not change the preprocessed recording.
+
+On the Preprocess tab's waveform, the gated stretches are turned down
+and [shaded](waveforms.md#the-noise-gate), and the shading follows both
+sliders as they move, so the gate can be set by eye. Breaths are often
+25 to 35 dB below the loudest sound, so a breath that `30 dB` leaves
+unshaded may need `25 dB` or less.
 
 ### Bass cut and treble tilt
 
@@ -285,8 +299,8 @@ lowest energy with neutral filter settings, and the rest of the pause is
 then truly silent. The first frame of the pause is left alone, so the
 sound before it fades out as it did. It costs 46 bits a pause, a few
 percent of a phrase with pauses. Shorter pauses are left as they are:
-they ring for at most 50 ms. The [squelch](#the-squelch) makes long
-pauses common.
+they ring for at most 50 ms. The [noise gate](#the-noise-gate) makes
+long pauses common.
 
 !!! warning "The pauses you hear in the window are not the chip's"
     The waveforms and **Listen** play the emulator, and at this level, a
