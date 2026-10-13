@@ -58,14 +58,18 @@ TEST(NoiseGateTest, KeepsStretchesAboveTheThreshold) {
   EXPECT_EQ(NoiseGate(x, kRate, 70.0, kCloseMs), x);
 }
 
-// The knee is soft: sound 3 dB under the threshold is turned down by 9 dB,
-// not muted.
-TEST(NoiseGateTest, TurnsSoundJustUnderTheThresholdDownALittle) {
-  const double quiet = std::pow(10.0, -(kBelowDb + 3.0) / 20.0);
-  const std::vector<double> x = LoudQuietLoud(quiet);
-  const std::vector<double> gain = NoiseGateGain(x, kRate, kBelowDb, kCloseMs);
-  EXPECT_NEAR(gain[kStretch + (kStretch / 2)], std::pow(10.0, -9.0 / 20.0),
-              1e-9);
+// Sound just under the threshold is muted too, so what the gate closes on
+// is silence for the encoder however the rest of the preprocessing lifts
+// it; sound just over it is kept.
+TEST(NoiseGateTest, MutesSoundJustUnderTheThreshold) {
+  const double under = std::pow(10.0, -(kBelowDb + 1.0) / 20.0);
+  const std::vector<double> gain =
+      NoiseGateGain(LoudQuietLoud(under), kRate, kBelowDb, kCloseMs);
+  EXPECT_EQ(gain[kStretch + (kStretch / 2)], 0.0);
+  const double over = std::pow(10.0, -(kBelowDb - 1.0) / 20.0);
+  const std::vector<double> kept =
+      NoiseGateGain(LoudQuietLoud(over), kRate, kBelowDb, kCloseMs);
+  EXPECT_EQ(kept[kStretch + (kStretch / 2)], 1.0);
 }
 
 // After the sound the gate fades down over its speed, and a faster gate

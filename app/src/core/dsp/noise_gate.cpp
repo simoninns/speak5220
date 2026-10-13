@@ -2,7 +2,7 @@
  * File:        noise_gate.cpp
  * Module:      dsp
  * Purpose:     Turns down the quiet stretches of a recording (breaths, room
- *              noise) relative to its loudest sound, with a soft knee and
+ *              noise) to silence relative to its loudest sound, with
  *              gradual opening and closing so word edges survive
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -46,19 +46,10 @@ std::vector<double> NoiseGateGain(std::span<const double> samples,
       loudest * std::pow(10.0, -below_db / kDecibelsPerDecade);
 
   // The gain each level asks for, in dB: open at or above the threshold,
-  // falling by the expansion below it, down to the floor.
+  // closed below it.
   std::vector<double> gain_db(n);
   for (std::size_t i = 0; i < n; ++i) {
-    if (level[i] >= threshold) {
-      gain_db[i] = 0.0;
-    } else if (level[i] <= 0.0) {
-      gain_db[i] = shape.floor_db;
-    } else {
-      const double under_db =
-          kDecibelsPerDecade * std::log10(level[i] / threshold);
-      gain_db[i] =
-          std::max(shape.floor_db, shape.expansion_db_per_db * under_db);
-    }
+    gain_db[i] = level[i] >= threshold ? 0.0 : shape.floor_db;
   }
 
   // Closing no faster than the speed allows, after each sound, and

@@ -2,7 +2,7 @@
  * File:        noise_gate.h
  * Module:      dsp
  * Purpose:     Turns down the quiet stretches of a recording (breaths, room
- *              noise) relative to its loudest sound, with a soft knee and
+ *              noise) to silence relative to its loudest sound, with
  *              gradual opening and closing so word edges survive
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -31,11 +31,9 @@ struct SampleSpan {
 // The level is the RMS of a window centred on the sample, long enough to
 // span a low voice's pitch period so the level does not ripple. Where it is
 // at or above the threshold (`below_db` under the loudest level), the gain
-// is 1. Below the threshold the gate is a downward expander: the gain falls
-// by `expansion_db_per_db` for each dB the level is under it, down to
-// `floor_db`, where the sample is made silent. So sound just under the
-// threshold is only turned down a little (a soft knee), and only sound well
-// under it is muted.
+// is 1. Below it, the gain is `floor_db`, where the sample is made silent:
+// what the gate closes on is silence, which stays silence through the rest
+// of the preprocessing, so the encoder never takes it for sound.
 //
 // The gain then changes no faster than the gate's speed allows. It closes,
 // from open to `floor_db`, over the `close_ms` the user chooses, after the
@@ -44,7 +42,6 @@ struct SampleSpan {
 // onset is not cut. Both changes are linear in dB, as faders are.
 struct NoiseGateShape {
   double window_ms = 20.0;
-  double expansion_db_per_db = 3.0;
   double floor_db = -80.0;
   double open_share = 0.25;
 };

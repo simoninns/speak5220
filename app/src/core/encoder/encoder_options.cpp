@@ -37,8 +37,7 @@ constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
      .field = "noise_gate_db",
      .label = "Noise gate",
      .help = "If set, sound quieter than this many dB below the recording's "
-             "loudest, such as breaths and room noise, is turned down: a "
-             "little just under the level, and to silence well under it.",
+             "loudest, such as breaths and room noise, is made silent.",
      .stage = kPreprocess,
      .type = kOptionalReal,
      .minimum = 6.0,

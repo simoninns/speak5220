@@ -71,7 +71,7 @@ preprocessed recording. Levels in dBFS are relative to a full-scale RMS
 
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
-| `noise_gate_db` | none (`noiseGateDb`) | If set, sound more than this many dB below the recording's loudest (breaths, room noise) is turned down by 3 dB for each dB under the level, and made silent from about 27 dB under it ([the noise gate](../user-manual/encoder.md#the-noise-gate)) | Number, or `null` (unset) | Unset | 6 to 80 | 12 to 60 dB, steps of 1 |
+| `noise_gate_db` | none (`noiseGateDb`) | If set, sound more than this many dB below the recording's loudest (breaths, room noise) is made silent, fading in and out at the gate's speed ([the noise gate](../user-manual/encoder.md#the-noise-gate)) | Number, or `null` (unset) | Unset | 6 to 80 | 12 to 60 dB, steps of 1 |
 | `noise_gate_ms` | none (`noiseGateMs`) | How long the noise gate takes to close, from open to silent, after the sound falls under its level; it opens in a quarter of this, ending as the sound rises. No effect while `noise_gate_db` is unset | Number | 100 | 5 to 2000 | 20 to 500 ms, steps of 10 |
 | `bass_cut_hz` | none (`bassCutHz`) | If set, the bass is cut below this frequency: a zero-phase order-2 Butterworth high-pass, −6 dB at the cut and 24 dB per octave below it ([bass cut and treble tilt](../user-manual/encoder.md#bass-cut-and-treble-tilt)) | Number, or `null` (unset) | Unset | 50 to 600 | 100 to 400 Hz, steps of 10 |
 | `treble_tilt` | none (`trebleTilt`) | The treble is lifted by 1 − μz⁻¹; 0 is off | Number | 0 | 0 to 0.95 | 0 to 0.9, steps of 0.05 |

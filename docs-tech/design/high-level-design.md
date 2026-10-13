@@ -352,7 +352,7 @@ Plan §2.2, with the names as built.
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `OutputFilter`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at 48 kHz through a computer's audio stage (none, or the BBC Micro's), for listening and display only (§16) |
-| `NoiseGate()`, `NoiseGateGain()`, `GatedSpans()` | **Implemented** (`core/dsp/noise_gate`): turns down stretches below a level relative to the loudest, softly and at a set speed, for the `noise_gate_db` and `noise_gate_ms` options (§8), and reports the stretches it turns down by more than 6 dB for the waveform's shading (§16) |
+| `NoiseGate()`, `NoiseGateGain()`, `GatedSpans()` | **Implemented** (`core/dsp/noise_gate`): mutes stretches below a level relative to the loudest, opening and closing at a set speed, for the `noise_gate_db` and `noise_gate_ms` options (§8), and reports the stretches it turns down by more than 6 dB for the waveform's shading (§16) |
 | `DeEss()`, `DeEsserGain()` | **Implemented** (`core/dsp/de_esser`): turns a recording's treble band down where it is most of the sound, for the `de_ess_db` option (§8) |
 | `Normalise()`, `NormaliserGain()`, `SpeechLoudness()` | **Implemented** (`core/dsp/normaliser`): speech-gated loudness, a soft-knee compressor, make-up gain and a lookahead peak limiter, for the `normalise_db` and `normalise_ratio` options (§8) |
 | `CentredRms()`, `SpreadDips()`, `SpreadPeaks()` | **Implemented** (`core/dsp/envelope`): the level and gain envelopes the noise gate, de-esser and normaliser share (§8) |
@@ -621,10 +621,12 @@ the preprocessing's first step (`dsp::NoiseGate()`) turns down the
 source's stretches more than that many dB below its loudest level, the
 RMS of a 20 ms window centred on each sample (long enough to span a low
 voice's pitch period, so the level does not ripple). Below the level the
-gate is a downward expander, 3 dB of gain lost for each dB under it, down
-to −80 dB, where the sample is made silent (about 27 dB under the
-level): a soft knee, so sound just under the level is only turned down
-a little. The gain then moves no faster than the gate's speed allows,
+gain is −80 dB, where the sample is made silent. It was first a downward
+expander, 3 dB of gain lost for each dB under the level, but a breath
+just under the level was then only turned down 15 dB or so, and the
+normaliser's compressor lifted what was left back over the encoder's
+silence gate, so a shaded, gated stretch was encoded as sound. Silence
+stays silence through the rest of the preprocessing. The gain then moves no faster than the gate's speed allows,
 linearly in dB: it closes from open to −80 dB over `noise_gate_ms`
 (100 ms by default) after the sound falls, so word endings fade, and
 opens over a quarter of that, before the sound rises (the whole
@@ -638,8 +640,8 @@ leave out what their voice activity mask does not count as speech, so a
 gated breath is not asked of an encoding. The gate is not searched by
 Optimise, since scores against differently gated sources do not compare.
 Loudness alone cannot tell a breath from a soft "h" or a trailing "s";
-the soft knee and the slow close keep word endings, and the user chooses
-the level and the speed.
+the slow close keeps word endings, and the user chooses the level and
+the speed.
 
 **The de-esser and the normaliser.** Both follow what broadcast and
 studio processing do to make speech even, done offline, so their
@@ -1306,7 +1308,9 @@ says so). `Refresh()` encodes every stale phrase in list order, storing
 each as it is made, so the budget is checked phrase by phrase and a failure
 does not stop the rest. `encoder::kEncoderVersion` changes whenever the
 same audio and options can give different frames: `1.1.0` added quiet
-pauses, on by default, so encodings made by `1.0.0` are stale. The
+pauses, on by default, so encodings made by `1.0.0` are stale; `1.2.0`
+made the noise gate mute everything under its level (the test projects
+do not use the gate, so only their version and settings hash changed). The
 reference data did not change, since it is compared with quiet pauses
 off (§13).
 

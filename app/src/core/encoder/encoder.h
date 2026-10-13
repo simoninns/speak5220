@@ -33,7 +33,8 @@ namespace speak5220::core::encoder {
 // it, and are redone when it changes (plan §3.4), so it changes whenever
 // the same audio and options can give different frames (AGENTS.md §3.1).
 // 1.1.0: quiet pauses (QuietPauses()), on by default.
-inline constexpr std::string_view kEncoderVersion = "1.1.0";
+// 1.2.0: the noise gate mutes everything under its level.
+inline constexpr std::string_view kEncoderVersion = "1.2.0";
 
 // The analysis behind an encoding, for tests and the waveform view.
 // Output sample kReachedSample + 200 j of the reference synthesis

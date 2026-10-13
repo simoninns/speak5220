@@ -235,16 +235,20 @@ It has two settings:
   words; a longer one lets soft word endings, such as a trailing *s*,
   fade out naturally.
 
-The gate is soft. Sound just under the level is only turned down a
-little (by 3 dB for each dB it is under the level), and only sound well
-under it, about 27 dB or more, is made silent. The gate fades between
-open and closed rather than switching, so it makes no clicks and does not
-chop words. Loudness alone cannot tell a breath from a soft *h*, though:
+Sound under the level is made silent, so a breath the gate closes on is
+silent in the encoding too, however much the normaliser lifts the rest.
+The gate fades between open and closed rather than switching, so it makes
+no clicks and does not chop words. Loudness alone cannot tell a breath from a soft *h*, though:
 if a word loses its ending, lower the number or make the gate slower.
 
 The noise gate is not the **Silence gate**, which only decides which
-frames of the encoding are silent (45 dB below the loudest frame by
-default) and does not change the preprocessed recording.
+frames of the encoding are silent and does not change the preprocessed
+recording. A frame of the preprocessed recording is silent if it is more
+than the Silence gate (45 dB by default) below the loudest frame, or
+under twice the background noise if that is higher. The normaliser
+narrows the gap between the speech and the quiet stretches, so without
+the noise gate it can lift room noise over the Silence gate; turn the
+noise gate on, or lower the Silence gate, if it does.
 
 On the Preprocess tab's waveform, the gated stretches are turned down
 and [shaded](waveforms.md#the-noise-gate), and the shading follows both
