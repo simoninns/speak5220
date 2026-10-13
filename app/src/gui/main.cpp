@@ -10,6 +10,7 @@
 #include <QApplication>
 #include <QCommandLineParser>
 #include <QIcon>
+#include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
@@ -51,7 +52,7 @@ int main(int argc, char* argv[]) {
   QApplication application(argc, argv);
   QApplication::setApplicationName(ToQString(core::kApplicationName));
   // Where QSettings keeps the preferences (the recent-file list, the
-  // advanced encoder settings shown or not).
+  // advanced encoder settings shown or not, the theme).
   QApplication::setOrganizationName(ToQString(core::kApplicationName));
   QApplication::setApplicationVersion(ToQString(core::Version()));
   // The icon of every window, and of the Dock on macOS. On Wayland the
@@ -92,14 +93,16 @@ int main(int argc, char* argv[]) {
     return kUsageExitCode;
   }
 
-  // Plan §5, "Colours": light or dark as the desktop prefers.
-  const std::unique_ptr<speak5220::app::IDesktopColourScheme> desktop_scheme =
-      speak5220::app::MakeDesktopColourScheme();
-  const speak5220::app::ColourSchemeFollower follower(*desktop_scheme);
-
   speak5220::app::QtDialogs dialogs;
   speak5220::app::SettingsRecentFilesStore recent_files;
   speak5220::app::SettingsViewPreferences view_preferences;
+
+  // Plan §5, "Colours": light or dark as the desktop prefers, unless the
+  // user chose one (View > Theme). Applied before the window is shown.
+  const std::unique_ptr<speak5220::app::IDesktopColourScheme> desktop_scheme =
+      speak5220::app::MakeDesktopColourScheme();
+  speak5220::app::ColourSchemeFollower follower(*desktop_scheme,
+                                                view_preferences.ChosenTheme());
   core::ThreadPoolTaskRunner runner;
   core::synth::Synth synth;
   speak5220::app::QtAudioOutput audio_output;
@@ -123,6 +126,10 @@ int main(int argc, char* argv[]) {
   speak5220::app::MainWindow window(dialogs, recent_files, view_preferences,
                                     runner, synth, player, tools);
   dialogs.SetParent(&window);
+  QObject::connect(&window, &speak5220::app::MainWindow::ThemeChanged, &window,
+                   [&follower](speak5220::app::ThemeChoice choice) {
+                     follower.SetChoice(choice);
+                   });
   window.show();
   if (!projects.isEmpty()) {
     window.OpenProject(projects.front());

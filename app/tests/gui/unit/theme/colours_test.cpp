@@ -51,6 +51,21 @@ TEST(ColoursTest, DarkPaletteGetsOtherColours) {
   EXPECT_NE(light.voiced, dark.voiced);
 }
 
+TEST(ColoursTest, WaveformPaletteIsDarkOnBlackInEitherScheme) {
+  for (const QPalette& palette : {LightPalette(), DarkPalette()}) {
+    const QPalette waveform = WaveformPalette(palette);
+    EXPECT_TRUE(IsDarkPalette(waveform));
+    EXPECT_EQ(waveform.color(QPalette::Base), QColor(Qt::black));
+    EXPECT_GE(ContrastRatio(waveform.color(QPalette::PlaceholderText),
+                            waveform.color(QPalette::Base)),
+              kTextContrast);
+    EXPECT_EQ(waveform.color(QPalette::Highlight),
+              palette.color(QPalette::Highlight));
+  }
+  EXPECT_EQ(ColoursFor(WaveformPalette(LightPalette())).wave,
+            ColoursFor(DarkPalette()).wave);
+}
+
 class ColoursContrastTest : public ::testing::TestWithParam<QPalette> {};
 
 TEST_P(ColoursContrastTest, WarningIsReadableTextOnTheBackground) {

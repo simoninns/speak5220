@@ -69,6 +69,7 @@
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/playback/player.h"
+#include "gui/theme/colour_scheme.h"
 #include "gui/undo/project_commands.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
@@ -150,6 +151,7 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
 
   SetOutputFilter(view_preferences_->ChosenOutputFilter());
   SetOutputPin(view_preferences_->ChosenOutputPin());
+  SetTheme(view_preferences_->ChosenTheme());
 
   OnProjectChanged();
   UpdateTitle();
@@ -221,6 +223,23 @@ QAction* MainWindow::OutputPinAction(core::synth::OutputPin pin) const {
   return nullptr;
 }
 
+void MainWindow::SetTheme(ThemeChoice choice) {
+  if (QAction* action = ThemeAction(choice); action != nullptr) {
+    action->setChecked(true);
+  }
+  view_preferences_->SetTheme(choice);
+  emit ThemeChanged(choice);
+}
+
+QAction* MainWindow::ThemeAction(ThemeChoice choice) const {
+  for (std::size_t i = 0; i < kThemeChoices.size(); ++i) {
+    if (kThemeChoices[i] == choice && i < theme_actions_.size()) {
+      return theme_actions_[i];
+    }
+  }
+  return nullptr;
+}
+
 QString MainWindow::StatusText() const { return status_label_->text(); }
 
 void MainWindow::CreateActions() {
@@ -258,6 +277,32 @@ void MainWindow::CreateActions() {
   redo_action_ =
       document_.UndoStack().createRedoAction(this, QStringLiteral("&Redo"));
   redo_action_->setShortcut(QKeySequence::Redo);
+
+  theme_group_ = new QActionGroup(this);
+  for (const ThemeChoice choice : kThemeChoices) {
+    QString label;
+    QString tip;
+    switch (choice) {
+      case ThemeChoice::kAuto:
+        label = QStringLiteral("&Auto");
+        tip = QStringLiteral("Show light or dark as the desktop prefers");
+        break;
+      case ThemeChoice::kLight:
+        label = QStringLiteral("&Light");
+        tip = QStringLiteral("Always show light");
+        break;
+      case ThemeChoice::kDark:
+        label = QStringLiteral("&Dark");
+        tip = QStringLiteral("Always show dark");
+        break;
+    }
+    auto* action = new QAction(label, theme_group_);
+    action->setCheckable(true);
+    action->setStatusTip(tip);
+    connect(action, &QAction::triggered, this,
+            [this, choice] { SetTheme(choice); });
+    theme_actions_.push_back(action);
+  }
 
   output_filter_group_ = new QActionGroup(this);
   for (const core::dsp::OutputFilterInfo& info : core::dsp::OutputFilters()) {
@@ -369,6 +414,12 @@ void MainWindow::CreateMenus() {
   QMenu* edit = menuBar()->addMenu(QStringLiteral("&Edit"));
   edit->addAction(undo_action_);
   edit->addAction(redo_action_);
+
+  QMenu* view = menuBar()->addMenu(QStringLiteral("&View"));
+  QMenu* theme = view->addMenu(QStringLiteral("&Theme"));
+  for (QAction* action : theme_actions_) {
+    theme->addAction(action);
+  }
 
   QMenu* phrase = menuBar()->addMenu(QStringLiteral("&Phrase"));
   phrase->addAction(add_action_);

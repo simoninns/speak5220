@@ -219,6 +219,9 @@ With an [output filter](#output-filter), the encoded audio plays at
 ## Light and dark
 
 The window follows the desktop's light or dark setting, when it starts and
-when the setting changes, and the waveform colours have a light and a dark
-form. On Linux the setting is read from the desktop portal, as GNOME and
+when the setting changes. The waveforms themselves are always drawn the
+dark way, in colour on black, so they look the same in either setting,
+and the quality rating's bands keep their full red, amber and green. To always show one or the other, choose **View > Theme > Light** or
+**Dark**; **Auto** (the default) goes back to following the desktop. The
+choice is remembered for next time. On Linux the setting is read from the desktop portal, as GNOME and
 KDE Plasma provide it; on Windows and macOS Qt follows the system itself.

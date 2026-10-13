@@ -35,6 +35,7 @@
 #include "gui/main_window/view_preferences.h"
 #include "gui/playback/audio_output.h"
 #include "gui/playback/player.h"
+#include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
@@ -80,11 +81,14 @@ class FakeViewPreferences : public app::IViewPreferences {
   }
   core::synth::OutputPin ChosenOutputPin() override { return pin; }
   void SetOutputPin(core::synth::OutputPin chosen) override { pin = chosen; }
+  app::ThemeChoice ChosenTheme() override { return theme; }
+  void SetTheme(app::ThemeChoice chosen) override { theme = chosen; }
 
   bool advanced_shown = false;
   app::PhraseTab phrase_tab = app::PhraseTab::kOriginal;
   core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
+  app::ThemeChoice theme = app::ThemeChoice::kAuto;
 };
 
 class MockAudioOutput : public app::IAudioOutput {

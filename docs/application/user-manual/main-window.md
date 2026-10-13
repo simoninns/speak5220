@@ -17,7 +17,8 @@ The two areas keep their sizes, and the play start, the zoom and the
 scroll position are shared by the tabs, so switching tabs shows the same
 place in the phrase at the same place on screen. To open a project at start-up, give it on the command line:
 `speak5220 greetings.s5proj`. The window follows the desktop's light or
-dark setting (see [light and dark](waveforms.md#light-and-dark)).
+dark setting unless you choose one under **View > Theme** (see
+[light and dark](waveforms.md#light-and-dark)).
 
 ## Projects
 
@@ -124,6 +125,13 @@ as you type:
 If the name is already taken (or a longer name would need a 65th PHROM),
 the message says so and the name goes back to what it was. The
 description is free text, kept only in the project.
+
+## The View menu
+
+**View > Theme** chooses how the window looks: **Auto** (the default)
+follows the desktop's light or dark setting, **Light** and **Dark** always
+show that one. The change is immediate, and the window remembers it for
+next time. See [light and dark](waveforms.md#light-and-dark).
 
 ## The Export menu
 

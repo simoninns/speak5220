@@ -15,6 +15,8 @@
 #include <QtGlobal>
 #include <functional>
 #include <memory>
+#include <optional>
+#include <string_view>
 #include <utility>
 
 #include "core/util/logging.h"
@@ -45,6 +47,39 @@ const char* SchemeName(Qt::ColorScheme scheme) {
 
 }  // namespace
 
+std::string_view ThemeChoiceKey(ThemeChoice choice) {
+  switch (choice) {
+    case ThemeChoice::kAuto:
+      return "auto";
+    case ThemeChoice::kLight:
+      return "light";
+    case ThemeChoice::kDark:
+      return "dark";
+  }
+  return "auto";
+}
+
+std::optional<ThemeChoice> ThemeChoiceFromKey(std::string_view key) {
+  for (const ThemeChoice choice : kThemeChoices) {
+    if (ThemeChoiceKey(choice) == key) {
+      return choice;
+    }
+  }
+  return std::nullopt;
+}
+
+Qt::ColorScheme SchemeFor(ThemeChoice choice, Qt::ColorScheme desktop) {
+  switch (choice) {
+    case ThemeChoice::kLight:
+      return Qt::ColorScheme::Light;
+    case ThemeChoice::kDark:
+      return Qt::ColorScheme::Dark;
+    case ThemeChoice::kAuto:
+      break;
+  }
+  return desktop;
+}
+
 Qt::ColorScheme SchemeFromPortalValue(quint32 value) {
   switch (value) {
     case kPortalPrefersDark:
@@ -65,17 +100,32 @@ std::unique_ptr<IDesktopColourScheme> MakeDesktopColourScheme() {
 }
 
 ColourSchemeFollower::ColourSchemeFollower(IDesktopColourScheme& desktop,
-                                           Apply apply) {
-  const Qt::ColorScheme scheme = desktop.Preference();
+                                           ThemeChoice choice, Apply apply)
+    : apply_(std::move(apply)),
+      choice_(choice),
+      desktop_(desktop.Preference()) {
   core::Logger(core::kLogModuleGui)
-      ->debug("desktop colour scheme: {}", SchemeName(scheme));
-  apply(scheme);
-  desktop.Watch([apply = std::move(apply)](Qt::ColorScheme changed) {
+      ->debug("desktop colour scheme: {}, theme: {}", SchemeName(desktop_),
+              ThemeChoiceKey(choice_));
+  ApplyNow();
+  desktop.Watch([this](Qt::ColorScheme changed) {
     core::Logger(core::kLogModuleGui)
         ->debug("desktop colour scheme changed: {}", SchemeName(changed));
-    apply(changed);
+    desktop_ = changed;
+    if (choice_ == ThemeChoice::kAuto) {
+      ApplyNow();
+    }
   });
 }
+
+void ColourSchemeFollower::SetChoice(ThemeChoice choice) {
+  core::Logger(core::kLogModuleGui)
+      ->debug("theme chosen: {}", ThemeChoiceKey(choice));
+  choice_ = choice;
+  ApplyNow();
+}
+
+void ColourSchemeFollower::ApplyNow() { apply_(SchemeFor(choice_, desktop_)); }
 
 void ColourSchemeFollower::ApplyToApplication(Qt::ColorScheme scheme) {
   QStyleHints* hints = QGuiApplication::styleHints();

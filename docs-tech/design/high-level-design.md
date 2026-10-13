@@ -1094,7 +1094,8 @@ Both executables are thin front ends over `s5core`.
 
 - The GUI's widgets are the static library `speak5220_gui`, so the GUI
   tests link them; the `speak5220` executable adds only `main()`, which
-  starts following the desktop's colour scheme (§16), creates the real
+  starts following the desktop's colour scheme or the theme chosen
+  (§16), creates the real
   `QtDialogs`, `SettingsRecentFilesStore`, `ThreadPoolTaskRunner`, `Synth`
   and `Player` (over `QtAudioOutput`, `SteadyClock` and `SincResampler`),
   and the `EncodingTools` (the encoder, `QualityAssessor` over an
@@ -1583,12 +1584,16 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   the phrase's tab shown, by its `PhraseTabKey()`, and the
   output filter chosen in the **Audio > Output Filter** menu, by its
   `OutputFilterInfo::key`, and the pin chosen in **Audio > Chip Output**,
-  by its `OutputPinInfo::key`) is kept the same way through
+  by its `OutputPinInfo::key`, and the theme chosen in **View > Theme**,
+  by its `ThemeChoiceKey()`) is kept the same way through
   `IViewPreferences` (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()`
   passes the filter to the `Player` and to `PhraseWaveforms`, ticks its
   menu item and saves it. `MainWindow::SetOutputPin()` does the same with
   the pin for `PhraseWaveforms` and the `OptimiseDialog`, first stopping
   encoded audio that was taken from the other pin.
+  `MainWindow::SetTheme()` ticks its menu item, saves the choice and
+  emits `ThemeChanged()`, which `main()` passes to the
+  `ColourSchemeFollower`.
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
   (which use the model and the document) first, then the encoder panel
@@ -1818,7 +1823,12 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   `QEvent::PaletteChange`. Everything else comes from the palette. The
   play/pause icons are drawn in the palette's button-text colour (the
   style's media icons are fixed black images) and redrawn on a palette
-  change.
+  change. The waveforms are the exception: `WaveformView` draws with
+  `WaveformPalette(palette())`, the palette with a black base and window
+  and light text, placeholder and mid (the highlight kept, for the focus
+  frame), and so with the dark `ThemeColours`, in either scheme. The
+  quality rating's bands and marks are the same full-strength colours in
+  both sets.
 - **Following the desktop.** On GNOME, Qt 6.11 picks its GTK 3 platform
   theme, which reports the GTK theme's scheme (light) and palette, not
   GNOME's dark preference; the XDG desktop portal's theme reports dark
@@ -1831,6 +1841,13 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   waiting at most a second, and follows `SettingChanged`. It is built
   where Qt D-Bus exists (Linux, the BSDs); elsewhere
   `NoDesktopColourScheme` leaves Qt to follow the system.
+- **Choosing a theme.** **View > Theme** offers `ThemeChoice` Auto (the
+  default), Light and Dark. The follower requests
+  `SchemeFor(choice, desktop)`: Light or Dark as chosen, or for Auto the
+  desktop's preference, which it keeps up to date while another choice
+  is in force so going back to Auto applies it at once. `main()` gives
+  the follower the saved choice before the window is created, so the
+  window never shows in the other scheme first.
 
 **Deviations from the plan.**
 
@@ -1856,7 +1873,7 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 **Acceptance** (plan Phase 6):
 
 - unit tests check the colours of a light and a dark palette (different,
-  and at least 4.5:1 for the warning text and 3:1 for the marks against
+  the waveform palette black and dark in both, and at least 4.5:1 for the warning text and 3:1 for the marks against
   the background and the frame fills), the portal's values, that each
   preference and change is applied, and that the phrase details follow a
   palette change;
@@ -2014,7 +2031,8 @@ options it was given and changes only the edited one.
 
 **The quality rating.** `RatingBar` draws the three bands (*Poor* from 0,
 *Fair* from `ScoreCalibration::kFairFrom`, *Good* from `kGoodFrom`) in
-`ThemeColours::quality_bands` (each a different colour), each band's name
+`ThemeColours::quality_bands` (each a different colour, full-strength red,
+amber and green in both schemes, with a near-black mark), each band's name
 inside it, at most 520 pixels wide, the overall score's mark (a line and a
 triangle in `quality_mark`) and an optional dashed mark for an earlier
 score (Optimise's start). The mark's colour has a contrast ratio of at

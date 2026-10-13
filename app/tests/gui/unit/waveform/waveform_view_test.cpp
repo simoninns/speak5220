@@ -16,6 +16,7 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QObject>
+#include <QPalette>
 #include <QPixmap>
 #include <QPointF>
 #include <QString>
@@ -26,6 +27,8 @@
 #include "core/lpc/frame.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "gui/support/test_palettes.h"
+#include "gui/theme/colours.h"
 #include "gui/waveform/time_axis.h"
 
 namespace speak5220::app {
@@ -171,7 +174,7 @@ TEST_F(WaveformViewTest, ClearShowsThePlaceholderAndNoClicks) {
 // and goes when a waveform is shown or the view is cleared without one.
 TEST_F(WaveformViewTest, BackdropShowsOnlyWithNoWaveform) {
   QPixmap backdrop(40, 20);
-  backdrop.fill(Qt::black);
+  backdrop.fill(Qt::white);
   view_.Clear(QStringLiteral("Select one phrase to see it"), backdrop);
   EXPECT_TRUE(view_.HasBackdrop());
   QImage drawn(view_.size(), QImage::Format_ARGB32);
@@ -182,6 +185,24 @@ TEST_F(WaveformViewTest, BackdropShowsOnlyWithNoWaveform) {
   EXPECT_FALSE(view_.HasBackdrop());
   view_.Clear(QStringLiteral("Not encoded yet"));
   EXPECT_FALSE(view_.HasBackdrop());
+}
+
+TEST_F(WaveformViewTest, DrawsOnBlackWithTheDarkColoursInEitherScheme) {
+  for (const QPalette& palette :
+       {testing::LightPalette(), testing::DarkPalette()}) {
+    view_.setPalette(palette);
+    QImage drawn(view_.size(), QImage::Format_ARGB32);
+    view_.render(&drawn);
+    // Above the wave, which is at a quarter of full scale.
+    EXPECT_EQ(drawn.pixelColor(kWidth / 2, 2), QColor(Qt::black));
+    // The wave, somewhere down the middle column.
+    bool wave_found = false;
+    for (int y = 0; y < kHeight && !wave_found; ++y) {
+      wave_found = drawn.pixelColor(kWidth / 2, y) ==
+                   ColoursFor(testing::DarkPalette()).wave;
+    }
+    EXPECT_TRUE(wave_found);
+  }
 }
 
 }  // namespace

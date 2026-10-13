@@ -15,6 +15,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/synth/output_pin.h"
+#include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
 
 namespace speak5220::app {
@@ -44,6 +45,11 @@ class IViewPreferences {
   // saved, or saved with a key this version does not know.
   virtual core::synth::OutputPin ChosenOutputPin() = 0;
   virtual void SetOutputPin(core::synth::OutputPin pin) = 0;
+
+  // The theme last chosen (View > Theme); Auto if never saved, or saved
+  // with a key this version does not know.
+  virtual ThemeChoice ChosenTheme() = 0;
+  virtual void SetTheme(ThemeChoice choice) = 0;
 };
 
 // IViewPreferences in the application's QSettings (the platform's usual
@@ -57,6 +63,8 @@ class SettingsViewPreferences : public IViewPreferences {
   static constexpr const char* kOutputFilterKey = "outputFilter";
   // Holds the pin's key (core::synth::OutputPinInfo::key).
   static constexpr const char* kOutputPinKey = "outputPin";
+  // Holds the choice's key (ThemeChoiceKey()).
+  static constexpr const char* kThemeKey = "theme";
 
   bool AdvancedSettingsShown() override;
   void SetAdvancedSettingsShown(bool shown) override;
@@ -66,6 +74,8 @@ class SettingsViewPreferences : public IViewPreferences {
   void SetOutputFilter(core::dsp::OutputFilter filter) override;
   core::synth::OutputPin ChosenOutputPin() override;
   void SetOutputPin(core::synth::OutputPin pin) override;
+  ThemeChoice ChosenTheme() override;
+  void SetTheme(ThemeChoice choice) override;
 
  private:
   QSettings settings_;

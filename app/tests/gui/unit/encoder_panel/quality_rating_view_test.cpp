@@ -15,6 +15,7 @@
 #include <QImage>
 #include <QPalette>
 #include <QProgressBar>
+#include <algorithm>
 #include <cstddef>
 #include <optional>
 
@@ -118,11 +119,19 @@ INSTANTIATE_TEST_SUITE_P(LightAndDark, QualityRatingColoursTest,
                          ::testing::Values(testing::LightPalette(),
                                            testing::DarkPalette()));
 
-TEST(QualityRatingColoursTest, BandsDifferBetweenLightAndDark) {
+TEST(QualityRatingColoursTest, BandsAreAtFullStrengthInLightAndDark) {
   const ThemeColours light = ColoursFor(testing::LightPalette());
   const ThemeColours dark = ColoursFor(testing::DarkPalette());
-  EXPECT_NE(light.quality_bands, dark.quality_bands);
-  EXPECT_NE(light.quality_mark, dark.quality_mark);
+  EXPECT_EQ(light.quality_bands, dark.quality_bands);
+  EXPECT_EQ(light.quality_mark, dark.quality_mark);
+  // Not pastel: every band's strongest channel is at least 0xBB and its
+  // weakest at most 0x5A.
+  for (const QColor& band : light.quality_bands) {
+    EXPECT_GE(std::max({band.red(), band.green(), band.blue()}), 0xBB)
+        << band.name().toStdString();
+    EXPECT_LE(std::min({band.red(), band.green(), band.blue()}), 0x5A)
+        << band.name().toStdString();
+  }
 }
 
 }  // namespace

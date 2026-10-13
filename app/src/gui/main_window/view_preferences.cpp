@@ -18,6 +18,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/synth/output_pin.h"
+#include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
 
 namespace speak5220::app {
@@ -72,6 +73,19 @@ void SettingsViewPreferences::SetOutputPin(core::synth::OutputPin pin) {
   const std::string_view key = core::synth::InfoFor(pin).key;
   settings_.setValue(
       QString::fromLatin1(kOutputPinKey),
+      QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
+}
+
+ThemeChoice SettingsViewPreferences::ChosenTheme() {
+  const std::string key =
+      settings_.value(QString::fromLatin1(kThemeKey)).toString().toStdString();
+  return ThemeChoiceFromKey(key).value_or(ThemeChoice::kAuto);
+}
+
+void SettingsViewPreferences::SetTheme(ThemeChoice choice) {
+  const std::string_view key = ThemeChoiceKey(choice);
+  settings_.setValue(
+      QString::fromLatin1(kThemeKey),
       QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
 }
 

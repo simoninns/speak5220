@@ -44,6 +44,19 @@ double Luminance(const QColor& colour) {
          (kBlueWeight * Linear(colour.blueF()));
 }
 
+// The quality rating's bands, worst first, and its marks, the same in
+// both forms.
+constexpr QColor kPoorBand(0xFF, 0x5A, 0x4A);
+constexpr QColor kFairBand(0xFF, 0xC1, 0x07);
+constexpr QColor kGoodBand(0x4C, 0xBB, 0x17);
+constexpr QColor kQualityMark(0x1F, 0x1F, 0x1F);
+
+// The waveform palette's own roles (WaveformPalette()).
+constexpr QColor kWaveformBackground(0x00, 0x00, 0x00);
+constexpr QColor kWaveformText(0xFF, 0xFF, 0xFF);
+constexpr QColor kWaveformPlaceholder(0x9A, 0x9A, 0x9A);
+constexpr QColor kWaveformMid(0x5A, 0x5A, 0x5A);
+
 const ThemeColours kLight = {
     .warning = QColor(0xB3, 0x26, 0x1E),
     .wave = QColor(0x1A, 0x5F, 0xB4),
@@ -55,9 +68,8 @@ const ThemeColours kLight = {
     .unvoiced = QColor(0xF8, 0xEA, 0xD2),
     .repeat = QColor(0xDC, 0xEF, 0xDC),
     .silence = QColor(0xEC, 0xEC, 0xEC),
-    .quality_bands = {QColor(0xF2, 0xC4, 0xC0), QColor(0xF6, 0xED, 0xB4),
-                      QColor(0xA8, 0xDE, 0x9C)},
-    .quality_mark = QColor(0x1F, 0x1F, 0x1F),
+    .quality_bands = {kPoorBand, kFairBand, kGoodBand},
+    .quality_mark = kQualityMark,
 };
 
 const ThemeColours kDark = {
@@ -71,9 +83,8 @@ const ThemeColours kDark = {
     .unvoiced = QColor(0x3D, 0x30, 0x20),
     .repeat = QColor(0x22, 0x38, 0x2A),
     .silence = QColor(0x2E, 0x2E, 0x2E),
-    .quality_bands = {QColor(0x5A, 0x2A, 0x27), QColor(0x55, 0x50, 0x1F),
-                      QColor(0x2D, 0x5E, 0x2F)},
-    .quality_mark = QColor(0xF2, 0xF2, 0xF2),
+    .quality_bands = {kPoorBand, kFairBand, kGoodBand},
+    .quality_mark = kQualityMark,
 };
 
 }  // namespace
@@ -85,6 +96,20 @@ bool IsDarkPalette(const QPalette& palette) {
 
 ThemeColours ColoursFor(const QPalette& palette) {
   return IsDarkPalette(palette) ? kDark : kLight;
+}
+
+QPalette WaveformPalette(const QPalette& palette) {
+  QPalette waveform = palette;
+  for (const QPalette::ColorGroup group :
+       {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+    waveform.setColor(group, QPalette::Base, kWaveformBackground);
+    waveform.setColor(group, QPalette::Window, kWaveformBackground);
+    waveform.setColor(group, QPalette::Text, kWaveformText);
+    waveform.setColor(group, QPalette::WindowText, kWaveformText);
+    waveform.setColor(group, QPalette::PlaceholderText, kWaveformPlaceholder);
+    waveform.setColor(group, QPalette::Mid, kWaveformMid);
+  }
+  return waveform;
 }
 
 double ContrastRatio(const QColor& a, const QColor& b) {

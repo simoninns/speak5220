@@ -79,7 +79,9 @@ constexpr int kBackdropGap = 8;
 }  // namespace
 
 WaveformView::WaveformView(QWidget* parent)
-    : QWidget(parent), colours_(ColoursFor(palette())) {
+    : QWidget(parent),
+      wave_palette_(WaveformPalette(palette())),
+      colours_(ColoursFor(wave_palette_)) {
   setFocusPolicy(Qt::StrongFocus);
   setMouseTracking(true);
   setAutoFillBackground(false);
@@ -220,9 +222,11 @@ bool WaveformView::event(QEvent* event) {
 
 void WaveformView::changeEvent(QEvent* event) {
   // Plan §5, "Colours": a change of scheme reaches every widget as a
-  // palette change.
+  // palette change. The waveform stays dark, keeping only the new
+  // palette's other roles.
   if (event->type() == QEvent::PaletteChange) {
-    colours_ = ColoursFor(palette());
+    wave_palette_ = WaveformPalette(palette());
+    colours_ = ColoursFor(wave_palette_);
     update();
   }
   QWidget::changeEvent(event);
@@ -274,13 +278,13 @@ void WaveformView::wheelEvent(QWheelEvent* event) {
 
 void WaveformView::paintEvent(QPaintEvent* /*event*/) {
   QPainter painter(this);
-  painter.fillRect(rect(), palette().base());
+  painter.fillRect(rect(), wave_palette_.base());
   if (!HasSamples()) {
     if (HasBackdrop()) {
       PaintBackdrop(painter);
       return;
     }
-    painter.setPen(palette().color(QPalette::PlaceholderText));
+    painter.setPen(wave_palette_.color(QPalette::PlaceholderText));
     painter.drawText(rect(), Qt::AlignCenter | Qt::TextWordWrap, placeholder_);
     return;
   }
@@ -291,7 +295,7 @@ void WaveformView::paintEvent(QPaintEvent* /*event*/) {
   PaintShading(painter);
   PaintMarks(painter);
   if (hasFocus()) {
-    painter.setPen(QPen(palette().color(QPalette::Highlight), 0));
+    painter.setPen(QPen(wave_palette_.color(QPalette::Highlight), 0));
     painter.drawRect(rect().adjusted(0, 0, -1, -1));
   }
 }
@@ -312,7 +316,7 @@ void WaveformView::PaintBackdrop(QPainter& painter) const {
   painter.setOpacity(kBackdropOpacity);
   painter.drawPixmap(target, backdrop_, QRectF(backdrop_.rect()));
   painter.restore();
-  painter.setPen(palette().color(QPalette::PlaceholderText));
+  painter.setPen(wave_palette_.color(QPalette::PlaceholderText));
   const QRectF below(0.0, target.bottom() + kBackdropGap, width(),
                      height() - target.bottom() - kBackdropGap);
   painter.drawText(below, Qt::AlignHCenter | Qt::AlignTop | Qt::TextWordWrap,
@@ -330,10 +334,10 @@ void WaveformView::Apply(const TimeAxis& axis, bool fitted) {
 }
 
 void WaveformView::PaintShading(QPainter& painter) const {
-  QColor veil = palette().color(QPalette::Base);
+  QColor veil = wave_palette_.color(QPalette::Base);
   veil.setAlpha(kShadeAlpha);
   // Hatched as well as dimmed, so it reads without colour.
-  const QBrush hatch(palette().color(QPalette::Mid), Qt::BDiagPattern);
+  const QBrush hatch(wave_palette_.color(QPalette::Mid), Qt::BDiagPattern);
   for (const TimeExtent& span : shading_) {
     const double left = std::max(axis_.SampleToX(span.begin), 0.0);
     const double right =

@@ -34,6 +34,7 @@
 #include "gui/main_window/view_preferences.h"
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/playback/player.h"
+#include "gui/theme/colour_scheme.h"
 
 class QAction;
 class QActionGroup;
@@ -56,17 +57,17 @@ class PhraseWaveforms;
 // (EncoderPanel::PreprocessPanel()), and Encode with the encoder panel
 // (EncoderPanel), each tab's waveform above its settings; the status bar shows
 // the project's size in KB and PHROMs. Menus: File (new, open, recent, save,
-// save as, quit), Edit (undo, redo), Phrase (add, remove, move up and down,
-// sort A-Z, re-encode, optimise, revert to saved), Export, Audio (chip
-// output, output filter), Help.
+// save as, quit), Edit (undo, redo), View (theme), Phrase (add, remove,
+// move up and down, sort A-Z, re-encode, optimise, revert to saved),
+// Export, Audio (chip output, output filter), Help.
 //
 // The title is the project's file name, marked while it has unsaved
 // changes, as the phrase list marks each phrase changed since the last
 // save; replacing or closing a modified project asks first. Questions
 // go through IDialogs, the recent-file list through IRecentFilesStore,
 // what the user chose to see and hear (the tab shown, the advanced encoder
-// settings, the output filter and chip output of the Audio menu) through
-// IViewPreferences;
+// settings, the theme, the output filter and chip output of the Audio
+// menu) through IViewPreferences;
 // imports, encoding and the rendering of encoded audio (through the
 // ISynth) run as background jobs on the ITaskRunner, their results coming
 // back to the GUI thread queued; the waveforms play through the Player;
@@ -148,6 +149,11 @@ class MainWindow : public QMainWindow {
   void SetOutputPin(core::synth::OutputPin pin);
   // The Audio > Chip Output menu's item for `pin`.
   QAction* OutputPinAction(core::synth::OutputPin pin) const;
+  // Shows the application in the theme `choice` (View > Theme): whoever
+  // applies it listens to ThemeChanged(). Remembered between sessions.
+  void SetTheme(ThemeChoice choice);
+  // The View > Theme menu's item for `choice`.
+  QAction* ThemeAction(ThemeChoice choice) const;
 
  signals:
   // An import finished, successfully or not.
@@ -156,6 +162,8 @@ class MainWindow : public QMainWindow {
   void EncodeFinished();
   // An export finished, successfully or not.
   void ExportFinished();
+  // The user chose the theme `choice` (SetTheme()).
+  void ThemeChanged(ThemeChoice choice);
 
  protected:
   void closeEvent(QCloseEvent* event) override;
@@ -249,6 +257,9 @@ class MainWindow : public QMainWindow {
   // One per core::synth::OutputPins(), in its order, in an exclusive group.
   QActionGroup* output_pin_group_ = nullptr;
   std::vector<QAction*> output_pin_actions_;
+  // One per kThemeChoices, in its order, in an exclusive group.
+  QActionGroup* theme_group_ = nullptr;
+  std::vector<QAction*> theme_actions_;
   QAction* add_action_ = nullptr;
   QAction* remove_action_ = nullptr;
   QAction* move_up_action_ = nullptr;

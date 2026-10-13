@@ -16,6 +16,7 @@
 #include <QCoreApplication>
 #include <QLabel>
 #include <QLineEdit>
+#include <QObject>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QString>
@@ -46,6 +47,7 @@
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
 #include "gui/waveform/waveform_pane.h"
@@ -182,6 +184,29 @@ TEST_F(MainWindowTest, ChipOutputStartsAsLastChosen) {
                     playback_.player, encoding_.Tools());
   EXPECT_TRUE(window.OutputPinAction(OutputPin::kIo)->isChecked());
   EXPECT_EQ(window.Waveforms()->Pin(), OutputPin::kIo);
+}
+
+TEST_F(MainWindowTest, ThemeMenuChoosesTheThemeAndRemembersIt) {
+  EXPECT_TRUE(window_.ThemeAction(ThemeChoice::kAuto)->isChecked());
+  std::vector<ThemeChoice> chosen;
+  QObject::connect(&window_, &MainWindow::ThemeChanged,
+                   [&chosen](ThemeChoice choice) { chosen.push_back(choice); });
+  window_.ThemeAction(ThemeChoice::kDark)->trigger();
+  EXPECT_TRUE(window_.ThemeAction(ThemeChoice::kDark)->isChecked());
+  EXPECT_FALSE(window_.ThemeAction(ThemeChoice::kAuto)->isChecked());
+  EXPECT_EQ(preferences_.theme, ThemeChoice::kDark);
+  window_.ThemeAction(ThemeChoice::kLight)->trigger();
+  EXPECT_EQ(chosen, (std::vector<ThemeChoice>{ThemeChoice::kDark,
+                                              ThemeChoice::kLight}));
+  EXPECT_EQ(preferences_.theme, ThemeChoice::kLight);
+}
+
+TEST_F(MainWindowTest, ThemeStartsAsLastChosen) {
+  FakeViewPreferences chosen;
+  chosen.theme = ThemeChoice::kDark;
+  MainWindow window(dialogs_, recent_, chosen, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.ThemeAction(ThemeChoice::kDark)->isChecked());
 }
 
 TEST_F(MainWindowTest, TurningTheNoiseGateOnShadesThePreprocessedAudio) {

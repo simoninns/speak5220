@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_GUI_WAVEFORM_WAVEFORM_VIEW_H_
 #define SPEAK5220_GUI_WAVEFORM_WAVEFORM_VIEW_H_
 
+#include <QPalette>
 #include <QPixmap>
 #include <QSize>
 #include <QString>
@@ -49,7 +50,8 @@ namespace speak5220::app {
 // or pause; Ctrl+wheel zooms about the pointer, the wheel scrolls; hovering
 // over a frame shows its indices. With no waveform it shows a placeholder,
 // under a faint backdrop if it has one. The view stays fitted to its extent
-// until zoomed or scrolled. Colours follow the palette (ColoursFor()).
+// until zoomed or scrolled. It is drawn dark, on black, in either scheme
+// (WaveformPalette(), ColoursFor()).
 // GUI thread only.
 class WaveformView : public QWidget {
   Q_OBJECT
@@ -157,6 +159,9 @@ class WaveformView : public QWidget {
   bool fitted_ = true;
   std::optional<int> marker_;
   std::optional<double> playhead_;
+  // The palette the waveform is drawn with (WaveformPalette()), and its
+  // colours: dark in either scheme.
+  QPalette wave_palette_;
   ThemeColours colours_;
 };
 

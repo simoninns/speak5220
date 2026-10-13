@@ -41,6 +41,8 @@ struct ThemeColours {
   // The quality rating's bands, worst first (core::quality::QualityRating
   // order), and the marks drawn over them. The bands are told apart by
   // their labels, not by colour alone; the marks contrast with every band.
+  // Full-strength red, amber and green in both forms, so they read at a
+  // glance on a light window as on a dark one.
   std::array<QColor, kQualityBandCount> quality_bands;
   QColor quality_mark;
 };
@@ -52,6 +54,13 @@ bool IsDarkPalette(const QPalette& palette);
 // the light ones. Each contrasts with the palette's base (WCAG 2.1: 4.5:1
 // for text, 3:1 for graphics) on Qt's Fusion palettes. Pure.
 ThemeColours ColoursFor(const QPalette& palette);
+
+// The palette the waveforms are drawn with: `palette` with a black base
+// and window and light text, placeholder text and mid, so a waveform shows
+// as in the dark scheme (ColoursFor() gives the dark colours) whichever
+// scheme the application is in. Other roles, such as the highlight, are
+// kept. Pure.
+QPalette WaveformPalette(const QPalette& palette);
 
 // WCAG 2.1 contrast ratio of two colours, from 1 to 21. Pure.
 double ContrastRatio(const QColor& a, const QColor& b);
