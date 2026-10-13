@@ -17,18 +17,12 @@
 #include <span>
 #include <vector>
 
+#include "core/dsp/envelope.h"
+
 namespace speak5220::core::dsp {
 namespace {
 
-constexpr double kMillisecondsPerSecond = 1000.0;
 constexpr double kDecibelsPerDecade = 20.0;
-
-// A duration in samples, at least 1.
-std::size_t SamplesOf(double ms, int sample_rate) {
-  const auto samples = static_cast<std::size_t>(
-      std::lround(ms * sample_rate / kMillisecondsPerSecond));
-  return std::max<std::size_t>(samples, 1);
-}
 
 }  // namespace
 
@@ -40,21 +34,9 @@ std::vector<double> NoiseGateGain(std::span<const double> samples,
   if (n == 0) {
     return {};
   }
-  const std::size_t half_window = SamplesOf(shape.window_ms, sample_rate) / 2;
-
-  // Each sample's level: the RMS of the window centred on it, from a
-  // running sum of squares so each is O(1).
-  std::vector<double> energy(n + 1, 0.0);
-  for (std::size_t i = 0; i < n; ++i) {
-    energy[i + 1] = energy[i] + (samples[i] * samples[i]);
-  }
-  std::vector<double> level(n);
-  for (std::size_t i = 0; i < n; ++i) {
-    const std::size_t begin = i > half_window ? i - half_window : 0;
-    const std::size_t end = std::min(i + half_window + 1, n);
-    level[i] = std::sqrt((energy[end] - energy[begin]) /
-                         static_cast<double>(end - begin));
-  }
+  // Each sample's level: the RMS of the window centred on it.
+  const std::vector<double> level =
+      CentredRms(samples, sample_rate, shape.window_ms);
   const double loudest = *std::ranges::max_element(level);
   if (loudest <= 0.0) {
     std::vector<double> unity(n, 1.0);
@@ -79,21 +61,14 @@ std::vector<double> NoiseGateGain(std::span<const double> samples,
     }
   }
 
-  // Closing no faster than the speed allows, after each sound...
+  // Closing no faster than the speed allows, after each sound, and
+  // opening no faster than its share of it, before each, so the gate is
+  // open when the sound starts.
   const double range_db = -shape.floor_db;
-  const double close_step =
-      range_db / static_cast<double>(SamplesOf(close_ms, sample_rate));
-  for (std::size_t i = 1; i < n; ++i) {
-    gain_db[i] = std::max(gain_db[i], gain_db[i - 1] - close_step);
-  }
-  // ...and opening no faster than its share of it, before each, so the
-  // gate is open when the sound starts.
-  const double open_step =
-      range_db /
-      static_cast<double>(SamplesOf(close_ms * shape.open_share, sample_rate));
-  for (std::size_t i = n - 1; i-- > 0;) {
-    gain_db[i] = std::max(gain_db[i], gain_db[i + 1] - open_step);
-  }
+  SpreadPeaks(gain_db,
+              range_db / static_cast<double>(SamplesOf(close_ms, sample_rate)),
+              range_db / static_cast<double>(SamplesOf(
+                             close_ms * shape.open_share, sample_rate)));
 
   std::vector<double> gain(n);
   for (std::size_t i = 0; i < n; ++i) {

@@ -22,8 +22,8 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
 | `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
-| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the noise gate, the output filters) | Implemented |
-| `s5core`: `preprocess/` (the noise gate, bass cut and treble tilt before encoding, and their presets) | Implemented (§8, plan Phase 11) |
+| `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the noise gate, the de-esser, the normaliser, the output filters) | Implemented |
+| `s5core`: `preprocess/` (the noise gate, bass cut, treble tilt, de-esser and normaliser before encoding, and their presets) | Implemented (§8, plan Phase 11) |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
@@ -84,7 +84,7 @@ app/
       dsp/                      resampler and FFT interfaces and adapters;
                                 SOS/FIR filters and their constants,
                                 NumPy-ordered sums and windows, LPC analysis,
-                                the noise gate
+                                the noise gate, de-esser and normaliser
       preprocess/               Preprocess(), PreprocessOptions and the
                                 presets (§8)
       encoder/                  Encoder and its stages, EncoderOptions (§8)
@@ -353,6 +353,9 @@ Plan §2.2, with the names as built.
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
 | `OutputFilter`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at 48 kHz through a computer's audio stage (none, or the BBC Micro's), for listening and display only (§16) |
 | `NoiseGate()`, `NoiseGateGain()`, `GatedSpans()` | **Implemented** (`core/dsp/noise_gate`): turns down stretches below a level relative to the loudest, softly and at a set speed, for the `noise_gate_db` and `noise_gate_ms` options (§8), and reports the stretches it turns down by more than 6 dB for the waveform's shading (§16) |
+| `DeEss()`, `DeEsserGain()` | **Implemented** (`core/dsp/de_esser`): turns a recording's treble band down where it is most of the sound, for the `de_ess_db` option (§8) |
+| `Normalise()`, `NormaliserGain()`, `SpeechLoudness()` | **Implemented** (`core/dsp/normaliser`): speech-gated loudness, a soft-knee compressor, make-up gain and a lookahead peak limiter, for the `normalise_db` and `normalise_ratio` options (§8) |
+| `CentredRms()`, `SpreadDips()`, `SpreadPeaks()` | **Implemented** (`core/dsp/envelope`): the level and gain envelopes the noise gate, de-esser and normaliser share (§8) |
 | `MainWindow`, `ProjectDocument` (`IDialogs`, `IRecentFilesStore`, `IViewPreferences`) | **Implemented** (`gui/main_window/`): menus, projects, imports, the status bar (§15) |
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
@@ -361,7 +364,7 @@ Plan §2.2, with the names as built.
 | `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
-| `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the noise gate, bass cut and treble tilt that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
+| `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the noise gate, bass cut, treble tilt, de-esser and normaliser that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
 | `QualityAssessor` (`IQualityAssessor`), `OverallQualityMetric` (`IQualityMetric`), `ScoreQuality()` | **Implemented** (`core/quality/`): the quality measures, the overall score and the rating (§9) |
 | `Optimiser` | **Implemented** (`core/optimiser/`): searches encoder options for the best overall quality score, within the 64-PHROM project budget and a per-phrase byte limit (§17) |
@@ -448,18 +451,23 @@ function's comment names its Python original.
 original recording, the **preprocessed** recording made from it, and the
 encoding of that. `core/preprocess/` holds the preprocessing, which the
 reference does not have: `PreprocessOptions` (`noise_gate_db` and its
-speed `noise_gate_ms`, `bass_cut_hz`, `treble_tilt`, all off by default)
-and `Preprocess()`, which gates the original (`dsp::NoiseGate()`), then
-cuts its bass
+speed `noise_gate_ms`, `bass_cut_hz`, `treble_tilt`, `de_ess_db`,
+`normalise_db` and its ratio `normalise_ratio`, all off by default) and
+`Preprocess()`, which gates the original (`dsp::NoiseGate()`), then cuts
+its bass
 (`ButterworthHighPass()`, an order-2 Butterworth high-pass designed as
 `scipy.signal.butter()` does, run forwards and backwards: −6 dB at the
-cut, 24 dB per octave below it), then lifts its treble (1 − μz⁻¹). It
-returns two signals: `samples`, the preprocessed recording, and
-`voicing`, the gated recording before the filters.
+cut, 24 dB per octave below it), then lifts its treble (1 − μz⁻¹), then
+de-esses it (`dsp::DeEss()`), then normalises it (`dsp::Normalise()`):
+the studio order of gate, equaliser, de-esser, compressor. It returns two
+signals: `samples`, the preprocessed recording, and `voicing`, the gated
+recording before the filters and the de-esser, times the normaliser's
+gain worked out from `samples`, so the encoder's extent and voicing see
+the same levels as its spectra.
 `PreprocessPresets()` gives the GUI's presets, *None* and *BBC Micro*
 (200 Hz, 0.4; §9, "Voicing and source shaping, from Acorn's PHROM"), and
 `MatchingPreset()` the preset some options match (ignoring the gate's
-speed while the gate is off). Everything that
+speed and the normaliser's ratio while they are off). Everything that
 measures an encoding (the quality measures in the GUI, Optimise, the
 corpus checks) compares it with `Preprocess(...).samples`.
 
@@ -632,6 +640,52 @@ Optimise, since scores against differently gated sources do not compare.
 Loudness alone cannot tell a breath from a soft "h" or a trailing "s";
 the soft knee and the slow close keep word endings, and the user chooses
 the level and the speed.
+
+**The de-esser and the normaliser.** Both follow what broadcast and
+studio processing do to make speech even, done offline, so their
+detectors look ahead instead of lagging. The de-esser
+(`dsp::DeEss()`, `de_ess_db`) is split-band: the band above 2.5 kHz
+(`kDeEssBandHz`; an 8 kHz recording keeps only the bottom of an "s"'s
+4 to 8 kHz hiss) is split off with the zero-phase `ButterworthHighPass()`,
+whose complement is the rest exactly, so the output is
+x − (1 − g)·band and is the input wherever g is 1. The gain falls by the
+band's share of the sound (each a 10 ms centred RMS) plus `de_ess_db`,
+clamped to 0 to `de_ess_db`: the whole depth in pure hiss, nothing where
+the band is that far below the whole (vowels, 20 dB and more down), so one
+setting is both threshold and depth and the result does not depend on the
+recording's level. The gain then moves by at most 1 dB per ms either way
+(`SpreadDips()`). It runs after the treble tilt, which lifts the hiss it
+tames. On the 33 phrases of an ARCTIC test project at 10 dB, the band
+fell by a median 6.5 dB in frames whose band share is over −3 dB, the
+rest of them by 0.4 dB, and frames with a share under −20 dB were
+unchanged. The voicing recording does not get it, as it lowers the
+spectral tilt and zero-crossing evidence of hiss.
+
+The normaliser (`dsp::Normalise()`, `normalise_db`, `normalise_ratio`)
+measures loudness as ITU-R BS.1770 does (`SpeechLoudness()`), with
+100 ms blocks every 25 ms for phrases of a second or two, the absolute
+gate at −70 dBFS and the relative gate 10 dB under the mean of the rest,
+and without K-weighting, which is defined for 48 kHz and makes little
+difference over speech's band. It scales the recording to the target,
+then compresses: a 20 ms centred RMS detector, a soft knee 6 dB wide
+(Giannoulis, Massberg and Reiss, 2012) at a threshold 10 dB under the
+target, so nearly all the speech is compressed rather than only its
+loudest syllables (with the threshold at the target, a 12 dB gap between
+syllables closed by only 2 dB at 4:1), attack 1 dB per ms ahead and
+release 0.1 dB per ms. Make-up gain brings the loudness back to the
+target, and a peak limiter, whose gain is the most each sample allows
+under −1 dBFS spread by 2 dB per ms ahead and 0.5 dB per ms after,
+guarantees the ceiling. All its levels are relative, so recordings of
+the same speech at any level give the same output (above the −70 dBFS
+gate). The encoder already sets its output level from `target_rms`
+(over sounding frames) and smooths slow changes with `level_agc`, so the
+target level mainly sets what the Preprocess tab plays; what reaches the
+encoding is the evening out. On the ARCTIC project at −20 dBFS, 3:1, the
+33 phrases' loudness went from −26.3 to −19.5 dBFS to −20.00 ± 0.02, the
+gap between their 95th and 25th percentile 20 ms levels from 19.6 to
+14.8 dB on average, and no peak passed −1.4 dBFS. Its gain is given to
+the voicing recording too. Neither is searched by Optimise, for the
+noise gate's reason.
 
 **Matching NumPy and SciPy.** The aim is the same frames, so the C++ follows
 the reference's order of floating-point operations where that is cheap:
@@ -1312,8 +1366,9 @@ gives the same values as before.
   (plan Phase 8, task 14, and Phase 11): the squelch and quiet pauses
   were once left out while at their defaults, the preprocessing
   options were once in `default_encoder`, and the squelch (`squelch_db`)
-  was replaced by the noise gate (`noise_gate_db`, `noise_gate_ms`), so a
-  project saved before is refused rather than read with whatever the
+  was replaced by the noise gate (`noise_gate_db`, `noise_gate_ms`), and
+  the de-esser and normaliser (`de_ess_db`, `normalise_db`,
+  `normalise_ratio`) were added, so a project saved before is refused rather than read with whatever the
   defaults have become. A leftover `squelch_db` is an unknown key, kept
   but ignored.
 - Phrase ids must be canonical lower-case UUIDs before they are used as
@@ -1675,10 +1730,12 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   so the waveform follows the sliders at once, before the 600 ms
   debounce. `UpdatePreprocessed()` runs `Preprocess()` again
   (milliseconds for a phrase), scaled down to full scale if a treble tilt
-  takes it past (`preprocessed_gain_`, named in the note); a new
+  takes it past (`preprocessed_gain_`, named in the note; the normaliser's
+  limiter keeps it under); a new
   preprocessing redraws the waveform keeping its extent and axis
   (`RedrawPreprocessed()`) and stops it if it is playing. The note names
-  the filters ("bass cut 200 Hz, treble tilt 0.4"), or says there is no
+  the stages after the gate ("bass cut 200 Hz, treble tilt 0.4, de-esser
+  10 dB, normalised to -20 dBFS at 3:1"), or says there is no
   preprocessing.
 - **Noise gate shading.** On the preprocessed recording, where the gate
   acts, `PhraseWaveforms` finds the stretches
@@ -1915,10 +1972,11 @@ window in milliseconds; a ratio reads "off" at 1). Its positions are the
 typical range in steps; a value outside it widens the range to include
 it, and a value off the steps is shown exactly and kept until the slider
 moves. Real and whole-number options get a slider; the optional ones
-(the noise gate, the bass cut, the resonance hold) a check box and a slider; the pre-emphasis
+(the noise gate, the bass cut, the de-esser, the normaliser, the
+resonance hold) a check box and a slider; the pre-emphasis
 a chirp/first-order chooser and a slider for μ. An option with no effect
 while another is unset (`EncoderOptionInfo::enabled_by`: the gate's
-speed needs the gate) has its label and slider disabled while it is. Values are read back
+speed needs the gate, the compression the normaliser) has its label and slider disabled while it is. Values are read back
 through `SetEncoderOption()` with `FormatNumber()`; the form keeps the
 options it was given and changes only the edited one.
 

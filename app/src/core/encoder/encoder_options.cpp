@@ -32,7 +32,7 @@ using enum OptionStage;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
+constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
     {.key = "noiseGateDb",
      .field = "noise_gate_db",
      .label = "Noise gate",
@@ -94,6 +94,56 @@ constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
      .typical_maximum = 0.9,
      .step = 0.05,
      .off_text = "0"},
+    {.key = "deEssDb",
+     .field = "de_ess_db",
+     .label = "De-esser",
+     .help = "If set, the hiss of S and SH sounds (the band above 2.5 kHz) "
+             "is turned down by up to this many dB: by all of it where the "
+             "hiss is all of the sound, and not at all where the band is "
+             "this far below the whole, as in vowels.",
+     .stage = kPreprocess,
+     .type = kOptionalReal,
+     .minimum = 1.0,
+     .maximum = 30.0,
+     .default_text = "",
+     .unit = "dB",
+     .typical_minimum = 3.0,
+     .typical_maximum = 18.0,
+     .step = 1.0},
+    {.key = "normaliseDb",
+     .field = "normalise_db",
+     .label = "Normaliser",
+     .help = "If set, the speech is brought to this loudness (its average "
+             "power, leaving out pauses), relative to full scale, so "
+             "recordings normalised to the same level sound as loud as each "
+             "other; the louder stretches are compressed and the peaks "
+             "limited to 1 dB below full scale.",
+     .stage = kPreprocess,
+     .type = kOptionalReal,
+     .minimum = -40.0,
+     .maximum = -6.0,
+     .default_text = "",
+     .unit = "dBFS",
+     .typical_minimum = -30.0,
+     .typical_maximum = -12.0,
+     .step = 1.0},
+    {.key = "normaliseRatio",
+     .field = "normalise_ratio",
+     .label = "Compression",
+     .help = "How much the normaliser evens out the speech: over nearly all "
+             "of it (from 10 dB under its level), a sound this many dB "
+             "louder comes out only 1 dB louder, with a soft knee. 1 only "
+             "sets the level and limits the peaks.",
+     .stage = kPreprocess,
+     .type = kReal,
+     .minimum = 1.0,
+     .maximum = 20.0,
+     .default_text = "3",
+     .unit = ":1",
+     .typical_minimum = 1.0,
+     .typical_maximum = 8.0,
+     .step = 0.5,
+     .enabled_by = "normalise_db"},
     {.key = "targetRms",
      .field = "target_rms",
      .label = "Target RMS",
@@ -260,7 +310,7 @@ using RealField = Field<double>;
 using IntegerField = Field<int>;
 using OptionalRealField = Field<std::optional<double>>;
 
-constexpr std::array<RealField, 9> kRealFields = {{
+constexpr std::array<RealField, 10> kRealFields = {{
     {.field = "noise_gate_ms",
      .member = [](EncoderOptions& o) -> double& {
        return o.preprocess.noise_gate_ms;
@@ -268,6 +318,10 @@ constexpr std::array<RealField, 9> kRealFields = {{
     {.field = "treble_tilt",
      .member = [](EncoderOptions& o) -> double& {
        return o.preprocess.treble_tilt;
+     }},
+    {.field = "normalise_ratio",
+     .member = [](EncoderOptions& o) -> double& {
+       return o.preprocess.normalise_ratio;
      }},
     {.field = "target_rms",
      .member = [](EncoderOptions& o) -> double& { return o.target_rms; }},
@@ -292,7 +346,7 @@ constexpr std::array<IntegerField, 2> kIntegerFields = {{
     {.field = "voicing_min_run",
      .member = [](EncoderOptions& o) -> int& { return o.voicing_min_run; }},
 }};
-constexpr std::array<OptionalRealField, 3> kOptionalRealFields = {{
+constexpr std::array<OptionalRealField, 5> kOptionalRealFields = {{
     {.field = "noise_gate_db",
      .member = [](EncoderOptions& o) -> std::optional<double>& {
        return o.preprocess.noise_gate_db;
@@ -300,6 +354,14 @@ constexpr std::array<OptionalRealField, 3> kOptionalRealFields = {{
     {.field = "bass_cut_hz",
      .member = [](EncoderOptions& o) -> std::optional<double>& {
        return o.preprocess.bass_cut_hz;
+     }},
+    {.field = "de_ess_db",
+     .member = [](EncoderOptions& o) -> std::optional<double>& {
+       return o.preprocess.de_ess_db;
+     }},
+    {.field = "normalise_db",
+     .member = [](EncoderOptions& o) -> std::optional<double>& {
+       return o.preprocess.normalise_db;
      }},
     {.field = "resonance_hold_db",
      .member = [](EncoderOptions& o) -> std::optional<double>& {

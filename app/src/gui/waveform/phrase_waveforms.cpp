@@ -88,16 +88,24 @@ QToolButton* MakeButton(const QString& text, const QString& tip,
   return button;
 }
 
-// The preprocessing's filters in words, for the preprocessed waveform's
-// note: "bass cut 200 Hz, treble tilt 0.4". The noise gate has a note of
-// its own.
-QString DescribeFilters(const core::preprocess::PreprocessOptions& options) {
+// The preprocessing after the noise gate in words, for the preprocessed
+// waveform's note: "bass cut 200 Hz, treble tilt 0.4, de-esser 10 dB,
+// normalised to -20 dBFS at 3:1". The noise gate has a note of its own.
+QString DescribeAfterGate(const core::preprocess::PreprocessOptions& options) {
   QStringList parts;
   if (options.bass_cut_hz.has_value()) {
     parts << QStringLiteral("bass cut %1 Hz").arg(*options.bass_cut_hz);
   }
   if (options.treble_tilt > 0.0) {
     parts << QStringLiteral("treble tilt %1").arg(options.treble_tilt);
+  }
+  if (options.de_ess_db.has_value()) {
+    parts << QStringLiteral("de-esser %1 dB").arg(*options.de_ess_db);
+  }
+  if (options.normalise_db.has_value()) {
+    parts << QStringLiteral("normalised to %1 dBFS at %2:1")
+                 .arg(*options.normalise_db)
+                 .arg(options.normalise_ratio);
   }
   return parts.join(QStringLiteral(", "));
 }
@@ -772,9 +780,9 @@ void PhraseWaveforms::UpdatePreprocessedLabels() {
                   : QStringLiteral("%1: shaded stretches are turned down")
                         .arg(gate));
   }
-  if (const QString filters = DescribeFilters(preprocessing_);
-      !filters.isEmpty()) {
-    notes << filters;
+  if (const QString after_gate = DescribeAfterGate(preprocessing_);
+      !after_gate.isEmpty()) {
+    notes << after_gate;
   }
   if (notes.isEmpty()) {
     notes << QStringLiteral("no preprocessing: the same as the original");

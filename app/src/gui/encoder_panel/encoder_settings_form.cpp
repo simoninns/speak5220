@@ -61,10 +61,12 @@ constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
 // What the optional options' and the coefficient's sliders show before
 // one is set: a noise gate under most breaths, a bass cut like Acorn's own
-// phrases (HLD §9), the default resonance hold, and the coefficient
-// Optimise tries.
+// phrases (HLD §9), a moderate de-esser, a broadcast-like speech level, the
+// default resonance hold, and the coefficient Optimise tries.
 constexpr double kUnsetNoiseGate = 30.0;
 constexpr double kUnsetBassCut = 200.0;
+constexpr double kUnsetDeEss = 10.0;
+constexpr double kUnsetNormalise = -20.0;
 constexpr double kUnsetResonanceHold = 14.0;
 constexpr double kUnsetMu = 0.9;
 
@@ -75,6 +77,12 @@ double UnsetValue(std::string_view field) {
   }
   if (field == "bass_cut_hz") {
     return kUnsetBassCut;
+  }
+  if (field == "de_ess_db") {
+    return kUnsetDeEss;
+  }
+  if (field == "normalise_db") {
+    return kUnsetNormalise;
   }
   return kUnsetResonanceHold;
 }

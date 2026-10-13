@@ -1,9 +1,9 @@
 /*
  * File:        preprocess_test.cpp
  * Module:      preprocess tests
- * Purpose:     Unit tests of the preprocessing: the noise gate, the bass cut
- *              and the treble tilt, the Butterworth high-pass behind the
- *              cut, and the presets
+ * Purpose:     Unit tests of the preprocessing: the noise gate, the bass
+ *              cut, the treble tilt, the de-esser and the normaliser, the
+ *              Butterworth high-pass behind the cut, and the presets
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -19,6 +19,7 @@
 
 #include "core/dsp/iir_filter.h"
 #include "core/dsp/noise_gate.h"
+#include "core/dsp/normaliser.h"
 #include "gtest/gtest.h"
 
 namespace speak5220::core::preprocess {
@@ -115,6 +116,37 @@ TEST(PreprocessTest, FiltersFollowTheNoiseGateAndLeaveTheVoicingRecording) {
   EXPECT_NE(audio.samples, audio.voicing);
 }
 
+// The de-esser turns down the treble band where it is most of the sound,
+// and leaves the voicing recording alone.
+TEST(PreprocessTest, DeEsserTurnsDownTreblyStretchesOnly) {
+  const PreprocessOptions options{.de_ess_db = 12.0};
+  EXPECT_NEAR(
+      20.0 * std::log10(PreprocessedRms(3500.0, options) / std::sqrt(0.5)),
+      -12.0, 0.5);
+  EXPECT_NEAR(PreprocessedRms(300.0, options), std::sqrt(0.5), 1e-3);
+  const std::vector<double> x = LoudThenQuiet();
+  EXPECT_EQ(Preprocess(x, options).voicing, x);
+}
+
+// The normaliser comes last, its gain worked out from the filtered
+// recording and given to both.
+TEST(PreprocessTest, NormaliserComesLastAndLevelsBoth) {
+  const std::vector<double> x = LoudThenQuiet();
+  const PreprocessOptions filters{.bass_cut_hz = 150.0, .de_ess_db = 6.0};
+  PreprocessOptions options = filters;
+  options.normalise_db = -20.0;
+  options.normalise_ratio = 2.0;
+  const PreprocessedAudio audio = Preprocess(x, options);
+  const std::vector<double> filtered = Preprocess(x, filters).samples;
+  const std::vector<double> gain =
+      dsp::NormaliserGain(filtered, kPreprocessSampleRate, -20.0, 2.0);
+  ASSERT_EQ(audio.samples.size(), x.size());
+  for (std::size_t i = 0; i < x.size(); ++i) {
+    ASSERT_DOUBLE_EQ(audio.samples[i], filtered[i] * gain[i]) << i;
+    ASSERT_DOUBLE_EQ(audio.voicing[i], x[i] * gain[i]) << i;
+  }
+}
+
 TEST(GatedSpansTest, AreTheGatesSpansOrNoneWithoutIt) {
   const std::vector<double> x = LoudThenQuiet();
   EXPECT_TRUE(GatedSpans(x, {}).empty());
@@ -140,6 +172,8 @@ TEST(PreprocessPresetsTest, MatchingPresetFindsTheOneWithTheseOptions) {
   EXPECT_EQ(MatchingPreset({.bass_cut_hz = 210.0, .treble_tilt = 0.4}),
             nullptr);
   EXPECT_EQ(MatchingPreset({.noise_gate_db = 30.0}), nullptr);
+  EXPECT_EQ(MatchingPreset({.de_ess_db = 10.0}), nullptr);
+  EXPECT_EQ(MatchingPreset({.normalise_db = -20.0}), nullptr);
 }
 
 // The gate's speed does nothing while the gate is off, so it does not stop
@@ -151,6 +185,11 @@ TEST(PreprocessPresetsTest, GatesSpeedMattersOnlyWithTheGate) {
           {.noise_gate_ms = 300.0, .bass_cut_hz = 200.0, .treble_tilt = 0.4})
           ->name,
       "BBC Micro");
+}
+
+// Nor does the normaliser's ratio while the normaliser is off.
+TEST(PreprocessPresetsTest, CompressionMattersOnlyWithTheNormaliser) {
+  EXPECT_EQ(MatchingPreset({.normalise_ratio = 6.0})->name, "None");
 }
 
 }  // namespace

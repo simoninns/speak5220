@@ -330,6 +330,9 @@ TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheNoiseGateUnsetAsNull) {
                                   "    noise_gate_ms: 100\n"
                                   "    bass_cut_hz: null\n"
                                   "    treble_tilt: 0\n"
+                                  "    de_ess_db: null\n"
+                                  "    normalise_db: null\n"
+                                  "    normalise_ratio: 3\n"
                                   "  default_encoder:\n"
                                   "    target_rms: 24\n"));
   EXPECT_THAT(defaults, HasSubstr("    voicing_evidence: 5\n"
@@ -503,7 +506,8 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
   EXPECT_THAT(yaml, HasSubstr("future_root: {a: [1, \"2\"], b: null}"));
   EXPECT_THAT(yaml, HasSubstr("  theme: \"dark\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    future_option: 7\n"));
-  EXPECT_THAT(yaml, HasSubstr("    treble_tilt: 0\n    future_filter: 3\n"));
+  EXPECT_THAT(yaml,
+              HasSubstr("    normalise_ratio: 3\n    future_filter: 3\n"));
   EXPECT_THAT(yaml, HasSubstr("    preprocess:\n      noise_gate_db: 30\n"
                               "      new_filter: 2\n    encoder:\n"));
   EXPECT_THAT(yaml, HasSubstr("      colour: \"NO\"\n"));
@@ -553,7 +557,7 @@ TEST_F(ProjectSerializerTest, LoadsAProjectListingEveryOption) {
 
 // A project lists every encoder option, so changing a default never
 // changes it; one that does not, such as one saved with the squelch the
-// noise gate replaced, is refused.
+// noise gate replaced, or before the de-esser and normaliser, is refused.
 TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
   const std::string head = "format: \"speak5220-project\"\nversion: 1\n";
   const StatusOr<Project> bare = Load(WithProjectYaml(head));
@@ -569,6 +573,10 @@ TEST_F(ProjectSerializerTest, RefusesAProjectThatDoesNotListEveryOption) {
       {{"    noise_gate_db: none\n", "    noise_gate_ms: 100\n"},
        "project.default_preprocess does not list noise_gate_db, "
        "noise_gate_ms"},
+      {{"    de_ess_db: none\n", "    normalise_db: none\n",
+        "    normalise_ratio: 3\n"},
+       "project.default_preprocess does not list de_ess_db, normalise_db, "
+       "normalise_ratio"},
       {{"    resonance_hold_db: 14\n", "    voicing_min_run: 2\n"},
        "project.default_encoder does not list resonance_hold_db, "
        "voicing_min_run"},

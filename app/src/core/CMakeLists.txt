@@ -11,10 +11,13 @@ add_library(
     bbc/bbc_disc.cpp
     bbc/dfs_disc.cpp
     dsp/array_math.cpp
+    dsp/de_esser.cpp
+    dsp/envelope.cpp
     dsp/fft.cpp
     dsp/iir_filter.cpp
     dsp/lpc_analysis.cpp
     dsp/noise_gate.cpp
+    dsp/normaliser.cpp
     dsp/output_filter.cpp
     dsp/resampler.cpp
     emulator/chip_arithmetic.cpp

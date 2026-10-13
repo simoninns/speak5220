@@ -156,7 +156,8 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   log->debug(
       "encoding {} samples: targetRms {}, repeatLambda {}, gateDb {}, "
       "noiseGateDb {}, noiseGateMs {}, bassCutHz {}, trebleTilt {}, "
-      "preEmphasis {}, window {}, "
+      "deEssDb {}, normaliseDb {}, normaliseRatio {}, preEmphasis {}, "
+      "window {}, "
       "lagWindowHz {}, resonanceHoldDb {}, voicingThreshold {}, "
       "voicingEvidence {}, voicingMinRun {}, levelAgc {}",
       samples.size(), options.target_rms, options.repeat_lambda,
@@ -169,6 +170,13 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
           ? std::to_string(*options.preprocess.bass_cut_hz)
           : std::string("none"),
       options.preprocess.treble_tilt,
+      options.preprocess.de_ess_db.has_value()
+          ? std::to_string(*options.preprocess.de_ess_db)
+          : std::string("none"),
+      options.preprocess.normalise_db.has_value()
+          ? std::to_string(*options.preprocess.normalise_db)
+          : std::string("none"),
+      options.preprocess.normalise_ratio,
       options.pre_emphasis.chirp ? std::string("chirp")
                                  : std::to_string(options.pre_emphasis.mu),
       options.window, options.lag_window_hz,
@@ -181,7 +189,8 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   const preprocess::PreprocessedAudio source =
       preprocess::Preprocess(samples, options.preprocess);
   const bool filtered = options.preprocess.bass_cut_hz.has_value() ||
-                        options.preprocess.treble_tilt > 0.0;
+                        options.preprocess.treble_tilt > 0.0 ||
+                        options.preprocess.de_ess_db.has_value();
 
   EncodeResult result;
   std::optional<Segmentation> seg = analyser_->Segment(source.voicing, options);
@@ -194,9 +203,9 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   std::vector<FrameVoicing> voicing =
       voicing_classifier_->Classify(track, seg->centres);
   SmoothVoicingRuns(voicing, options.voicing_min_run);
-  // With the recording filtered, the spectra, levels and gate come from
-  // the preprocessed recording; the speech's extent, pitch and voicing
-  // stay as the recording before its filters gives them.
+  // With the recording filtered or de-essed, the spectra, levels and gate
+  // come from the preprocessed recording; the speech's extent, pitch and
+  // voicing stay as the recording before its filters gives them.
   if (filtered) {
     if (std::optional<Segmentation> filtered_seg =
             analyser_->Segment(source.samples, options);

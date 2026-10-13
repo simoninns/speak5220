@@ -49,8 +49,8 @@ struct PreEmphasis {
 // changes a project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
-  // The preprocessing: the noise gate, the bass cut and the treble tilt. Not
-  // in the reference encoder.
+  // The preprocessing: the noise gate, the bass cut, the treble tilt, the
+  // de-esser and the normaliser. Not in the reference encoder.
   preprocess::PreprocessOptions preprocess;
   // RMS of the output over sounding frames, in codes.
   double target_rms = 24.0;
@@ -100,7 +100,7 @@ enum class EncoderOptionType {
   kReal,
   kInteger,
   // A real value that may also be unset (noise_gate_db, bass_cut_hz,
-  // resonance_hold_db).
+  // de_ess_db, normalise_db, resonance_hold_db).
   kOptionalReal,
   // "chirp" or a real coefficient (pre_emphasis).
   kPreEmphasis,
@@ -146,7 +146,8 @@ struct EncoderOptionInfo {
   std::string_view off_text = {};
   // The optional option (kOptionalReal) without which this one has no
   // effect, which the GUI disables while that one is unset
-  // (noise_gate_ms needs noise_gate_db); empty for none.
+  // (noise_gate_ms needs noise_gate_db, normalise_ratio normalise_db);
+  // empty for none.
   std::string_view enabled_by = {};
 };
 
@@ -163,13 +164,13 @@ Status ValidateEncoderOptions(const EncoderOptions& options);
 const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 
 // The text for an unset optional option (noise_gate_db, bass_cut_hz,
-// resonance_hold_db).
+// de_ess_db, normalise_db, resonance_hold_db).
 inline constexpr std::string_view kUnsetOptionText = "none";
 
 // Sets one option from text, as a user types it or a project file holds
 // it: a number ("18", "0.35"), "chirp" or a number for pre_emphasis, and
-// a number or "none" for noise_gate_db, bass_cut_hz and
-// resonance_hold_db.
+// a number or "none" for noise_gate_db, bass_cut_hz, de_ess_db,
+// normalise_db and resonance_hold_db.
 // Numbers use '.' as the decimal point, whatever the locale. Fails,
 // leaving `options` unchanged, for an unknown field, text of the wrong
 // type, a fractional value for a whole-number option, or a value outside

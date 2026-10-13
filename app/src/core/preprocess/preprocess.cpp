@@ -2,8 +2,8 @@
  * File:        preprocess.cpp
  * Module:      preprocess
  * Purpose:     The preprocessing of a phrase's recording before it is
- *              encoded: the noise gate, the bass cut and the treble tilt,
- *              and their presets
+ *              encoded: the noise gate, the bass cut, the treble tilt, the
+ *              de-esser and the normaliser, and their presets
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -18,8 +18,10 @@
 #include <span>
 #include <vector>
 
+#include "core/dsp/de_esser.h"
 #include "core/dsp/iir_filter.h"
 #include "core/dsp/noise_gate.h"
+#include "core/dsp/normaliser.h"
 
 namespace speak5220::core::preprocess {
 namespace {
@@ -46,10 +48,14 @@ constexpr std::array<PreprocessPreset, 2> kPresets = {{
 std::span<const PreprocessPreset> PreprocessPresets() { return kPresets; }
 
 const PreprocessPreset* MatchingPreset(const PreprocessOptions& options) {
-  // The gate's speed does nothing while it is off.
+  // The gate's speed and the normaliser's ratio do nothing while they are
+  // off.
   PreprocessOptions effective = options;
   if (!effective.noise_gate_db.has_value()) {
     effective.noise_gate_ms = kDefaultNoiseGateMs;
+  }
+  if (!effective.normalise_db.has_value()) {
+    effective.normalise_ratio = kDefaultNormaliseRatio;
   }
   for (const PreprocessPreset& preset : kPresets) {
     if (preset.options == effective) {
@@ -77,6 +83,24 @@ PreprocessedAudio Preprocess(std::span<const double> original,
   if (options.treble_tilt > 0.0) {
     const std::array<double, 2> tilt = {1.0, -options.treble_tilt};
     audio.samples = dsp::FirFilter(tilt, audio.samples);
+  }
+  if (options.de_ess_db.has_value() &&
+      audio.samples.size() > static_cast<std::size_t>(kOneSectionPad)) {
+    const std::array<dsp::SosSection, 1> sections = {
+        ButterworthHighPass(kDeEssBandHz)};
+    const std::vector<double> band =
+        dsp::SosFiltFilt(sections, kOneSectionPad, audio.samples);
+    audio.samples = dsp::DeEss(audio.samples, band, kPreprocessSampleRate,
+                               *options.de_ess_db);
+  }
+  if (options.normalise_db.has_value()) {
+    const std::vector<double> gain =
+        dsp::NormaliserGain(audio.samples, kPreprocessSampleRate,
+                            *options.normalise_db, options.normalise_ratio);
+    for (std::size_t i = 0; i < gain.size(); ++i) {
+      audio.samples[i] *= gain[i];
+      audio.voicing[i] *= gain[i];
+    }
   }
   return audio;
 }

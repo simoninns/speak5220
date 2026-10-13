@@ -6,7 +6,8 @@ shows them:
 
 - **[Preprocessing](#preprocessing)**: how the phrase's 8 kHz recording
   is prepared before it is encoded (`noise_gate_db`, `noise_gate_ms`,
-  `bass_cut_hz`, `treble_tilt`). The encoding aims at the preprocessed
+  `bass_cut_hz`, `treble_tilt`, `de_ess_db`, `normalise_db`,
+  `normalise_ratio`). The encoding aims at the preprocessed
   recording, and its
   [quality](../user-manual/encoder.md#the-quality-rating) is measured
   against it. All are off by default.
@@ -56,14 +57,17 @@ project file, and the slider widens to show it.
 
 ## Preprocessing
 
-The panel always shows these four, with a chooser of
+The panel always shows these seven, with a chooser of
 [presets](../user-manual/encoder.md#presets): **None** (all off) and
 **BBC Micro** (`bass_cut_hz` 200, `treble_tilt` 0.4). Neither preset
-gates, and `noise_gate_ms` does not count towards a match while
-`noise_gate_db` is unset. The noise gate comes first, then the bass cut,
-then the treble tilt. The encoder finds the
-pitch and the voicing in the recording before the bass cut and treble
-tilt, and everything else in the preprocessed recording.
+gates, de-esses or normalises, and `noise_gate_ms` and `normalise_ratio`
+do not count towards a match while `noise_gate_db` and `normalise_db`
+are unset. The noise gate comes first, then the bass cut, the treble
+tilt, the de-esser and last the normaliser. The encoder finds the pitch
+and the voicing in the recording before the bass cut, treble tilt and
+de-esser (but gated and normalised), and everything else in the
+preprocessed recording. Levels in dBFS are relative to a full-scale RMS
+(a full-scale sine is −3 dBFS).
 
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
@@ -71,6 +75,9 @@ tilt, and everything else in the preprocessed recording.
 | `noise_gate_ms` | none (`noiseGateMs`) | How long the noise gate takes to close, from open to silent, after the sound falls under its level; it opens in a quarter of this, ending as the sound rises. No effect while `noise_gate_db` is unset | Number | 100 | 5 to 2000 | 20 to 500 ms, steps of 10 |
 | `bass_cut_hz` | none (`bassCutHz`) | If set, the bass is cut below this frequency: a zero-phase order-2 Butterworth high-pass, −6 dB at the cut and 24 dB per octave below it ([bass cut and treble tilt](../user-manual/encoder.md#bass-cut-and-treble-tilt)) | Number, or `null` (unset) | Unset | 50 to 600 | 100 to 400 Hz, steps of 10 |
 | `treble_tilt` | none (`trebleTilt`) | The treble is lifted by 1 − μz⁻¹; 0 is off | Number | 0 | 0 to 0.95 | 0 to 0.9, steps of 0.05 |
+| `de_ess_db` | none (`deEssDb`) | If set, the band above 2.5 kHz (a zero-phase order-2 Butterworth high-pass, split off and added back) is turned down by up to this many dB: by the band's share of the sound (its 10 ms RMS over the whole's) plus this, so fully where the band is all of the sound and not at all where it is this far below the whole; the gain changes by at most 1 dB per ms, starting before the hiss ([the de-esser](../user-manual/encoder.md#the-de-esser)) | Number, or `null` (unset) | Unset | 1 to 30 | 3 to 18 dB, steps of 1 |
+| `normalise_db` | none (`normaliseDb`) | If set, the speech loudness is brought to this many dBFS: the mean power of 100 ms blocks every 25 ms, gated as ITU-R BS.1770 gates it (blocks under −70 dBFS, then those over 10 dB under the mean of the rest, left out; no K-weighting). Then a soft-knee compressor (6 dB knee, threshold 10 dB under the level, 20 ms RMS detector, attack 1 dB/ms ahead, release 0.1 dB/ms), make-up gain back to the level, and a lookahead peak limiter at −1 dBFS ([the normaliser](../user-manual/encoder.md#the-normaliser)) | Number, or `null` (unset) | Unset | −40 to −6 | −30 to −12 dBFS, steps of 1 |
+| `normalise_ratio` | none (`normaliseRatio`) | The normaliser's compression ratio; 1 only sets the level and limits the peaks. No effect while `normalise_db` is unset | Number | 3 | 1 to 20 | 1 to 8, steps of 0.5 |
 
 ## Encoder
 
