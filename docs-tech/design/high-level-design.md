@@ -501,7 +501,7 @@ stages over `PocketFft`.
 |---|---|---|
 | `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level, its loudness (the level after the loudness high-pass, not in the reference) and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
 | `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
-| `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix. `SmoothVoicingRuns()`, which the reference does not have, then removes islands shorter than `voicing_min_run` frames (below) |
+| `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops (`CentredVoicing()`); onsets voiced from the hops the chip plays (`VoiceOnsets()`, which the reference does not have, below); then the octave fix (`CorrectOctaves()`). `SmoothVoicingRuns()`, which the reference does not have either, then removes islands shorter than `voicing_min_run` frames (below) |
 | `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
 | `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the limiter (a ceiling of 160 and a clip budget, where the reference holds every code within 120) and the safety net, all on loudness ("Level setting", below) |
 
@@ -509,7 +509,8 @@ Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`,
 on the frames' levels), shapes the frames' loudness (the reference shapes
 their levels), sets the gain from `target_rms`, and turns the plan and energies into
 frames with `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`,
-from `_toFrames()`, `_guardK510()` and `_addFades()`), and last quietens
+from `_toFrames()`, `_guardK510()` and `_addFades()`, but with fewer
+fades, below), and last quietens
 the pauses (`QuietPauses()`, below), which the reference does not do. Before the levels are set, with `resonance_hold_db`, it holds
 resonant filters through a fade (`HoldResonantFilters()`, in
 `repeat_search`; below), which the reference does not have either. Two
@@ -560,6 +561,28 @@ the PHROM round trip":
   lowers everything until all three hold. The ceiling and the budget are
   constants (plan D2).
 
+**Onsets and fades** (encoder-quality plan, Phase 4; 2026-10-13). Two
+departures from `analyse()` and `_addFades()`, measured in §9, "Onsets
+and fades, from the PHROM round trip":
+
+- *Onsets.* The chip plays a frame's voicing from the frame's centre to
+  the next frame's, 25 ms of input (datasheet §8.6 and §8.7), but the
+  centred vote looks at the centre ±5 ms. A vowel starting just after a
+  centre was voiced a frame late, and the late frame was played as noise
+  at the vowel's level. So `VoiceOnsets()` voices an unvoiced frame whose
+  next frame is voiced when most of the five hops from its own centre on
+  (hops 0 to +4) are voiced, with the median period of those hops; a
+  frame it voices does not count as voiced for the frame before. Offsets
+  keep the centred vote, since a forward vote there ends voicing early.
+- *Fades.* The reference follows every unvoiced frame before silence or
+  the end with repeats at a third of the energy each, down to energy
+  value 2: one to three frames of hiss after every final S, CH or K,
+  which Acorn's PHROM does not have (its words decay in their own frames).
+  `AddFades()` fades only an unvoiced frame at energy index 6 (value 8) or
+  more, which would stop audibly (datasheet §12.2), and then by one frame
+  at a third of its energy (`kFadeFromEnergy`, `kFadeStep`). The K5-K10
+  guard follows as before.
+
 The plan names four stage interfaces. `IFrameAnalyser` is a fifth, so the
 orchestration can be unit tested with every stage mocked.
 
@@ -580,8 +603,8 @@ over the corpus or did what another option does (§9, "Fixed options"):
 `targetPeak` unset (the level comes from `target_rms`), `peakLimit`
 (replaced by the ceiling and clip budget above, `kPeakCeiling` and
 `kClipBudget` in `level_setter`), `repeats` on (`kMaxRepeatRun`),
-`iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on and `compression` 1
-(off). Quiet pauses, once an option, are always on. The defaults are the
+`iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on (with fades only
+after loud unvoiced sound, above) and `compression` 1 (off). Quiet pauses, once an option, are always on. The defaults are the
 reference's but for five (§9, "Default settings"): `window` 256,
 `voicing_evidence` 5 and `level_agc` 1.25, chosen on the corpus for the
 overall quality score, and `voicing_threshold` 0.6 and `repeat_lambda`
@@ -1232,6 +1255,43 @@ encodings match it; Optimise from the new defaults raises the score of
 ---
 
 
+**Onsets and fades, from the PHROM round trip** (2026-10-13; §8, "Onsets
+and fades"; encoder-quality plan, Phase 4). On the round trip, 8 of the
+PHROM's 106 voicing onsets came a frame late and 6 three frames late,
+each late frame played as hiss at the vowel's level, and the encoder
+ended 23 of the 157 words in a fade-out where the PHROM has 3. Measured
+with `phrom-check.sh`, `option_sweep.py` (the corpus of 243, ARCTIC's 33,
+the investigation's 64 TTS files) and the phoneme check (`say`), at the
+defaults:
+
+| | Round trip: agreement; voiced made unvoiced inside / at onsets / at offsets; unvoiced made voiced | Onsets on time / one late (of 106); offsets one late (of 204) | Fade-outs (PHROM 3); repeats | Pitch, mean difference | Corpus: median, mean score; median VDE | Corpus size |
+|---|---|---|---|---|---|---|
+| Phase 3 | 97.2 %; 16 / 28 / 7; 26 | 72 / 8; 72 | 23; 393 | 0.40 semitones | 0.742, 0.742; 9.1 % | 122,687 bytes |
+| Fades only | 97.2 %; 16 / 28 / 7; 26 | 72 / 8; 72 | 4; 367 | 0.40 | 0.741, 0.742; 9.0 % | 122,648 bytes |
+| Onsets and fades (the encoder) | 97.9 %; 10 / 14 / 6; 27 | 80 / 0; 72 | 4; 358 | 0.43 | 0.738, 0.742; 11.1 % | 124,477 bytes |
+
+ARCTIC scores a median of 0.709 and a mean of 0.706 (0.708, 0.701), with
+a VDE of 20.4 % (18.9 %); the TTS set 0.735 and 0.742 (0.730, 0.741). On
+the phoneme set the loud unvoiced frames before voicing fall from 17 to
+10 and the fade frames from 45 to 11, of which one is a fade the encoder
+added (after a final SH at energy 6); the rest are decays in the speech's
+own frames, which the PHROM has too. The consonant frames voiced rise from
+81 to 99 of 553, 17 of them in initial consonants: the frame before the
+vowel, which the chip plays mostly over the vowel. The files over 20 %
+gross pitch error fall from 22 to 20 of 152. Encoding takes 0.0080 s per
+second of speech on one core.
+
+The fades cost nothing on the score and bring the fade-outs to the
+PHROM's. The onset rule puts 80 of the PHROM's onsets on time and none a
+frame late, with the noise bursts before vowels gone from the round trip
+(4 at energy 8 or more before, 0 after), at the cost of one more PHROM
+hiss frame voiced (27, over the plan's bound of 26) and of the corpus's
+VDE and pitch score: those compare the encoding with a tracker's voicing
+of the source, frame by frame, and the rule voices a frame the source
+voices only in its second half. The reference data was regenerated from
+the C++ encoder (§13), and the corpus check's 972 encodings match it;
+Optimise from the new defaults raises the score of 242 of the 243 files.
+
 **The anchor vocoder** is order 10, 25 ms frames, K and gain
 interpolated over 8 steps, a pulse per pitch period or Gaussian noise, pre-
 and de-emphasis 0.9375, nothing quantised: what unquantised LPC reaches,
@@ -1421,8 +1481,12 @@ the build and tests read only these files and never run anything in
   stages up to the plan from the Python encoder (same rules: refuses local
   changes, records the commit, the SHA-256 and the NumPy and SciPy
   versions), the level setting and the frames from the C++ encoder, whose
-  level setting departs from the reference's (§8, "Level setting"; agreed
-  with the user, encoder-quality plan D7). The script runs the by-hand
+  level setting, onsets and fades depart from the reference's (§8, "Level
+  setting" and "Onsets and fades"; agreed with the user, encoder-quality
+  plan D7). Each frame's voicing in the analysis is the Python's, without
+  `VoiceOnsets()`, and is checked against the stages the two share
+  (`CentredVoicing()` and `CorrectOctaves()`); the stages after it take it
+  as their input. The script runs the by-hand
   functional test `EncoderReferenceWriter` on the corpus's WAV copies and
   records `kEncoderVersion`; `--check` compares:
   - `inputs/`: WAV copies of an eight-file corpus subset (public-domain and
@@ -1571,7 +1635,9 @@ reference data did not change, since it is compared with quiet pauses
 off (§13). `1.3.0` aims the level at loudness and gives the limiter a
 clip budget (§8, "Level setting"): the test projects with recordings were
 encoded again, their exports' hashes recorded again, and the reference
-data regenerated from the C++ encoder (§13).
+data regenerated from the C++ encoder (§13). `1.4.0` voices onsets from
+the hops the chip plays and fades only loud hiss (§8, "Onsets and
+fades"), with the same regeneration.
 
 **Audio on the 24-bit grid.** A project stores audio as 24-bit PCM, so the
 importer rounds the 8 kHz samples to codes / 2^23 (`QuantiseToPcm24()`),

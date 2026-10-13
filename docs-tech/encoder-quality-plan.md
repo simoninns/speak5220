@@ -254,48 +254,71 @@ the reference data. Done 2026-10-13; the sweeps and the reasons are in HLD
      0.0085). The listening check of five loud and five quiet files is
      the user's.
 
-**Baseline for the later phases.** The defaults after Phase 3, by the
-same commands:
+**Baseline for the later phases.** The defaults after Phases 3 and 4, by
+the same commands:
 
-| Measure | Phase 2 defaults | Phase 3 defaults |
-|---|---|---|
-| ARCTIC (33): score median / mean | 0.698 / 0.695 | 0.708 / 0.701 |
-| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 2.97 dB, 5.5 %, 18.4 %, 0.764 | 2.88 dB, 5.7 %, 18.9 %, 0.765 |
-| ARCTIC: bytes; sounding RMS, peak, clipped (mean), BBC Micro RMS, A-weighted RMS | 20,298; 19.6, 118, 0, 11.6, 8.5 | 20,452; 24.7, 146, 0.082 %, 14.5, 10.6 |
-| Corpus (243): score median / mean; bytes | 0.730 / 0.732; 122,016 | 0.742 / 0.742; 122,687 |
-| TTS (64): score median / mean | 0.747 / 0.726 | 0.730 / 0.741 |
-| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 97.2 %; 17 / 28 / 7 / 26 | 97.2 %; 16 / 28 / 7 / 26 |
-| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 395; 25; 1.98 dB; +0.36 / +0.78 | 393; 23; 1.99 dB; +0.58 / +0.80 |
-| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 | 21.8 / 21.5, 124 / 126, 14.5 / 14.6 |
-| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 13; 23 of 152; 81 of 553 | 17; 22 of 152; 81 of 553 |
+| Measure | Phase 2 defaults | Phase 3 defaults | Phase 4 defaults |
+|---|---|---|---|
+| ARCTIC (33): score median / mean | 0.698 / 0.695 | 0.708 / 0.701 | 0.709 / 0.706 |
+| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 2.97 dB, 5.5 %, 18.4 %, 0.764 | 2.88 dB, 5.7 %, 18.9 %, 0.765 | 2.87 dB, 5.6 %, 20.4 %, 0.771 |
+| ARCTIC: bytes; sounding RMS, peak, clipped (mean), BBC Micro RMS, A-weighted RMS | 20,298; 19.6, 118, 0, 11.6, 8.5 | 20,452; 24.7, 146, 0.082 %, 14.5, 10.6 | 20,771; 24.9, 147, 0.084 %, 14.5, 10.6 |
+| Corpus (243): score median / mean; bytes | 0.730 / 0.732; 122,016 | 0.742 / 0.742; 122,687 | 0.738 / 0.742; 124,477 |
+| TTS (64): score median / mean | 0.747 / 0.726 | 0.730 / 0.741 | 0.735 / 0.742 |
+| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 97.2 %; 17 / 28 / 7 / 26 | 97.2 %; 16 / 28 / 7 / 26 | 97.9 %; 10 / 14 / 6 / 27 |
+| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 395; 25; 1.98 dB; +0.36 / +0.78 | 393; 23; 1.99 dB; +0.58 / +0.80 | 358; 4; 1.99 dB; +0.58 / +0.79 |
+| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 | 21.8 / 21.5, 124 / 126, 14.5 / 14.6 | 21.8 / 21.6, 124 / 126, 14.5 / 14.5 |
+| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 13; 23 of 152; 81 of 553 | 17; 22 of 152; 81 of 553 | 10; 20 of 152; 99 of 553 |
 
 ## Phase 4: Voicing onsets and fades
 
 Depends on: Phase 3. Changes C4 and C7. One regeneration of the reference
-data.
+data. Done 2026-10-13; the figures are in HLD §9, "Onsets and fades, from
+the PHROM round trip", and the design in HLD §8, "Onsets and fades".
 
 1. **Onset rule.** `VoicingClassifier::Classify()` keeps the centred
-   majority of hops −1…+1 and, when the next frame's centre is voiced,
-   also votes hops 0…+4; the frame is voiced if either says so. The
-   period of a frame voiced by the forward vote is the median of the
-   voiced hops that voted. Unit tests with hand-made pitch tracks for an
-   onset inside the frame, an offset, and an island.
-   - **Acceptance:** round trip: onsets on time ≥ 80 of 106, late by one
-     frame ≤ 15, offsets late unchanged (≤ 65); unvoiced-made-voiced ≤ 26;
-     corpus score within 0.005.
+   majority of hops −1…+1 (`CentredVoicing()`) and, when the next frame's
+   centred vote is voiced, also votes hops 0…+4 (`VoiceOnsets()`); the
+   frame is voiced if either says so, with the median period of the
+   voiced hops that voted, and the octave fix (`CorrectOctaves()`)
+   follows. Unit tests with hand-made pitch tracks for an onset inside the
+   frame (and one too late in it), an offset, an island, and a frame
+   voiced by the rule not voicing the one before.
+   - **Acceptance:** round trip: onsets on time 80 of 106 (≥ 80; Phase 3
+     72), late by one frame 0 (≤ 15; 8), offsets late by one 72
+     (unchanged; the bound of 65 was already passed in Phase 3);
+     unvoiced-made-voiced 27 (≤ 26: **not met** by one frame); corpus
+     median 0.738 against 0.742 (within 0.005). The corpus VDE rises from
+     9.1 % to 11.1 % and the pitch difference on the round trip from 0.40
+     to 0.43 semitones, both from this rule alone (the fades alone leave
+     them as they were). Whether to accept the miss is the user's.
 2. **Fades only where needed.** `AddFades()` appends a fade only after an
    unvoiced frame of energy index 6 or more that precedes silence or the
-   stop, and then one frame at a third of its energy; quieter endings end
-   as the PHROM's do. Unit tests for both branches and for the K5–K10
-   guard that follows.
-   - **Acceptance:** round-trip fade-outs ≤ 10 of 157 words; the phoneme
-     report shows no fade after a final S or CH whose own frames already
-     decay; corpus score within 0.005.
-3. **Reference data, version and documentation** as Phase 3 task 4; HLD
-   §8's description of the voicing classifier and of `frame_endings`
-   updated.
-   - **Acceptance:** as Phase 3 task 4, with a listening check of ten
-     words with final fricatives and ten with vowel onsets after S or K.
+   stop (`kFadeFromEnergy`), and then one frame at a third of its energy;
+   quieter endings end as the PHROM's do. Unit tests for both branches,
+   the threshold, a decay already in the frames, and the K5–K10 guard
+   that follows.
+   - **Acceptance:** round-trip fade-outs 4 of 157 words (≤ 10; Phase 3
+     23); on the phoneme set 11 fade frames (45), of which one is a fade
+     the encoder added, after a lone final SH at energy 6, and the rest
+     decays coded from the speech: no fade after a final S or CH whose
+     frames already decay. Corpus median 0.741 with this change alone
+     (within 0.005). Met.
+3. **Reference data, version and documentation** as Phase 3 task 4:
+   `app/golden/encoder/` (the "encode" sections of the intermediates and
+   the frames, from the C++ encoder; the Python's voicing in the
+   intermediates is without the onset rule, and the intermediates test
+   checks it against `CentredVoicing()` and `CorrectOctaves()`) and
+   `app/golden/quality/` regenerated; `kEncoderVersion` 1.4.0; the fixture
+   projects with recordings re-encoded and their export hashes recorded
+   again. HLD §8 (the stage table, "Onsets and fades", "Options"), §9 and
+   §13, `encoder-options.md` (`fadeUnvoiced`), `encoder.md` ("Vowel
+   starts and word endings"), `app/golden/README.md`, TESTING.md and
+   `encoder.py` updated.
+   - **Acceptance:** `corpus-check.sh` passes against the new reference
+     (972 of 972 identical; Optimise raises 242 of 243 files): met.
+     Encoding takes 0.0080 s per second of speech on one core (Phase 3:
+     0.0079). The listening check of ten words with final fricatives and
+     ten with vowel onsets after S or K is the user's.
 
 ## Phase 5: A pitch tracker that cannot lock on a harmonic
 

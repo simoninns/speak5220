@@ -375,7 +375,9 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
     encoder version 1.3.0, whose level setting departs from the Python's,
     the frames and the level-setting intermediates are the C++ encoder's
     (`app/scripts/golden/encoder.py` runs `EncoderReferenceWriter`), and
-    the stages before them are still checked against the Python's values.
+    the stages before them are still checked against the Python's values
+    (the voicing without the C++ encoder's onset rule, which the unit tests
+    check).
     A change behind an option that is off in those sets leaves the
     reference data as it is, and is tested by unit tests of its own.
 

@@ -35,11 +35,15 @@ std::vector<lpc::Frame> ToFrames(std::span<const PlanEntry> plan,
 // Re-implements tms5220enc.py _guardK510().
 std::vector<lpc::Frame> GuardK510(std::span<const lpc::Frame> frames);
 
-// Fades unvoiced sound before silence and before the end (§12.2), each
-// fade frame an unvoiced repeat at about a third of the energy before,
-// replacing following silence frames (or appended at the end); then
-// applies GuardK510() and adds the stop. Re-implements tms5220enc.py
-// _addFades(), with fadeUnvoiced on, its default.
+// Fades loud unvoiced sound before silence and before the end, which
+// would otherwise stop audibly (§12.2): an unvoiced frame at energy index
+// 6 (value 8) or more is followed by one unvoiced repeat at about a third
+// of its energy, in place of the silence frame after it (or appended at
+// the end). Quieter unvoiced sound ends as it is, as it does in Acorn's
+// PHROM, whose words decay in their own frames (HLD §9). Then applies
+// GuardK510() and adds the stop. Departs from tms5220enc.py _addFades(),
+// which faded every unvoiced ending in steps of a third down to energy
+// value 2.
 std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames);
 
 // The pauses QuietPauses() quietens: this many silence frames or more.

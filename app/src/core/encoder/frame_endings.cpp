@@ -27,9 +27,10 @@
 namespace speak5220::core::encoder {
 namespace {
 
-// A fade ends once the energy value is this low (§12.2).
-constexpr int kFadeEndValue = 2;
-// Each fade frame has about this fraction of the energy before it.
+// AddFades(): unvoiced sound at this energy index (value 8) or more
+// before silence or the end would stop audibly (§12.2), and is followed by
+// one frame at about a third of its energy value.
+constexpr int kFadeFromEnergy = 6;
 constexpr double kFadeStep = 3.0;
 
 bool IsSounding(const lpc::Frame& f) {
@@ -133,31 +134,25 @@ std::vector<lpc::Frame> GuardK510(std::span<const lpc::Frame> frames) {
 
 std::vector<lpc::Frame> AddFades(std::span<const lpc::Frame> frames) {
   std::vector<lpc::Frame> faded;
+  faded.reserve(frames.size() + 1);
   const std::size_t nfr = frames.size();
   std::size_t i = 0;
   while (i < nfr) {
     const lpc::Frame& f = frames[i];
     faded.push_back(f);
-    const bool unvoiced = IsSounding(f) && f.pitch == 0;
-    if (unvoiced &&
-        (i + 1 == nfr || frames[i + 1].energy == lpc::kSilenceEnergy)) {
-      // Replace the following silence frames (or append, at the end).
-      int e = f.energy;
-      std::size_t j = i + 1;
-      while (EnergyValue(e) > kFadeEndValue) {
-        e = EnergyIndex(static_cast<double>(EnergyValue(e)) / kFadeStep);
-        const lpc::Frame fade = lpc::Frame::Repeat(e, 0);
-        if (j >= nfr || frames[j].energy == lpc::kSilenceEnergy) {
-          faded.push_back(fade);
-          ++j;
-        } else {
-          break;
-        }
-      }
-      i = std::max(i + 1, std::min(j, nfr));
-      continue;
-    }
     ++i;
+    const bool loud_unvoiced =
+        IsSounding(f) && f.pitch == 0 && f.energy >= kFadeFromEnergy;
+    if (loud_unvoiced &&
+        (i == nfr || frames[i].energy == lpc::kSilenceEnergy)) {
+      // In place of the silence frame that follows, or appended at the end.
+      const int e =
+          EnergyIndex(static_cast<double>(EnergyValue(f.energy)) / kFadeStep);
+      faded.push_back(lpc::Frame::Repeat(e, 0));
+      if (i < nfr) {
+        ++i;
+      }
+    }
   }
   std::vector<lpc::Frame> out = GuardK510(faded);
   out.push_back(lpc::Frame::Stop());

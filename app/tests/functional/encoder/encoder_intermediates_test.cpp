@@ -228,7 +228,8 @@ TEST_P(EncoderIntermediatesTest, PitchTrackMatchesReference) {
 }
 
 // The voicing parts of tms5220enc.py analyse(), from the reference's own
-// pitch track.
+// pitch track: the centred vote and the octave fix. VoiceOnsets() is not
+// in the reference, and is checked by the unit tests.
 TEST_P(EncoderIntermediatesTest, VoicingMatchesReference) {
   const QJsonObject pitch = ref_["pitch"].toObject();
   const core::encoder::PitchTrack track{
@@ -240,8 +241,9 @@ TEST_P(EncoderIntermediatesTest, VoicingMatchesReference) {
   for (const FrameFeatures& f : ref) {
     centres.push_back(f.centre);
   }
-  core::encoder::VoicingClassifier classifier;
-  const auto voicing = classifier.Classify(track, centres);
+  std::vector<core::encoder::FrameVoicing> voicing =
+      core::encoder::CentredVoicing(track, centres);
+  core::encoder::CorrectOctaves(voicing);
   ASSERT_EQ(voicing.size(), ref.size());
   for (std::size_t j = 0; j < ref.size(); ++j) {
     EXPECT_EQ(voicing[j].voiced, ref[j].voiced) << "frame " << j;

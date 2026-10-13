@@ -81,35 +81,75 @@ TEST(FrameEndingsTest, VoicedEndGetsOnlyTheStop) {
   EXPECT_EQ(AddFades(frames), expected);
 }
 
-TEST(FrameEndingsTest, UnvoicedEndFadesInThirdsBeforeTheStop) {
-  // Energy index 10 (value 33): 33/3 = 11 is index 7; 11/3 is nearest 4
-  // (index 4) in dB; 4/3 is nearest 1 (index 1), which ends the fade.
+TEST(FrameEndingsTest, LoudUnvoicedEndFadesOneFrameBeforeTheStop) {
+  // Energy index 10 (value 33): 33/3 = 11 is index 7.
   const std::vector<Frame> frames = {Frame::Voiced(9, 30, kK10Array),
                                      Frame::Unvoiced(10, kK4Array)};
   EXPECT_EQ(AddFades(frames),
             (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
                                 Frame::Unvoiced(10, kK4Array),
-                                Frame::Repeat(7, 0), Frame::Repeat(4, 0),
-                                Frame::Repeat(1, 0), Frame::Stop()}));
+                                Frame::Repeat(7, 0), Frame::Stop()}));
 }
 
-TEST(FrameEndingsTest, FadeReplacesFollowingSilenceOnly) {
+TEST(FrameEndingsTest, FadeStartsAtEnergyIndexSix) {
+  // Index 6 (value 8): 8/3 is nearest 3 (index 3) in dB. Index 5 (value
+  // 6) ends as it is.
+  const std::vector<Frame> loud = {Frame::Voiced(9, 30, kK10Array),
+                                   Frame::Unvoiced(6, kK4Array)};
+  EXPECT_EQ(AddFades(loud),
+            (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
+                                Frame::Unvoiced(6, kK4Array),
+                                Frame::Repeat(3, 0), Frame::Stop()}));
+  const std::vector<Frame> quiet = {Frame::Voiced(9, 30, kK10Array),
+                                    Frame::Unvoiced(5, kK4Array)};
+  EXPECT_EQ(AddFades(quiet),
+            (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
+                                Frame::Unvoiced(5, kK4Array), Frame::Stop()}));
+}
+
+TEST(FrameEndingsTest, FadeReplacesOneSilenceFrameOnly) {
   const std::vector<Frame> frames = {
       Frame::Voiced(9, 30, kK10Array), Frame::Unvoiced(10, kK4Array),
-      Frame::Silence(), Frame::Voiced(9, 30, kK10Array)};
-  EXPECT_EQ(
-      AddFades(frames),
-      (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
-                          Frame::Unvoiced(10, kK4Array), Frame::Repeat(7, 0),
-                          Frame::Voiced(9, 30, kK10Array), Frame::Stop()}));
+      Frame::Silence(), Frame::Silence(), Frame::Voiced(9, 30, kK10Array)};
+  EXPECT_EQ(AddFades(frames),
+            (std::vector<Frame>{
+                Frame::Voiced(9, 30, kK10Array), Frame::Unvoiced(10, kK4Array),
+                Frame::Repeat(7, 0), Frame::Silence(),
+                Frame::Voiced(9, 30, kK10Array), Frame::Stop()}));
 }
 
-TEST(FrameEndingsTest, QuietUnvoicedEndNeedsNoFade) {
+TEST(FrameEndingsTest, QuietUnvoicedSoundBeforeSilenceIsNotFaded) {
+  // A decay already in the frames (as a final S in Acorn's PHROM) ends as
+  // it is.
   const std::vector<Frame> frames = {Frame::Voiced(9, 30, kK10Array),
+                                     Frame::Unvoiced(5, kK4Array),
+                                     Frame::Repeat(3, 0),
+                                     Frame::Silence(),
+                                     Frame::Voiced(9, 30, kK10Array),
                                      Frame::Unvoiced(2, kK4Array)};
-  EXPECT_EQ(AddFades(frames),
-            (std::vector<Frame>{Frame::Voiced(9, 30, kK10Array),
-                                Frame::Unvoiced(2, kK4Array), Frame::Stop()}));
+  std::vector<Frame> expected = frames;
+  expected.push_back(Frame::Stop());
+  EXPECT_EQ(AddFades(frames), expected);
+}
+
+TEST(FrameEndingsTest, GuardFollowsTheFade) {
+  // Before the first voiced frame, the silence the fade leaves (loud) or
+  // all of it (quiet) becomes an unvoiced repeat at energy 1.
+  const std::vector<Frame> loud = {Frame::Unvoiced(10, kK4Array),
+                                   Frame::Silence(), Frame::Silence(),
+                                   Frame::Voiced(9, 30, kK10Array)};
+  EXPECT_EQ(
+      AddFades(loud),
+      (std::vector<Frame>{Frame::Unvoiced(10, kK4Array), Frame::Repeat(7, 0),
+                          Frame::Repeat(1, 0), Frame::Voiced(9, 30, kK10Array),
+                          Frame::Stop()}));
+  const std::vector<Frame> quiet = {Frame::Unvoiced(4, kK4Array),
+                                    Frame::Silence(),
+                                    Frame::Voiced(9, 30, kK10Array)};
+  EXPECT_EQ(
+      AddFades(quiet),
+      (std::vector<Frame>{Frame::Unvoiced(4, kK4Array), Frame::Repeat(1, 0),
+                          Frame::Voiced(9, 30, kK10Array), Frame::Stop()}));
 }
 
 // QuietPauses() (speak5220 datasheet §12.2).

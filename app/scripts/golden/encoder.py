@@ -5,8 +5,10 @@
 
 The stages before level setting come from the reference Python encoder
 (investigation/encoder/tms5220enc.py), which the C++ encoder re-implements
-and matches; the level setting and the frames come from the C++ encoder
-itself, whose level setting departs from the reference's (HLD §8 and §13).
+and matches but for its onset rule (the voicing written is the Python's);
+the level setting and the frames come from the C++ encoder itself, whose
+level setting, onsets and fades depart from the reference's (HLD §8 and
+§13).
 On the phase 11 corpus (investigation/captures/phase11/inputs/) it writes
 (application plan §1.4 and §3.2, Phase 2 task 1):
 

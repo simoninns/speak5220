@@ -1,8 +1,8 @@
 /*
  * File:        voicing_classifier_test.cpp
  * Module:      encoder tests
- * Purpose:     Unit tests of the per-frame voicing decision and the octave
- *              fix
+ * Purpose:     Unit tests of the per-frame voicing decision, the onset
+ *              rule and the octave fix
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -101,6 +101,70 @@ TEST(VoicingClassifierTest, OctaveFixStaysWithinPitchRange) {
   const std::vector<int> centres = {0, 200, 400, 600, 800};
   EXPECT_EQ(c.Classify(TrackOf(periods), centres)[2].period, 100.0);
   EXPECT_EQ(c.Classify(TrackOf(high), centres)[2].period, 85.0);
+}
+
+// VoiceOnsets(): frames every 200 samples (5 hops), so frame j's centre
+// is hop 5j, its centred vote hops 5j-1 to 5j+1 and its forward vote hops
+// 5j to 5j+4.
+const std::vector<int> kCentres = {0, 200, 400, 600};
+
+// A track of 20 hops, voiced (period `period` + the hop) from `from` to
+// `to` inclusive.
+PitchTrack VoicedHops(int from, int to, double period = 60.0) {
+  std::vector<double> periods(20, 0.0);
+  for (int h = from; h <= to; ++h) {
+    periods[static_cast<std::size_t>(h)] = period + h;
+  }
+  return TrackOf(periods);
+}
+
+TEST(VoicingClassifierTest, OnsetInsideAFrameVoicesIt) {
+  VoicingClassifier c;
+  // Voicing from hop 7: frame 1's centred vote (hops 4-6) is unvoiced, but
+  // three of its forward hops (7-9) are voiced and so is frame 2.
+  const auto v = c.Classify(VoicedHops(7, 19), kCentres);
+  EXPECT_FALSE(v[0].voiced);
+  EXPECT_TRUE(v[1].voiced);
+  EXPECT_EQ(v[1].period, 68.0);  // the median of hops 7-9
+  EXPECT_TRUE(v[2].voiced);
+  // From hop 8 only two of the five vote voiced: still a frame late.
+  const auto late = c.Classify(VoicedHops(8, 19), kCentres);
+  EXPECT_FALSE(late[1].voiced);
+  EXPECT_TRUE(late[2].voiced);
+  // The centred vote alone leaves the onset a frame late.
+  EXPECT_FALSE(CentredVoicing(VoicedHops(7, 19), kCentres)[1].voiced);
+}
+
+TEST(VoicingClassifierTest, OffsetIsDecidedByTheCentredVoteAlone) {
+  VoicingClassifier c;
+  // Voiced to hop 6: frame 1's centred vote (4-6) is voiced, though its
+  // forward hops (5-9) are mostly not; frame 2 stays unvoiced.
+  const auto v = c.Classify(VoicedHops(0, 6), kCentres);
+  EXPECT_TRUE(v[1].voiced);
+  EXPECT_EQ(v[1].period, 65.0);  // the centred hops' median
+  EXPECT_FALSE(v[2].voiced);
+}
+
+TEST(VoicingClassifierTest, ForwardVoteNeedsTheNextFrameVoiced) {
+  VoicingClassifier c;
+  // An island of voicing at hops 6-8, inside frame 1's forward hops but
+  // not reaching frame 2's centre: no frame is voiced.
+  const auto v = c.Classify(VoicedHops(6, 8), kCentres);
+  for (const FrameVoicing& f : v) {
+    EXPECT_FALSE(f.voiced);
+  }
+}
+
+TEST(VoicingClassifierTest, OnsetRuleDoesNotCascade) {
+  // Frame 2 is voiced only by the onset rule; frame 1, whose forward hops
+  // (5-9) are voiced, is left as it is since frame 2's own vote was not.
+  std::vector<FrameVoicing> v = {{.voiced = false},
+                                 {.voiced = false},
+                                 {.voiced = false},
+                                 {.voiced = true, .period = 60.0}};
+  VoiceOnsets(VoicedHops(5, 14), kCentres, v);
+  EXPECT_FALSE(v[1].voiced);
+  EXPECT_TRUE(v[2].voiced);
 }
 
 // The voicing of each frame, as a string: V voiced, U unvoiced.

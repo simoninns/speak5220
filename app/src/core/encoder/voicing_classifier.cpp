@@ -2,8 +2,9 @@
  * File:        voicing_classifier.cpp
  * Module:      encoder
  * Purpose:     Each frame's voicing and period from the pitch track, with
- *              octave errors corrected against its neighbours and short
- *              islands of voicing removed
+ *              onsets voiced from the hops the chip plays, octave errors
+ *              corrected against its neighbours and short islands of
+ *              voicing removed
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -12,6 +13,7 @@
 #include "core/encoder/voicing_classifier.h"
 
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <span>
@@ -34,35 +36,81 @@ constexpr double kLongestPeriod = 160.0;
 constexpr int kNeighbourReach = 2;
 constexpr std::size_t kMinimumNeighbours = 2;
 
+// VoiceOnsets(): the hops after a frame's centre that vote, the centre's
+// own first (§8.6: 25 ms of 5 ms hops).
+constexpr int kForwardHops = 5;
+
+// The hop nearest an input sample. Python's round(): halves go to the
+// even neighbour.
+int NearestHop(int sample) {
+  return static_cast<int>(std::nearbyint(static_cast<double>(sample) /
+                                         static_cast<double>(kPitchHop)));
+}
+
+// The majority vote of hops [first, last] of `track` that exist, with the
+// median period of the voiced ones (0 when unvoiced).
+FrameVoicing Vote(const PitchTrack& track, int first, int last,
+                  std::vector<double>& voiced_periods) {
+  const auto hops = static_cast<int>(track.periods.size());
+  int counted = 0;
+  voiced_periods.clear();
+  for (int h = first; h <= last; ++h) {
+    if (h < 0 || h >= hops) {
+      continue;
+    }
+    ++counted;
+    const double period = track.periods[static_cast<std::size_t>(h)];
+    if (period > 0.0) {
+      voiced_periods.push_back(period);
+    }
+  }
+  const bool voiced = static_cast<int>(voiced_periods.size()) * 2 > counted;
+  return {.voiced = voiced,
+          .period = voiced ? dsp::Median(voiced_periods) : 0.0};
+}
+
 }  // namespace
 
 std::vector<FrameVoicing> VoicingClassifier::Classify(
     const PitchTrack& track, std::span<const int> centres) {
-  const auto hops = static_cast<int>(track.periods.size());
+  std::vector<FrameVoicing> out = CentredVoicing(track, centres);
+  VoiceOnsets(track, centres, out);
+  CorrectOctaves(out);
+  return out;
+}
+
+std::vector<FrameVoicing> CentredVoicing(const PitchTrack& track,
+                                         std::span<const int> centres) {
   std::vector<FrameVoicing> out;
   out.reserve(centres.size());
   std::vector<double> voiced_periods;
   for (const int c : centres) {
-    // Python's round(): halves go to the even neighbour.
-    const auto h0 = static_cast<int>(std::nearbyint(
-        static_cast<double>(c) / static_cast<double>(kPitchHop)));
-    int counted = 0;
-    voiced_periods.clear();
-    for (int h = h0 - 1; h <= h0 + 1; ++h) {
-      if (h < 0 || h >= hops) {
-        continue;
-      }
-      ++counted;
-      const double period = track.periods[static_cast<std::size_t>(h)];
-      if (period > 0.0) {
-        voiced_periods.push_back(period);
-      }
-    }
-    const bool voiced = static_cast<int>(voiced_periods.size()) * 2 > counted;
-    out.push_back({.voiced = voiced,
-                   .period = voiced ? dsp::Median(voiced_periods) : 0.0});
+    const int h0 = NearestHop(c);
+    out.push_back(Vote(track, h0 - 1, h0 + 1, voiced_periods));
   }
+  return out;
+}
 
+void VoiceOnsets(const PitchTrack& track, std::span<const int> centres,
+                 std::span<FrameVoicing> voicing) {
+  assert(centres.size() == voicing.size());
+  std::vector<double> voiced_periods;
+  // In frame order, so that each frame sees its next frame as given.
+  for (std::size_t j = 1; j < voicing.size(); ++j) {
+    const std::size_t prev = j - 1;
+    if (voicing[prev].voiced || !voicing[j].voiced) {
+      continue;
+    }
+    const int h0 = NearestHop(centres[prev]);
+    const FrameVoicing forward =
+        Vote(track, h0, h0 + kForwardHops - 1, voiced_periods);
+    if (forward.voiced) {
+      voicing[prev] = forward;
+    }
+  }
+}
+
+void CorrectOctaves(std::span<FrameVoicing> out) {
   const auto n = static_cast<int>(out.size());
   std::vector<double> neighbours;
   for (int j = 0; j < n; ++j) {
@@ -87,7 +135,6 @@ std::vector<FrameVoicing> VoicingClassifier::Classify(
       f.period *= 2.0;
     }
   }
-  return out;
 }
 
 void SmoothVoicingRuns(std::span<FrameVoicing> voicing, int min_run) {

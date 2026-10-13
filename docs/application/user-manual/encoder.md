@@ -392,6 +392,26 @@ corpus of 243 recordings it lowers more scores than it raises, so it is
 not the default. The threshold's default has since risen to `0.6`, which
 leaves fewer bursts of hiss inside vowels still.
 
+## Vowel starts and word endings
+
+Two things the encoder always does, with no setting, so that phrases
+start and end as Acorn's own do:
+
+- **Vowels start on time.** The chip plays each frame's buzz or hiss for
+  the 25 ms after the moment the frame stands for, so a vowel that starts
+  a little after that moment would be played a frame late, with a short
+  burst of hiss at the vowel's loudness in front of it (after an *s* or a
+  *k*, for example). The encoder decides such a frame by the sound the
+  chip will play it over, and makes it voiced. On Acorn's phrases,
+  re-encoded, 80 of their 106 vowel starts now come on the same frame as
+  in the phrases themselves, and none a frame late (72 and 8 before).
+- **Hiss ends as it is.** A final *s*, *sh* or *ch* already dies away in
+  its own frames, so the encoder adds a fade only after hiss that is
+  still loud when the sound stops (energy 8 or more), and then one frame
+  of it. Acorn's phrases, re-encoded, now end in a fade 4 times in 157
+  words, against 23 before (the phrases themselves: 3); each of those
+  fades lengthened the word by 25 to 75 ms of hiss.
+
 ## Quiet pauses
 
 A pause inside a phrase is made of silence frames, which stop the sound

@@ -47,7 +47,10 @@ The C++ encoder's level setting departs from the reference's (encoder
 version 1.3.0; docs-tech/design/high-level-design.md §8, "Level setting"),
 so since then the frames and the level-setting intermediates are its own,
 regenerated with each intended change to it, and the Python provides the
-stages before (HLD §13). A near-tie frame is one whose coding changes when
+stages before (HLD §13). Its onsets and fades depart too (HLD §8, "Onsets
+and fades"): each frame's voicing in the intermediates is the
+Python's, without the C++ encoder's onset rule, which only the unit tests
+check. A near-tie frame is one whose coding changes when
 the input is disturbed at the level of floating-point noise; the C++
 encoder could differ from the reference there, and only there (plan §3.2).
 The Python reference had none, and the C++ encoder, which gives the same

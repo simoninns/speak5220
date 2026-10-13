@@ -117,7 +117,7 @@ corpus of 243 recordings, or did what another option already does:
 | `peakLimit` | Replaced: no peak over 160, and at most 1 sample in 1000 over the DAC's ±127, which clips it | The reference's 120 held every peak inside the DAC's range, so the peaks rather than `target_rms` set the level and phrases came out quieter than Acorn's own, which clip 0.21 % of their samples ([the level](../user-manual/encoder.md#the-level)) |
 | `repeats` | On | `repeat_lambda` already sets how many repeat frames are used |
 | `iterations` | 5 passes | 3 or 8 passes moved no file's score by more than 0.02 |
-| `fadeUnvoiced` | On | Hiss fades out instead of stopping abruptly |
+| `fadeUnvoiced` | On, after loud hiss only | Loud hiss fades out over one frame instead of stopping abruptly; quieter hiss ends as the recording has it, as on Acorn's own PHROMs |
 | `compression` | Off | It lowered the score on average, and badly on some recordings; `level_agc` brings quiet words up better |
 | `quietPauses` (Speak5220's own) | On | Without it the chip buzzes faintly through every pause |
 
