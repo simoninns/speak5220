@@ -1,10 +1,12 @@
 # The encoder and Optimise
 
-Under the [waveforms](waveforms.md), with a splitter between them, the
-[main window](main-window.md) shows the selected phrase's **encoder
+On the **Encode** tab of the [main window](main-window.md), under the
+encoded [waveform](waveforms.md), is the selected phrase's **encoder
 panel**: what its frames add up to, how good they sound, and the
-settings they are made with. **Optimise** searches those settings for
-the best quality the project has room for.
+settings they are made with. The [preprocessing](#preprocessing)
+settings are on the **Preprocess** tab, under the preprocessed waveform.
+**Optimise** searches the settings for the best quality the project has
+room for.
 
 A phrase is made in three stages:
 
@@ -16,9 +18,10 @@ A phrase is made in three stages:
    recording.
 
 The quality is measured between the last two: how close the encoding is
-to what it was asked to make. The top [waveform](waveforms.md) shows the
-original or the preprocessed recording, as you choose, so you can see
-and hear what the encoding is aiming at.
+to what it was asked to make. The main window has a tab for each stage,
+**Original**, **Preprocess** and **Encode**, each with its
+[waveform](waveforms.md), so you can see and hear what the encoding is
+aiming at and what it made.
 
 ## The encoder panel
 
@@ -43,7 +46,8 @@ From the top:
     (frames whose energy was lowered to keep every code within ±120,
     and frames made silent) is known only for encodings made in this session.
 - **The quality rating** (below).
-- **The settings** (below).
+- **The settings** (below): the encoder's. The preprocessing settings
+  are on the Preprocess tab.
 - **Re-encode** (Encode for a phrase with no frames) encodes the phrase
   now with the settings shown. It is available only when there is
   something to redo: the phrase has no frames, they are stale, or a
@@ -124,9 +128,10 @@ the [resonance hold](#the-resonance-hold) have a check box that turns
 them on or off, and the pre-emphasis a choice of chirp or first order,
 whose coefficient the slider beside it sets.
 
-The **Preprocessing** section always shows its three settings: the
-[squelch](#the-squelch), and the [bass cut and treble
-tilt](#bass-cut-and-treble-tilt). The **Encoder** section first shows
+The **Preprocessing** section, on the Preprocess tab, always shows its
+three settings: the [squelch](#the-squelch), and the [bass cut and
+treble tilt](#bass-cut-and-treble-tilt). The **Encoder** section, on
+the Encode tab, first shows
 its four **basic settings**, the ones that change the sound or the size
 most clearly: the target RMS (loudness), the repeat trade-off (bytes
 against quality), the pre-emphasis (brighter or more muffled) and the
@@ -168,18 +173,20 @@ stored: a message says so, and the form shows the phrase's settings again
 
 The preprocessing prepares the recording for the chip before it is
 encoded. It is off by default, so the encoder takes the original as it
-is. It is set in the **Preprocessing** section of the settings, for a
-phrase or for the project's defaults like any other setting.
+is. It is set in the **Preprocessing** section on the **Preprocess**
+tab, for a phrase or for the project's defaults like any other setting:
+the tab has its own **Settings for** chooser, which always matches the
+Encode tab's. A change there re-encodes the phrase after a pause, as a
+change on the Encode tab does.
 
 - The quality is measured against the preprocessed recording, which is
   what the encoding aims at. So a preprocessing that suits the speaker
   the phrases will be played on is not counted against the encoding, and
   scores made with different preprocessing do not compare. Optimise keeps
   the phrase's preprocessing as it is.
-- Click **Preprocessed** above the top waveform to see and hear the
-  recording as preprocessed, and **Original** to go back
-  ([the original and the preprocessed
-  recording](waveforms.md#the-original-and-the-preprocessed-recording)).
+- The Preprocess tab's waveform shows and plays the recording as
+  preprocessed, following the settings as they move
+  ([the preprocessed recording](waveforms.md#the-preprocessed-recording)).
   The original is never changed.
 - **Export** can write the preprocessed recordings as WAV files
   ([export](export.md)).
@@ -215,11 +222,11 @@ box to turn it on (it starts at `30 dB`).
   frames of the encoding are silent (45 dB below the loudest frame by
   default) and does not change the preprocessed recording.
 
-On the original waveform the stretches the squelch mutes are
-[shaded](waveforms.md#the-squelch), and the shading follows the slider as
-it moves, so the level can be set by eye: breaths are often 25 to 35 dB
-below the loudest sound, so a breath that `30 dB` leaves unshaded may
-need `25 dB` or less. On the preprocessed recording they are silent.
+On the Preprocess tab's waveform the stretches the squelch mutes are
+silent and [shaded](waveforms.md#the-squelch), and the shading follows
+the slider as it moves, so the level can be set by eye: breaths are
+often 25 to 35 dB below the loudest sound, so a breath that `30 dB`
+leaves unshaded may need `25 dB` or less.
 
 ### Bass cut and treble tilt
 
@@ -360,8 +367,8 @@ When it finishes with better settings, **Listen** compares them by ear:
 - **▶ Original** plays the phrase's frames now, which Revert keeps;
 - **▶ Optimised** plays the frames Optimise found, which Accept keeps.
 
-Each plays the whole phrase at the recording's level, as the encoded
-waveform pane plays it, so the two compare fairly. Pressing a button while
+Each plays the whole phrase at the recording's level, as the Encode
+tab's waveform plays it, so the two compare fairly. Pressing a button while
 it plays pauses it; pressing the other stops it and plays from the
 beginning. When several phrases changed, choose which to hear beside
 **Listen**. A phrase with no frames before Optimise has only **Optimised**.

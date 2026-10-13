@@ -30,7 +30,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality, BBC BASIC II tokenisations, output hashes) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`, `bbc/`, `benchmark/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the original (or preprocessed) and encoded waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the Original, Preprocess and Encode tabs with their waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
@@ -111,8 +111,9 @@ app/
                                 helpers and text (§17)
       optimise/                 OptimiseSession, OptimiseDialog (§17)
       export/                   ExportDialog (§18)
-      waveform/                 PhraseWaveforms, WaveformPane, WaveformView,
-                                PeakCache, TimeAxis, the frame map (§16)
+      waveform/                 PhraseWaveforms (the phrase's tabs),
+                                WaveformPane, WaveformView, PeakCache,
+                                TimeAxis, the frame map, GripSplitter (§16)
       playback/                 Player, IAudioOutput, QtAudioOutput,
                                 PlayPauseIcon (§16)
       theme/                    ThemeColours, the desktop colour scheme
@@ -356,7 +357,7 @@ Plan §2.2, with the names as built.
 | `PhraseListModel`, `PhraseListDelegate`, `PhraseListPanel` | **Implemented** (`gui/phrase_list/`): the phrase list (§15) |
 | `PhraseDetails` | **Implemented** (`gui/phrase_editor/`): name and description (§15) |
 | `ProjectEdits` and the undo commands | **Implemented** (`gui/undo/`): one `QUndoCommand` per `IProjectEditor` operation (§15) |
-| `PhraseWaveforms`, `WaveformPane`, `WaveformView`, `PeakCache`, `TimeAxis` | **Implemented** (`gui/waveform/`): the original and encoded waveforms, their shared time axis and controls, the play start (§16) |
+| `PhraseWaveforms`, `WaveformPane`, `WaveformView`, `PeakCache`, `TimeAxis`, `GripSplitter` | **Implemented** (`gui/waveform/`): the Original, Preprocess and Encode tabs, their waveforms, shared time axis and controls, the play start (§16) |
 | `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
@@ -1406,9 +1407,11 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
  ├── PhraseListModel (reads a Project snapshot, edits through ProjectEdits)
  │    └── PhraseListPanel: QListView + PhraseListDelegate + buttons
  ├── PhraseDetails (name, description; edits through ProjectEdits)
- ├── QSplitter
- │    ├── PhraseWaveforms (§16; the play start through ProjectEdits)
- │    └── EncoderPanel (§17; settings and encodings through ProjectEdits)
+ ├── PhraseWaveforms (§16; the tabs; the play start through ProjectEdits)
+ │    ├── Original
+ │    ├── Preprocess: EncoderPanel::PreprocessPanel() under the waveform
+ │    └── Encode: EncoderPanel (§17; settings and encodings through
+ │         ProjectEdits) under the waveform
  ├── OptimiseSession + OptimiseDialog (§17)
  └── status bar: ProjectSizeText(Project::Allocation())
 ```
@@ -1481,7 +1484,7 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   `IRecentFilesStore` (`SettingsRecentFilesStore`, `QSettings` under the
   organisation and application name "Speak5220"). What the user chose to
   see and hear (whether the encoder panel shows its advanced settings,
-  whether the top waveform shows the preprocessed recording, and the
+  the phrase's tab shown, by its `PhraseTabKey()`, and the
   output filter chosen in the **Audio > Output Filter** menu, by its
   `OutputFilterInfo::key`, and the pin chosen in **Audio > Chip Output**,
   by its `OutputPinInfo::key`) is kept the same way through
@@ -1492,7 +1495,8 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   encoded audio that was taken from the other pin.
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
-  (which use the model and the document) first and disconnects the
+  (which use the model and the document) first, then the encoder panel
+  and the tabs that hold it (in that order, as the tabs own the panel) and disconnects the
   document; `~ProjectDocument()` disconnects the stack, which clears itself
   (and signals) as it is destroyed.
 - **Status bar.** `ProjectSizeText()` formats
@@ -1538,18 +1542,22 @@ view is [`docs/application/user-manual/waveforms.md`](../../docs/application/use
 
 ```
 PhraseWaveforms ── ProjectEdits, Player, ISynth, ITaskRunner (injected)
- ├── WaveformPane "Original (8 kHz)" ─┐ stacked, equal heights
- ├── WaveformPane "Encoded"          ─┘
- │    each: title, note
- │          + WaveformView (PeakCache, TimeAxis, ThemeColours)
- ├── QScrollBar (shared)
- └── play Original, play Encoded, reset play start, Frame grid,
-     zoom out, zoom in, fit (shared)
+ ├── QTabBar: Original | Preprocess | Encode (PhraseTab)
+ └── GripSplitter (vertical), shared by the tabs
+      ├── waveform area: QStackedWidget, a page per tab of
+      │    WaveformPane "Original (8 kHz)", "Preprocessed (8 kHz)" or
+      │    "Encoded": title, note
+      │    + WaveformView (PeakCache, TimeAxis, ThemeColours)
+      │    + QScrollBar
+      │    + play/pause, reset play start, (Frame grid,) zoom out,
+      │      zoom in, fit
+      └── settings area: QStackedWidget, a QScrollArea per tab holding
+           its settings (SetControls()), or "No settings"
 Player ── IAudioOutput (QtAudioOutput: QAudioSink), IClock, IResampler
 ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 ```
 
-- **Time.** Both views count time in samples of the phrase's source
+- **Time.** All three views count time in samples of the phrase's source
   audio (`TimeAxis`: the source sample at pixel 0 and samples per pixel,
   with fit, clamp, zoom about a pixel and scroll). A view's own samples
   are placed by a source offset: sample `s + offset` is drawn at source
@@ -1582,10 +1590,10 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   quarter of 16-bit full scale, and the encoder aims at an RMS of 20
   codes, so the encoded audio is about 15 dB below a normalised
   recording. `PhraseWaveforms` shows and plays it multiplied by the level
-  gain, and the encoded pane's note gives the gain in dB before any note
+  gain, and the encoded waveform's note gives the gain in dB before any note
   passed in (such as "stale"). The frames and exports are unchanged.
 - **Output filter.** With a filter (`PhraseWaveforms::SetOutputFilter()`),
-  the encoded pane shows the level-matched samples through
+  the encoded waveform shows the level-matched samples through
   `FilterSamples()`: `FilterDacOutput()` at 48 kHz averaged back to one
   value per 8 kHz sample, so the view's sample positions, offset and frame
   grid are unchanged. The unfiltered samples go to the `Player`, which
@@ -1616,58 +1624,68 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   floor), against 5.5 dB RMS before. That BBC Micro's chip ran at
   601 kHz, 6 % low (its clock is set by a trimmer); its pitch steps fell
   exactly on Table 8-5's periods at that clock.
-- **Shared time axis.** The panes are stacked with equal stretch, so the
-  views are the same size. Both scroll over the union of their content extents, and each
-  view's `AxisChanged()` sets the same axis on the other (a flag stops the
-  echo); with the same axis, the same sound is at the same x. New
-  contents (another phrase, or its encoded audio arriving) are placed
-  without following and then both views are fitted to the union, so a
-  phrase starts as Fit shows it. The shared
-  zoom and fit buttons and the scroll bar act on the original's view (the
-  encoded view's when there is no original), and the other follows; the
-  scroll bar follows either view.
-- **Original or preprocessed** (plan Phase 11). The top pane shows the
-  original or the preprocessed recording, as two exclusive buttons in its
-  heading choose (`WaveformPane::AddHeadingWidget()`;
-  `SetPreprocessedShown()`, signalled by `PreprocessedShownChanged()` and
-  kept by the main window in `IViewPreferences`). Its title and play
-  button name what it shows, and it plays what it shows
-  (`TopSamples()`). `EncoderPanel::ShownPreprocessing()` is the
-  preprocessing the phrase shown would be encoded with as the form has
-  it, edits not yet applied included (in the defaults scope, the form's
-  defaults under the phrase's overrides; none for no phrase, a locked one
-  or one without audio). `UpdateView()` emits `PreprocessingChanged()`
-  when it changes, and the main window passes it to
-  `PhraseWaveforms::SetPreprocessing()`, so the pane follows the sliders
-  at once, before the 600 ms debounce. `UpdatePreprocessed()` runs
-  `Preprocess()` again (milliseconds for a phrase), scaled down to full
-  scale if a treble tilt takes it past (`preprocessed_gain_`, named in the
-  note); switching or a new preprocessing redraws the pane keeping its
-  extent and axis (`RedrawTop()`) and stops the top pane's playback. The
-  encoded pane's heading is given the buttons' height
-  (`SetMinimumHeadingHeight()`), so the two views stay the same height.
-- **Squelch shading.** On the original, `PhraseWaveforms` finds the
-  stretches `preprocess::SquelchedSpans()` lowers (gain under 1) when the
-  squelch or the phrase changes, gives them to the original's
-  `WaveformView::SetShading()`, and sets the pane's note ("squelch 30 dB:
-  shaded stretches are muted", or that nothing is quiet enough). The view
-  veils them with the base colour at alpha 170 over the waveform, so it
-  is dimmed, not hidden, and hatches them with the palette's Mid colour,
-  so they read without colour; hovering says they are squelched. On the
-  preprocessed recording they are silent, and the note names the
-  preprocessing instead ("squelch 30 dB, bass cut 200 Hz, treble tilt
-  0.4").
+- **Shared time axis.** Every view scrolls over the union of the content
+  extents of those with samples, and each view's `AxisChanged()` gives
+  its axis to the others (a flag stops the echo); with the same axis, the
+  same sound is at the same x. A `QStackedWidget` lays out only the page
+  shown, so a hidden view keeps its last size (before a tab is first
+  shown, not the area's): when the view that
+  changed is fitted (`WaveformView::IsFitted()`), the others are fitted
+  to their own widths instead of copying its axis, and they fit again
+  when shown and resized. New contents (another phrase, or its encoded
+  audio arriving) are placed without following and then every view is
+  fitted to the union, so a phrase starts as Fit shows it. Each tab's
+  zoom and fit buttons and scroll bar act on its own view, and the
+  others follow; each scroll bar follows its view. The zoom and fit
+  buttons are enabled only when their view has samples.
+- **Tabs and areas.** The tab bar switches both stacks; the one splitter
+  between them (stretch 3 to 2) is not part of any tab, so the areas
+  keep their sizes and the waveforms their place from tab to tab, for
+  comparing them. `PhraseWaveforms::SetControls()` puts a widget in a
+  tab's `QScrollArea` (widget-resizable), so settings taller than the
+  area scroll instead of resizing it. The main window puts `EncoderPanel::PreprocessPanel()` on the Preprocess tab and
+  the `EncoderPanel` on the Encode tab. The tab shown
+  (`CurrentTabChanged()`) is kept by the main window in
+  `IViewPreferences`.
+- **Preprocessed recording** (plan Phase 11). The Preprocess tab shows
+  and plays the recording preprocessed (`PlaybackSource::kPreprocessed`).
+  `EncoderPanel::ShownPreprocessing()` is the preprocessing the phrase
+  shown would be encoded with as the form has it, edits not yet applied
+  included (in the defaults scope, the form's defaults under the
+  phrase's overrides; none for no phrase, a locked one or one without
+  audio). `UpdateView()` emits `PreprocessingChanged()` when it changes,
+  and the main window passes it to `PhraseWaveforms::SetPreprocessing()`,
+  so the waveform follows the sliders at once, before the 600 ms
+  debounce. `UpdatePreprocessed()` runs `Preprocess()` again
+  (milliseconds for a phrase), scaled down to full scale if a treble tilt
+  takes it past (`preprocessed_gain_`, named in the note); a new
+  preprocessing redraws the waveform keeping its extent and axis
+  (`RedrawPreprocessed()`) and stops it if it is playing. The note names
+  the filters ("bass cut 200 Hz, treble tilt 0.4"), or says there is no
+  preprocessing.
+- **Squelch shading.** On the preprocessed recording, where the squelch
+  mutes, `PhraseWaveforms` finds the stretches
+  `preprocess::SquelchedSpans()` lowers (gain under 1) when the squelch
+  or the phrase changes, gives them to its view's
+  `WaveformView::SetShading()`, and puts the squelch first in the note
+  ("squelch 30 dB: shaded stretches are muted", or that nothing is quiet
+  enough). The view veils them with the base colour at alpha 170 over
+  the waveform, so it is dimmed, not hidden, and hatches them with the
+  palette's Mid colour, so they read without colour; hovering says they
+  are squelched. The original is never shaded.
 - **Play start.** A click asks for the marker at that source sample;
   `PhraseWaveforms` rounds and limits it to the audio and applies
   `ProjectEdits::SetPlayStart()` (`SetPlayStartCommand`, "Move Play
-  Start"), so it is saved as `play_start` and undoable. Both views show
-  it. A phrase without audio has none. Playback follows a move (and the
-  reset button, even when the play start is already 0): a pane playing
-  starts again from the new play start, and one paused stops, so the next
-  play starts there rather than resuming.
+  Start"), so it is saved as `play_start` and undoable. Every tab's view
+  shows it, so it carries from one tab to another. A phrase without audio
+  has none. Playback follows a move (and each tab's reset button, even
+  when the play start is already 0): a waveform playing starts again from
+  the new play start, and one paused stops, so the next play starts there
+  rather than resuming; the Optimise window's audio is left alone.
 - **Playback.** `Player` plays one buffer at a time: `Play(source,
   samples, start)`, `Pause()`, `Resume()` (a new buffer from the paused
-  position) and `Stop()`. The original plays from the play start; the
+  position) and `Stop()`. One tab's waveform plays at a time. The
+  original and preprocessed recordings play from the play start; the
   encoded audio from `play_start + offset`, limited to its samples. The
   playhead is the clock time since the device started, but no more than
   `IAudioOutput::ProcessedMicroseconds()`, so it neither runs ahead of the
@@ -1675,8 +1693,8 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   it stops at the end or when the output reports finished. If the device
   does not take 8 kHz (`PlaybackRate()`), the buffer is resampled with
   `IResampler`. With an output filter (`Player::SetOutputFilter()`),
-  every source but the original is played as `FilterDacOutput()` gives
-  it: each sample held for 6 values at 48 kHz, through the filter's
+  the chip's output (`IsChipOutput()`: every source but the original and
+  preprocessed recordings) is played as `FilterDacOutput()` gives it: each sample held for 6 values at 48 kHz, through the filter's
   second-order sections, the whole buffer at `Play()` so the filters'
   state at any start is as from the beginning, then resampled from 48 kHz
   if the device does not take it. The playhead still counts 8 kHz
@@ -1707,15 +1725,20 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 
 **Deviations from the plan.**
 
-- The plan offsets the encoded pane by the emulator's start latency. The
+- The plan puts the waveforms side by side in one phrase editor; they
+  are on a tab each instead (Original, Preprocess, Encode), each tab's
+  waveform above that stage's settings in two areas that keep their
+  sizes from tab to tab, so each has the height to be read, its controls
+  are beside it, and switching tabs compares them in place.
+- The plan offsets the encoded waveform by the emulator's start latency. The
   encoder leaves out leading silence and the project does not record
   where its first frame starts, so a fixed latency would not line the
-  panes up; the offset is found by `speechqual.py`'s alignment instead.
+  waveforms up; the offset is found by `speechqual.py`'s alignment instead.
 - The play start is a project edit, undoable, which the plan does not
   say; it is saved in the project as `play_start`, so changing it marks
   the project modified.
-- One play start serves both panes (the encoded pane plays from the same
-  sound), rather than one marker per pane.
+- One play start serves every tab (the encoded audio plays from the same
+  sound), rather than one marker per waveform.
 - The plan's Phase 6 item 1 asks for the dark-mode cause to be fixed in
   the build. No plugin was missing: the default GTK 3 theme does not
   report GNOME's preference, so the fix is in the application, through
@@ -1757,7 +1780,10 @@ EncoderPanel ── ProjectEdits, EncodingTools, ISynth, ITaskRunner
  ├── QualityRatingView: RatingBar, the QualityText line, the components'
  │   bars and the FiguresText line (QualityAssessment)
  ├── "Settings for": this phrase | project defaults
- ├── EncoderSettingsForm (from EncoderOptionInfos())
+ ├── PreprocessPanel(): its own "Settings for", kept the same, and the
+ │   form's PreprocessSection() (on the Preprocess tab)
+ ├── EncoderSettingsForm (from EncoderOptionInfos()): its
+ │   EncoderSection()
  └── Re-encode, Optimise..., Reset
 OptimiseSession ── ProjectEdits, EncodingTools, ITaskRunner (candidates)
  └── core::optimiser::Optimiser ── IEncoder, OverallQualityMetric, ITaskRunner
@@ -1843,8 +1869,10 @@ candidate; the history keeps the cancelled ones (`kCancelled`).
   so it is known only for encodings made in the session.
 
 **The settings form.** One row per `EncoderOptionInfo`, in two columns,
-in three groups, each under a heading row of one grid so the columns
-line up: the preprocessing options under "Preprocessing", with a chooser
+in three groups, each under a heading row, in two sections that can be
+placed apart (`PreprocessSection()`, `EncoderSection()`, each one grid
+so its columns line up; the main window puts them on different tabs):
+the preprocessing options under "Preprocessing", with a chooser
 of `PreprocessPresets()` and "Custom" (`PresetBox()`); the encoder's four
 basic options under "Encoder" (target RMS, repeat trade-off,
 pre-emphasis, voicing threshold: the ones with the clearest effect on
@@ -1911,7 +1939,7 @@ Revert leaves, so they are the honest comparison. Each is spoken with
 `RenderEncodedAudio()` on the runner once per search (a generation count
 drops speakings from an earlier one) and played at the recording's level
 (`level_gain`) from the chosen pin (`OptimiseDialog::SetOutputPin()`),
-as the encoded pane plays it; the dialog keeps the `EncodedAudio` and
+as the Encode tab plays it; the dialog keeps the `EncodedAudio` and
 makes the samples when a play starts. They play through the
 window's `Player` as `PlaybackSource::kBeforeOptimise` and `kOptimised`,
 through the output filter if one is chosen, which `PhraseWaveforms` gives no playhead; the dialog stops them on

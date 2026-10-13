@@ -15,6 +15,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/synth/output_pin.h"
+#include "gui/waveform/phrase_tab.h"
 
 namespace speak5220::app {
 
@@ -29,10 +30,10 @@ class IViewPreferences {
   virtual bool AdvancedSettingsShown() = 0;
   virtual void SetAdvancedSettingsShown(bool shown) = 0;
 
-  // Whether the top waveform pane shows the preprocessed recording rather
-  // than the original; false if never saved.
-  virtual bool PreprocessedShown() = 0;
-  virtual void SetPreprocessedShown(bool shown) = 0;
+  // The phrase editor's tab last chosen; Original if never saved, or
+  // saved with a key this version does not know.
+  virtual PhraseTab ChosenPhraseTab() = 0;
+  virtual void SetPhraseTab(PhraseTab tab) = 0;
 
   // The audio stage the chip's output is heard and shown through; none if
   // never saved, or saved by a version that had a filter this one lacks.
@@ -50,7 +51,8 @@ class IViewPreferences {
 class SettingsViewPreferences : public IViewPreferences {
  public:
   static constexpr const char* kAdvancedSettingsKey = "advancedEncoderSettings";
-  static constexpr const char* kPreprocessedShownKey = "preprocessedShown";
+  // Holds the tab's key (PhraseTabKey()).
+  static constexpr const char* kPhraseTabKey = "phraseTab";
   // Holds the filter's key (core::dsp::OutputFilterInfo::key).
   static constexpr const char* kOutputFilterKey = "outputFilter";
   // Holds the pin's key (core::synth::OutputPinInfo::key).
@@ -58,8 +60,8 @@ class SettingsViewPreferences : public IViewPreferences {
 
   bool AdvancedSettingsShown() override;
   void SetAdvancedSettingsShown(bool shown) override;
-  bool PreprocessedShown() override;
-  void SetPreprocessedShown(bool shown) override;
+  PhraseTab ChosenPhraseTab() override;
+  void SetPhraseTab(PhraseTab tab) override;
   core::dsp::OutputFilter ChosenOutputFilter() override;
   void SetOutputFilter(core::dsp::OutputFilter filter) override;
   core::synth::OutputPin ChosenOutputPin() override;

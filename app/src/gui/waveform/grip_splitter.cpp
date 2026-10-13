@@ -1,6 +1,6 @@
 /*
  * File:        grip_splitter.cpp
- * Module:      main_window
+ * Module:      waveform
  * Purpose:     A splitter whose handle shows a grip, so it can be found on
  *              every platform's style
  *
@@ -8,7 +8,7 @@
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
  */
 
-#include "gui/main_window/grip_splitter.h"
+#include "gui/waveform/grip_splitter.h"
 
 #include <QColor>
 #include <QPaintEvent>

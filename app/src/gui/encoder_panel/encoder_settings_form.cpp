@@ -19,6 +19,7 @@
 #include <QSignalBlocker>
 #include <QString>
 #include <QToolButton>
+#include <QVBoxLayout>
 #include <QWidget>
 #include <algorithm>
 #include <array>
@@ -115,6 +116,16 @@ constexpr std::array<Group, 3> kGroups = {{
     {.stage = OptionStage::kEncoder, .advanced = true},
 }};
 
+// The form's sections: the preprocessing's group, then the encoder's.
+constexpr std::size_t kSections = 2;
+constexpr std::size_t kPreprocessSection = 0;
+constexpr std::size_t kEncoderSection = 1;
+
+std::size_t SectionOf(const Group& group) {
+  return group.stage == OptionStage::kPreprocess ? kPreprocessSection
+                                                 : kEncoderSection;
+}
+
 bool InGroup(const EncoderOptionInfo& info, const Group& group) {
   return info.stage == group.stage &&
          (group.stage == OptionStage::kPreprocess ||
@@ -134,10 +145,25 @@ QLabel* Heading(const QString& text, QWidget* parent) {
 
 EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     : QWidget(parent),
-      preset_box_(new QComboBox(this)),
-      advanced_button_(new QToolButton(this)) {
-  auto* grid = new QGridLayout(this);
-  grid->setContentsMargins(0, 0, 0, 0);
+      preprocess_section_(new QWidget(this)),
+      encoder_section_(new QWidget(this)),
+      preset_box_(new QComboBox(preprocess_section_)),
+      advanced_button_(new QToolButton(encoder_section_)) {
+  // One grid per section, each group's heading row and options down it in
+  // order.
+  const std::array<QWidget*, kSections> sections = {preprocess_section_,
+                                                    encoder_section_};
+  std::array<QGridLayout*, kSections> grids{};
+  std::array<int, kSections> next_rows{};
+  for (std::size_t s = 0; s < kSections; ++s) {
+    grids[s] = new QGridLayout(sections[s]);
+    grids[s]->setContentsMargins(0, 0, 0, 0);
+  }
+  auto* layout = new QVBoxLayout(this);
+  layout->setContentsMargins(0, 0, 0, 0);
+  layout->addWidget(preprocess_section_);
+  layout->addWidget(encoder_section_);
+
   const auto infos = encoder::EncoderOptionInfos();
   constexpr int kAllColumns = kOptionColumns * kColumnsPerOption;
   // Each group's options in metadata order, down the first column of the
@@ -146,8 +172,9 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
   std::vector<int> first_row;
   std::vector<int> group_rows;
   std::vector<std::size_t> group_of;
-  int next_row = 0;
   for (std::size_t g = 0; g < kGroups.size(); ++g) {
+    const std::size_t s = SectionOf(kGroups[g]);
+    QWidget* section = sections[s];
     int count = 0;
     for (const EncoderOptionInfo& info : infos) {
       if (InGroup(info, kGroups[g])) {
@@ -160,28 +187,30 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     // or the button that shows the advanced options.
     QWidget* heading = nullptr;
     if (kGroups[g].stage == OptionStage::kPreprocess) {
-      auto* box = new QWidget(this);
-      auto* layout = new QHBoxLayout(box);
-      layout->setContentsMargins(0, 0, 0, 0);
-      layout->addWidget(Heading(QStringLiteral("Preprocessing"), box));
+      auto* box = new QWidget(section);
+      auto* box_layout = new QHBoxLayout(box);
+      box_layout->setContentsMargins(0, 0, 0, 0);
+      box_layout->addWidget(Heading(QStringLiteral("Preprocessing"), box));
       auto* preset_label = new QLabel(QStringLiteral("Preset"), box);
       preset_label->setBuddy(preset_box_);
-      layout->addSpacing(preset_label->fontMetrics().averageCharWidth() * 2);
-      layout->addWidget(preset_label);
-      layout->addWidget(preset_box_);
-      layout->addStretch();
+      box_layout->addSpacing(preset_label->fontMetrics().averageCharWidth() *
+                             2);
+      box_layout->addWidget(preset_label);
+      box_layout->addWidget(preset_box_);
+      box_layout->addStretch();
       heading = box;
     } else if (!kGroups[g].advanced) {
-      heading = Heading(QStringLiteral("Encoder"), this);
+      heading = Heading(QStringLiteral("Encoder"), section);
     } else {
       heading = advanced_button_;
     }
-    grid->addWidget(heading, next_row, 0, 1, kAllColumns, Qt::AlignLeft);
-    first_row.push_back(next_row + 1);
+    grids[s]->addWidget(heading, next_rows[s], 0, 1, kAllColumns,
+                        Qt::AlignLeft);
+    first_row.push_back(next_rows[s] + 1);
     // A group has at least one row.
     group_rows.push_back(
         std::max(1, (count + kOptionColumns - 1) / kOptionColumns));
-    next_row += 1 + group_rows.back();
+    next_rows[s] += 1 + group_rows.back();
   }
   for (const preprocess::PreprocessPreset& preset :
        preprocess::PreprocessPresets()) {
@@ -201,6 +230,9 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
   rows_.reserve(infos.size());
   for (std::size_t i = 0; i < ordered.size(); ++i) {
     const EncoderOptionInfo& info = *ordered[i];
+    const std::size_t g = group_of[i];
+    const std::size_t s = SectionOf(kGroups[g]);
+    QWidget* section = sections[s];
     Row row;
     row.info = &info;
     const QString help = QStringLiteral("%1\nDefault: %2")
@@ -208,7 +240,7 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
                                   info.default_text.empty()
                                       ? ToQString(encoder::kUnsetOptionText)
                                       : ToQString(info.default_text));
-    row.label = new QLabel(ToQString(info.label), this);
+    row.label = new QLabel(ToQString(info.label), section);
     row.label->setToolTip(help);
     auto make_slider = [&info](QWidget* owner) {
       return new OptionSlider(
@@ -220,34 +252,34 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     switch (info.type) {
       case EncoderOptionType::kReal:
       case EncoderOptionType::kInteger:
-        row.slider = make_slider(this);
+        row.slider = make_slider(section);
         editor = row.slider;
         focus = row.slider->Slider();
         break;
       case EncoderOptionType::kOptionalReal: {
-        auto* box = new QWidget(this);
-        auto* layout = new QHBoxLayout(box);
-        layout->setContentsMargins(0, 0, 0, 0);
+        auto* box = new QWidget(section);
+        auto* box_layout = new QHBoxLayout(box);
+        box_layout->setContentsMargins(0, 0, 0, 0);
         row.check = new QCheckBox(box);
         row.check->setToolTip(
             QStringLiteral("Turn %1 on").arg(ToQString(info.label).toLower()));
         row.slider = make_slider(box);
-        layout->addWidget(row.check);
-        layout->addWidget(row.slider, 1);
+        box_layout->addWidget(row.check);
+        box_layout->addWidget(row.slider, 1);
         editor = box;
         focus = row.check;
         break;
       }
       case EncoderOptionType::kPreEmphasis: {
-        auto* box = new QWidget(this);
-        auto* layout = new QHBoxLayout(box);
-        layout->setContentsMargins(0, 0, 0, 0);
+        auto* box = new QWidget(section);
+        auto* box_layout = new QHBoxLayout(box);
+        box_layout->setContentsMargins(0, 0, 0, 0);
         row.kind = new QComboBox(box);
         row.kind->addItem(QStringLiteral("Chirp"));
         row.kind->addItem(QStringLiteral("First order"));
         row.slider = make_slider(box);
-        layout->addWidget(row.kind);
-        layout->addWidget(row.slider, 1);
+        box_layout->addWidget(row.kind);
+        box_layout->addWidget(row.slider, 1);
         editor = box;
         focus = row.kind;
         break;
@@ -266,24 +298,25 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     }
     row.label->setBuddy(focus);
     row.editor = editor;
-    row.reset = new QToolButton(this);
+    row.reset = new QToolButton(section);
     row.reset->setText(QStringLiteral("↺"));
     row.reset->setAutoRaise(true);
 
     // Down the first column of its group, then the second.
-    const std::size_t g = group_of[i];
     const int index = static_cast<int>(std::ranges::count(
         group_of.begin(), group_of.begin() + static_cast<std::ptrdiff_t>(i),
         g));
     const int r = first_row[g] + index % group_rows[g];
     const int c = (index / group_rows[g]) * kColumnsPerOption;
-    grid->addWidget(row.label, r, c);
-    grid->addWidget(editor, r, c + 1);
-    grid->addWidget(row.reset, r, c + 2);
+    grids[s]->addWidget(row.label, r, c);
+    grids[s]->addWidget(editor, r, c + 1);
+    grids[s]->addWidget(row.reset, r, c + 2);
     rows_.push_back(row);
   }
-  grid->setColumnStretch(1, 1);
-  grid->setColumnStretch(1 + kColumnsPerOption, 1);
+  for (QGridLayout* grid : grids) {
+    grid->setColumnStretch(1, 1);
+    grid->setColumnStretch(1 + kColumnsPerOption, 1);
+  }
   // Every value's text the same width, so the sliders line up.
   int text_width = 0;
   for (const Row& row : rows_) {

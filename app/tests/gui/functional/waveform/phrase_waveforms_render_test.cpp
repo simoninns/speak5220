@@ -23,6 +23,7 @@
 #include "gui/main_window/main_window.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
 #include "gui/waveform/waveform_pane.h"
 #include "gui/waveform/waveform_view.h"
@@ -58,8 +59,11 @@ TEST(PhraseWaveformsRenderTest, DrawsAFixturePhraseLinedUpWithItsSource) {
   window.Panel()->Select({phrase.id});
   QApplication::processEvents();
 
-  const PhraseWaveforms* waveforms = window.Waveforms();
+  PhraseWaveforms* waveforms = window.Waveforms();
   ASSERT_EQ(waveforms->RendersRunning(), 0);
+  // Shown, the Encode tab is laid out at the Original tab's size.
+  waveforms->SetCurrentTab(PhraseTab::kEncode);
+  QApplication::processEvents();
   const WaveformView* original = waveforms->OriginalPane()->View();
   const WaveformView* encoded = waveforms->EncodedPane()->View();
   ASSERT_TRUE(original->HasSamples());

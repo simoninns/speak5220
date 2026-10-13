@@ -35,6 +35,7 @@
 #include "gui/main_window/view_preferences.h"
 #include "gui/playback/audio_output.h"
 #include "gui/playback/player.h"
+#include "gui/waveform/phrase_tab.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
 #include "support/quality_mocks.h"
@@ -71,8 +72,8 @@ class FakeViewPreferences : public app::IViewPreferences {
  public:
   bool AdvancedSettingsShown() override { return advanced_shown; }
   void SetAdvancedSettingsShown(bool shown) override { advanced_shown = shown; }
-  bool PreprocessedShown() override { return preprocessed_shown; }
-  void SetPreprocessedShown(bool shown) override { preprocessed_shown = shown; }
+  app::PhraseTab ChosenPhraseTab() override { return phrase_tab; }
+  void SetPhraseTab(app::PhraseTab tab) override { phrase_tab = tab; }
   core::dsp::OutputFilter ChosenOutputFilter() override { return filter; }
   void SetOutputFilter(core::dsp::OutputFilter chosen) override {
     filter = chosen;
@@ -81,7 +82,7 @@ class FakeViewPreferences : public app::IViewPreferences {
   void SetOutputPin(core::synth::OutputPin chosen) override { pin = chosen; }
 
   bool advanced_shown = false;
-  bool preprocessed_shown = false;
+  app::PhraseTab phrase_tab = app::PhraseTab::kOriginal;
   core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
 };

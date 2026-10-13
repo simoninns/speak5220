@@ -241,10 +241,30 @@ TEST_F(PlayerTest, ChangingTheOutputFilterStopsTheEncodedAudio) {
   EXPECT_EQ(player_.State(), PlaybackState::kStopped);
 }
 
-TEST_F(PlayerTest, ChangingTheOutputFilterKeepsTheOriginalPlaying) {
-  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+TEST_F(PlayerTest, ChangingTheOutputFilterKeepsTheRecordingsPlaying) {
+  for (const PlaybackSource source :
+       {PlaybackSource::kOriginal, PlaybackSource::kPreprocessed}) {
+    player_.SetOutputFilter(core::dsp::OutputFilter::kNone);
+    ASSERT_TRUE(player_.Play(source, Numbered(), 0).IsOk());
+    player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+    EXPECT_EQ(player_.State(), PlaybackState::kPlaying);
+  }
+}
+
+// The recordings are played as they are, at 8 kHz, whatever the filter.
+TEST_F(PlayerTest, RecordingsAreNotPlayedThroughTheOutputFilter) {
   player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
-  EXPECT_EQ(player_.State(), PlaybackState::kPlaying);
+  EXPECT_CALL(output_, Start(SizeIs(8000), Player::kSampleRate));
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kPreprocessed, Numbered(), 0).IsOk());
+}
+
+TEST(PlaybackSourceTest, OnlyTheEncodingsAreTheChipsOutput) {
+  EXPECT_FALSE(IsChipOutput(PlaybackSource::kOriginal));
+  EXPECT_FALSE(IsChipOutput(PlaybackSource::kPreprocessed));
+  EXPECT_TRUE(IsChipOutput(PlaybackSource::kEncoded));
+  EXPECT_TRUE(IsChipOutput(PlaybackSource::kBeforeOptimise));
+  EXPECT_TRUE(IsChipOutput(PlaybackSource::kOptimised));
 }
 
 }  // namespace

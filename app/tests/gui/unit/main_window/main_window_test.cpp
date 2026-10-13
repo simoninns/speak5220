@@ -17,10 +17,13 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QString>
 #include <QStringList>
+#include <QTabBar>
 #include <QToolButton>
 #include <QUndoStack>
+#include <QWidget>
 #include <algorithm>
 #include <optional>
 #include <utility>
@@ -36,12 +39,14 @@
 #include "gtest/gtest.h"
 #include "gui/encoder_panel/encoder_panel.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
+#include "gui/encoder_panel/quality_rating_view.h"
 #include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
 #include "gui/waveform/waveform_pane.h"
 #include "gui/waveform/waveform_view.h"
@@ -179,37 +184,56 @@ TEST_F(MainWindowTest, ChipOutputStartsAsLastChosen) {
   EXPECT_EQ(window.Waveforms()->Pin(), OutputPin::kIo);
 }
 
-TEST_F(MainWindowTest, TurningTheSquelchOnShadesTheOriginalAudio) {
+TEST_F(MainWindowTest, TurningTheSquelchOnShadesThePreprocessedAudio) {
   // Loud, then 60 dB quieter, a tenth of a second each.
   core::project::Phrase breath = AudioPhrase(1, "BREATH");
   breath.audio.assign(1600, 0.5F);
   std::fill(breath.audio.begin() + 800, breath.audio.end(), 0.0005F);
   AddPhrases({breath, AudioPhrase(2, "TWO")});
   window_.Panel()->Select({TestId(1)});
-  WaveformView* original = window_.Waveforms()->OriginalPane()->View();
-  EXPECT_TRUE(original->Shading().empty());
+  WaveformView* preprocessed = window_.Waveforms()->PreprocessedPane()->View();
+  EXPECT_TRUE(preprocessed->Shading().empty());
   window_.Encoder()->Form()->OnBox("squelch_db")->setChecked(true);
   EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, 30.0);
-  EXPECT_FALSE(original->Shading().empty());
+  EXPECT_FALSE(preprocessed->Shading().empty());
+  EXPECT_TRUE(window_.Waveforms()->OriginalPane()->View()->Shading().empty());
   // Selecting several phrases shows none, and so no squelch.
   window_.Panel()->Select({TestId(1), TestId(2)});
   EXPECT_EQ(window_.Waveforms()->Preprocessing().squelch_db, std::nullopt);
-  EXPECT_TRUE(original->Shading().empty());
+  EXPECT_TRUE(preprocessed->Shading().empty());
 }
 
-// What the top waveform pane shows is remembered between sessions.
-TEST_F(MainWindowTest, RemembersWhetherThePreprocessedRecordingIsShown) {
-  EXPECT_FALSE(window_.Waveforms()->PreprocessedShown());
-  window_.Waveforms()->PreprocessedButton()->click();
-  EXPECT_TRUE(preferences_.preprocessed_shown);
-  window_.Waveforms()->OriginalButton()->click();
-  EXPECT_FALSE(preferences_.preprocessed_shown);
+// Each tab's settings area holds its settings: the preprocessing settings
+// on the Preprocess tab, the encoder panel on the Encode tab.
+TEST_F(MainWindowTest, TabsHoldTheirOwnSettings) {
+  const PhraseWaveforms* waveforms = window_.Waveforms();
+  const EncoderPanel* encoder = window_.Encoder();
+  QWidget* preprocess = waveforms->SettingsArea(PhraseTab::kPreprocess);
+  QWidget* encode = waveforms->SettingsArea(PhraseTab::kEncode);
+  EXPECT_TRUE(preprocess->isAncestorOf(encoder->PreprocessPanel()));
+  EXPECT_TRUE(preprocess->isAncestorOf(encoder->Form()->PreprocessSection()));
+  EXPECT_TRUE(preprocess->isAncestorOf(encoder->PreprocessScopeBox()));
+  EXPECT_FALSE(preprocess->isAncestorOf(encoder->Form()->EncoderSection()));
+  EXPECT_TRUE(encode->isAncestorOf(encoder->Form()->EncoderSection()));
+  EXPECT_TRUE(encode->isAncestorOf(encoder->Quality()));
+  EXPECT_FALSE(encode->isAncestorOf(encoder->PreprocessPanel()));
+  EXPECT_FALSE(waveforms->SettingsArea(PhraseTab::kOriginal)
+                   ->isAncestorOf(encoder->PreprocessPanel()));
+}
+
+// The tab shown is remembered between sessions.
+TEST_F(MainWindowTest, RemembersTheTabShown) {
+  EXPECT_EQ(window_.Waveforms()->CurrentTab(), PhraseTab::kOriginal);
+  window_.Waveforms()->Tabs()->setCurrentIndex(1);
+  EXPECT_EQ(preferences_.phrase_tab, PhraseTab::kPreprocess);
+  window_.Waveforms()->SetCurrentTab(PhraseTab::kEncode);
+  EXPECT_EQ(preferences_.phrase_tab, PhraseTab::kEncode);
 
   FakeViewPreferences shown;
-  shown.preprocessed_shown = true;
+  shown.phrase_tab = PhraseTab::kEncode;
   MainWindow window(dialogs_, recent_, shown, runner_, playback_.synth,
                     playback_.player, encoding_.Tools());
-  EXPECT_TRUE(window.Waveforms()->PreprocessedShown());
+  EXPECT_EQ(window.Waveforms()->CurrentTab(), PhraseTab::kEncode);
 }
 
 // The preprocessing the encoder panel shows is what the waveform shows.

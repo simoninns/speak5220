@@ -41,15 +41,18 @@ namespace speak5220::app {
 class EncoderSettingsForm;
 class QualityRatingView;
 
-// Plan §5, "Encoder panel", and Phase 7: under the waveforms, the selected
-// phrase's encoding.
+// Plan §5, "Encoder panel", and Phase 7: on the Encode tab, under the
+// encoded waveform, the selected phrase's encoding.
 //
 // - Statistics (FramesText(), KindsText(), LevelText()) and the quality
 //   (QualityRatingView): the rating, components and figures stored with
 //   the encoding, or measured in the background for display when it has
 //   none.
 // - The settings form, for this phrase (over the project's defaults) or
-//   for the project's defaults themselves, chosen above it.
+//   for the project's defaults themselves, chosen above it. Its
+//   preprocessing section is in the preprocessing panel
+//   (PreprocessPanel()) with a scope chooser of its own, which always
+//   matches the panel's: the main window puts it on the Preprocess tab.
 // - A change of setting is applied after kDebounceMs without another
 //   change (timed through IClock): for the phrase, it is encoded and
 //   measured in the background, and the settings and encoding are stored
@@ -107,6 +110,11 @@ class EncoderPanel : public QWidget {
   EncoderSettingsForm* Form() const { return form_; }
   QualityRatingView* Quality() const { return quality_; }
   QComboBox* ScopeBox() const { return scope_box_; }
+  // The preprocessing settings, with their scope chooser: at first inside
+  // this panel, above the encoder's settings. It can be put in another
+  // widget, which then owns it.
+  QWidget* PreprocessPanel() const { return preprocess_panel_; }
+  QComboBox* PreprocessScopeBox() const { return preprocess_scope_box_; }
   QLabel* StateLabel() const { return state_; }
   QLabel* FramesLabel() const { return frames_; }
   QLabel* KindsLabel() const { return kinds_; }
@@ -163,6 +171,8 @@ class EncoderPanel : public QWidget {
   core::ITaskRunner* runner_;
 
   QComboBox* scope_box_;
+  QWidget* preprocess_panel_;
+  QComboBox* preprocess_scope_box_;
   QLabel* state_;
   QLabel* frames_;
   QLabel* kinds_;

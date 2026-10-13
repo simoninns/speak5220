@@ -59,7 +59,6 @@
 #include "gui/encoder_panel/phrase_encoder.h"
 #include "gui/export/export_dialog.h"
 #include "gui/main_window/dialogs.h"
-#include "gui/main_window/grip_splitter.h"
 #include "gui/main_window/project_document.h"
 #include "gui/main_window/recent_files.h"
 #include "gui/main_window/status_text.h"
@@ -71,6 +70,7 @@
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/playback/player.h"
 #include "gui/undo/project_commands.h"
+#include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
 
 namespace speak5220::app {
@@ -82,11 +82,6 @@ namespace {
 // The window's initial size in device-independent pixels.
 constexpr int kInitialWidth = 1100;
 constexpr int kInitialHeight = 820;
-// The share of the height the waveforms start with, against the encoder
-// panel's.
-constexpr int kWaveformsStretch = 3;
-constexpr int kEncoderStretch = 2;
-
 // How long a progress message stays in the status bar, in milliseconds.
 constexpr int kStatusMessageMs = 5000;
 
@@ -137,10 +132,9 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
   connect(encoder_panel_, &EncoderPanel::Failed, this, &MainWindow::ShowError);
   connect(encoder_panel_, &EncoderPanel::PreprocessingChanged, waveforms_,
           &PhraseWaveforms::SetPreprocessing);
-  waveforms_->SetPreprocessedShown(view_preferences_->PreprocessedShown());
-  connect(
-      waveforms_, &PhraseWaveforms::PreprocessedShownChanged, this,
-      [this](bool shown) { view_preferences_->SetPreprocessedShown(shown); });
+  waveforms_->SetCurrentTab(view_preferences_->ChosenPhraseTab());
+  connect(waveforms_, &PhraseWaveforms::CurrentTabChanged, this,
+          [this](PhraseTab tab) { view_preferences_->SetPhraseTab(tab); });
   connect(encoder_panel_, &EncoderPanel::OptimiseRequested, this,
           [this](const project::PhraseId& id) { Optimise({id}); });
   connect(optimise_dialog_, &OptimiseDialog::Failed, this,
@@ -171,10 +165,11 @@ MainWindow::~MainWindow() {
   // Child widgets outlive the members (QObject deletes them later), so
   // those that use the model and the document go first; otherwise their
   // signals on the way out would reach destroyed members.
+  // The encoder panel is on one of the waveforms' tabs, so goes first.
   delete panel_;
   delete details_;
-  delete waveforms_;
   delete encoder_panel_;
+  delete waveforms_;
   delete optimise_dialog_;
   delete optimise_session_;
 }
@@ -202,8 +197,7 @@ QAction* MainWindow::OutputFilterAction(core::dsp::OutputFilter filter) const {
 void MainWindow::SetOutputPin(core::synth::OutputPin pin) {
   // The audio being played was taken from the other pin.
   if (player_->State() != PlaybackState::kStopped &&
-      player_->Source() != PlaybackSource::kOriginal &&
-      waveforms_->Pin() != pin) {
+      IsChipOutput(player_->Source()) && waveforms_->Pin() != pin) {
     player_->Stop();
   }
   waveforms_->SetOutputPin(pin);
@@ -411,20 +405,17 @@ void MainWindow::CreateWidgets() {
   auto* central = new QWidget(this);
   auto* layout = new QVBoxLayout(central);
   details_ = new PhraseDetails(document_.Edits(), central);
-  // The waveforms above the encoder panel, with a splitter between them
-  // (GripSplitter, so its handle can be seen in every style).
-  auto* splitter = new GripSplitter(Qt::Vertical, central);
+  // The phrase's tabs under its details: the preprocessing settings on the
+  // Preprocess tab, the encoder panel on the Encode tab.
   waveforms_ = new PhraseWaveforms(document_.Edits(), *player_, *synth_,
-                                   *runner_, splitter);
+                                   *runner_, central);
   encoder_panel_ =
-      new EncoderPanel(document_.Edits(), tools_, *synth_, *runner_, splitter);
-  splitter->addWidget(waveforms_);
-  splitter->addWidget(encoder_panel_);
-  splitter->setStretchFactor(0, kWaveformsStretch);
-  splitter->setStretchFactor(1, kEncoderStretch);
-  splitter->setChildrenCollapsible(false);
+      new EncoderPanel(document_.Edits(), tools_, *synth_, *runner_, central);
+  waveforms_->SetControls(PhraseTab::kPreprocess,
+                          encoder_panel_->PreprocessPanel());
+  waveforms_->SetControls(PhraseTab::kEncode, encoder_panel_);
   layout->addWidget(details_);
-  layout->addWidget(splitter, 1);
+  layout->addWidget(waveforms_, 1);
   setCentralWidget(central);
 
   optimise_session_ =

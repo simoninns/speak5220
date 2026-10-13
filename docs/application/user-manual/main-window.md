@@ -1,9 +1,21 @@
 # The main window
 
 `speak5220` opens a window with the project's phrases on the left, the
-selected phrase's name and description on the right with its
-[waveforms](waveforms.md) and its [encoder panel](encoder.md) below them,
-and the project's size in the status bar. To open a project at start-up, give it on the command line:
+selected phrase's name and description on the right with its three tabs
+below them, and the project's size in the status bar. The tabs follow
+the stages of making a phrase, each with its [waveform](waveforms.md)
+and controls in the waveform area, and that stage's settings in the
+scrolling settings area below it:
+
+- **Original**: the recording as imported.
+- **Preprocess**: the recording as preprocessed, with the
+  [preprocessing settings](encoder.md#preprocessing).
+- **Encode**: what the chip makes of the phrase's frames, with the
+  [encoder panel](encoder.md).
+
+The two areas keep their sizes, and the play start, the zoom and the
+scroll position are shared by the tabs, so switching tabs shows the same
+place in the phrase at the same place on screen. To open a project at start-up, give it on the command line:
 `speak5220 greetings.s5proj`. The window follows the desktop's light or
 dark setting (see [light and dark](waveforms.md#light-and-dark)).
 

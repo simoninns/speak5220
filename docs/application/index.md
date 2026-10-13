@@ -9,8 +9,8 @@ So far the application has:
 - a GUI, `speak5220`, whose [main window](user-manual/main-window.md) opens
   and saves projects, imports WAV files as phrases, orders, sorts, renames
   and describes them with undo and redo, and shows how many PHROMs they
-  fill; it shows each phrase's original and encoded
-  [waveforms](user-manual/waveforms.md) and plays them, in light or dark
+  fill; it shows each phrase's original, preprocessed and encoded
+  [waveforms](user-manual/waveforms.md) on tabs and plays them, in light or dark
   as the desktop is set; it encodes phrases, shows their quality, and
   [optimises](user-manual/encoder.md) their settings within the budget;
   and it [exports](user-manual/export.md) them;

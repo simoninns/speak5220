@@ -33,10 +33,12 @@ class OptionSlider;
 // defaults for a phrase, the encoder's for the project). Rows that differ
 // from the baseline have a bold label and the button enabled.
 //
-// The preprocessing options come first, under a "Preprocessing" heading
-// with a chooser of its presets (preprocess::PreprocessPresets()), which
-// shows "Custom" when the options match none; choosing a preset sets them.
-// The encoder's basic options follow under an "Encoder" heading. Below
+// The form has two sections, which can be placed apart (the main window
+// puts them in different tabs). The preprocessing section has the
+// preprocessing options under a "Preprocessing" heading with a chooser of
+// its presets (preprocess::PreprocessPresets()), which shows "Custom" when
+// the options match none; choosing a preset sets them. The encoder section
+// has the encoder's basic options under an "Encoder" heading. Below
 // them a button shows or hides the advanced ones
 // (EncoderOptionInfo::advanced), and says how many of those differ from
 // the baseline, so a hidden change is never missed; hidden options still
@@ -91,6 +93,12 @@ class EncoderSettingsForm : public QWidget {
   // "Custom".
   QComboBox* PresetBox() const { return preset_box_; }
 
+  // The sections, at first one above the other in the form. Either can be
+  // put in another widget, which then owns it; its editors still edit the
+  // form's options, and do nothing once the form is destroyed.
+  QWidget* PreprocessSection() const { return preprocess_section_; }
+  QWidget* EncoderSection() const { return encoder_section_; }
+
  signals:
   // The user changed an option.
   void Edited();
@@ -128,6 +136,8 @@ class EncoderSettingsForm : public QWidget {
   void UpdateAdvanced();
 
   std::vector<Row> rows_;
+  QWidget* preprocess_section_;
+  QWidget* encoder_section_;
   QComboBox* preset_box_;
   QToolButton* advanced_button_;
   core::encoder::EncoderOptions options_;

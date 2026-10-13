@@ -20,6 +20,8 @@
 #include <QPushButton>
 #include <QString>
 #include <QUndoStack>
+#include <QVBoxLayout>
+#include <QWidget>
 #include <algorithm>
 #include <cstdint>
 #include <optional>
@@ -356,6 +358,38 @@ TEST_F(EncoderPanelTest, ProjectDefaultsAreEditedAsOneStep) {
             QStringLiteral("Reset to Encoder Defaults"));
   panel_.Reset();
   EXPECT_EQ(project_.Settings().default_encoder, EncoderOptions{});
+}
+
+// The preprocessing panel holds the form's preprocessing section, with a
+// scope chooser that always matches the panel's.
+TEST_F(EncoderPanelTest, PreprocessPanelSharesTheScope) {
+  QWidget* preprocess = panel_.PreprocessPanel();
+  EXPECT_TRUE(preprocess->isAncestorOf(panel_.Form()->PreprocessSection()));
+  EXPECT_TRUE(preprocess->isAncestorOf(panel_.PreprocessScopeBox()));
+  EXPECT_FALSE(preprocess->isAncestorOf(panel_.Form()->EncoderSection()));
+
+  panel_.PreprocessScopeBox()->setCurrentIndex(1);
+  EXPECT_EQ(panel_.CurrentScope(), EncoderPanel::Scope::kProjectDefaults);
+  EXPECT_EQ(panel_.ScopeBox()->currentIndex(), 1);
+  panel_.ScopeBox()->setCurrentIndex(0);
+  EXPECT_EQ(panel_.CurrentScope(), EncoderPanel::Scope::kPhrase);
+  EXPECT_EQ(panel_.PreprocessScopeBox()->currentIndex(), 0);
+}
+
+// Moved elsewhere, as the main window moves it to its own tab, the
+// preprocessing panel still edits the phrase's settings.
+TEST_F(EncoderPanelTest, PreprocessPanelWorksAwayFromThePanel) {
+  QWidget elsewhere;
+  elsewhere.setLayout(new QVBoxLayout);
+  elsewhere.layout()->addWidget(panel_.PreprocessPanel());
+  EXPECT_FALSE(panel_.isAncestorOf(panel_.PreprocessPanel()));
+  Show(1);
+  QCheckBox* squelch = panel_.Form()->OnBox("squelch_db");
+  ASSERT_NE(squelch, nullptr);
+  EXPECT_TRUE(elsewhere.isAncestorOf(squelch));
+  squelch->setChecked(true);
+  EXPECT_TRUE(panel_.HasPendingChange());
+  EXPECT_EQ(panel_.ShownPreprocessing().squelch_db, 30.0);
 }
 
 TEST_F(EncoderPanelTest, LockedPhrasesShowTheirStatisticsOnly) {

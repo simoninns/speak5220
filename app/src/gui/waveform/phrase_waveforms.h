@@ -1,9 +1,10 @@
 /*
  * File:        phrase_waveforms.h
  * Module:      waveform
- * Purpose:     The phrase editor's two waveform panes, the source
- *              (original or preprocessed) and the encoded audio: rendering,
- *              linked time axes, the play-start marker and playback
+ * Purpose:     The phrase editor's tabs, each a waveform with its own
+ *              controls: the original, the preprocessed and the encoded
+ *              audio; rendering, linked time axes, the play-start marker
+ *              and playback
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -14,9 +15,9 @@
 
 #include <QString>
 #include <QWidget>
+#include <array>
 #include <cstdint>
 #include <map>
-#include <optional>
 #include <vector>
 
 #include "core/dsp/output_filter.h"
@@ -30,10 +31,15 @@
 #include "core/util/task_runner.h"
 #include "gui/playback/player.h"
 #include "gui/undo/project_edits.h"
+#include "gui/waveform/phrase_tab.h"
 
 class QCheckBox;
 class QEvent;
 class QScrollBar;
+class QScrollArea;
+class QSplitter;
+class QStackedWidget;
+class QTabBar;
 class QToolButton;
 
 namespace speak5220::app {
@@ -41,52 +47,61 @@ namespace speak5220::app {
 class WaveformPane;
 class WaveformView;
 
-// Plan §5, Phase 6 and Phase 11: the source audio above the encoded audio,
-// the same height, with one scroll bar and one row of controls under both:
-// play or pause each (labelled with the pane's name), reset the play start,
-// Frame grid, zoom out, zoom in and fit.
+// Plan §5, Phase 6 and Phase 11: the phrase editor's three tabs (PhraseTab).
+// Under the tab bar are two areas with one splitter between them, which
+// the tabs share, so neither area moves or changes size when another tab
+// is chosen and the waveforms can be compared by switching tabs:
 //
-// - The top pane shows the original recording or the recording
-//   preprocessed (SetPreprocessing(), preprocess::Preprocess()), as the
-//   Original and Preprocessed buttons in its heading choose
-//   (SetPreprocessedShown()); it plays what it shows. The preprocessed
-//   recording is what the encoder aims at and the quality is measured
-//   against. Where the preprocessing would take it past full scale, it is
-//   shown and played scaled down to fit, and the pane's note says so.
+// - The waveform area: the tab's waveform with its own scroll bar and
+//   row of controls under it (play or pause, reset the play start, zoom
+//   out, zoom in and fit; Frame grid on the Encode tab).
+// - The settings area: the tab's settings (SetControls()) in a scroll
+//   area of their own, so however many there are, the area keeps its size
+//   and scrolls instead.
 //
-// - The encoded audio is the cached frames spoken through the emulator
-//   and lined up with the original (RenderEncodedAudio()), in the
-//   background on the ITaskRunner; the result comes back queued and is
-//   kept per phrase until its frames change.
-// - Both panes always have the same time axis, over the union of their
-//   extents, so the same sound is at the same place: zooming or
-//   scrolling either one, or with the shared controls, moves both.
-// - A click in either pane moves the phrase's play start there, and the
-//   reset button moves it to 0, each one undoable step
-//   (ProjectEdits::SetPlayStart()). The original plays from the play
-//   start, and the encoded audio from the same sound; moving the play
-//   start while a pane plays or is paused takes playback there too.
+// The tabs:
+//
+// - Original: the recording as imported.
+// - Preprocess: the recording preprocessed (SetPreprocessing(),
+//   preprocess::Preprocess()): what the encoder aims at and the quality is
+//   measured against. Where the preprocessing would take it past full
+//   scale, it is shown and played scaled down to fit, and the note says
+//   so. With a squelch, the stretches it mutes are shaded
+//   (preprocess::SquelchedSpans()) and the note gives its level, so what
+//   will be left out of the encoding and of the quality measure can be
+//   seen before encoding.
+// - Encode: the cached frames spoken through the emulator and lined up
+//   with the original (RenderEncodedAudio()), in the background on the
+//   ITaskRunner; the result comes back queued and is kept per phrase
+//   until its frames change.
+//
+// - The three waveforms always have the same time axis, over the union of
+//   their extents, so the same sound is at the same place in every tab:
+//   zooming or scrolling one, with its controls or in its view, moves the
+//   others. A tab not shown keeps its last size, so a view that shows its
+//   whole extent makes the others fit theirs rather than copying its axis.
+// - The play start is the phrase's, shared by the tabs. A click in any
+//   waveform moves it there, and a tab's reset button moves it to 0, each
+//   one undoable step (ProjectEdits::SetPlayStart()). The recordings play
+//   from the play start, and the encoded audio from the same sound; moving
+//   the play start while a waveform plays or is paused takes playback
+//   there too.
 // - The encoded audio is shown and played at the original's level
-//   (EncodedAudio::level_gain), which the encoded pane's note gives in
-//   dB: the chip's output is about 15 dB quieter than a normalised
-//   recording, which would make the two hard to compare.
-// - With a squelch, the stretches it mutes are shaded on the original
-//   audio (preprocess::SquelchedSpans()), and the pane's note gives its
-//   level, so what will be left out of the encoding and of the quality
-//   measure can be seen before encoding. On the preprocessed audio they
-//   are silent, and the note names the preprocessing.
+//   (EncodedAudio::level_gain), which its note gives in dB: the chip's
+//   output is about 15 dB quieter than a normalised recording, which would
+//   make the two hard to compare.
 // - With an output filter (SetOutputFilter()), the encoded audio is shown
 //   through it (core::dsp::FilterSamples()), as that computer's audio
-//   stage would deliver it, and the encoded pane's note names it; the
-//   Player plays it through the same filter. The original is unchanged.
+//   stage would deliver it, and its note names it; the Player plays it
+//   through the same filter. The recordings are unchanged.
 // - The encoded audio is taken from the chip's SPEAKER pin, whose DAC
 //   clips each code to 8 bits, or from its I/O pin's 10-bit codes
-//   (SetOutputPin()): shown and played so, and the encoded pane's note
-//   says how many samples the DAC clipped, or that it is the I/O pin. The
-//   level match is measured on the codes, so it is the same for both.
-// - Each pane has its own play button, which shows pause while that pane
-//   plays (Space in a pane's view does the same); one pane plays at a
-//   time, through the Player, and its view shows the playhead.
+//   (SetOutputPin()): shown and played so, and its note says how many
+//   samples the DAC clipped, or that it is the I/O pin. The level match is
+//   measured on the codes, so it is the same for both.
+// - Each tab's play button shows pause while its waveform plays (Space in
+//   the view does the same); one waveform plays at a time, through the
+//   Player, and its view shows the playhead.
 //
 // GUI thread only. The edits, player, synth and runner must outlive the
 // widget; the destructor waits for the runner.
@@ -101,24 +116,21 @@ class PhraseWaveforms : public QWidget {
   PhraseWaveforms(const PhraseWaveforms&) = delete;
   PhraseWaveforms& operator=(const PhraseWaveforms&) = delete;
 
-  // Shows `phrase`, or clears both panes when null (no phrase, or
+  // Shows `phrase`, or clears every waveform when null (no phrase, or
   // several, selected). Showing the phrase already shown keeps the zoom,
   // and renders again only if its frames changed. `encoded_note` is shown
-  // beside the encoded pane's title (such as "stale").
+  // beside the encoded waveform's title (such as "stale").
   void ShowPhrase(const core::project::Phrase* phrase,
                   const QString& encoded_note = QString());
 
   // The preprocessing of the phrase shown: as the encoder panel's
   // settings have it, changes not yet applied included. None at first.
+  // Changing it redraws the preprocessed recording, keeping the zoom, and
+  // stops it if it is playing.
   void SetPreprocessing(const core::preprocess::PreprocessOptions& options);
   const core::preprocess::PreprocessOptions& Preprocessing() const {
     return preprocessing_;
   }
-  // Whether the top pane shows the preprocessed recording rather than the
-  // original; false at first. Changing it keeps the zoom, and stops the
-  // top pane's playback. Does not signal PreprocessedShownChanged().
-  void SetPreprocessedShown(bool shown);
-  bool PreprocessedShown() const { return preprocessed_shown_; }
 
   // The audio stage the encoded audio is shown through; none at first.
   // Changing it redraws the encoded audio, keeping the zoom.
@@ -129,26 +141,51 @@ class PhraseWaveforms : public QWidget {
   void SetOutputPin(core::synth::OutputPin pin);
   core::synth::OutputPin Pin() const { return pin_; }
 
-  WaveformPane* OriginalPane() const { return original_; }
-  // The buttons in the top pane's heading that choose what it shows.
-  QToolButton* OriginalButton() const { return show_original_; }
-  QToolButton* PreprocessedButton() const { return show_preprocessed_; }
-  WaveformPane* EncodedPane() const { return encoded_; }
-  QScrollBar* ScrollBar() const { return scroll_bar_; }
-  // The play/pause button of a pane.
+  // Puts `controls` in `tab`'s settings area, which scrolls when they do
+  // not fit, and takes ownership. A tab's area says it has no settings
+  // until given some.
+  void SetControls(PhraseTab tab, QWidget* controls);
+  // The tab shown; Original at first. Choosing one, here or by its tab,
+  // signals CurrentTabChanged().
+  void SetCurrentTab(PhraseTab tab);
+  PhraseTab CurrentTab() const;
+  QTabBar* Tabs() const { return tab_bar_; }
+
+  WaveformPane* Pane(PhraseTab tab) const { return TrackOf(tab).pane; }
+  WaveformPane* OriginalPane() const { return Pane(PhraseTab::kOriginal); }
+  WaveformPane* PreprocessedPane() const {
+    return Pane(PhraseTab::kPreprocess);
+  }
+  WaveformPane* EncodedPane() const { return Pane(PhraseTab::kEncode); }
+  // The splitter between the waveform area and the settings area, shared
+  // by every tab.
+  QSplitter* Splitter() const { return splitter_; }
+  // The scroll area holding a tab's settings.
+  QScrollArea* SettingsArea(PhraseTab tab) const {
+    return TrackOf(tab).settings;
+  }
+  QScrollBar* ScrollBar(PhraseTab tab) const { return TrackOf(tab).scroll_bar; }
+  // The play/pause button of the waveform that plays `source`; nullptr
+  // for the Optimise window's sources.
   QToolButton* PlayButton(PlaybackSource source) const;
   // True while `source`'s button shows pause.
   bool ShowsPause(PlaybackSource source) const;
-  QToolButton* ResetButton() const { return reset_; }
-  QToolButton* ZoomInButton() const { return zoom_in_; }
-  QToolButton* ZoomOutButton() const { return zoom_out_; }
-  QToolButton* FitButton() const { return fit_; }
+  QToolButton* ResetButton(PhraseTab tab) const { return TrackOf(tab).reset; }
+  QToolButton* ZoomInButton(PhraseTab tab) const {
+    return TrackOf(tab).zoom_in;
+  }
+  QToolButton* ZoomOutButton(PhraseTab tab) const {
+    return TrackOf(tab).zoom_out;
+  }
+  QToolButton* FitButton(PhraseTab tab) const { return TrackOf(tab).fit; }
+  // The Encode tab's Frame grid.
   QCheckBox* GridBox() const { return grid_; }
   // Renders started and not yet finished.
   int RendersRunning() const { return renders_running_; }
 
-  // Plays the pane's audio from the play start, or pauses or resumes it
-  // if that pane is already playing or paused.
+  // Plays the audio of `source` (the original, the preprocessed or the
+  // encoded audio) from the play start, or pauses or resumes it if it is
+  // already playing or paused.
   void PlayPause(PlaybackSource source);
   // Moves the play start to `source_sample`, rounded and limited to the
   // audio, as one undoable step. Playback follows it: audio playing
@@ -162,18 +199,42 @@ class PhraseWaveforms : public QWidget {
   void RenderFinished();
   // Moving the play start or playing failed.
   void Failed(const QString& title, const QString& message);
-  // The user chose what the top pane shows.
-  void PreprocessedShownChanged(bool shown);
+  // Another tab is shown.
+  void CurrentTabChanged(PhraseTab tab);
 
  protected:
   // Redraws the play/pause icons in the new palette's colours.
   void changeEvent(QEvent* event) override;
 
  private:
+  // A tab's waveform and its controls.
+  struct Track {
+    PhraseTab tab = PhraseTab::kOriginal;
+    PlaybackSource source = PlaybackSource::kOriginal;
+    QScrollArea* settings = nullptr;
+    WaveformPane* pane = nullptr;
+    QScrollBar* scroll_bar = nullptr;
+    QToolButton* play = nullptr;
+    QToolButton* reset = nullptr;
+    QToolButton* zoom_out = nullptr;
+    QToolButton* zoom_in = nullptr;
+    QToolButton* fit = nullptr;
+    bool shows_pause = false;
+  };
+
   struct Rendered {
     std::vector<core::lpc::Frame> frames;
     core::quality::EncodedAudio audio;
   };
+
+  // Makes the tab's waveform, its controls and its settings area.
+  void BuildTrack(Track& track, const QString& tab_title,
+                  const QString& pane_title, const QString& audio_name);
+  const Track& TrackOf(PhraseTab tab) const;
+  Track& TrackOf(PhraseTab tab);
+  // The track that plays `source`, or nullptr.
+  const Track* TrackFor(PlaybackSource source) const;
+  WaveformView* ViewOf(PhraseTab tab) const;
 
   void Render(const std::vector<core::lpc::Frame>& frames);
   void OnRendered(const core::project::PhraseId& id,
@@ -183,49 +244,46 @@ class PhraseWaveforms : public QWidget {
   // Shows the encoded audio again, for a new filter or pin, keeping the
   // zoom.
   void RedrawEncoded();
-  // The encoded pane's note: the level match, then the given note.
+  // The encoded waveform's note: the level match, then the given note.
   void UpdateEncodedNote();
   // Makes the preprocessed recording of audio_ again.
   void UpdatePreprocessed();
-  // The samples the top pane shows and plays.
-  const std::vector<float>& TopSamples() const;
-  // Shows TopSamples() in the top pane again, keeping the zoom, with its
-  // title, shading and note.
-  void RedrawTop();
-  // The top pane's title, play button, shading and note.
-  void UpdateTopLabels();
-  // Sets both views' extents for new contents (the union of the two) and
-  // fits both to it.
+  // Shows the preprocessed recording again, keeping the zoom, with its
+  // shading and note.
+  void RedrawPreprocessed();
+  // The preprocessed waveform's shading and note.
+  void UpdatePreprocessedLabels();
+  // Enables the controls that have something to act on.
+  void UpdateControls();
+  // Sets every view's extent for new contents (the union of those with
+  // samples) and fits them all to it.
   void UpdateExtents();
-  void FollowAxis(WaveformView* from, WaveformView* to);
-  // The view the shared controls act on: the original, or the encoded
-  // audio when there is no original.
+  // Gives the other views the axis of `from`, or fits them if it is
+  // fitted.
+  void FollowAxis(WaveformView* from);
+  // The view whose axis the others follow when contents change: the
+  // current tab's, or the first with samples when it has none.
   WaveformView* LeadView() const;
-  void UpdateScrollBar();
-  void OnScrolled(int value);
-  void SetPlaying(PlaybackSource source, bool playing);
+  void UpdateScrollBar(const Track& track);
+  void OnScrolled(const Track& track, int value);
+  void SetPlaying(Track& track, bool playing);
   // Playing audio starts again from the play start; paused audio stops.
   void FollowPlayStart();
   void OnPlayerStateChanged();
   void OnPlayerPositionChanged(int position);
-  WaveformView* PlayingView() const;
 
   ProjectEdits* edits_;
   Player* player_;
   core::synth::ISynth* synth_;
   core::ITaskRunner* runner_;
-  WaveformPane* original_;
-  WaveformPane* encoded_;
-  QToolButton* show_original_;
-  QToolButton* show_preprocessed_;
-  QScrollBar* scroll_bar_;
-  QToolButton* play_original_;
-  QToolButton* play_encoded_;
-  QToolButton* reset_;
-  QCheckBox* grid_;
-  QToolButton* zoom_out_;
-  QToolButton* zoom_in_;
-  QToolButton* fit_;
+  QTabBar* tab_bar_;
+  QSplitter* splitter_;
+  // The tabs' waveforms and settings, in PhraseTab order.
+  QStackedWidget* waveform_stack_;
+  QStackedWidget* settings_stack_;
+  // In PhraseTab order.
+  std::array<Track, 3> tracks_;
+  QCheckBox* grid_ = nullptr;
 
   // The phrase shown: its id, audio, play start and frames.
   core::project::PhraseId id_;
@@ -242,20 +300,17 @@ class PhraseWaveforms : public QWidget {
   // The note given with the phrase (such as "stale").
   QString encoded_note_;
   core::preprocess::PreprocessOptions preprocessing_;
-  bool preprocessed_shown_ = false;
   // audio_ preprocessed, scaled by preprocessed_gain_ (at most 1) so it
   // stays within full scale.
   std::vector<float> preprocessed_;
   double preprocessed_gain_ = 1.0;
   core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin_ = core::synth::OutputPin::kSpeaker;
-  bool original_shows_pause_ = false;
-  bool encoded_shows_pause_ = false;
   // The latest render of each phrase.
   std::map<core::project::PhraseId, Rendered> rendered_;
   int renders_running_ = 0;
-  // Set while one view's axis is copied to the other, and while the
-  // scroll bar is being moved to match the axis.
+  // Set while one view's axis is given to the others, and while a scroll
+  // bar is being moved to match its view.
   bool following_ = false;
   bool updating_scroll_bar_ = false;
 };

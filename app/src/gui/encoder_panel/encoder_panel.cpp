@@ -61,6 +61,27 @@ QString ToQString(std::string_view text) {
   return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
 }
 
+QComboBox* MakeScopeBox(QWidget* parent) {
+  auto* box = new QComboBox(parent);
+  box->addItem(QStringLiteral("This phrase"));
+  box->addItem(QStringLiteral("Project defaults"));
+  box->setToolTip(QStringLiteral(
+      "Edit this phrase's settings, or the defaults every phrase starts "
+      "from"));
+  return box;
+}
+
+// A row with the label "Settings for" and its scope chooser.
+QHBoxLayout* MakeScopeRow(QComboBox* box, QWidget* parent) {
+  auto* row = new QHBoxLayout;
+  auto* label = new QLabel(QStringLiteral("&Settings for"), parent);
+  label->setBuddy(box);
+  row->addWidget(label);
+  row->addWidget(box);
+  row->addStretch();
+  return row;
+}
+
 }  // namespace
 
 EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
@@ -71,7 +92,9 @@ EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
       tools_(tools),
       synth_(&synth),
       runner_(&runner),
-      scope_box_(new QComboBox(this)),
+      scope_box_(MakeScopeBox(this)),
+      preprocess_panel_(new QWidget(this)),
+      preprocess_scope_box_(MakeScopeBox(preprocess_panel_)),
       state_(new QLabel(this)),
       frames_(new QLabel(this)),
       kinds_(new QLabel(this)),
@@ -83,11 +106,6 @@ EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
       reset_(
           new QPushButton(QStringLiteral("Reset to Project Defaults"), this)),
       debounce_(new QTimer(this)) {
-  scope_box_->addItem(QStringLiteral("This phrase"));
-  scope_box_->addItem(QStringLiteral("Project defaults"));
-  scope_box_->setToolTip(QStringLiteral(
-      "Edit this phrase's settings, or the defaults every phrase starts "
-      "from"));
   QFont bold = state_->font();
   bold.setBold(true);
   state_->setFont(bold);
@@ -100,12 +118,15 @@ EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
       "Search the settings for the best quality within the budget"));
   debounce_->setSingleShot(true);
 
-  auto* scope_row = new QHBoxLayout;
-  auto* scope_label = new QLabel(QStringLiteral("&Settings for"), this);
-  scope_label->setBuddy(scope_box_);
-  scope_row->addWidget(scope_label);
-  scope_row->addWidget(scope_box_);
-  scope_row->addStretch();
+  // The preprocessing panel: its own scope chooser above the form's
+  // preprocessing section.
+  auto* preprocess_layout = new QVBoxLayout(preprocess_panel_);
+  preprocess_layout->setContentsMargins(0, 0, 0, 0);
+  preprocess_layout->addLayout(
+      MakeScopeRow(preprocess_scope_box_, preprocess_panel_));
+  preprocess_layout->addWidget(form_->PreprocessSection());
+  preprocess_layout->addStretch();
+
   auto* buttons = new QHBoxLayout;
   buttons->addWidget(re_encode_);
   buttons->addWidget(optimise_);
@@ -118,17 +139,20 @@ EncoderPanel::EncoderPanel(ProjectEdits& edits, const EncodingTools& tools,
   layout->addWidget(kinds_);
   layout->addWidget(level_);
   layout->addWidget(quality_);
-  layout->addLayout(scope_row);
+  layout->addLayout(MakeScopeRow(scope_box_, this));
+  layout->addWidget(preprocess_panel_);
   layout->addWidget(form_);
   layout->addLayout(buttons);
   layout->addStretch();
 
   connect(form_, &EncoderSettingsForm::Edited, this, &EncoderPanel::OnEdited);
   connect(debounce_, &QTimer::timeout, this, &EncoderPanel::DebounceTick);
-  connect(scope_box_, &QComboBox::currentIndexChanged, this, [this](int index) {
-    SetScope(index == kDefaultsScopeIndex ? Scope::kProjectDefaults
-                                          : Scope::kPhrase);
-  });
+  for (QComboBox* box : {scope_box_, preprocess_scope_box_}) {
+    connect(box, &QComboBox::currentIndexChanged, this, [this](int index) {
+      SetScope(index == kDefaultsScopeIndex ? Scope::kProjectDefaults
+                                            : Scope::kPhrase);
+    });
+  }
   connect(re_encode_, &QPushButton::clicked, this, &EncoderPanel::ReEncode);
   connect(reset_, &QPushButton::clicked, this, &EncoderPanel::Reset);
   connect(optimise_, &QPushButton::clicked, this,
@@ -189,9 +213,10 @@ void EncoderPanel::SetScope(Scope scope) {
   }
   ApplyPending();
   scope_ = scope;
-  scope_box_->setCurrentIndex(scope == Scope::kProjectDefaults
-                                  ? kDefaultsScopeIndex
-                                  : kPhraseScopeIndex);
+  for (QComboBox* box : {scope_box_, preprocess_scope_box_}) {
+    box->setCurrentIndex(scope == Scope::kProjectDefaults ? kDefaultsScopeIndex
+                                                          : kPhraseScopeIndex);
+  }
   reset_->setText(scope == Scope::kProjectDefaults
                       ? QStringLiteral("Reset to Encoder Defaults")
                       : QStringLiteral("Reset to Project Defaults"));

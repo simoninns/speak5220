@@ -29,14 +29,24 @@ namespace speak5220::app {
 // Pure.
 std::vector<std::int16_t> ToPcm16(std::span<const float> samples);
 
-// What is playing: a waveform pane's audio, or in the Optimise window a
-// phrase's encoding before Optimise or the optimised one.
-enum class PlaybackSource { kOriginal, kEncoded, kBeforeOptimise, kOptimised };
+// What is playing: a waveform tab's audio (the original recording, the
+// recording preprocessed, or the encoded audio), or in the Optimise window
+// a phrase's encoding before Optimise or the optimised one.
+enum class PlaybackSource {
+  kOriginal,
+  kPreprocessed,
+  kEncoded,
+  kBeforeOptimise,
+  kOptimised
+};
+
+// Whether `source` is the chip's output, rather than a recording. Pure.
+bool IsChipOutput(PlaybackSource source);
 
 enum class PlaybackState { kStopped, kPlaying, kPaused };
 
 // Plan §5 and Phase 6: plays one buffer of 8 kHz samples at a time, so
-// starting one pane stops the other. Play starts at a sample (the
+// starting one waveform stops another. Play starts at a sample (the
 // play-start marker), Pause holds the position and Resume goes on from
 // it; at the end, or on Stop, the position returns to where play started.
 //
@@ -47,7 +57,7 @@ enum class PlaybackState { kStopped, kPlaying, kPaused };
 // called. When the device does not take 8 kHz, the samples are resampled
 // to its rate.
 //
-// The chip's output (every source but kOriginal) is played through the
+// The chip's output (IsChipOutput()) is played through the
 // output filter (SetOutputFilter()), if there is one: as the DAC's
 // staircase through that computer's audio stage, at 48 kHz
 // (core::dsp::FilterDacOutput()), resampled to the device's rate if it

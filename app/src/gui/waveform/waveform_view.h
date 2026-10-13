@@ -89,6 +89,9 @@ class WaveformView : public QWidget {
   void ZoomIn();
   void ZoomOut();
   void Fit();
+  // Whether the view shows its whole extent, as Fit() left it; it fits
+  // again when resized.
+  bool IsFitted() const { return fitted_; }
   // Scrolls by `pixels` (positive is later).
   void ScrollBy(double pixels);
 

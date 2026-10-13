@@ -1,6 +1,6 @@
 /*
  * File:        grip_splitter.h
- * Module:      main_window
+ * Module:      waveform
  * Purpose:     A splitter whose handle shows a grip, so it can be found on
  *              every platform's style
  *
@@ -8,8 +8,8 @@
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
  */
 
-#ifndef SPEAK5220_GUI_MAIN_WINDOW_GRIP_SPLITTER_H_
-#define SPEAK5220_GUI_MAIN_WINDOW_GRIP_SPLITTER_H_
+#ifndef SPEAK5220_GUI_WAVEFORM_GRIP_SPLITTER_H_
+#define SPEAK5220_GUI_WAVEFORM_GRIP_SPLITTER_H_
 
 #include <QSplitter>
 
@@ -33,4 +33,4 @@ class GripSplitter : public QSplitter {
 
 }  // namespace speak5220::app
 
-#endif  // SPEAK5220_GUI_MAIN_WINDOW_GRIP_SPLITTER_H_
+#endif  // SPEAK5220_GUI_WAVEFORM_GRIP_SPLITTER_H_

@@ -18,6 +18,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/synth/output_pin.h"
+#include "gui/waveform/phrase_tab.h"
 
 namespace speak5220::app {
 
@@ -30,13 +31,18 @@ void SettingsViewPreferences::SetAdvancedSettingsShown(bool shown) {
   settings_.setValue(QString::fromLatin1(kAdvancedSettingsKey), shown);
 }
 
-bool SettingsViewPreferences::PreprocessedShown() {
-  return settings_.value(QString::fromLatin1(kPreprocessedShownKey), false)
-      .toBool();
+PhraseTab SettingsViewPreferences::ChosenPhraseTab() {
+  const std::string key = settings_.value(QString::fromLatin1(kPhraseTabKey))
+                              .toString()
+                              .toStdString();
+  return PhraseTabFromKey(key).value_or(PhraseTab::kOriginal);
 }
 
-void SettingsViewPreferences::SetPreprocessedShown(bool shown) {
-  settings_.setValue(QString::fromLatin1(kPreprocessedShownKey), shown);
+void SettingsViewPreferences::SetPhraseTab(PhraseTab tab) {
+  const std::string_view key = PhraseTabKey(tab);
+  settings_.setValue(
+      QString::fromLatin1(kPhraseTabKey),
+      QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
 }
 
 core::dsp::OutputFilter SettingsViewPreferences::ChosenOutputFilter() {

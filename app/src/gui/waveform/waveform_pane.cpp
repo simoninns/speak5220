@@ -24,7 +24,6 @@ WaveformPane::WaveformPane(const QString& title, QWidget* parent)
     : QWidget(parent),
       title_(new QLabel(title, this)),
       note_(new QLabel(this)),
-      heading_(new QHBoxLayout),
       view_(new WaveformView(this)) {
   QFont bold = title_->font();
   bold.setBold(true);
@@ -32,12 +31,13 @@ WaveformPane::WaveformPane(const QString& title, QWidget* parent)
   note_->setForegroundRole(QPalette::PlaceholderText);
   view_->setAccessibleName(title);
 
-  heading_->addWidget(title_);
-  heading_->addWidget(note_);
-  heading_->addStretch();
+  auto* heading = new QHBoxLayout;
+  heading->addWidget(title_);
+  heading->addWidget(note_);
+  heading->addStretch();
   auto* layout = new QVBoxLayout(this);
   layout->setContentsMargins(0, 0, 0, 0);
-  layout->addLayout(heading_);
+  layout->addLayout(heading);
   layout->addWidget(view_, 1);
 }
 
@@ -47,15 +47,6 @@ void WaveformPane::SetTitle(const QString& title) {
 }
 
 QString WaveformPane::Title() const { return title_->text(); }
-
-void WaveformPane::AddHeadingWidget(QWidget* widget) {
-  widget->setParent(this);
-  heading_->addWidget(widget);
-}
-
-void WaveformPane::SetMinimumHeadingHeight(int height) {
-  heading_->addStrut(height);
-}
 
 void WaveformPane::SetNote(const QString& note) { note_->setText(note); }
 

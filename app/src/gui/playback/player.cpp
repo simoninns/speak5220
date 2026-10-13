@@ -60,6 +60,19 @@ std::vector<std::int16_t> ToPcm16(std::span<const float> samples) {
   return out;
 }
 
+bool IsChipOutput(PlaybackSource source) {
+  switch (source) {
+    case PlaybackSource::kOriginal:
+    case PlaybackSource::kPreprocessed:
+      return false;
+    case PlaybackSource::kEncoded:
+    case PlaybackSource::kBeforeOptimise:
+    case PlaybackSource::kOptimised:
+      return true;
+  }
+  return true;
+}
+
 Player::Player(IAudioOutput& output, core::IClock& clock,
                core::dsp::IResampler& resampler, QObject* parent)
     : QObject(parent),
@@ -150,15 +163,13 @@ void Player::SetOutputFilter(core::dsp::OutputFilter filter) {
   }
   filter_ = filter;
   // The chip's output, whichever way the filter changed.
-  if (state_ != PlaybackState::kStopped &&
-      source_ != PlaybackSource::kOriginal) {
+  if (state_ != PlaybackState::kStopped && IsChipOutput(source_)) {
     Stop();
   }
 }
 
 bool Player::IsFiltered(PlaybackSource source) const {
-  return filter_ != core::dsp::OutputFilter::kNone &&
-         source != PlaybackSource::kOriginal;
+  return filter_ != core::dsp::OutputFilter::kNone && IsChipOutput(source);
 }
 
 core::Status Player::StartOutput(int from) {

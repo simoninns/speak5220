@@ -1,9 +1,9 @@
 /*
  * File:        phrase_waveforms_test.cpp
  * Module:      waveform tests
- * Purpose:     Unit tests of the two waveform panes with a mocked editor,
- *              synth and audio output: rendering, linked time axes, the
- *              play-start marker and playback
+ * Purpose:     Unit tests of the phrase editor's tabs with a mocked
+ *              editor, synth and audio output: rendering, linked time
+ *              axes, the play-start marker and playback
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -15,10 +15,16 @@
 #include <QColor>
 #include <QCoreApplication>
 #include <QImage>
+#include <QLabel>
+#include <QList>
 #include <QObject>
 #include <QPalette>
+#include <QRect>
+#include <QScrollArea>
 #include <QScrollBar>
+#include <QSplitter>
 #include <QString>
+#include <QTabBar>
 #include <QToolButton>
 #include <QUndoStack>
 #include <algorithm>
@@ -43,6 +49,7 @@
 #include "gui/support/gui_mocks.h"
 #include "gui/support/test_palettes.h"
 #include "gui/undo/project_edits.h"
+#include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/time_axis.h"
 #include "gui/waveform/waveform_pane.h"
 #include "gui/waveform/waveform_view.h"
@@ -98,7 +105,16 @@ class PhraseWaveformsTest : public ::testing::Test {
     QCoreApplication::processEvents();
   }
 
+  // Shows `tab`, laid out at the widget's size.
+  void ShowTab(PhraseTab tab) {
+    waveforms_.SetCurrentTab(tab);
+    QCoreApplication::processEvents();
+  }
+
   WaveformView* Original() const { return waveforms_.OriginalPane()->View(); }
+  WaveformView* Preprocessed() const {
+    return waveforms_.PreprocessedPane()->View();
+  }
   WaveformView* Encoded() const { return waveforms_.EncodedPane()->View(); }
 
   StrictMock<MockProjectEditor> editor_;
@@ -134,91 +150,157 @@ TEST_F(PhraseWaveformsTest, RendersTheEncodedAudioOnceInTheBackground) {
   EXPECT_TRUE(Encoded()->HasSamples());
 }
 
+TEST_F(PhraseWaveformsTest, TabsAreTheOriginalThePreprocessedAndTheEncoded) {
+  QTabBar* tabs = waveforms_.Tabs();
+  ASSERT_EQ(tabs->count(), 3);
+  EXPECT_EQ(tabs->tabText(0), QStringLiteral("Original"));
+  EXPECT_EQ(tabs->tabText(1), QStringLiteral("Preprocess"));
+  EXPECT_EQ(tabs->tabText(2), QStringLiteral("Encode"));
+  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
+            QStringLiteral("Original (8 kHz)"));
+  EXPECT_EQ(waveforms_.PreprocessedPane()->Title(),
+            QStringLiteral("Preprocessed (8 kHz)"));
+  EXPECT_EQ(waveforms_.EncodedPane()->Title(), QStringLiteral("Encoded"));
+  EXPECT_EQ(waveforms_.CurrentTab(), PhraseTab::kOriginal);
+
+  std::vector<PhraseTab> shown;
+  QObject::connect(&waveforms_, &PhraseWaveforms::CurrentTabChanged,
+                   [&shown](PhraseTab tab) { shown.push_back(tab); });
+  waveforms_.SetCurrentTab(PhraseTab::kEncode);
+  tabs->setCurrentIndex(1);
+  EXPECT_EQ(shown, (std::vector<PhraseTab>{PhraseTab::kEncode,
+                                           PhraseTab::kPreprocess}));
+  EXPECT_EQ(waveforms_.CurrentTab(), PhraseTab::kPreprocess);
+}
+
+// A tab's settings go in its settings area, under the waveform area, with
+// one splitter between them.
+TEST_F(PhraseWaveformsTest, TabSettingsGoInTheSettingsArea) {
+  auto* settings = new QLabel(QStringLiteral("settings"));
+  waveforms_.SetControls(PhraseTab::kPreprocess, settings);
+  EXPECT_EQ(waveforms_.SettingsArea(PhraseTab::kPreprocess)->widget(),
+            settings);
+  QSplitter* splitter = waveforms_.Splitter();
+  ASSERT_EQ(splitter->count(), 2);
+  EXPECT_EQ(splitter->orientation(), Qt::Vertical);
+  EXPECT_FALSE(splitter->childrenCollapsible());
+  for (const PhraseTab tab : kPhraseTabs) {
+    EXPECT_TRUE(
+        splitter->widget(0)->isAncestorOf(waveforms_.Pane(tab)->View()));
+    EXPECT_TRUE(
+        splitter->widget(1)->isAncestorOf(waveforms_.SettingsArea(tab)));
+  }
+  // A tab given no settings says so.
+  const auto* none = qobject_cast<QLabel*>(
+      waveforms_.SettingsArea(PhraseTab::kOriginal)->widget());
+  ASSERT_NE(none, nullptr);
+  EXPECT_EQ(none->text(), QStringLiteral("No settings"));
+}
+
+// The areas keep their sizes whichever tab is shown, so the waveforms are
+// at the same place to compare; settings too tall for their area scroll
+// rather than growing it.
+TEST_F(PhraseWaveformsTest, AreasKeepTheirSizesAcrossTabs) {
+  auto* tall = new QLabel(QStringLiteral("tall settings"));
+  tall->setMinimumHeight(2000);
+  waveforms_.SetControls(PhraseTab::kEncode, tall);
+  ShowPhrase();
+  ShowTab(PhraseTab::kOriginal);
+  const QList<int> sizes = waveforms_.Splitter()->sizes();
+  const QRect original = Original()->geometry();
+  for (const PhraseTab tab : {PhraseTab::kPreprocess, PhraseTab::kEncode}) {
+    ShowTab(tab);
+    EXPECT_EQ(waveforms_.Splitter()->sizes(), sizes);
+    EXPECT_EQ(waveforms_.Pane(tab)->View()->geometry(), original);
+  }
+  QScrollArea* area = waveforms_.SettingsArea(PhraseTab::kEncode);
+  EXPECT_LT(area->height(), 2000);
+  EXPECT_GT(area->verticalScrollBar()->maximum(), 0);
+}
+
+// The squelch is shown on the preprocessed recording, where it mutes: the
+// stretches are shaded and the note gives the level.
 TEST_F(PhraseWaveformsTest, ShadesWhatTheSquelchMutes) {
   // Loud for the first half, 60 dB quieter after.
   std::fill(phrase_.audio.begin() + (kAudioSamples / 2), phrase_.audio.end(),
             0.0001F);
   ShowPhrase();
-  EXPECT_TRUE(Original()->Shading().empty());
-  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+  WaveformPane* pane = waveforms_.PreprocessedPane();
+  EXPECT_TRUE(Preprocessed()->Shading().empty());
+  EXPECT_EQ(pane->Note(),
+            QStringLiteral("no preprocessing: the same as the original"));
 
   waveforms_.SetPreprocessing({.squelch_db = 30.0});
-  ASSERT_THAT(Original()->Shading(), SizeIs(1));
-  const TimeExtent shaded = Original()->Shading().front();
+  ASSERT_THAT(Preprocessed()->Shading(), SizeIs(1));
+  const TimeExtent shaded = Preprocessed()->Shading().front();
   // Inside the quiet half, after the hold, to the end.
   EXPECT_GT(shaded.begin, kAudioSamples / 2);
   EXPECT_DOUBLE_EQ(shaded.end, kAudioSamples);
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+  EXPECT_EQ(pane->Note(),
             QStringLiteral("squelch 30 dB: shaded stretches are muted"));
+  // Neither the original nor the encoded audio is shaded.
+  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
   EXPECT_TRUE(Encoded()->Shading().empty());
 
   // Too low a squelch to mute anything says so.
   waveforms_.SetPreprocessing({.squelch_db = 70.0});
-  EXPECT_TRUE(Original()->Shading().empty());
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+  EXPECT_TRUE(Preprocessed()->Shading().empty());
+  EXPECT_EQ(pane->Note(),
             QStringLiteral("squelch 70 dB: nothing is quiet enough to mute"));
+
+  // The squelch's note comes first, then the filters.
+  waveforms_.SetPreprocessing({.squelch_db = 30.0, .treble_tilt = 0.4});
+  EXPECT_EQ(pane->Note(), QStringLiteral("squelch 30 dB: shaded stretches are "
+                                         "muted · treble tilt 0.4"));
 
   // Another phrase is shaded by the same squelch; none clears it.
   waveforms_.SetPreprocessing({.squelch_db = 30.0});
   const Phrase other = EncodedPhrase(2, "OTHER", 50);
   waveforms_.ShowPhrase(&other);
   QCoreApplication::processEvents();
-  EXPECT_TRUE(Original()->Shading().empty());
+  EXPECT_TRUE(Preprocessed()->Shading().empty());
   ShowPhrase();
-  EXPECT_THAT(Original()->Shading(), SizeIs(1));
+  EXPECT_THAT(Preprocessed()->Shading(), SizeIs(1));
   waveforms_.SetPreprocessing({});
-  EXPECT_TRUE(Original()->Shading().empty());
-  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+  EXPECT_TRUE(Preprocessed()->Shading().empty());
+  waveforms_.ShowPhrase(nullptr);
+  EXPECT_TRUE(pane->Note().isEmpty());
 }
 
-// The top pane shows and plays the original or the preprocessed
-// recording, keeping its zoom, and follows a change of preprocessing.
-TEST_F(PhraseWaveformsTest, TopPaneShowsAndPlaysTheChosenRecording) {
+// The Preprocess tab shows and plays the recording preprocessed, and
+// follows a change of preprocessing, keeping its zoom; the Original tab
+// still plays the original.
+TEST_F(PhraseWaveformsTest, PreprocessTabShowsAndPlaysThePreprocessedAudio) {
   ShowPhrase();
-  EXPECT_FALSE(waveforms_.PreprocessedShown());
-  EXPECT_TRUE(waveforms_.OriginalButton()->isChecked());
-  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
-            QStringLiteral("Original (8 kHz)"));
-  Original()->ZoomIn();
-  const TimeAxis zoomed = Original()->Axis();
-
-  // With no preprocessing, the preprocessed recording is the original.
-  std::vector<bool> chosen;
-  QObject::connect(&waveforms_, &PhraseWaveforms::PreprocessedShownChanged,
-                   [&chosen](bool shown) { chosen.push_back(shown); });
-  waveforms_.PreprocessedButton()->click();
-  EXPECT_EQ(chosen, std::vector<bool>{true});
-  EXPECT_TRUE(waveforms_.PreprocessedShown());
-  EXPECT_FALSE(waveforms_.OriginalButton()->isChecked());
-  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
-            QStringLiteral("Preprocessed (8 kHz)"));
-  EXPECT_EQ(waveforms_.PlayButton(PlaybackSource::kOriginal)->text(),
-            QStringLiteral("Preprocessed"));
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
-            QStringLiteral("no preprocessing: the same as the original"));
-  EXPECT_EQ(Original()->Axis(), zoomed);
+  ShowTab(PhraseTab::kPreprocess);
+  Preprocessed()->ZoomIn();
+  const TimeAxis zoomed = Preprocessed()->Axis();
 
   // A treble tilt of 0.4 takes the steady 0.1 to 0.06.
   waveforms_.SetPreprocessing({.treble_tilt = 0.4});
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+  EXPECT_EQ(waveforms_.PreprocessedPane()->Note(),
             QStringLiteral("treble tilt 0.4"));
+  EXPECT_EQ(Preprocessed()->Axis(), zoomed);
   std::vector<std::int16_t> played;
   EXPECT_CALL(playback_.output, Start(_, Player::kSampleRate))
-      .WillOnce(DoAll(SaveArg<0>(&played), Return(core::OkStatus())));
-  waveforms_.PlayPause(PlaybackSource::kOriginal);
+      .WillRepeatedly(DoAll(SaveArg<0>(&played), Return(core::OkStatus())));
+  waveforms_.PlayButton(PlaybackSource::kPreprocessed)->click();
+  EXPECT_EQ(playback_.player.Source(), PlaybackSource::kPreprocessed);
   ASSERT_THAT(played, SizeIs(kAudioSamples - kPlayStart));
   EXPECT_NEAR(played.front(), 0.06 * 32768.0, 2.0);
-  EXPECT_EQ(Original()->Axis(), zoomed);
 
-  // A change of preprocessing stops the audio it no longer matches, and
-  // so does choosing the original again.
+  // A change of preprocessing stops the audio it no longer matches.
   waveforms_.SetPreprocessing({.treble_tilt = 0.2});
   EXPECT_EQ(playback_.player.State(), PlaybackState::kStopped);
-  waveforms_.SetPreprocessedShown(false);
-  EXPECT_EQ(chosen.size(), 1U);
-  EXPECT_EQ(waveforms_.OriginalPane()->Title(),
-            QStringLiteral("Original (8 kHz)"));
-  EXPECT_TRUE(waveforms_.OriginalPane()->Note().isEmpty());
+  EXPECT_EQ(Preprocessed()->Axis(), zoomed);
+
+  // The original is unchanged, and a change of preprocessing leaves it
+  // playing.
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  EXPECT_NEAR(played.front(), 0.1 * 32768.0, 2.0);
+  waveforms_.SetPreprocessing({.treble_tilt = 0.4});
+  EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
 }
 
 // Preprocessing that would go past full scale is shown and played scaled
@@ -228,44 +310,32 @@ TEST_F(PhraseWaveformsTest, PreprocessedRecordingIsScaledToFit) {
     phrase_.audio[i] = i % 2 == 0 ? 0.9F : -0.9F;
   }
   ShowPhrase();
-  waveforms_.SetPreprocessedShown(true);
   // 0.9 x 1.4 is 2.0 dB over full scale.
   waveforms_.SetPreprocessing({.treble_tilt = 0.4});
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(),
+  EXPECT_EQ(waveforms_.PreprocessedPane()->Note(),
             QStringLiteral("treble tilt 0.4 · scaled by -2.0 dB to fit"));
 }
 
-// With the original shown, a squelch is shaded; on the preprocessed
-// recording the muted stretches are silent and the note names it.
-TEST_F(PhraseWaveformsTest, SquelchIsShadedOnTheOriginalOnly) {
-  std::fill(phrase_.audio.begin() + (kAudioSamples / 2), phrase_.audio.end(),
-            0.0001F);
+TEST_F(PhraseWaveformsTest, TabsShowTheSameSoundAtTheSamePlace) {
   ShowPhrase();
-  waveforms_.SetPreprocessing({.squelch_db = 30.0});
-  EXPECT_THAT(Original()->Shading(), SizeIs(1));
-  waveforms_.SetPreprocessedShown(true);
-  EXPECT_TRUE(Original()->Shading().empty());
-  EXPECT_EQ(waveforms_.OriginalPane()->Note(), QStringLiteral("squelch 30 dB"));
-}
-
-TEST_F(PhraseWaveformsTest, PanesShowTheSameSoundAtTheSamePlace) {
-  ShowPhrase();
-  // The panes are stacked, the same size (an odd pixel of height goes to
-  // one of them).
-  EXPECT_EQ(Original()->width(), Encoded()->width());
-  EXPECT_LE(std::abs(Original()->height() - Encoded()->height()), 1);
-  // Both scroll over the union of the two.
-  const TimeExtent both{.begin = -kFirstFrameStretch,
-                        .end = kEncodedSamples - kFirstFrameStretch};
-  EXPECT_EQ(Original()->Extent(), both);
-  EXPECT_EQ(Encoded()->Extent(), both);
-  // They start fitted to it, as Fit shows them.
-  const TimeAxis fit = FitAxis(both, Original()->width());
-  EXPECT_EQ(Original()->Axis(), fit);
-  EXPECT_EQ(Encoded()->Axis(), fit);
+  // Every tab scrolls over the union of the three, and starts fitted to
+  // it, as Fit shows it.
+  const TimeExtent all{.begin = -kFirstFrameStretch,
+                       .end = kEncodedSamples - kFirstFrameStretch};
+  for (const WaveformView* view : {Original(), Preprocessed(), Encoded()}) {
+    EXPECT_EQ(view->Extent(), all);
+    EXPECT_TRUE(view->IsFitted());
+  }
+  EXPECT_EQ(Original()->Axis(), FitAxis(all, Original()->width()));
 
   Original()->ZoomIn();
   Original()->ScrollBy(120.0);
+  EXPECT_EQ(Preprocessed()->Axis(), Original()->Axis());
+  EXPECT_EQ(Encoded()->Axis(), Original()->Axis());
+
+  // Shown, another tab draws the same sound at the same place.
+  ShowTab(PhraseTab::kEncode);
+  EXPECT_EQ(Encoded()->width(), Original()->width());
   EXPECT_EQ(Encoded()->Axis(), Original()->Axis());
   for (const int source : {0, 400, 1000}) {
     EXPECT_DOUBLE_EQ(Original()->XOfSample(source),
@@ -273,52 +343,95 @@ TEST_F(PhraseWaveformsTest, PanesShowTheSameSoundAtTheSamePlace) {
   }
   Encoded()->ZoomIn();
   EXPECT_EQ(Original()->Axis(), Encoded()->Axis());
+  EXPECT_EQ(Preprocessed()->Axis(), Encoded()->Axis());
 }
 
-TEST_F(PhraseWaveformsTest, SharedControlsZoomAndScrollBoth) {
+// A tab not shown keeps its last size, so fitting one tab fits the others
+// to their own widths; shown, each shows the whole phrase.
+TEST_F(PhraseWaveformsTest, FittingOneTabFitsEveryTab) {
   ShowPhrase();
-  const TimeAxis fit = Original()->Axis();
-  waveforms_.ZoomInButton()->click();
-  EXPECT_DOUBLE_EQ(Original()->Axis().samples_per_pixel,
-                   fit.samples_per_pixel / WaveformView::kZoomStep);
-  EXPECT_EQ(Encoded()->Axis(), Original()->Axis());
+  waveforms_.ZoomInButton(PhraseTab::kOriginal)->click();
+  EXPECT_FALSE(Encoded()->IsFitted());
+  waveforms_.FitButton(PhraseTab::kOriginal)->click();
+  EXPECT_TRUE(Preprocessed()->IsFitted());
+  EXPECT_TRUE(Encoded()->IsFitted());
+  ShowTab(PhraseTab::kPreprocess);
+  EXPECT_EQ(Preprocessed()->Axis(),
+            FitAxis(Preprocessed()->Extent(), Preprocessed()->width()));
+  EXPECT_EQ(Original()->Axis(), Preprocessed()->Axis());
+}
 
-  QScrollBar* scroll_bar = waveforms_.ScrollBar();
+TEST_F(PhraseWaveformsTest, EachTabsControlsZoomAndScrollEveryTab) {
+  ShowPhrase();
+  ShowTab(PhraseTab::kPreprocess);
+  const TimeAxis fit = Preprocessed()->Axis();
+  waveforms_.ZoomInButton(PhraseTab::kPreprocess)->click();
+  EXPECT_DOUBLE_EQ(Preprocessed()->Axis().samples_per_pixel,
+                   fit.samples_per_pixel / WaveformView::kZoomStep);
+  EXPECT_EQ(Original()->Axis(), Preprocessed()->Axis());
+  EXPECT_EQ(Encoded()->Axis(), Preprocessed()->Axis());
+
+  QScrollBar* scroll_bar = waveforms_.ScrollBar(PhraseTab::kPreprocess);
   ASSERT_GT(scroll_bar->maximum(), 0);
   scroll_bar->setValue(scroll_bar->maximum());
-  EXPECT_DOUBLE_EQ(Original()->Axis().XToSample(Original()->width()),
-                   Original()->Extent().end);
-  EXPECT_EQ(Encoded()->Axis(), Original()->Axis());
-  // Scrolling a view moves the scroll bar.
+  EXPECT_DOUBLE_EQ(Preprocessed()->Axis().XToSample(Preprocessed()->width()),
+                   Preprocessed()->Extent().end);
+  EXPECT_EQ(Encoded()->Axis(), Preprocessed()->Axis());
+  // Scrolling another tab's view moves this tab's scroll bar.
   Encoded()->ScrollBy(-50.0);
   EXPECT_EQ(scroll_bar->value(), scroll_bar->maximum() - 50);
 
-  waveforms_.ZoomOutButton()->click();
-  waveforms_.FitButton()->click();
+  waveforms_.ZoomOutButton(PhraseTab::kPreprocess)->click();
+  waveforms_.FitButton(PhraseTab::kPreprocess)->click();
+  EXPECT_EQ(Preprocessed()->Axis(), fit);
   EXPECT_EQ(Original()->Axis(), fit);
-  EXPECT_EQ(Encoded()->Axis(), fit);
 }
 
-TEST_F(PhraseWaveformsTest, SharedControlsZoomTheEncodedAudioAlone) {
+// Without source audio, only the encoded audio can be zoomed, and there
+// is no play start to reset.
+TEST_F(PhraseWaveformsTest, ControlsNeedSomethingToActOn) {
   phrase_.audio.clear();
   phrase_.source.reset();
   phrase_.play_start = 0;
   ShowPhrase();
   ASSERT_FALSE(Original()->HasSamples());
+  ASSERT_FALSE(Preprocessed()->HasSamples());
+  for (const PhraseTab tab : {PhraseTab::kOriginal, PhraseTab::kPreprocess}) {
+    EXPECT_FALSE(waveforms_.ZoomInButton(tab)->isEnabled());
+    EXPECT_FALSE(waveforms_.FitButton(tab)->isEnabled());
+  }
+  EXPECT_FALSE(waveforms_.PlayButton(PlaybackSource::kOriginal)->isEnabled());
+  EXPECT_FALSE(
+      waveforms_.PlayButton(PlaybackSource::kPreprocessed)->isEnabled());
+  for (const PhraseTab tab : kPhraseTabs) {
+    EXPECT_FALSE(waveforms_.ResetButton(tab)->isEnabled());
+  }
   const TimeAxis fit = Encoded()->Axis();
-  waveforms_.ZoomInButton()->click();
+  ASSERT_TRUE(waveforms_.ZoomInButton(PhraseTab::kEncode)->isEnabled());
+  waveforms_.ZoomInButton(PhraseTab::kEncode)->click();
   EXPECT_NE(Encoded()->Axis(), fit);
-  EXPECT_FALSE(waveforms_.ResetButton()->isEnabled());
 }
 
-TEST_F(PhraseWaveformsTest, ClickMovesThePlayStartInBothPanes) {
+// The play start is the phrase's: a click in any tab moves it in every
+// tab.
+TEST_F(PhraseWaveformsTest, ClickMovesThePlayStartInEveryTab) {
   ShowPhrase();
   EXPECT_EQ(Original()->Marker(), kPlayStart);
+  EXPECT_EQ(Preprocessed()->Marker(), kPlayStart);
+  EXPECT_EQ(Encoded()->Marker(), kPlayStart);
   EXPECT_CALL(editor_, SetPlayStart(TestId(1), 800)).WillOnce(Return(400));
-  emit Encoded() -> MarkerRequested(800.4);
+  emit Preprocessed() -> MarkerRequested(800.4);
   EXPECT_EQ(Original()->Marker(), 800);
+  EXPECT_EQ(Preprocessed()->Marker(), 800);
   EXPECT_EQ(Encoded()->Marker(), 800);
   EXPECT_EQ(stack_.count(), 1);
+  // Each tab plays from it.
+  EXPECT_CALL(playback_.output, Start(SizeIs(kAudioSamples - 800), _)).Times(2);
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  waveforms_.PlayPause(PlaybackSource::kPreprocessed);
+  EXPECT_CALL(playback_.output,
+              Start(SizeIs(kEncodedSamples - 800 - kFirstFrameStretch), _));
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
 }
 
 TEST_F(PhraseWaveformsTest, PlayStartIsLimitedToTheAudio) {
@@ -334,7 +447,8 @@ TEST_F(PhraseWaveformsTest, PlayStartIsLimitedToTheAudio) {
 TEST_F(PhraseWaveformsTest, ResetMovesThePlayStartToTheBeginning) {
   ShowPhrase();
   EXPECT_CALL(editor_, SetPlayStart(TestId(1), 0)).WillOnce(Return(kPlayStart));
-  waveforms_.ResetButton()->click();
+  waveforms_.ResetButton(PhraseTab::kEncode)->click();
+  EXPECT_EQ(Original()->Marker(), 0);
   EXPECT_EQ(Encoded()->Marker(), 0);
 }
 
@@ -348,7 +462,7 @@ TEST_F(PhraseWaveformsTest, PlayingAudioStartsAgainFromTheNewPlayStart) {
   EXPECT_EQ(playback_.player.Position(), kPlayStart + 800);
   EXPECT_CALL(editor_, SetPlayStart(TestId(1), 0)).WillOnce(Return(kPlayStart));
   EXPECT_CALL(playback_.output, Start(SizeIs(kAudioSamples), _));
-  waveforms_.ResetButton()->click();
+  waveforms_.ResetButton(PhraseTab::kOriginal)->click();
   EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
   EXPECT_EQ(playback_.player.Source(), PlaybackSource::kOriginal);
   EXPECT_EQ(playback_.player.Position(), 0);
@@ -365,7 +479,7 @@ TEST_F(PhraseWaveformsTest, PausedAudioStopsSoTheNextPlayStartsThere) {
   ASSERT_EQ(playback_.player.State(), PlaybackState::kPaused);
   // The play start is already at the beginning: no step to undo, but
   // playback still goes back there.
-  waveforms_.ResetButton()->click();
+  waveforms_.ResetButton(PhraseTab::kEncode)->click();
   EXPECT_EQ(stack_.count(), 0);
   EXPECT_EQ(playback_.player.State(), PlaybackState::kStopped);
   EXPECT_CALL(playback_.output,
@@ -397,10 +511,11 @@ TEST_F(PhraseWaveformsTest, PlaysTheOriginalFromThePlayStart) {
   EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
   EXPECT_EQ(playback_.player.Source(), PlaybackSource::kOriginal);
   EXPECT_TRUE(waveforms_.ShowsPause(PlaybackSource::kOriginal));
+  EXPECT_FALSE(waveforms_.ShowsPause(PlaybackSource::kPreprocessed));
   EXPECT_FALSE(waveforms_.ShowsPause(PlaybackSource::kEncoded));
-  // Showing pause keeps the button's label, and so its width.
+  // Showing pause keeps the button's width.
   QToolButton* button = waveforms_.PlayButton(PlaybackSource::kOriginal);
-  EXPECT_EQ(button->text(), QStringLiteral("Original"));
+  EXPECT_EQ(button->accessibleName(), QStringLiteral("Pause the original"));
   const int playing_width = button->sizeHint().width();
   playback_.player.Stop();
   EXPECT_FALSE(waveforms_.ShowsPause(PlaybackSource::kOriginal));
@@ -427,6 +542,7 @@ TEST_F(PhraseWaveformsTest, PlayheadIsShownInSourceTime) {
   // 800 samples on from source sample 400.
   EXPECT_EQ(Encoded()->Playhead(), std::optional<double>(kPlayStart + 800));
   EXPECT_EQ(Original()->Playhead(), std::nullopt);
+  EXPECT_EQ(Preprocessed()->Playhead(), std::nullopt);
   playback_.player.Stop();
   EXPECT_EQ(Encoded()->Playhead(), std::nullopt);
 }
@@ -438,7 +554,11 @@ TEST_F(PhraseWaveformsTest, PlayAgainPausesAndThenResumes) {
   EXPECT_EQ(playback_.player.State(), PlaybackState::kPaused);
   waveforms_.PlayPause(PlaybackSource::kOriginal);
   EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
-  // The other pane takes over.
+  // Another tab takes over.
+  waveforms_.PlayPause(PlaybackSource::kPreprocessed);
+  EXPECT_EQ(playback_.player.Source(), PlaybackSource::kPreprocessed);
+  EXPECT_FALSE(waveforms_.ShowsPause(PlaybackSource::kOriginal));
+  EXPECT_TRUE(waveforms_.ShowsPause(PlaybackSource::kPreprocessed));
   waveforms_.PlayPause(PlaybackSource::kEncoded);
   EXPECT_EQ(playback_.player.Source(), PlaybackSource::kEncoded);
 }
@@ -507,7 +627,7 @@ TEST_F(PhraseWaveformsTest, StaleNoteFollowsTheLevelNote) {
 
 TEST_F(PhraseWaveformsTest, OutputFilterRedrawsTheEncodedAudioInPlace) {
   ShowPhrase();
-  waveforms_.ZoomInButton()->click();
+  waveforms_.ZoomInButton(PhraseTab::kEncode)->click();
   const TimeAxis axis = Encoded()->Axis();
   // Drawn again from the render kept, not spoken again.
   EXPECT_CALL(playback_.synth, Synthesize(_, _)).Times(0);
@@ -572,7 +692,10 @@ TEST_F(PhraseWaveformsTest, PhraseNotEncodedSaysSo) {
   EXPECT_FALSE(Encoded()->HasSamples());
   EXPECT_TRUE(Encoded()->Placeholder().contains(QStringLiteral("Not encoded")));
   EXPECT_FALSE(waveforms_.PlayButton(PlaybackSource::kEncoded)->isEnabled());
+  EXPECT_FALSE(waveforms_.ZoomInButton(PhraseTab::kEncode)->isEnabled());
   EXPECT_TRUE(waveforms_.PlayButton(PlaybackSource::kOriginal)->isEnabled());
+  EXPECT_TRUE(
+      waveforms_.PlayButton(PlaybackSource::kPreprocessed)->isEnabled());
 }
 
 TEST_F(PhraseWaveformsTest, FailedRenderSaysWhy) {
@@ -584,12 +707,15 @@ TEST_F(PhraseWaveformsTest, FailedRenderSaysWhy) {
       QStringLiteral("the Speak command did not start")));
 }
 
-TEST_F(PhraseWaveformsTest, NoPhraseClearsBothPanes) {
+TEST_F(PhraseWaveformsTest, NoPhraseClearsEveryTab) {
   ShowPhrase();
   waveforms_.ShowPhrase(nullptr);
   EXPECT_FALSE(Original()->HasSamples());
+  EXPECT_FALSE(Preprocessed()->HasSamples());
   EXPECT_FALSE(Encoded()->HasSamples());
   EXPECT_FALSE(waveforms_.PlayButton(PlaybackSource::kOriginal)->isEnabled());
+  EXPECT_FALSE(waveforms_.PlayButton(PlaybackSource::kEncoded)->isEnabled());
+  EXPECT_FALSE(waveforms_.ResetButton(PhraseTab::kOriginal)->isEnabled());
 }
 
 TEST_F(PhraseWaveformsTest, EncodedNoteIsShownBesideTheTitle) {

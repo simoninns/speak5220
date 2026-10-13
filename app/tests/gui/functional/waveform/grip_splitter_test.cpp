@@ -1,13 +1,13 @@
 /*
  * File:        grip_splitter_test.cpp
- * Module:      main_window tests
+ * Module:      waveform tests
  * Purpose:     Paints the splitter's grip on the offscreen platform
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
  */
 
-#include "gui/main_window/grip_splitter.h"
+#include "gui/waveform/grip_splitter.h"
 
 #include <QApplication>
 #include <QImage>

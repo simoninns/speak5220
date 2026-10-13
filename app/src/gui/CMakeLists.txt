@@ -14,7 +14,6 @@ add_library(
     encoder_panel/quality_rating_view.cpp
     export/export_dialog.cpp
     main_window/dialogs.cpp
-    main_window/grip_splitter.cpp
     main_window/main_window.cpp
     main_window/project_document.cpp
     main_window/recent_files.cpp
@@ -34,7 +33,9 @@ add_library(
     undo/project_commands.cpp
     undo/project_edits.cpp
     waveform/frame_map.cpp
+    waveform/grip_splitter.cpp
     waveform/peak_cache.cpp
+    waveform/phrase_tab.cpp
     waveform/phrase_waveforms.cpp
     waveform/time_axis.cpp
     waveform/waveform_pane.cpp

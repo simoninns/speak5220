@@ -51,18 +51,21 @@ class PhraseListPanel;
 class PhraseWaveforms;
 
 // Plan §5: the top-level window. The phrase list is docked on the left;
-// on the right are the selected phrase's details, its waveforms
-// (PhraseWaveforms) and, below a splitter, its encoder panel
-// (EncoderPanel); the status bar shows the project's size in KB and
-// PHROMs. Menus: File (new, open, recent, save, save as, quit), Edit
-// (undo, redo), Phrase (add, remove, move up and down, sort A-Z,
-// re-encode, optimise), Export, Audio (chip output, output filter), Help.
+// on the right are the selected phrase's details and its tabs
+// (PhraseWaveforms): Original, Preprocess with the preprocessing settings
+// (EncoderPanel::PreprocessPanel()), and Encode with the encoder panel
+// (EncoderPanel), each tab's waveform above its settings; the status bar shows
+// the project's size in KB and PHROMs. Menus: File (new, open, recent, save,
+// save as, quit), Edit (undo, redo), Phrase (add, remove, move up and down,
+// sort A-Z, re-encode, optimise), Export, Audio (chip output, output filter),
+// Help.
 //
 // The title is the project's file name, marked while it has unsaved
 // changes; replacing or closing a modified project asks first. Questions
 // go through IDialogs, the recent-file list through IRecentFilesStore,
-// what the user chose to see and hear (the advanced encoder settings, the
-// output filter of the Audio menu) through IViewPreferences;
+// what the user chose to see and hear (the tab shown, the advanced encoder
+// settings, the output filter and chip output of the Audio menu) through
+// IViewPreferences;
 // imports, encoding and the rendering of encoded audio (through the
 // ISynth) run as background jobs on the ITaskRunner, their results coming
 // back to the GUI thread queued; the waveforms play through the Player;
