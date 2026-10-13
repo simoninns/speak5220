@@ -548,12 +548,14 @@ over the corpus or did what another option does (§9, "Fixed options"):
 (`kPeakLimit`, in `level_setter`), `repeats` on (`kMaxRepeatRun`),
 `iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on and `compression` 1
 (off). Quiet pauses, once an option, are always on. The defaults are the
-reference's but for five (§9, "Default settings"): `target_rms` 24,
+reference's but for six (§9, "Default settings"): `target_rms` 24,
 `window` 256, `voicing_evidence` 5 and `level_agc` 1.25, chosen on the
-corpus for the overall quality score, and `voicing_threshold` 0.4, chosen
-with `voicing_min_run` against Acorn's PHROM. The reference data is
+corpus for the overall quality score, and `voicing_threshold` 0.6 and
+`repeat_lambda` 300, chosen with `voicing_min_run` against Acorn's PHROM
+(§9, "Voicing and source shaping, from Acorn's PHROM" and "The voicing
+threshold and the repeat trade-off, from the PHROM round trip"). The reference data is
 compared with the reference's own defaults written out (`voicing_threshold`
-0.3 among them) and the options it does not have off
+0.3 and `repeat_lambda` 70 among them) and the options it does not have off
 (`ReferenceEncoderOptions()` in the test support, §13), and with the
 reference's frames with their pauses quietened (`ReferenceFrames()`), so
 it does not depend on the application's defaults. `EncoderOptionInfos()`
@@ -1064,6 +1066,58 @@ lowers the starting median by 0.002. It tries a median of 268 candidates
 per file instead of 310, and takes 1.69 s per second of speech on 16
 threads instead of 1.72.
 
+**The voicing threshold and the repeat trade-off, from the PHROM round
+trip** (2026-10-13; §8, "Options"; encoder-quality plan, Phase 2). The
+round trip ("Diagnostics", below) compares the encoder's frames for the
+157 speech words of Acorn PHROM A with the PHROM's own, which are the
+ground truth for that audio. At `voicing_threshold` 0.4 the encoder left
+94 of the PHROM's voiced frames unvoiced inside vowels (bursts of hiss),
+and at `repeat_lambda` 70 it made 1184 repeats where the PHROM has 321,
+holding one filter through moving formants. Both were swept with
+`option_sweep.py` over the corpus of 243 recordings (with the round
+trip), the investigation's 64 TTS files and the phoneme set (`say`), the
+other options at their defaults:
+
+| Corpus of 243 (`repeat_lambda` 300 but the first row) | Median, mean score | 10th percentile | Good / Fair / Poor | Files up / down by over 0.005 | Median VDE | Total size | Round trip: agreement; voiced made unvoiced inside / at onsets / at offsets; unvoiced made voiced |
+|---|---|---|---|---|---|---|---|
+| Old defaults (0.4, `repeat_lambda` 70) | 0.722, 0.712 | 0.583 | 140 / 94 / 9 | — | 8.4 % | 101,566 bytes | 93.7 %; 94 / 43 / 19; 18 |
+| `voicing_threshold` 0.4 | 0.730, 0.727 | 0.599 | 158 / 80 / 5 | 162 / 29 | 8.5 % | 119,949 bytes | 93.7 %; 92 / 44 / 19; 20 |
+| 0.5 | 0.730, 0.729 | 0.600 | 159 / 79 / 5 | 167 / 42 | 8.8 % | 120,971 bytes | 96.3 %; 33 / 33 / 12; 25 |
+| 0.55 | 0.730, 0.729 | 0.604 | 158 / 79 / 6 | 173 / 47 | 9.0 % | 121,396 bytes | 96.9 %; 22 / 29 / 10; 26 |
+| 0.6 (the defaults) | 0.730, 0.732 | 0.606 | 158 / 81 / 4 | 171 / 44 | 9.0 % | 122,016 bytes | 97.2 %; 17 / 28 / 7; 26 |
+| 0.65 | 0.735, 0.733 | 0.612 | 159 / 78 / 6 | 166 / 45 | 9.4 % | 122,560 bytes | 97.4 %; 10 / 25 / 6; 31 |
+| 0.7 | 0.734, 0.730 | 0.615 | 159 / 76 / 8 | 168 / 41 (one file −0.89) | 9.9 % | 123,203 bytes | 97.5 %; 3 / 23 / 5; 39 |
+
+| At `voicing_threshold` 0.6 | Corpus: median, mean score | Corpus size | TTS (64): median, mean score | TTS size | Round trip: repeats (the PHROM's 321); voiced filter shape error | Round-trip fade-outs |
+|---|---|---|---|---|---|---|
+| Old defaults (0.4, 70) | 0.722, 0.712 | 101,566 bytes | 0.705, 0.685 | 9,977 bytes | 1184; 2.17 dB | 42 |
+| `repeat_lambda` 70 | 0.720, 0.715 | 103,392 bytes | 0.718, 0.706 | 10,109 bytes | 1197; 2.18 dB | 38 |
+| 140 | 0.730, 0.727 | 115,273 bytes | 0.748, 0.721 | 11,248 bytes | 743; 2.05 dB | 28 |
+| 200 | 0.732, 0.729 | 119,150 bytes | 0.745, 0.725 | 11,741 bytes | 550; 2.02 dB | 27 |
+| 300 (the defaults) | 0.730, 0.732 | 122,016 bytes | 0.747, 0.726 | 12,188 bytes | 395; 1.98 dB | 25 |
+
+So `voicing_threshold` became 0.6 and `repeat_lambda` 300, agreed with
+the user. 0.6 has the best mean and the fewest Poor files over the corpus
+and the PHROM's voicing on 97.2 % of frames; above it the PHROM's hiss
+starts to be voiced (31 frames at 0.65, 39 at 0.7) and at 0.7 one
+recording collapses. On the phoneme set, the consonants' frames voiced
+rise only from 69 to 81 of 553 (S 16 to 23, CH 30 to 33), the files with
+a gross pitch error over 20 % fall from 29 to 23 of 152, and the loud
+unvoiced frames before voicing from 18 to 13. 300 comes nearest the
+PHROM's repeats, with the least filter shape error, and gives the best
+mean; the cost is 20 % more bytes
+(ARCTIC's 33: 16,857 to 20,298). The median VDE over the 33 ARCTIC
+recordings rises from 13.9 % to 18.4 % (16.0 % at 0.5), against a
+tracker's voicing of the source rather than the ground truth; it was
+accepted for the round trip's figures. The slider's typical range of
+`repeat_lambda` became 0 to 600. The slow gain control was swept too, to
+lower the round trip's unvoiced energy bias (+0.78 index): at 1 and 1.1
+it falls only to +0.60 and +0.67, while the corpus median falls to 0.727
+and 0.728 and more files fall than rise (85 against 53 at 1, the worst by
+0.26), so `level_agc` stays 1.25 and the bias is left to the level
+setting (plan, Phase 3). The reference data is unchanged, since it is
+compared with the reference's 0.3 and 70 (§13).
+
 ---
 
 
@@ -1117,7 +1171,9 @@ tools, which judge the encoder-quality plan's later phases:
 - `option_sweep.py`: for each option set of a table
   (`app/scripts/sweeps/`), a project with those defaults (`speak5220-cli
   new --option`) is encoded and measured, optionally with the round trip,
-  and one row of medians is printed per set.
+  and one row of medians is printed per set; `--only` takes some of the
+  files (`sweeps/investigation-tts.txt`: the investigation's 64 TTS files
+  out of the phoneme set).
 - `phoneme-check.sh`: `phoneme_corpus.py` renders `phoneme_prompts.csv`
   (words and sentences isolating S, SH, CH, K, T and F) with Piper or
   macOS's `say`, recording each file's SHA-256; `PhonemeCheck` encodes each
@@ -1127,8 +1183,9 @@ tools, which judge the encoder-quality plan's later phases:
   the source and the encoding, loud unvoiced frames before voicing, fade
   frames and the share of repeats in voiced sound.
 
-On the defaults, the round trip gives 93.7 % voicing agreement over 2770
-matched frames, 1184 repeats and 42 fade-outs; the investigation's figures
+On the defaults before the plan's Phase 2 (`voicing_threshold` 0.4,
+`repeat_lambda` 70), the round trip gives 93.7 % voicing agreement over
+2770 matched frames, 1184 repeats and 42 fade-outs; the investigation's figures
 (93.9 %, 2737, 1164, 37) are reproduced exactly when the words are spoken
 by the reference synthesiser, whose output ends one idle frame sooner than
 the emulator's: the encoder is sensitive to the length of the idle tail

@@ -150,6 +150,14 @@ changed)**, as it can after Optimise or with a project from elsewhere.
 The [option reference](../reference/encoder-options.md) says which
 options are which.
 
+The defaults of the voicing threshold (`0.6`) and the repeat trade-off
+(`300`) come from Acorn's own PHROM phrases: encoded from the chip's
+output, the phrases come back with nearly the same voicing as their own
+frames (97 % of frames agree) and about as many repeat frames, and
+recordings score higher on average, at about a fifth more bytes. A
+project keeps the defaults it was made with; a new project starts from
+these.
+
 **Settings for** chooses what the form edits:
 
 - **This phrase**: the phrase's settings. The ticks mark the project's
@@ -348,13 +356,14 @@ unvoiced. Runs at the start and end of a phrase are kept. `1` turns it
 off.
 
 So by default a single frame of the other kind is smoothed away. On
-Acorn's own phrases, this and the voicing threshold of `0.4` bring the
-encoder's voicing nearer the phrases' own: re-encoded by Speak5220, they
-change between buzz and hiss 2.7 times a second instead of 3.8 (the
-phrases themselves: 1.6), and score 0.928 instead of 0.890. `3 frames`
-comes nearer still (2.2 times a second), but over the corpus of 243
-recordings it lowers more scores than it raises, so it is not the
-default.
+Acorn's own phrases, this and the voicing threshold bring the encoder's
+voicing nearer the phrases' own: re-encoded by Speak5220 with the
+threshold at `0.4`, they changed between buzz and hiss 2.7 times a second
+instead of 3.8 (the phrases themselves: 1.6), and scored 0.928 instead of
+0.890. `3 frames` comes nearer still (2.2 times a second), but over the
+corpus of 243 recordings it lowers more scores than it raises, so it is
+not the default. The threshold's default has since risen to `0.6`, which
+leaves fewer bursts of hiss inside vowels still.
 
 ## Quiet pauses
 

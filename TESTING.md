@@ -474,7 +474,9 @@ hand, and only to create or, by agreement, regenerate the reference data
     `app/scripts/sweeps/encoder-quality.tsv`) through the CLI (`new
     --option`, `add`, `encode`, `measure`), with `--phrom` the round trip
     too, and prints one row of medians per set, into
-    `build/app/option-sweep/`.
+    `build/app/option-sweep/`. `--only` takes some of the files: with
+    `app/scripts/sweeps/investigation-tts.txt` on
+    `local/phoneme-corpus/say/`, the investigation's 64 TTS files.
   - `app/scripts/phoneme-check.sh` renders the phoneme test set
     (`phoneme_prompts.csv`, by `phoneme_corpus.py`, with Piper on Linux or
     `--engine say` on macOS, into the gitignored `local/phoneme-corpus/`,

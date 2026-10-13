@@ -13,8 +13,10 @@ row per set goes to OUTPUT/summary.tsv and is printed: the median and mean
 overall score, the median component scores, envelope distortion, GPE, VDE
 and ESTOI, the total bytes, the median loudness figures and, with --phrom,
 the round trip's voicing agreement and its breakdown, repeats and
-fade-outs. Each set's project, measures and round-trip report are kept in
-OUTPUT/SET/. The encoder-quality plan's phases are judged with it
+fade-outs, energy biases and bits. --only takes a list of the files to
+encode (sweeps/investigation-tts.txt picks the encoder-quality
+investigation's 64 TTS files out of the phoneme set). Each set's project,
+measures and round-trip report are kept in OUTPUT/SET/. The encoder-quality plan's phases are judged with it
 (docs-tech/encoder-quality-plan.md).
 
 It is run by hand from the repository root in the default Nix shell, with
@@ -68,7 +70,10 @@ ROUND_TRIP = [
     ("unvoiced_as_voiced", "phrom_unvoiced_as_voiced"),
     ("repeats_enc", "phrom_repeats"),
     ("fade_outs_enc", "phrom_fade_outs"),
+    ("energy_diff_voiced", "phrom_energy_voiced"),
+    ("energy_diff_unvoiced", "phrom_energy_unvoiced"),
     ("shape_db_voiced", "phrom_shape_db_voiced"),
+    ("bits_enc", "phrom_bits"),
 ]
 
 
@@ -96,6 +101,26 @@ def read_sets(path):
     if not sets:
         sys.exit(f"{path}: no option sets")
     return sets
+
+
+def read_names(path):
+    """The names of a list file: one per line, # starts a comment."""
+    names = set()
+    with open(path) as f:
+        for line in f:
+            name = line.split("#", 1)[0].strip()
+            if name:
+                names.add(name)
+    if not names:
+        sys.exit(f"{path}: no names")
+    return names
+
+
+def listed(wav, names):
+    """Whether `wav` is named in `names` by its stem, or by its stem less
+    a last "_VOICE" part (a prompt id of phoneme_corpus.py)."""
+    stem = wav.stem
+    return stem in names or stem.rsplit("_", 1)[0] in names
 
 
 def read_tsv(path):
@@ -136,6 +161,12 @@ def main():
         "--output", type=Path, help="where the results go (default: BUILD/option-sweep)"
     )
     ap.add_argument(
+        "--only",
+        type=Path,
+        help="a list of the files of --input to encode, by stem or prompt id "
+        "(such as sweeps/investigation-tts.txt); default: every file",
+    )
+    ap.add_argument(
         "--phrom",
         action="store_true",
         help="also run the PHROM round trip with each set",
@@ -151,6 +182,9 @@ def main():
                 f"cmake --build {args.build}"
             )
     wavs = sorted(args.input.glob("*.wav"))
+    if args.only:
+        names = read_names(args.only)
+        wavs = [w for w in wavs if listed(w, names)]
     if not wavs:
         sys.exit(f"option_sweep: no WAV files in {args.input}")
     output = args.output or args.build / "option-sweep"

@@ -135,33 +135,63 @@ Phase 4.
 ## Phase 2: Defaults that need no reference data
 
 Depends on: Phase 1. Changes C3 and C6, and the `level_agc` part of C2.
+Done 2026-10-13; the sweeps and the reasons are in HLD §9, "The voicing
+threshold and the repeat trade-off, from the PHROM round trip".
 
-1. **`voicing_threshold` 0.5.** Sweep 0.4, 0.45 and 0.5 over the full
-   corpus (`OptionsCorpusCheck`, HLD §9) and the round trip; choose the
-   value, expected 0.5, with the user.
-   - **Acceptance:** round-trip voicing agreement ≥ 96 % with voiced-made-
-     unvoiced misses inside runs ≤ 30; corpus median score not lower than
-     today's 0.718 and VDE not worse than 16 % median; HLD §9 and
-     `encoder-options.md` record the figures and the new default.
-2. **`repeat_lambda` 300** (D1). Sweep 70, 140, 200 and 300 over the
-   corpus, the TTS set and the round trip, with task 1's threshold, to
-   record the figures the default rests on; the default becomes 300.
-   - **Acceptance:** round-trip repeats ≤ 20 %; TTS median score ≥ 0.72
-     (0.707 today); corpus size growth recorded (expect +17 %); the
-     slider's typical range in `EncoderOptionInfos()` (0 to 300 today)
-     covers the default with room above it.
-3. **`level_agc`.** Sweep 1, 1.1 and 1.25 on the round trip's unvoiced
-   energy bias and the corpus score; lower the default if the bias falls
-   without a score loss, else leave it and note why.
-   - **Acceptance:** round-trip unvoiced energy difference ≤ +0.5 index at
-     the chosen value; corpus median score within 0.005 of task 2's.
-4. **Documentation and fixtures.** `encoder-options.md`, `encoder.md`, HLD
-   §8 "Options" and §9 updated with the sweep tables; the fixture projects
-   in `app/projects/` keep their own listed options, so their frames are
-   unchanged; the GUI's default-settings tests follow the new defaults.
-   - **Acceptance:** unit and GUI tests pass; `mkdocs build --strict`
-     passes; the corpus check passes unchanged (the reference is compared
-     with its own defaults).
+1. **`voicing_threshold`.** Swept from 0.4 to 0.7 over the corpus of 243
+   (`option_sweep.py`, the measures `OptionsCorpusCheck` gives) with the
+   round trip, the TTS set and the phoneme set, alone and with each
+   `repeat_lambda` of task 2, since the two interact. Chosen with the
+   user: **0.6**. 0.5, expected, missed the inside misses (33).
+   - **Acceptance:** round-trip voicing agreement 97.2 % (≥ 96 %) with
+     17 voiced-made-unvoiced misses inside runs (≤ 30); corpus median
+     0.730 (today's was 0.722, not the 0.718 written here before: that
+     was the median before the voicing smoothing), mean 0.712 to 0.732;
+     corpus median VDE 8.4 % to 9.0 %. The bound of 16 % median VDE, which
+     was ARCTIC's figure at 0.5, is not met on ARCTIC (18.4 %; 0.5 gives
+     16.0 %) and was relaxed with the user: VDE is judged against a
+     tracker's voicing of the source, the round trip against the ground
+     truth. HLD §9 and `encoder-options.md` record the figures and the
+     new default.
+2. **`repeat_lambda` 300** (D1). Swept 70, 140, 200 and 300 at threshold
+   0.6 over the corpus, the TTS set and the round trip; the default
+   became 300, and the slider's typical range 0 to 600.
+   - **Acceptance:** round-trip repeats 395 (13 % of sounding frames;
+     ≤ 20 %); TTS median score 0.747 (≥ 0.72; 0.705 today on the
+     phoneme set's render of the TTS set, 0.707 on the investigation's);
+     corpus size +20.1 % (101,566 to 122,016 bytes; ARCTIC +20.4 %).
+3. **`level_agc`.** 1 and 1.1 at the new defaults lower the round trip's
+   unvoiced energy bias from +0.78 to +0.60 and +0.67, never to +0.5,
+   and lower the corpus median to 0.727 and 0.728 with more files down
+   than up (85 against 53 at 1, the worst −0.26). Left at 1.25; the bias
+   is Phase 3's, through the level setting.
+   - **Acceptance:** not met (no value reaches +0.5), so the default is
+     unchanged, as the task allowed.
+4. **Documentation and fixtures.** `encoder-options.md`, `encoder.md`,
+   `project-file.md`, HLD §8 "Options" and §9 updated; the fixture
+   projects in `app/projects/` list every option, so their frames are
+   unchanged; the default-settings tests follow the new defaults, and
+   `ReferenceEncoderOptions()` writes out the reference's
+   `repeat_lambda` 70. `option_sweep.py --only` takes the TTS set
+   (`app/scripts/sweeps/investigation-tts.txt`) out of the phoneme set.
+   - **Acceptance:** unit and GUI tests pass (1088); `mkdocs build
+     --strict` passes; the corpus check passes unchanged (972 encodings,
+     all identical to the reference's).
+
+**Baseline for the later phases.** The defaults after Phase 2, by the
+same commands as Phase 1's baseline:
+
+| Measure | Phase 1 defaults | Phase 2 defaults |
+|---|---|---|
+| ARCTIC (33): score median / mean | 0.679 / 0.682 | 0.698 / 0.695 |
+| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 3.10 dB, 5.7 %, 13.9 %, 0.746 | 2.97 dB, 5.5 %, 18.4 %, 0.764 |
+| ARCTIC: bytes; sounding RMS, peak, BBC Micro RMS, A-weighted RMS | 16,857; 20.0, 119, 11.6, 8.4 | 20,298; 19.6, 118, 11.6, 8.5 |
+| Corpus (243): score median / mean; bytes | 0.722 / 0.712; 101,566 | 0.730 / 0.732; 122,016 |
+| TTS (64): score median / mean | 0.705 / 0.685 | 0.747 / 0.726 |
+| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 93.7 %; 94 / 43 / 19 / 18 | 97.2 %; 17 / 28 / 7 / 26 |
+| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 1184; 42; 2.17 dB; +0.37 / +0.79 | 395; 25; 1.98 dB; +0.36 / +0.78 |
+| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.6 | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 |
+| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 18; 29 of 152; 69 of 553 | 13; 23 of 152; 81 of 553 |
 
 ## Phase 3: Level and loudness
 
@@ -279,6 +309,7 @@ Agreed with the user on the investigation's figures.
 | D3. Default shaping (Phase 3 task 3) | *BBC Micro* preset on by default for new projects, or off | Off by default; the loudness-weighted level (Phase 3 task 2) closes part of the gap for every target, and the preset stays the user's choice for a small speaker. Revisited only if listening on a BBC Micro after Phase 3 still finds encodings quiet |
 | D4. Pitch tracker (Phase 5 task 1) | REAPER-led, or the present tracker made robust | Prototype both behind `IPitchTracker`; REAPER unless it slows Optimise by more than about a third |
 | D5. Reference data | Regenerate once per phase (3, 4, 5), or once after Phase 5 | Once per phase, so each change's quality is recorded on its own commit |
+| D6. Voicing threshold (Phase 2 task 1; 2026-10-13) | 0.5 (expected), 0.55 (the least meeting the round-trip bounds) or 0.6 | 0.6: the best corpus mean and fewest Poor files, 97.2 % round-trip agreement; ARCTIC's median VDE (18.4 %) over the 16 % bound accepted, as VDE is against a tracker's voicing of the source |
 
 ## Risks
 

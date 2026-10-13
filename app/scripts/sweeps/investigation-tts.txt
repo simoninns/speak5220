@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The TTS set of the encoder-quality investigation (§3.2): 16 prompts of
+# phoneme_prompts.csv, in each voice of the phoneme set. With option_sweep.py
+# --only, on local/phoneme-corpus/say/ (64 files).
+cat
+cheese
+chess
+choose
+church
+kick
+science
+sea_shells
+sent_ch
+sent_k
+sent_mixed
+sent_s
+seven
+sister
+six
+sixty_six

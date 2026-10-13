@@ -68,7 +68,7 @@ TEST_F(EncoderSettingsFormTest, SlidersShowTheValueWithItsUnit) {
   EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("24 codes"));
   EXPECT_EQ(form_.Slider("gate_db")->Text(), QStringLiteral("45 dB"));
   EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("32 ms"));
-  EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.4"));
+  EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.6"));
   EXPECT_EQ(form_.Slider("voicing_min_run")->Text(),
             QStringLiteral("2 frames"));
   EXPECT_EQ(form_.Slider("treble_tilt")->Text(), QStringLiteral("off"));
@@ -248,7 +248,7 @@ TEST_F(EncoderSettingsFormTest, ValuesOutsideTheTypicalRangeWidenTheSlider) {
   EXPECT_DOUBLE_EQ(lambda->ValueAt(lambda->Slider()->maximum()), 800.0);
   // A value back in the range narrows it again.
   form_.SetOptions({}, {}, QStringLiteral("the project default"));
-  EXPECT_DOUBLE_EQ(lambda->ValueAt(lambda->Slider()->maximum()), 300.0);
+  EXPECT_DOUBLE_EQ(lambda->ValueAt(lambda->Slider()->maximum()), 600.0);
 }
 
 TEST_F(EncoderSettingsFormTest, HidesTheAdvancedOptionsUntilAsked) {

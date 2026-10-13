@@ -47,7 +47,7 @@ project:
     normalise_ratio: 3
   default_encoder:
     target_rms: 24
-    repeat_lambda: 70
+    repeat_lambda: 300
     pre_emphasis: "chirp"
     # ... every encoder option, each one required
   phroms:

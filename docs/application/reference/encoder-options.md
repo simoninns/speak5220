@@ -19,14 +19,15 @@ The encoder reproduces the frames of the project's reference encoder
 what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md). The
 exceptions are `resonance_hold_db` and `voicing_min_run`, and the
-preprocessing, which the reference does not have. Five defaults differ
+preprocessing, which the reference does not have. Six defaults differ
 from the reference's. Four give the best typical
 [quality rating](../user-manual/encoder.md#the-quality-rating) over a
 corpus of 243 recordings: `target_rms` 24 (the reference's is 20),
 `window` 256 (240), `voicing_evidence` 5 (4) and `level_agc` 1.25 (1).
-The fifth, `voicing_threshold` 0.4 (0.3), with `voicing_min_run` 2,
-brings the encoder's voicing nearer that of Acorn's own PHROM phrases,
-and raises the typical rating over the corpus too.
+The other two, `voicing_threshold` 0.6 (0.3), with `voicing_min_run` 2,
+and `repeat_lambda` 300 (70), bring the encoder's voicing and its repeat
+frames near those of Acorn's own PHROM phrases, and raise the typical
+rating over the corpus too.
 
 The reference's other options are fixed at its defaults (below). The
 encoder also always gives pauses a quiet frame
@@ -90,13 +91,13 @@ Project files and the command line treat the two groups alike.
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
 | `target_rms` | `targetRms` | RMS of the output over sounding frames, in DAC codes | Number | 24 | 1 to 100 | 5 to 50 codes, steps of 0.5 |
-| `repeat_lambda` | `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 70 | 0 to 1000 | 0 to 300, steps of 5 |
+| `repeat_lambda` | `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 300 | 0 to 1000 | 0 to 600, steps of 5 |
 | `gate_db` (*Advanced*) | `gateDb` | Frames this many dB below the loudest frame become silence | Number | 45 | 10 to 90 | 20 to 70 dB, steps of 0.5 |
 | `pre_emphasis` | `preEmphasis` | Pre-emphasis for the voiced analysis: `"chirp"` whitens the chip's excitation pulse; a number μ uses 1 − μz⁻¹ | `"chirp"` or a number | `"chirp"` | μ from 0 to 0.99 | μ from 0.5 to 0.99, steps of 0.01 |
 | `window` (*Advanced*) | `window` | Length of the analysis window, in samples at 8 kHz | Whole number | 256 (32 ms) | 80 to 480 | 120 to 400 (15 to 50 ms), steps of 8 |
 | `lag_window_hz` (*Advanced*) | `lagWindowHz` | Bandwidth of the Gaussian lag window, in Hz, which widens the formant peaks | Number | 60 | 0 to 400 | 0 to 200 Hz, steps of 5 |
 | `resonance_hold_db` (*Advanced*) | none (`resonanceHoldDb`) | If set, where a fading voiced sound moves from a strongly resonant filter to one with more than this many dB less gain, the resonant filter is kept for one more frame, so the level does not drop suddenly with a pop ([the resonance hold](../user-manual/encoder.md#the-resonance-hold)) | Number, or `null` (unset) | 14 | 3 to 40 | 6 to 30 dB, steps of 0.5 |
-| `voicing_threshold` | `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.4 | 0 to 1 | 0.05 to 0.7, steps of 0.01 |
+| `voicing_threshold` | `voicingThreshold` | Periodicity level at which voiced and unvoiced cost the same; higher gives more voiced frames | Number | 0.6 | 0 to 1 | 0.05 to 0.7, steps of 0.01 |
 | `voicing_evidence` (*Advanced*) | `voicingEvidence` | Weight of spectral tilt and zero crossings in the voicing decision; 0 uses periodicity alone | Number | 5 | 0 to 20 | 0 to 12, steps of 0.25 |
 | `voicing_min_run` (*Advanced*) | none (`voicingMinRun`) | A run of voiced or unvoiced frames shorter than this, with runs of the other kind on both sides, takes its neighbours' voicing; 1 is off ([voicing smoothing](../user-manual/encoder.md#voicing-smoothing)) | Whole number | 2 | 1 to 8 | 1 to 6 frames, steps of 1 |
 | `level_agc` (*Advanced*) | `levelAgc` | Compression ratio of a slow (0.75 s) loudness envelope, which brings quiet words up; 1 is off | Number | 1.25 | 1 to 10 | 1 (off) to 6, steps of 0.05 |

@@ -310,10 +310,10 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
                                                  {"pre_emphasis", "chirp"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    repeat_lambda: 70\n"));
+  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    repeat_lambda: 300\n"));
   EXPECT_THAT(yaml, HasSubstr("    window: 256\n"));
   EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
-  EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.4\n"));
+  EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.6\n"));
   EXPECT_THAT(yaml, HasSubstr("    encoder:\n      target_rms: 18\n"
                               "      pre_emphasis: \"chirp\"\n"
                               "      window: 200\n"));

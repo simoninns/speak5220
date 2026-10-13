@@ -54,8 +54,9 @@ struct EncoderOptions {
   preprocess::PreprocessOptions preprocess;
   // RMS of the output over sounding frames, in codes.
   double target_rms = 24.0;
-  // Bits a repeat run may trade per dB of prediction error.
-  double repeat_lambda = 70.0;
+  // Bits a repeat run may trade per dB of prediction error. The
+  // reference's is 70; 300 comes near Acorn's PHROM's repeats (HLD §9).
+  double repeat_lambda = 300.0;
   // Frames this many dB below the loudest are silence.
   double gate_db = 45.0;
   // Voiced analysis pre-emphasis.
@@ -70,8 +71,10 @@ struct EncoderOptions {
   // suddenly (a pop). Not in the reference encoder; 14 catches the pops
   // heard on the corpus at little cost to its score (HLD §9).
   std::optional<double> resonance_hold_db = 14.0;
-  // CMNDF level at which voiced and unvoiced cost the same.
-  double voicing_threshold = 0.4;
+  // CMNDF level at which voiced and unvoiced cost the same. The
+  // reference's is 0.3; 0.6 voices Acorn's PHROM most like its own frames
+  // without voicing its hiss (HLD §9).
+  double voicing_threshold = 0.6;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
   double voicing_evidence = 5.0;
   // Runs of voiced or unvoiced frames shorter than this, between runs of

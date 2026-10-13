@@ -30,12 +30,12 @@ namespace {
 TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
   const EncoderOptions o;
   EXPECT_EQ(o.target_rms, 24.0);
-  EXPECT_EQ(o.repeat_lambda, 70.0);
+  EXPECT_EQ(o.repeat_lambda, 300.0);
   EXPECT_EQ(o.gate_db, 45.0);
   EXPECT_EQ(o.pre_emphasis, PreEmphasis::Chirp());
   EXPECT_EQ(o.window, 256);
   EXPECT_EQ(o.lag_window_hz, 60.0);
-  EXPECT_EQ(o.voicing_threshold, 0.4);
+  EXPECT_EQ(o.voicing_threshold, 0.6);
   EXPECT_EQ(o.voicing_evidence, 5.0);
   EXPECT_EQ(o.level_agc, 1.25);
 }
@@ -352,7 +352,7 @@ TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
 TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
   EncoderOptions options;
   EXPECT_EQ(EncoderOptionText(options, "target_rms"), "24");
-  EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.4");
+  EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.6");
   EXPECT_EQ(EncoderOptionText(options, "window"), "256");
   EXPECT_EQ(EncoderOptionText(options, "noise_gate_db"), "none");
   EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "chirp");
