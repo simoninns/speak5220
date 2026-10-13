@@ -146,11 +146,13 @@ constexpr std::array<EncoderOptionInfo, 18> kInfos = {{
     {.key = "targetRms",
      .field = "target_rms",
      .label = "Target RMS",
-     .help = "RMS of the output over sounding frames, in DAC codes.",
+     .help = "RMS of the output over sounding frames, in DAC codes, "
+             "measured after a 279 Hz high-pass (the BBC Micro's), so "
+             "bass does not count.",
      .type = kReal,
      .minimum = 1.0,
      .maximum = 100.0,
-     .default_text = "24",
+     .default_text = "20",
      .unit = "codes",
      .typical_minimum = 5.0,
      .typical_maximum = 50.0,

@@ -239,8 +239,18 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   if (options.resonance_hold_db.has_value()) {
     HoldResonantFilters(plan, raw_levels, *options.resonance_hold_db);
   }
+  // The energies aim at each frame's loudness (its level after the
+  // loudness high-pass), so bass does not count towards target_rms.
+  const std::vector<double> loudness = [&] {
+    std::vector<double> out;
+    out.reserve(plan.size());
+    for (std::size_t j = 0; j < plan.size(); ++j) {
+      out.push_back(feats[lead + j].loudness);
+    }
+    return out;
+  }();
   std::vector<double> levels =
-      level_setter_->ShapeLevels(raw_levels, plan, options);
+      level_setter_->ShapeLevels(loudness, plan, options);
 
   std::vector<double> squares;
   for (std::size_t j = 0; j < plan.size(); ++j) {
@@ -270,8 +280,11 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   details.energies = std::move(energies);
   details.stats = stats;
   result.details = std::move(details);
-  log->debug("encoder: {} frames, {} bits, gain {:.6g}", result.frames.size(),
-             StreamBits(result.frames), gain);
+  log->debug(
+      "encoder: {} frames, {} bits, gain {:.6g}; limiter lowered {} and "
+      "silenced {} of {} sounding frames",
+      result.frames.size(), StreamBits(result.frames), gain, stats.limited,
+      stats.silenced, stats.sounding);
   return result;
 }
 

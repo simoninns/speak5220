@@ -1,7 +1,7 @@
 /*
  * File:        encoder_intermediates_test.cpp
  * Module:      encoder tests
- * Purpose:     Checks each encoder stage against the Python reference's
+ * Purpose:     Checks each encoder stage against the reference's
  *              intermediate values, stage by stage, on the corpus subset
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -48,10 +48,11 @@ using core::encoder::FrameFeatures;
 using core::encoder::PlanEntry;
 using core::encoder::PlanKind;
 
-// The C++ follows the Python function by function and reproduces its
-// frames exactly (plan §3.2); its floating-point values agree to within
-// rounding. Values are compared to this relative tolerance, with an
-// absolute floor for values near zero.
+// The stages up to the plan are checked against the Python reference's
+// values, which the C++ follows function by function, the level setting
+// against the C++ encoder's own (app/golden/README.md); floating-point
+// values agree to within rounding. Values are compared to this relative
+// tolerance, with an absolute floor for values near zero.
 constexpr double kRelative = 1e-9;
 constexpr double kAbsolute = 1e-12;
 
@@ -303,8 +304,9 @@ TEST_P(EncoderIntermediatesTest, PlanMatchesReference) {
             PlanOf(ref_["plan"].toArray()));
 }
 
-// The faint-opening trim, _gainOf() and _setLevels(), from the
-// reference's plan, levels and gain.
+// The faint-opening trim (tms5220enc.py encodeDetailed()) from the
+// Python's plan and levels; the gains and energies of the level setting
+// from the encoder's own plan, levels and gain.
 TEST_P(EncoderIntermediatesTest, LevelsMatchReference) {
   const QJsonObject enc = ref_["encode"].toObject();
   std::vector<PlanEntry> plan = PlanOf(ref_["plan"].toArray());
@@ -332,7 +334,8 @@ TEST_P(EncoderIntermediatesTest, LevelsMatchReference) {
         pitch != 0
             ? core::lpc::kPitchTable.at(static_cast<std::size_t>(pitch)) + 1
             : 0;
-    ExpectClose(ref_gains[j], core::encoder::GainOf(fft_, eff[j], period),
+    ExpectClose(ref_gains[j],
+                core::encoder::GainOf(fft_, eff[j], period, /*loudness=*/true),
                 "gain of frame " + std::to_string(j));
   }
 
@@ -346,7 +349,7 @@ TEST_P(EncoderIntermediatesTest, LevelsMatchReference) {
   EXPECT_EQ(stats.sounding, enc["sounding"].toInt());
 }
 
-// tms5220enc.py encodeDetailed() end to end.
+// The whole encoding, against the encoder's own frames, plan and energies.
 TEST_P(EncoderIntermediatesTest, EncodingMatchesReference) {
   const auto encoder = core::encoder::MakeEncoder();
   const auto result =
@@ -361,7 +364,7 @@ TEST_P(EncoderIntermediatesTest, EncodingMatchesReference) {
           std::vector<std::uint8_t>(packed.begin(), packed.end()))
           .frames;
   EXPECT_EQ(static_cast<int>(reference.size()), enc["frame_count"].toInt());
-  EXPECT_EQ(result->frames, ReferenceFrames(reference));
+  EXPECT_EQ(result->frames, reference);
   ExpectClose(enc["gain"].toDouble(), result->details->gain, "gain");
   EXPECT_EQ(result->details->plan, PlanOf(enc["plan"].toArray()));
   EXPECT_EQ(result->details->energies, JsonInts(enc["energies"].toArray()));

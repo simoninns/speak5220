@@ -88,7 +88,7 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 ```bash
 nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator and packaging: regenerate in a temporary directory and compare
 nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/ and packaging/
-nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (a few minutes, on every core)
+nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (under a minute; needs the functional tests built)
 nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
 make -C investigation/emulator                                                # measures.py runs the built reference emulator
 nix develop --command python3 app/scripts/golden/measures.py --check          # quality measures: regenerate and compare (under a minute, on every core)

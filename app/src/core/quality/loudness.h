@@ -15,6 +15,7 @@
 #include <span>
 #include <vector>
 
+#include "core/encoder/encoder_filters.h"
 #include "core/lpc/frame.h"
 
 namespace speak5220::core::quality {
@@ -24,8 +25,8 @@ namespace speak5220::core::quality {
 inline constexpr int kDacLimit = 127;
 
 // The corner of the first-order high-pass of the BBC Micro's speech path
-// (HLD §16).
-inline constexpr double kBbcHighPassHz = 279.0;
+// (HLD §16), the one the encoder measures loudness through.
+inline constexpr double kBbcHighPassHz = encoder::kLoudnessHighPassHz;
 
 // The sample from which the high-passed and A-weighted levels are taken:
 // the output is idle for about the first frame (ReferenceSynthesis).
@@ -34,8 +35,9 @@ inline constexpr int kLoudnessStartSample = 200;
 // The loudness figures of one phrase's output, in codes.
 struct Loudness {
   // The RMS of the per-frame levels (encoder::MeasureOutputLevels()) over
-  // the voiced, unvoiced and repeat frames: what the encoder's target_rms
-  // aims at.
+  // the voiced, unvoiced and repeat frames. The encoder's target_rms aims
+  // at the same after the BBC Micro's high-pass
+  // (encoder::MeasureOutputLoudness()).
   double sounding_rms = 0.0;
   // The largest code magnitude.
   int peak = 0;
@@ -62,9 +64,9 @@ Loudness MeasureLoudness(std::span<const int> codes,
                          std::span<const lpc::Frame> frames,
                          int wrapped_samples);
 
-// `x` through the BBC Micro's high-pass: H(z) from the bilinear transform
-// of a first-order high-pass at kBbcHighPassHz, prewarped, starting at
-// rest (scipy.signal.lfilter). O(n).
+// `x` through the BBC Micro's high-pass: encoder::LoudnessHighPass(), the
+// bilinear transform of a first-order high-pass at kBbcHighPassHz,
+// prewarped, starting at rest (scipy.signal.lfilter). O(n).
 std::vector<double> BbcHighPass(std::span<const double> x);
 
 // `x` A-weighted: the analogue IEC 61672-1 weighting through

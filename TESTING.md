@@ -338,7 +338,7 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
 | `app/projects/benchmark/` | `synthetic-speech`: two speech-like clips (1.5 and 3.4 s), for timing Optimise in `app/scripts/benchmark.sh` |
 | `app/golden/emulator/` | The C emulator's runs (plan §1.4): codes and event logs for its self-test scenarios, synthetic vectors and encoder output, through both paths |
 | `app/golden/packaging/` | The Python encoder's Acorn PHROM and TI indexed images and Speak External streams |
-| `app/golden/encoder/` | The Python encoder's frames for the whole corpus with four option sets, with each file's near-tie frames; `encodeDetailed()` intermediates and WAV inputs for a corpus subset |
+| `app/golden/encoder/` | The C++ encoder's frames for the whole corpus with four option sets (no near-tie frames); for a corpus subset, WAV inputs and intermediates: the Python encoder's `encodeDetailed()` values up to the plan, and the C++ encoder's level setting |
 | `app/golden/quality/measures/` | Independent implementations of the quality measures of plan §3.3 on the corpus subset's reference encodings: the voice activity masks, the pitch tracks and the scores |
 | `app/golden/bbc/` | BBC BASIC II's tokenisation of three test programs, typed in on MAME's emulated BBC Micro by `app/scripts/golden/basic_programs.py` |
 | `app/golden/output-hashes/` | The SHA-256 of every file the `general`, `phrom` and `bbc` fixture suites' export presets write, recorded by `output-hashes.sh --record` |
@@ -368,14 +368,16 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
     regenerated from the C++ itself, in its own commit that records the
     quality before and after. The quality data follows the encoder data it
     measures.
-  - **What the reference does not have is compared off, or applied to
-    it.** The resonance hold is not in the Python encoder, so the encoder
-    data is compared with it off: the option sets are read over
-    `ReferenceEncoderOptions()` (`tests/support/encoder_golden.h`). Quiet
-    pauses, which the encoder always makes, are applied to the reference's
-    frames before they are compared (`ReferenceFrames()`). An improvement
-    made that way, as a pass the reference lacks, leaves the reference data
-    as it is; it is tested by unit tests of its own.
+  - **Where the encoder departs from the Python, its own output is the
+    reference.** The option sets are read over `ReferenceEncoderOptions()`
+    (`tests/support/encoder_golden.h`), the Python encoder's defaults with
+    the options it does not have off, such as the resonance hold. Since
+    encoder version 1.3.0, whose level setting departs from the Python's,
+    the frames and the level-setting intermediates are the C++ encoder's
+    (`app/scripts/golden/encoder.py` runs `EncoderReferenceWriter`), and
+    the stages before them are still checked against the Python's values.
+    A change behind an option that is off in those sets leaves the
+    reference data as it is, and is tested by unit tests of its own.
 
 **Small vectors belong in the test source.** A few dozen bytes, such as the
 Speech System User Guide's "ZERO" stream, the §8.8 multiplier examples or a

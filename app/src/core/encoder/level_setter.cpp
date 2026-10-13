@@ -24,6 +24,7 @@
 #include "core/dsp/array_math.h"
 #include "core/dsp/fft.h"
 #include "core/dsp/lpc_analysis.h"
+#include "core/encoder/encoder_filters.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_analyser.h"
@@ -61,9 +62,15 @@ constexpr double kStepFraction = 0.7;
 constexpr int kLevelPasses = 5;
 // A frame this many times too loud at energy 1 becomes silence.
 constexpr double kTooLoud = 4.0;
-// No output code beyond this (tms5220enc.py DEFAULTS "peakLimit"),
-// within the DAC's +-127.
-constexpr double kPeakLimit = 120.0;
+// The limiter. The reference holds every output code within 120
+// (tms5220enc.py DEFAULTS "peakLimit"); Acorn's PHROM A clips the DAC on
+// the peaks of half its words, 0.21 % of its samples on average
+// (docs-tech/encoder-quality-investigation.md §4.1). So no frame's peak
+// may pass kPeakCeiling, and at most kClipBudget of the phrase's samples
+// may pass the DAC's +-127 (speak5220 datasheet §8.9), which clips them.
+constexpr double kPeakCeiling = 160.0;
+constexpr int kDacLimit = 127;
+constexpr double kClipBudget = 0.001;
 // The limiter's passes, its peak window, and dB per energy step.
 constexpr int kLimiterPasses = 30;
 constexpr int kLimiterPeakHalf = 110;
@@ -133,6 +140,25 @@ int MaxAbs(std::span<const int> codes) {
   return peak;
 }
 
+// The samples of `codes` beyond the DAC's range.
+int ClippedSamples(std::span<const int> codes) {
+  return static_cast<int>(std::ranges::count_if(
+      codes, [](int c) { return std::abs(c) > kDacLimit; }));
+}
+
+// The samples the clip budget allows in `codes`.
+int AllowedClips(std::span<const int> codes) {
+  return static_cast<int>(
+      std::floor(kClipBudget * static_cast<double>(codes.size())));
+}
+
+// Whether `out` is within the limits: no lattice wrap (speak5220
+// datasheet §12.3), no code beyond kPeakCeiling, and the clip budget.
+bool WithinLimits(const synth::ReferenceSynthesis& out) {
+  return out.wrapped_samples == 0 && MaxAbs(out.codes) <= kPeakCeiling &&
+         ClippedSamples(out.codes) <= AllowedClips(out.codes);
+}
+
 synth::ReferenceSynthesis Render(std::span<const PlanEntry> plan,
                                  std::span<const int> energies) {
   return synth::ReferenceSynthesizer::Synthesize(
@@ -141,11 +167,20 @@ synth::ReferenceSynthesis Render(std::span<const PlanEntry> plan,
 
 }  // namespace
 
-double GainOf(dsp::IFft& fft, std::span<const double> k_values, int period) {
+double GainOf(dsp::IFft& fft, std::span<const double> k_values, int period,
+              bool loudness) {
   const std::vector<double> a = dsp::StepUp(k_values);
   std::vector<double> h = PowerSpectrum(fft, a);
   for (double& v : h) {
     v = 1.0 / v;
+  }
+  if (loudness) {
+    static const std::vector<double> kWeight =
+        LoudnessHighPassPower((kGainFft / 2) + 1);
+    assert(h.size() == kWeight.size());
+    for (std::size_t i = 0; i < h.size(); ++i) {
+      h[i] *= kWeight[i];
+    }
   }
   if (period == 0) {
     return kNoiseRms * std::sqrt(FullSpectrumMean(h)) / kCodeScale;
@@ -210,6 +245,18 @@ OutputLevels MeasureOutputLevels(std::span<const int> codes, int frames,
       out.peak[at] = MaxAbs(codes.subspan(static_cast<std::size_t>(a),
                                           static_cast<std::size_t>(b - a)));
     }
+  }
+  return out;
+}
+
+OutputLevels MeasureOutputLoudness(std::span<const int> codes, int frames,
+                                   int peak_half) {
+  OutputLevels out = MeasureOutputLevels(codes, frames, peak_half);
+  const std::vector<double> c(codes.begin(), codes.end());
+  const std::vector<double> weighted = LoudnessHighPass(c);
+  for (int j = 0; j < frames; ++j) {
+    out.level[static_cast<std::size_t>(j)] =
+        FrameRms(weighted, kReachedSample + (kFrameSamples * j));
   }
   return out;
 }
@@ -287,7 +334,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
     const int period =
         pitch != 0 ? lpc::kPitchTable.at(static_cast<std::size_t>(pitch)) + 1
                    : 0;
-    const double g = GainOf(*fft_, eff[j], period);
+    const double g = GainOf(*fft_, eff[j], period, /*loudness=*/true);
     energies[j] = EnergyIndex(g > 0.0 ? target[j] / g : 1.0);
   }
   const bool any_sounding =
@@ -300,7 +347,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   std::vector<double> abs_err;
   for (int it = 0; it < kLevelPasses; ++it) {
     const synth::ReferenceSynthesis out = Render(plan, energies);
-    const OutputLevels lev = MeasureOutputLevels(out.codes, nfr);
+    const OutputLevels lev = MeasureOutputLoudness(out.codes, nfr);
     abs_err.clear();
     for (std::size_t j = 0; j < n; ++j) {
       err[j] = 20.0 * std::log10(std::max(target[j], kMinimumLevel) /
@@ -338,7 +385,7 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   int silenced = 0;
   {
     const synth::ReferenceSynthesis out = Render(plan, energies);
-    const OutputLevels lev = MeasureOutputLevels(out.codes, nfr);
+    const OutputLevels lev = MeasureOutputLoudness(out.codes, nfr);
     for (std::size_t j = 1; j < n; ++j) {
       if (sounding[j] && energies[j] == 1 &&
           lev.level[j] > target[j] * kTooLoud) {
@@ -349,23 +396,61 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
   }
   const std::vector<int> before_limit = energies;
 
-  // Peak and wrap limiting.
-  const double limit = kPeakLimit;
+  // Peak, clip and wrap limiting: lower each frame whose peak passes the
+  // ceiling to it; while the phrase clips more samples than the budget,
+  // lower by a step the frames whose windows clip the most, enough of them
+  // to cover the excess; a peak or wrap in no frame's window lowers the
+  // loudest frame.
   for (int pass = 0; pass < kLimiterPasses; ++pass) {
     const synth::ReferenceSynthesis out = Render(plan, energies);
-    const OutputLevels lev =
-        MeasureOutputLevels(out.codes, nfr, kLimiterPeakHalf);
-    std::vector<std::size_t> over;
-    for (std::size_t j = 0; j < n; ++j) {
-      if (sounding[j] && lev.peak[j] > limit) {
-        over.push_back(j);
-      }
-    }
-    if (over.empty() && out.wrapped_samples == 0 &&
-        MaxAbs(out.codes) <= limit) {
+    if (WithinLimits(out)) {
       break;
     }
-    if (over.empty()) {
+    const OutputLevels lev =
+        MeasureOutputLevels(out.codes, nfr, kLimiterPeakHalf);
+    std::vector<int> drop(n, 0);
+    bool any = false;
+    for (std::size_t j = 0; j < n; ++j) {
+      if (sounding[j] && lev.peak[j] > kPeakCeiling) {
+        const double ratio = static_cast<double>(lev.peak[j]) / kPeakCeiling;
+        drop[j] =
+            std::max(1, static_cast<int>(std::ceil(20.0 * std::log10(ratio) /
+                                                   kDbPerEnergyStep)));
+        any = true;
+      }
+    }
+    const int excess = ClippedSamples(out.codes) - AllowedClips(out.codes);
+    if (excess > 0) {
+      // (clipped samples in the frame's window, frame), most first; ties
+      // to the earlier frame.
+      std::vector<std::pair<int, std::size_t>> clipping;
+      for (std::size_t j = 0; j < n; ++j) {
+        if (!sounding[j] || lev.peak[j] <= kDacLimit) {
+          continue;
+        }
+        const int m = kReachedSample + (kFrameSamples * static_cast<int>(j));
+        const int a = std::max(0, m - kLimiterPeakHalf);
+        const int b =
+            std::min(static_cast<int>(out.codes.size()), m + kLimiterPeakHalf);
+        const int count =
+            ClippedSamples(std::span<const int>(out.codes).subspan(
+                static_cast<std::size_t>(a), static_cast<std::size_t>(b - a)));
+        clipping.emplace_back(count, j);
+      }
+      std::ranges::stable_sort(clipping, [](const auto& x, const auto& y) {
+        return x.first > y.first;
+      });
+      int covered = 0;
+      for (const auto& [count, j] : clipping) {
+        if (covered >= excess) {
+          break;
+        }
+        drop[j] = std::max(drop[j], 1);
+        covered += count;
+        any = true;
+      }
+    }
+    if (!any) {
       // A peak outside every frame's window: lower the loudest frame.
       std::size_t loudest = 0;
       double loudest_level = 0.0;
@@ -376,26 +461,23 @@ std::vector<int> LevelSetter::SetLevels(std::span<const PlanEntry> plan,
           loudest = j;
         }
       }
-      over.push_back(loudest);
+      drop[loudest] = 1;
     }
-    for (const std::size_t j : over) {
+    for (std::size_t j = 0; j < n; ++j) {
+      if (drop[j] == 0) {
+        continue;
+      }
       if (energies[j] > 1) {
-        const double ratio =
-            static_cast<double>(std::max(lev.peak[j], 1)) / limit;
-        const int drop =
-            std::max(1, static_cast<int>(std::ceil(20.0 * std::log10(ratio) /
-                                                   kDbPerEnergyStep)));
-        energies[j] = std::max(1, energies[j] - drop);
+        energies[j] = std::max(1, energies[j] - drop[j]);
       } else if (j > 0) {
         energies[j] = 0;
       }
     }
   }
-  // Safety net: lower everything until no code exceeds the limit and
-  // nothing wraps.
+  // Safety net: lower everything until the output is within the limits.
   for (int pass = 0; pass < kSafetyPasses; ++pass) {
     const synth::ReferenceSynthesis out = Render(plan, energies);
-    if (out.wrapped_samples == 0 && MaxAbs(out.codes) <= limit) {
+    if (WithinLimits(out)) {
       break;
     }
     for (int& e : energies) {

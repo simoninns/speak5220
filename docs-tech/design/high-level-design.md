@@ -457,7 +457,8 @@ sink and observer mocked.
 
 **Implemented** (plan §3.2, Phase 2). `core/encoder/` re-implements
 `tms5220enc.py`'s `encodeDetailed()` function by function; each C++
-function's comment names its Python original.
+function's comment names its Python original, and says where the C++
+departs from it (below, and "Level setting").
 
 **Three stages** (plan Phase 11). A phrase is shown and measured as the
 original recording, the **preprocessed** recording made from it, and the
@@ -498,14 +499,15 @@ stages over `PocketFft`.
 
 | Stage (interface → class) | Python | Does |
 |---|---|---|
-| `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
+| `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level, its loudness (the level after the loudness high-pass, not in the reference) and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
 | `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
 | `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops, then the octave fix. `SmoothVoicingRuns()`, which the reference does not have, then removes islands shorter than `voicing_min_run` frames (below) |
 | `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
-| `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the peak limiter at 120 and the safety net |
+| `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the limiter (a ceiling of 160 and a clip budget, where the reference holds every code within 120) and the safety net, all on loudness ("Level setting", below) |
 
-Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`),
-sets the gain from `target_rms`, and turns the plan and energies into
+Between the stages, `Encoder` drops a faint opening (`TrimFaintOpening()`,
+on the frames' levels), shapes the frames' loudness (the reference shapes
+their levels), sets the gain from `target_rms`, and turns the plan and energies into
 frames with `frame_endings` (`ToFrames()`, `GuardK510()`, `AddFades()`,
 from `_toFrames()`, `_guardK510()` and `_addFades()`), and last quietens
 the pauses (`QuietPauses()`, below), which the reference does not do. Before the levels are set, with `resonance_hold_db`, it holds
@@ -524,8 +526,39 @@ centres, the pitch and the voicing stay as before. Brightening the
 recording first and finding the voicing in it made 70% of one phrase's
 frames unvoiced, heard as noise on a BBC Micro. The quantisers
 (`QuantiseK()`, `PitchIndex()`, `EnergyIndex()`) are in `quantiser`, and the
-filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`) in
-`encoder_filters`.
+filters (`HighPass60Hz()`, `LowPass1kHz()`, `PreEmphasisFilter()`,
+`LoudnessHighPass()`) in `encoder_filters`.
+
+**Level setting** (encoder-quality plan, Phase 3; 2026-10-13). Two
+departures from `_setLevels()`, measured in §9, "Level and loudness, from
+the PHROM round trip":
+
+- *Loudness.* The level the energies aim at, and the level the closed loop
+  measures of its output, are taken after the loudness high-pass
+  (`LoudnessHighPass()`: the first-order high-pass at 279 Hz of the BBC
+  Micro's speech path, §16, by the prewarped bilinear transform), so bass
+  does not count as loudness: `FrameFeatures::loudness`,
+  `MeasureOutputLoudness()`, and `GainOf()` with `loudness` for the
+  open-loop estimate (the filter's power spectrum weighted by the
+  high-pass's). `target_rms` is therefore the RMS over the sounding frames
+  after that high-pass. The faint-opening trim, the gate and the resonance
+  hold keep the plain level. A bass-heavy recording, whose rumble held its
+  level down, comes out louder; the quality measures' `high_passed_rms` is
+  the same filter.
+- *Limiter.* The reference holds every output code within 120
+  (`peakLimit`), so the peaks of speech, about 15 dB over its RMS, set the
+  level rather than `target_rms`. Acorn's PHROM A drives the DAC into
+  clipping on half its words, 0.21% of its samples on average
+  (encoder-quality investigation §4.1). The limiter now allows that: no
+  frame's peak over `kPeakCeiling` (160), no lattice wrap (datasheet
+  §12.3), and at most `kClipBudget` (1 in 1000) of the phrase's samples
+  beyond the DAC's ±127. Each pass lowers a frame whose peak passes the
+  ceiling by the steps that bring it under (3 dB each), and while the
+  phrase clips more than the budget, lowers by a step the frames whose
+  windows clip the most, enough of them to cover the excess; a peak or
+  wrap outside every window lowers the loudest frame. The safety net
+  lowers everything until all three hold. The ceiling and the budget are
+  constants (plan D2).
 
 The plan names four stage interfaces. `IFrameAnalyser` is a fifth, so the
 orchestration can be unit tested with every stage mocked.
@@ -544,21 +577,23 @@ resonance hold (`resonance_hold_db`, 14 dB by default) and the voicing
 smoothing (`voicing_min_run`, 2 frames by default). The reference's other six are
 fixed at its defaults, since moving them made no difference worth keeping
 over the corpus or did what another option does (§9, "Fixed options"):
-`targetPeak` unset (the level comes from `target_rms`), `peakLimit` 120
-(`kPeakLimit`, in `level_setter`), `repeats` on (`kMaxRepeatRun`),
+`targetPeak` unset (the level comes from `target_rms`), `peakLimit`
+(replaced by the ceiling and clip budget above, `kPeakCeiling` and
+`kClipBudget` in `level_setter`), `repeats` on (`kMaxRepeatRun`),
 `iterations` 5 (`kLevelPasses`), `fadeUnvoiced` on and `compression` 1
 (off). Quiet pauses, once an option, are always on. The defaults are the
-reference's but for six (§9, "Default settings"): `target_rms` 24,
-`window` 256, `voicing_evidence` 5 and `level_agc` 1.25, chosen on the
-corpus for the overall quality score, and `voicing_threshold` 0.6 and
-`repeat_lambda` 300, chosen with `voicing_min_run` against Acorn's PHROM
-(§9, "Voicing and source shaping, from Acorn's PHROM" and "The voicing
-threshold and the repeat trade-off, from the PHROM round trip"). The reference data is
-compared with the reference's own defaults written out (`voicing_threshold`
-0.3 and `repeat_lambda` 70 among them) and the options it does not have off
-(`ReferenceEncoderOptions()` in the test support, §13), and with the
-reference's frames with their pauses quietened (`ReferenceFrames()`), so
-it does not depend on the application's defaults. `EncoderOptionInfos()`
+reference's but for five (§9, "Default settings"): `window` 256,
+`voicing_evidence` 5 and `level_agc` 1.25, chosen on the corpus for the
+overall quality score, and `voicing_threshold` 0.6 and `repeat_lambda`
+300, chosen with `voicing_min_run` against Acorn's PHROM (§9, "Voicing and
+source shaping, from Acorn's PHROM" and "The voicing threshold and the
+repeat trade-off, from the PHROM round trip"). `target_rms` is the
+reference's 20, but of loudness, where the reference's is of the plain
+level (§9, "Level and loudness, from the PHROM round trip"). The
+reference data is encoded with the reference's own defaults written out
+(`voicing_threshold` 0.3 and `repeat_lambda` 70 among them) and the options
+it does not have off (`ReferenceEncoderOptions()` in the test support,
+§13), so it does not depend on the application's defaults. `EncoderOptionInfos()`
 gives each one's key (the Python name, or one in its style, such as
 `noiseGateDb`, for an option it does not have), label, help text, type,
 range and default, for the GUI's settings form and for project files,
@@ -722,20 +757,22 @@ the reference's order of floating-point operations where that is cheap:
 - Dot products and BLAS-backed matrix products are summed in order. They
   cannot reproduce OpenBLAS's rounding, and do not need to (below).
 
-**Acceptance** (met, plan §3.2):
+**Acceptance** (met, plan §3.2, against the Python reference; since
+encoder version 1.3.0 the reference frames are the C++ encoder's own, §13):
 
 - On all 243 corpus files with the four option sets in
-  `app/golden/encoder/option_sets.tsv`, the frames are identical to the
+  `app/golden/encoder/option_sets.tsv`, the frames were identical to the
   Python reference's for every encoding (972 of 972), against the
   criterion of 99%, again after the "loud" and "plain" sets were
   regenerated without the fixed options (§9, "Fixed options"). The option
-  sets are taken over `ReferenceEncoderOptions()` (the defaults with the
-  resonance hold off), and the reference's frames are compared with their
-  pauses quietened (`ReferenceFrames()`), since the reference has neither.
-  No near-tie frames are needed: at a relative disturbance
+  sets are taken over `ReferenceEncoderOptions()` (the reference's
+  defaults, with the options it does not have off), and the reference's
+  frames were compared with their pauses quietened, since the reference
+  quietens none. No near-tie frames were needed: at a relative disturbance
   of 1e-9 the reference changes no frame on any file (§13).
 - Every intermediate value of the corpus subset agrees with the reference
-  to a relative 1e-9.
+  to a relative 1e-9 (the level setting's, since 1.3.0, with the C++
+  encoder's own).
 - Encoding takes 0.0104 s per second of speech on one core over the whole
   corpus (`benchmark.sh`), against the target of 0.05.
 
@@ -1054,7 +1091,9 @@ them on many files. The defaults' encodings are unchanged. The reference
 data's "loud" and "plain" sets, which changed the fixed options, were
 regenerated without them ("loud" sets `targetRms` 40 in place of
 `targetPeak` 100, so it still reaches the limiter), and the reference's
-frames are compared with their pauses quietened.
+frames were compared with their pauses quietened. `peakLimit` was later
+replaced by a ceiling and a clip budget ("Level and loudness, from the
+PHROM round trip", below).
 
 Optimise, which searched `targetPeak`, `repeats`, `iterations`,
 `fadeUnvoiced` and `compression` too, was run over the corpus again
@@ -1118,6 +1157,78 @@ and 0.728 and more files fall than rise (85 against 53 at 1, the worst by
 setting (plan, Phase 3). The reference data is unchanged, since it is
 compared with the reference's 0.3 and 70 (§13).
 
+**Level and loudness, from the PHROM round trip** (2026-10-13; §8, "Level
+setting"; encoder-quality plan, Phase 3). The limiter held every code
+within 120, so on recordings the peaks, not `target_rms`, set the level:
+the corpus's median peak was 117 and its sounding RMS 20.5 against a
+target of 24, while the PHROM clips 0.21 % of its samples. And the level
+counted bass, which the BBC Micro's speech path removes: the ARCTIC
+recordings came out 3 to 5 dB quieter than the PHROM through it. Swept
+with `option_sweep.py` as Phase 2 was, with the encoder that has only the
+new limiter (`target_rms` of the plain level) and the one that also aims
+at loudness:
+
+| Corpus of 243 | Median, mean score | 10th percentile | Good / Fair / Poor | Total size | Median sounding RMS, peak; clipped (mean, worst file) | Median BBC Micro / A-weighted RMS |
+|---|---|---|---|---|---|---|
+| Phase 2 (limit 120, `target_rms` 24 of level) | 0.730, 0.732 | 0.606 | 158 / 81 / 4 | 122,016 bytes | 20.5, 117; 0, 0 | 12.7 / 9.7 |
+| Clip budget, 24 of level | 0.734, 0.737 | 0.613 | 164 / 75 / 4 | 122,022 bytes | 22.3, 143; 0.057 %, 0.100 % | 13.8 / 10.9 |
+| Clip budget and loudness, 16 | 0.740, 0.736 | 0.610 | 166 / 73 / 4 | 122,540 bytes | 21.9, 141; 0.051 %, 0.100 % | 13.9 / 10.7 |
+| 18 | 0.741, 0.740 | 0.614 | 167 / 73 / 3 | 122,620 bytes | 23.4, 143; 0.063 %, 0.098 % | 14.8 / 11.3 |
+| 20 (the default) | 0.742, 0.742 | 0.627 | 172 / 69 / 2 | 122,687 bytes | 24.6, 143; 0.066 %, 0.100 % | 15.5 / 11.8 |
+| 24 | 0.742, 0.739 | 0.617 | 170 / 68 / 5 | 122,796 bytes | 26.4, 144; 0.072 %, 0.101 % | 16.3 / 12.4 |
+
+| Round trip (157 words) | Energy index bias, voiced / unvoiced | Sounding RMS, BBC Micro RMS, A-weighted RMS (PHROM: 21.8, 17.1, 14.5) | Peak, clipped (PHROM: 124, 0.21 %) | Fade-outs |
+|---|---|---|---|---|
+| Phase 2 | +0.36 / +0.78 | 20.2, 15.2, 13.4 (−0.7, −1.0, −0.6 dB) | 109, 0 | 25 |
+| Clip budget, 24 of level | +0.46 / +0.78 | 21.4, 16.0, 14.0 | 125, 0.020 % | 25 |
+| Loudness, 16 | +0.12 / +0.28 | 19.0, 14.8, 13.0 (−1.2, −1.2, −0.9 dB) | 115, 0.011 % | 14 |
+| 18 | +0.37 / +0.55 | 20.3, 15.9, 13.9 (−0.6, −0.6, −0.3 dB) | 123, 0.019 % | 18 |
+| 20 (the default) | +0.58 / +0.80 | 21.5, 16.5, 14.6 (−0.1, −0.3, +0.0 dB) | 126, 0.023 % | 23 |
+| 24 | +0.87 / +1.24 | 22.9, 17.4, 15.2 (+0.4, +0.2, +0.4 dB) | 128, 0.026 % | 29 |
+
+| ARCTIC (33) | Median, mean score | Median ESTOI | Sounding RMS, peak | BBC Micro / A-weighted RMS | Frames the limiter lowered |
+|---|---|---|---|---|---|
+| Phase 2 | 0.698, 0.695 | 0.764 | 19.6, 118 | 11.6 / 8.5 | 490 of 3612 |
+| Clip budget, 24 of level | 0.704, 0.703 | 0.766 | 21.9, 145 | 13.1 / 9.4 | 163 |
+| Loudness, 16 | 0.707, 0.705 | 0.766 | 22.4, 145 | 13.3 / 9.7 | 244 |
+| 18 | 0.710, 0.705 | 0.768 | 23.5, 146 | 14.0 / 10.2 | — |
+| 20 (the default) | 0.708, 0.701 | 0.765 | 24.7, 146 | 14.5 / 10.6 | 590 |
+| 24 | 0.695, 0.693 | 0.754 | 26.0, 146 | 14.9 / 11.0 | 895 |
+| 30 | 0.678, 0.676 | 0.745 | 27.3, 146 | 15.7 / 11.5 | 1224 |
+| *BBC Micro* preset: Phase 2 | 0.664, 0.667 | 0.745 | 17.7, 119 | 13.2 / 11.6 | 338 |
+| Preset, loudness 20 | 0.667, 0.671 | 0.747 | 19.9, 147 | 14.8 / 12.4 | 161 |
+| Preset, loudness 24 | 0.660, 0.663 | 0.738 | 21.5, 150 | 15.8 / 13.2 | 264 |
+
+On the TTS set (64) the default scores a median of 0.730 and a mean of
+0.741 (Phase 2: 0.747, 0.726; the median moves by a few short words),
+with a sounding RMS of 23.8 and A-weighted 11.3 (20.5 and 9.3). On the
+phoneme set the loud unvoiced frames before voicing rise from 13 to 17
+(the level is higher; the plan's Phase 4 is about onsets), the consonant
+frames voiced stay 81 of 553, and the files over 20 % gross pitch error
+are 22 of 152 (23). Encoding takes 0.0079 s per second of speech on one
+core (0.0085 before). No file clips more than 0.101 % of
+its samples, and none wraps.
+
+The clip budget alone gives the PHROM's sounding RMS at `target_rms` 24
+(21.9) with a third of the limiting, and raises the score. Aiming at
+loudness then makes `target_rms` a loudness, so the same number is louder
+on a bass-heavy recording; 20, agreed with the user, gives the PHROM's
+own words the PHROM's loudness (all three measures within 0.3 dB) and the
+best corpus mean. 16 brings the energy indices closest (+0.12 / +0.28)
+but leaves those words 1 dB quieter than the PHROM: quiet frames come out
+a little high while the loudest are limited, so a mean index bias is no
+measure of loudness. Above 20 the score falls as the limiter flattens
+more frames (ESTOI falls), and the consonants grow louder against the
+vowels. The plan's bounds for ARCTIC's A-weighted RMS (14.5 within 1.5 dB
+with the *BBC Micro* preset, within 3 dB without) are not met: ARCTIC is
+darker than the PHROM, and its pauses lower its whole-talk RMS, which the
+PHROM's single words do not have. With the preset, ARCTIC through a BBC
+Micro is 1.6 dB louder than in Phase 2 (14.8 against 13.2), without it
+2.9 dB (14.5 against 11.6). The reference data was regenerated from the
+C++ encoder (§13; encoder-quality plan D7), and the corpus check's 972
+encodings match it; Optimise from the new defaults raises the score of
+240 of the 243 files.
+
 ---
 
 
@@ -1137,7 +1248,8 @@ wrong; the investigation behind them is
 
 - `MeasureLoudness()`: from the chip's codes and the frames, the sounding
   RMS (the RMS of `MeasureOutputLevels()` over the voiced, unvoiced and
-  repeat frames, what `target_rms` aims at), the peak code, the share of
+  repeat frames; `target_rms` aims at the same after the 279 Hz
+  high-pass), the peak code, the share of
   samples beyond ±127 that the DAC clips, the lattice wraps, and from
   sample 200 the RMS after the BBC Micro's 279 Hz first-order high-pass
   (§16) and the A-weighted RMS (IEC 61672-1 through the bilinear
@@ -1282,8 +1394,10 @@ The GUI's undo/redo wraps the same operations (§15).
 
 **Implemented** for the emulator, packaging, encoder and quality measures
 (plan §1.4).
-`app/golden/` holds what the retired references produced; the build and
-tests read only these files and never run anything in `investigation/`.
+`app/golden/` holds what the retired references produced, and since
+encoder version 1.3.0 the encoder's own frames and level setting (below);
+the build and tests read only these files and never run anything in
+`investigation/`.
 
 - `app/scripts/golden/generate_golden.py`, run by hand in the default Nix
   shell, builds `tms5220emu` from `investigation/emulator/` into a temporary
@@ -1303,18 +1417,24 @@ tests read only these files and never run anything in `investigation/`.
 - `golden/packaging/`: an Acorn PHROM and a TI indexed image of the corpus
   phrases and the "special" vectors, with their word tables and ASCII map,
   and each word's Speak External stream.
-- `golden/encoder/`, written by `app/scripts/golden/encoder.py` from the
-  Python encoder (same rules: refuses local changes, records the commit,
-  the SHA-256 and the NumPy and SciPy versions, `--check` compares):
+- `golden/encoder/`, written by `app/scripts/golden/encoder.py`: the
+  stages up to the plan from the Python encoder (same rules: refuses local
+  changes, records the commit, the SHA-256 and the NumPy and SciPy
+  versions), the level setting and the frames from the C++ encoder, whose
+  level setting departs from the reference's (§8, "Level setting"; agreed
+  with the user, encoder-quality plan D7). The script runs the by-hand
+  functional test `EncoderReferenceWriter` on the corpus's WAV copies and
+  records `kEncoderVersion`; `--check` compares:
   - `inputs/`: WAV copies of an eight-file corpus subset (public-domain and
     CC0 voices only, one or two per category of prompt);
-  - `intermediates/`: per subset file, `encodeDetailed()`'s intermediates
-    with the default options, as JSON: the filtered signals (every 16th
+  - `intermediates/`: per subset file, with the reference's default
+    options, as JSON: `encodeDetailed()`'s filtered signals (every 16th
     sample), the pitch track with CMNDF rows and candidates for six hops,
-    each frame's analysis and own quantisation, the plan, the faint-opening
-    trim, the shaped levels, the per-frame gains, the gain and the energies;
+    each frame's analysis and own quantisation and the plan, and in
+    `encode` the C++ encoder's faint-opening trim, shaped levels, per-frame
+    gains, gain, energies and frames;
   - `frames/SET.tsv`: for each option set, every corpus file's frame count,
-    near-tie frames and packed frames;
+    near-tie frames and packed frames, from the C++ encoder;
   - `option_sets.tsv`: the default set, and three fixed sets that between
     them change every option the application has ("loud" and "plain"
     regenerated without the fixed options, §9, "Fixed options").
@@ -1324,7 +1444,8 @@ tests read only these files and never run anything in `investigation/`.
   plus white noise at 1e-9 of its RMS, twice with different seeds); a frame
   that differs in any run is listed, and a file whose frame count changes
   has every frame listed. Plan §3.2 accepts a difference only at such
-  frames. With the current reference none are listed.
+  frames. The Python reference listed none; the C++ encoder gives the same
+  frames whatever the thread count and platform, so it lists none either.
 - The full corpus is not committed: `app/scripts/generate_corpus.py` writes
   its WAV copies (8 kHz, 16-bit, lossless from the FLAC originals) for
   `corpus-check.sh`. Where an encoding differs from the reference, the
@@ -1340,7 +1461,9 @@ tests read only these files and never run anything in `investigation/`.
     original WebRTC code;
   - `tracks/SET/NAME.tsv`: the F0 tracks of both prepared signals from
     REAPER's own command-line tool and from WORLD's Harvest through pyworld,
-    the originals of SPTK's copies;
+    the originals of SPTK's copies. The flake builds REAPER's tool, like
+    SPTK, without fused multiply-add contraction: with it, Clang on arm64
+    moved a frame of one original's track;
   - `scores/SET.tsv`: the alignment lag, the mask's frame count, the log
     spectral distortion from the script's own NumPy LPC analysis, the pitch
     and voicing errors of both trackers, and ESTOI from pystoi. Scores are
@@ -1445,7 +1568,10 @@ pauses, on by default, so encodings made by `1.0.0` are stale; `1.2.0`
 made the noise gate mute everything under its level (the test projects
 do not use the gate, so only their version and settings hash changed). The
 reference data did not change, since it is compared with quiet pauses
-off (§13).
+off (§13). `1.3.0` aims the level at loudness and gives the limiter a
+clip budget (§8, "Level setting"): the test projects with recordings were
+encoded again, their exports' hashes recorded again, and the reference
+data regenerated from the C++ encoder (§13).
 
 **Audio on the 24-bit grid.** A project stores audio as 24-bit PCM, so the
 importer rounds the 8 kHz samples to codes / 2^23 (`QuantiseToPcm24()`),

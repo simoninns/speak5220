@@ -46,7 +46,7 @@ project:
     normalise_db: -20
     normalise_ratio: 3
   default_encoder:
-    target_rms: 24
+    target_rms: 20
     repeat_lambda: 300
     pre_emphasis: "chirp"
     # ... every encoder option, each one required

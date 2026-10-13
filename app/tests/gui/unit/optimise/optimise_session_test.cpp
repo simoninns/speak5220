@@ -112,7 +112,7 @@ TEST_F(OptimiseSessionTest, AcceptKeepsTheBestAsOneUndoableStep) {
   ASSERT_EQ(session_.Phrases().size(), 1U);
   const PhraseOptimisation& result = session_.Phrases().front();
   ASSERT_TRUE(result.best.has_value());
-  EXPECT_GT(result.best->options.target_rms, 20.0);
+  EXPECT_GT(result.best->options.target_rms, EncoderOptions{}.target_rms);
   EXPECT_EQ(session_.ChangeCount(), 1);
   // Nothing changes before Accept.
   EXPECT_EQ(project_, before);

@@ -137,7 +137,7 @@ TEST(OptimiserTest, TriesTheStartThenTheGridAroundIt) {
     targets.insert(
         result->history[static_cast<std::size_t>(i)].options.target_rms);
   }
-  EXPECT_EQ(targets, (std::set<double>{20.0, 24.0, 28.0}));
+  EXPECT_EQ(targets, (std::set<double>{16.0, 20.0, 24.0}));
 }
 
 // The preprocessing changes what encodings are scored against, so it is

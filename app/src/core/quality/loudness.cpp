@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "core/dsp/iir_filter.h"
+#include "core/encoder/encoder_filters.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/level_setter.h"
 #include "core/lpc/frame.h"
@@ -73,12 +74,7 @@ double Rms(std::span<const double> x) {
 }  // namespace
 
 std::vector<double> BbcHighPass(std::span<const double> x) {
-  const double k = std::tan(std::numbers::pi * kBbcHighPassHz / kSampleRate);
-  const std::array<dsp::SosSection, 1> sections = {
-      {{.b = {1.0 / (1.0 + k), -1.0 / (1.0 + k), 0.0},
-        .a = {(k - 1.0) / (1.0 + k), 0.0},
-        .zi = {}}}};
-  return Filter(sections, x);
+  return encoder::LoudnessHighPass(x);
 }
 
 std::vector<double> AWeighted(std::span<const double> x) {

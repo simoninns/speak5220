@@ -29,7 +29,7 @@ namespace {
 // PHROM (HLD §9).
 TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
   const EncoderOptions o;
-  EXPECT_EQ(o.target_rms, 24.0);
+  EXPECT_EQ(o.target_rms, 20.0);
   EXPECT_EQ(o.repeat_lambda, 300.0);
   EXPECT_EQ(o.gate_db, 45.0);
   EXPECT_EQ(o.pre_emphasis, PreEmphasis::Chirp());
@@ -351,7 +351,7 @@ TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
 
 TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
   EncoderOptions options;
-  EXPECT_EQ(EncoderOptionText(options, "target_rms"), "24");
+  EXPECT_EQ(EncoderOptionText(options, "target_rms"), "20");
   EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.6");
   EXPECT_EQ(EncoderOptionText(options, "window"), "256");
   EXPECT_EQ(EncoderOptionText(options, "noise_gate_db"), "none");

@@ -52,6 +52,8 @@ struct FrameFeatures {
   int centre = 0;
   // Hann-weighted RMS over 25 ms around the centre.
   double level = 0.0;
+  // The same after LoudnessHighPass(): the level the energies aim at.
+  double loudness = 0.0;
   bool voiced = false;
   double period = 0.0;
   // Lag-windowed autocorrelation of the pre-emphasised (voiced) and plain

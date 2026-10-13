@@ -25,7 +25,6 @@
 #include <filesystem>
 #include <map>
 #include <set>
-#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -34,7 +33,6 @@
 
 #include "core/audio/sndfile_wav_io.h"
 #include "core/encoder/encoder_options.h"
-#include "core/encoder/frame_endings.h"
 #include "core/lpc/frame.h"
 #include "core/lpc/frame_codec.h"
 #include "core/util/status.h"
@@ -101,11 +99,6 @@ EncoderOptions ReferenceEncoderOptions() {
   options.resonance_hold_db.reset();
   options.voicing_min_run = 1;
   return options;
-}
-
-std::vector<core::lpc::Frame> ReferenceFrames(
-    std::span<const core::lpc::Frame> reference) {
-  return core::encoder::QuietPauses(reference);
 }
 
 std::filesystem::path EncoderGoldenDir() {

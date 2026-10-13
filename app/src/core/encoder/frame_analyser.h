@@ -63,6 +63,8 @@ double FrameRms(std::span<const double> x, int centre, int half = 100);
 //   offset, against a gate gate_db below the loudest frame (or twice the
 //   envelope's 5th percentile, if higher);
 // - frames are 200 samples apart from c0;
+// - each frame's level is its FrameRms(), and its loudness the same after
+//   LoudnessHighPass() (not in the reference);
 // - each frame's spectrum is the lag-windowed autocorrelation of a Hamming
 //   window, of the pre-emphasised signal for voiced frames and the plain
 //   one for unvoiced; the first frame's window starts at the onset.

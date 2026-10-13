@@ -183,6 +183,33 @@ A new encoding that would take the project past its 64 PHROMs is not
 stored: a message says so, and the form shows the phrase's settings again
 (see [troubleshooting](troubleshooting.md#the-encoder-and-optimise)).
 
+### The level
+
+**Target RMS** (`20` by default) sets how loud the encoding is: the RMS
+of the chip's output over the sounding frames, in DAC codes, measured
+after a 279 Hz high-pass, the one in the BBC Micro's speech path. Bass
+does not count, since a small speaker gives little of it back: a
+recording with a lot of bass is encoded louder than one without for the
+same setting, so the two sound about as loud on a BBC Micro. At `20`,
+Acorn's own phrases, encoded from the chip's output, come back as loud as
+they are.
+
+The loudest peaks may clip a little, as Acorn's phrases do (they drive
+the DAC past its ±127 on half their words): the encoder lets at most 1
+sample in 1000 pass ±127, and none pass 160. Where a phrase would clip
+more, it turns down the frames that clip most. A higher Target RMS makes
+it turn down more frames, which flattens the loud syllables, and the
+quality rating falls; from `24` up it falls on many recordings.
+
+For phrases to be played on a BBC Micro, choose the **BBC Micro**
+[preset](#presets) too. Recordings, unlike Acorn's phrases, carry much of
+their energy in the bass, which the BBC Micro's small speaker cannot
+play; the preset moves it into the band the speaker plays, so the phrase
+sounds louder and clearer for the same peaks. On 33 recorded sentences,
+the preset makes them about 1.3 dB louder to the ear (A-weighted) at the
+default Target RMS. The rating, which compares the encoding with the
+preprocessed recording, is usually a little lower with it.
+
 ## Preprocessing
 
 The preprocessing prepares the recording for the chip before it is
@@ -408,8 +435,8 @@ frame instead, and the sound fades out through it. The filter changes a
 frame later, when the sound is already quieter. It costs no bits (the
 held frame is a repeat, which is shorter) and changes about one encoding
 in ten. A lower value catches more places, at a small cost in how closely
-the sound follows the recording; switch it off only when the frames must
-match another encoder's exactly. Optimise leaves the setting as it is.
+the sound follows the recording; switch it off only to compare the frames
+with another encoder's. Optimise leaves the setting as it is.
 
 ## Re-encoding several phrases
 

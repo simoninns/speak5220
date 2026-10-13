@@ -3,28 +3,32 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Writes the encoder reference data in app/golden/encoder/.
 
-Runs the reference Python encoder (investigation/encoder/tms5220enc.py) on
-the phase 11 corpus (investigation/captures/phase11/inputs/) and writes what
-it produces (application plan §1.4 and §3.2, Phase 2 task 1):
+The stages before level setting come from the reference Python encoder
+(investigation/encoder/tms5220enc.py), which the C++ encoder re-implements
+and matches; the level setting and the frames come from the C++ encoder
+itself, whose level setting departs from the reference's (HLD §8 and §13).
+On the phase 11 corpus (investigation/captures/phase11/inputs/) it writes
+(application plan §1.4 and §3.2, Phase 2 task 1):
 
 - inputs/NAME.wav: the WAV copies of a corpus subset (public-domain and CC0
   voices only), so the functional tests read WAV and never the FLAC
   originals.
-- intermediates/NAME.json: encodeDetailed()'s intermediate values for that
-  subset with the default options: the filtered signals, the pitch track,
-  the per-frame analysis, the plan of frame kinds, K and pitch, the gains
-  and the energies.
-- frames/SET.tsv: the frames of every corpus file for each option set in
-  option_sets.tsv, packed, with the file's near-tie frames.
+- intermediates/NAME.json: for that subset with the reference's default
+  options, encodeDetailed()'s intermediate values up to the plan (the
+  filtered signals, the pitch track, the per-frame analysis, the plan of
+  frame kinds, K and pitch), and in "encode" what the C++ encoder's level
+  setting made of it (the faint-opening trim, the levels, the gains, the
+  energies and the frames).
+- frames/SET.tsv: the C++ encoder's frames of every corpus file for each
+  option set in option_sets.tsv, packed. The C++ encoder gives the same
+  frames whatever the thread count and the platform's rounding, so no
+  frame is marked a near tie (near_ties "-").
 
-A near-tie frame is one whose coding changes when the input is disturbed at
-the level of floating-point noise (a relative 1e-9): the encoder's decision
-there rests on a margin smaller than the differences between two correct
-implementations. Each file is encoded once as given and once per
-disturbance in DISTURBANCES; a frame that differs in any of those runs is a
-near-tie frame. A file whose frame count changes has every frame marked.
-
-Run by hand, in the project's default Nix shell, from the repository root:
+The C++ part is a by-hand functional test
+(EncoderReferenceWriter.DISABLED_WritesFramesAndLevelSetting), run on WAV
+copies of the corpus (app/scripts/generate_corpus.py). Run by hand, in the
+project's default Nix shell, from the repository root, with the functional
+tests built:
 
     nix develop --command python3 app/scripts/golden/encoder.py
     nix develop --command python3 app/scripts/golden/encoder.py --check
@@ -38,8 +42,8 @@ import argparse
 import filecmp
 import hashlib
 import json
-import multiprocessing
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -53,6 +57,10 @@ ROOT = Path(__file__).resolve().parents[3]
 ENCODER = ROOT / "investigation" / "encoder"
 CORPUS = ROOT / "investigation" / "captures" / "phase11" / "inputs"
 GOLDEN = ROOT / "app" / "golden" / "encoder"
+SCRIPTS = ROOT / "app" / "scripts"
+DEFAULT_BUILD = ROOT / "build" / "app"
+ENCODER_H = ROOT / "app" / "src" / "core" / "encoder" / "encoder.h"
+WRITER = "EncoderReferenceWriter.DISABLED_WritesFramesAndLevelSetting"
 
 sys.path.insert(0, str(ENCODER))
 import tms5220enc as enc  # noqa: E402
@@ -71,11 +79,11 @@ SUBSET = [
     "s11_joe",
 ]
 
-# The option sets every corpus file is encoded with: the defaults, and
-# three fixed combinations that between them change every option the
-# application has. The reference's other options (targetPeak, peakLimit,
-# repeats, iterations, fadeUnvoiced, compression) stay at their defaults,
-# at which the application fixes them.
+# The option sets every corpus file is encoded with, over the reference's
+# defaults: the defaults, and three fixed combinations that between them
+# change every option the reference and the application share. The
+# reference's other options (targetPeak, peakLimit, repeats, iterations,
+# fadeUnvoiced, compression) are fixed in the application.
 OPTION_SETS = {
     "default": {},
     "lean": {
@@ -95,12 +103,6 @@ OPTION_SETS = {
         "voicingThreshold": 0.45,
     },
 }
-
-# Disturbances for the near-tie search: (seed, scale). The input is scaled
-# by 1 + scale and given added noise of relative size 1e-9 from the seed
-# (no noise for seed None).
-DISTURBANCE = 1e-9
-DISTURBANCES = [(None, DISTURBANCE), (1, 0.0), (2, 0.0)]
 
 # Decimation of the long signals recorded in the intermediates.
 SIGNAL_STEP = 16
@@ -146,40 +148,6 @@ def read_corpus(path):
     return x.mean(axis=1)
 
 
-def disturbed(x, seed, scale):
-    y = x * (1.0 + scale)
-    if seed is not None:
-        rms = float(np.sqrt(np.mean(x * x))) or 1.0
-        y = y + np.random.default_rng(seed).standard_normal(len(x)) * rms * DISTURBANCE
-    return y
-
-
-def near_ties(frames, others):
-    """Frame indices that differ between `frames` and any of `others`."""
-    marked = set()
-    for other in others:
-        if len(other) != len(frames):
-            return list(range(len(frames)))
-        marked.update(i for i, (a, b) in enumerate(zip(frames, other)) if a != b)
-    return sorted(marked)
-
-
-def encode_job(job):
-    """(set, stem, hex, frame count, near-tie frames) for one file and set."""
-    set_name, stem, path = job
-    opts = OPTION_SETS[set_name]
-    x = read_corpus(path)
-    frames = enc.encode(x, enc.RATE, **opts)
-    others = [enc.encode(disturbed(x, s, k), enc.RATE, **opts) for s, k in DISTURBANCES]
-    return (
-        set_name,
-        stem,
-        enc.pack(frames).hex(),
-        len(frames),
-        near_ties(frames, others),
-    )
-
-
 def floats(values):
     return [float(v) for v in values]
 
@@ -196,7 +164,8 @@ def plan_json(plan):
 
 
 def intermediates(stem, x_in):
-    """encodeDetailed()'s intermediates for one file, default options."""
+    """encodeDetailed()'s intermediates up to the plan for one file, default
+    options; the C++ encoder adds "encode"."""
     opts = dict(enc.DEFAULTS)
     an = enc.analyse(x_in, enc.RATE, **opts)
     x = an["x"]
@@ -227,31 +196,6 @@ def intermediates(stem, x_in):
             }
         )
     plan = enc._kindsAndK(feats, opts)
-
-    # The energies _setLevels returns, captured on the way out
-    calls = []
-    set_levels = enc._setLevels
-
-    def recording(*args, **kwargs):
-        e = set_levels(*args, **kwargs)
-        calls.append([int(v) for v in e])
-        return e
-
-    enc._setLevels = recording
-    try:
-        frames, info = enc.encodeDetailed(x_in, enc.RATE)
-    finally:
-        enc._setLevels = set_levels
-    final_plan = info["plan"]
-    lead = an["centres"].index(info["c0"])
-    eff = enc._effectiveK(final_plan)
-    gains = []
-    for j, p in enumerate(final_plan):
-        if p["kind"] == "silence":
-            gains.append(0.0)
-            continue
-        per = enc.PITCH[p["pitch"]] + 1 if p["pitch"] else 0
-        gains.append(float(enc._gainOf(eff[j], per)))
 
     return {
         "name": stem,
@@ -289,30 +233,52 @@ def intermediates(stem, x_in):
             ],
         },
         "plan": plan_json(plan),
-        "encode": {
-            "lead": lead,
-            "dropped": int(info["stats"]["droppedOpening"]),
-            "plan": plan_json(final_plan),
-            "levels": floats(f["level"] for f in info["feats"]),
-            "gain": float(info["gain"]),
-            "gains": gains,
-            "energies": calls[-1],
-            "silenced": int(info["stats"]["silenced"]),
-            "limited": int(info["stats"]["limited"]),
-            "sounding": int(info["stats"]["sounding"]),
-            "frames_hex": enc.pack(frames).hex(),
-            "frame_count": len(frames),
-        },
     }
 
 
-def generate(out, processes):
+def encoder_version():
+    """The C++ encoder's kEncoderVersion."""
+    m = re.search(r'kEncoderVersion = "([^"]+)"', ENCODER_H.read_text())
+    if not m:
+        sys.exit("no kEncoderVersion in %s" % ENCODER_H.relative_to(ROOT))
+    return m.group(1)
+
+
+def write_cpp(out, build, corpus):
+    """Runs the C++ writer: frames/SET.tsv and each input's "encode"
+    section, merged into its intermediates."""
+    tests = build / "tests" / "speak5220_functional_tests"
+    if not tests.exists():
+        sys.exit(
+            "%s not found; build it with: cmake --build %s "
+            "--target speak5220_functional_tests" % (tests, build)
+        )
+    run([sys.executable, str(SCRIPTS / "generate_corpus.py"), "--output", str(corpus)])
+    env = dict(
+        os.environ,
+        SPEAK5220_CORPUS_DIR=str(corpus),
+        SPEAK5220_ENCODER_REFERENCE_DIR=str(out),
+    )
+    run(
+        [str(tests), "--gtest_also_run_disabled_tests", "--gtest_filter=" + WRITER],
+        env=env,
+        stdout=subprocess.DEVNULL,
+    )
+    for stem in SUBSET:
+        path = out / "intermediates" / (stem + ".json")
+        data = json.loads(path.read_text())
+        data["encode"] = json.loads((out / "encode" / (stem + ".json")).read_text())
+        path.write_text(json.dumps(data, indent=1, sort_keys=True) + "\n")
+    shutil.rmtree(out / "encode")
+
+
+def generate(out, build, corpus):
     commit = reference_commit()
     files = corpus_files()
     missing = [s for s in SUBSET if s not in files]
     if missing:
         sys.exit("subset files missing: " + ", ".join(missing))
-    for sub in ("inputs", "intermediates", "frames"):
+    for sub in ("inputs", "intermediates"):
         (out / sub).mkdir(parents=True, exist_ok=True)
 
     for stem in SUBSET:
@@ -322,22 +288,13 @@ def generate(out, processes):
         text = json.dumps(intermediates(stem, x), indent=1, sort_keys=True)
         (out / "intermediates" / (stem + ".json")).write_text(text + "\n")
 
-    jobs = [(s, stem, path) for s in OPTION_SETS for stem, path in files.items()]
-    with multiprocessing.Pool(processes) as pool:
-        results = pool.map(encode_job, jobs, chunksize=1)
-    for set_name in OPTION_SETS:
-        lines = ["name\tframes\tnear_ties\tpacked"]
-        for s, stem, packed, count, ties in results:
-            if s == set_name:
-                tie_text = ",".join(str(i) for i in ties) if ties else "-"
-                lines.append("%s\t%d\t%s\t%s" % (stem, count, tie_text, packed))
-        (out / "frames" / (set_name + ".tsv")).write_text("\n".join(lines) + "\n")
-
     sets = ["name\toptions"]
     sets += [
         "%s\t%s" % (k, json.dumps(v, sort_keys=True)) for k, v in OPTION_SETS.items()
     ]
     (out / "option_sets.tsv").write_text("\n".join(sets) + "\n")
+
+    write_cpp(out, build, corpus)
 
     source = ENCODER / "tms5220enc.py"
     ref = [
@@ -349,6 +306,7 @@ def generate(out, processes):
     import scipy
 
     ref.append("scipy\t" + scipy.__version__)
+    ref.append("encoder_version\t" + encoder_version())
     (out / "REFERENCE.tsv").write_text("\n".join(ref) + "\n")
 
 
@@ -376,15 +334,16 @@ def main():
         help="regenerate into a temporary directory and compare",
     )
     ap.add_argument(
-        "--jobs",
-        type=int,
-        default=os.cpu_count() or 1,
-        help="encoder processes to run in parallel (default: one per CPU)",
+        "--build",
+        type=Path,
+        default=DEFAULT_BUILD,
+        help="the build directory, with the functional tests (default: %(default)s)",
     )
     args = ap.parse_args()
+    corpus = args.build / "generated-corpus"
     if args.check:
         with tempfile.TemporaryDirectory() as tmp:
-            generate(Path(tmp), args.jobs)
+            generate(Path(tmp), args.build, corpus)
             diff = compare(Path(tmp), GOLDEN)
             if diff:
                 print("differs from app/golden/encoder/:\n  " + "\n  ".join(diff))
@@ -392,7 +351,7 @@ def main():
             print("app/golden/encoder/ is reproduced exactly")
     else:
         shutil.rmtree(GOLDEN, ignore_errors=True)
-        generate(GOLDEN, args.jobs)
+        generate(GOLDEN, args.build, corpus)
         print("wrote", GOLDEN.relative_to(ROOT))
     return 0
 

@@ -1,10 +1,10 @@
-encoder_version: "1.2.0"
-settings_hash: "ea9445fd2ea501f4fa5a831243a8388b89929296a12fcf9a40a4b200d97de0c0"
+encoder_version: "1.3.0"
+settings_hash: "cbc9e210538b696202af22125a78a86eee9ef88a64ea800d436454bb9ef92466"
 frames:
-  - {energy: 6, repeat: 0, pitch: 39, k: [18, 21, 9, 10, 2, 12, 11, 4, 4, 4]}
+  - {energy: 7, repeat: 0, pitch: 39, k: [18, 21, 9, 10, 2, 12, 11, 4, 4, 4]}
   - {energy: 10, repeat: 1, pitch: 39}
-  - {energy: 10, repeat: 1, pitch: 39}
-  - {energy: 10, repeat: 1, pitch: 40}
+  - {energy: 11, repeat: 1, pitch: 39}
+  - {energy: 11, repeat: 1, pitch: 40}
   - {energy: 10, repeat: 1, pitch: 40}
   - {energy: 10, repeat: 1, pitch: 40}
   - {energy: 10, repeat: 1, pitch: 40}
@@ -20,12 +20,12 @@ frames:
   - {energy: 11, repeat: 1, pitch: 42}
   - {energy: 11, repeat: 1, pitch: 42}
   - {energy: 11, repeat: 1, pitch: 43}
-  - {energy: 8, repeat: 1, pitch: 43}
+  - {energy: 9, repeat: 1, pitch: 43}
   - {energy: 0}
   - {energy: 1, repeat: 0, pitch: 43, k: [23, 9, 8, 6, 7, 6, 6, 3, 3, 3]}
   - {energy: 0}
   - {energy: 0}
-  - {energy: 2, repeat: 0, pitch: 0, k: [26, 14, 10, 8]}
+  - {energy: 3, repeat: 0, pitch: 0, k: [26, 14, 10, 8]}
   - {energy: 7, repeat: 1, pitch: 0}
   - {energy: 7, repeat: 1, pitch: 0}
   - {energy: 7, repeat: 1, pitch: 0}
@@ -35,18 +35,18 @@ frames:
   - {energy: 5, repeat: 1, pitch: 0}
   - {energy: 9, repeat: 0, pitch: 35, k: [26, 19, 5, 4, 1, 10, 10, 4, 4, 3]}
   - {energy: 13, repeat: 1, pitch: 35}
-  - {energy: 13, repeat: 1, pitch: 36}
-  - {energy: 13, repeat: 1, pitch: 36}
-  - {energy: 13, repeat: 1, pitch: 37}
-  - {energy: 13, repeat: 1, pitch: 37}
-  - {energy: 13, repeat: 1, pitch: 37}
-  - {energy: 13, repeat: 1, pitch: 38}
-  - {energy: 13, repeat: 0, pitch: 38, k: [26, 20, 6, 4, 1, 9, 9, 4, 4, 3]}
-  - {energy: 13, repeat: 1, pitch: 38}
-  - {energy: 13, repeat: 1, pitch: 39}
-  - {energy: 13, repeat: 1, pitch: 39}
-  - {energy: 13, repeat: 1, pitch: 39}
-  - {energy: 13, repeat: 1, pitch: 39}
-  - {energy: 13, repeat: 1, pitch: 40}
+  - {energy: 14, repeat: 1, pitch: 36}
+  - {energy: 14, repeat: 1, pitch: 36}
+  - {energy: 14, repeat: 1, pitch: 37}
+  - {energy: 14, repeat: 1, pitch: 37}
+  - {energy: 14, repeat: 1, pitch: 37}
+  - {energy: 14, repeat: 1, pitch: 38}
+  - {energy: 14, repeat: 0, pitch: 38, k: [26, 20, 6, 4, 1, 9, 9, 4, 4, 3]}
+  - {energy: 14, repeat: 1, pitch: 38}
+  - {energy: 14, repeat: 1, pitch: 39}
+  - {energy: 14, repeat: 1, pitch: 39}
+  - {energy: 14, repeat: 1, pitch: 39}
+  - {energy: 14, repeat: 1, pitch: 39}
+  - {energy: 14, repeat: 1, pitch: 40}
   - {energy: 11, repeat: 1, pitch: 40}
   - {energy: 15}

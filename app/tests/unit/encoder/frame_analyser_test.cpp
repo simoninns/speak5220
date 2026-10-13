@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "core/dsp/array_math.h"
+#include "core/encoder/encoder_filters.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "gtest/gtest.h"
@@ -24,15 +25,38 @@
 namespace speak5220::core::encoder {
 namespace {
 
-// Silence, then a 300 Hz tone from sample `start` for `length` samples,
-// then silence, `total` samples in all.
-std::vector<double> ToneBurst(int start, int length, int total) {
+// Silence, then a tone of `hz` (300 Hz by default) from sample `start` for
+// `length` samples, then silence, `total` samples in all.
+std::vector<double> ToneBurst(int start, int length, int total,
+                              double hz = 300.0) {
   std::vector<double> x(static_cast<std::size_t>(total), 0.0);
   for (int n = start; n < start + length && n < total; ++n) {
     x[static_cast<std::size_t>(n)] =
-        0.3 * std::sin(2.0 * std::numbers::pi * 300.0 * n / 8000.0);
+        0.3 * std::sin(2.0 * std::numbers::pi * hz * n / 8000.0);
   }
   return x;
+}
+
+// The middle frame's features of a tone burst of `hz`, all frames voiced.
+FrameFeatures MiddleFrameOfTone(double hz) {
+  FrameAnalyser analyser;
+  const EncoderOptions options;
+  const auto seg = analyser.Segment(ToneBurst(2000, 4000, 8000, hz), options);
+  EXPECT_TRUE(seg.has_value());
+  if (!seg.has_value()) {
+    return {};
+  }
+  const std::vector<FrameVoicing> voicing(seg->centres.size(),
+                                          {.voiced = true, .period = 80.0});
+  const auto feats = analyser.Features(*seg, voicing, options);
+  return feats[feats.size() / 2];
+}
+
+// |H|^2 of LoudnessHighPass() at a multiple of 50 Hz.
+double LoudnessPowerAt(int hz) {
+  constexpr int kStepHz = 50;
+  const std::vector<double> power = LoudnessHighPassPower(81);
+  return power[static_cast<std::size_t>(hz / kStepHz)];
 }
 
 TEST(FrameAnalyserTest, FrameRmsOfConstantIsTheConstant) {
@@ -98,6 +122,30 @@ TEST(FrameAnalyserTest, FeaturesCarryVoicingLevelAndGate) {
   EXPECT_GT(mid.rv[0], 0.0);
   EXPECT_GT(mid.ru[0], 0.0);
   EXPECT_FALSE(feats.back().voiced);
+}
+
+// Of two tones of equal RMS, the 100 Hz tone's loudness is about 9 dB
+// below its level (itself 1 dB down after the 60 Hz high-pass), the 1 kHz
+// tone's barely below: bass does not count towards the level aimed at.
+TEST(FrameAnalyserTest, LoudnessIsTheLevelAfterTheLoudnessHighPass) {
+  const FrameFeatures low = MiddleFrameOfTone(100.0);
+  const FrameFeatures high = MiddleFrameOfTone(1000.0);
+  EXPECT_NEAR(low.loudness / low.level, std::sqrt(LoudnessPowerAt(100)), 0.01);
+  EXPECT_NEAR(high.loudness / high.level, std::sqrt(LoudnessPowerAt(1000)),
+              0.01);
+  EXPECT_LT(20.0 * std::log10(low.loudness / high.loudness), -8.0);
+}
+
+TEST(FrameAnalyserTest, LoudnessHighPassIsHalfPowerAtItsCorner) {
+  // The bilinear transform is prewarped, so the corner stays at 279 Hz.
+  const std::vector<double> power = LoudnessHighPassPower(4001);
+  EXPECT_NEAR(power[static_cast<std::size_t>(kLoudnessHighPassHz)], 0.5, 0.001);
+  EXPECT_EQ(power.front(), 0.0);
+  EXPECT_NEAR(power.back(), 1.0, 1e-12);
+  // The filter itself removes DC.
+  const std::vector<double> dc =
+      LoudnessHighPass(std::vector<double>(4000, 1.0));
+  EXPECT_LT(std::fabs(dc.back()), 1e-6);
 }
 
 TEST(FrameAnalyserTest, AutocorrelationGetsItsNoiseFloor) {

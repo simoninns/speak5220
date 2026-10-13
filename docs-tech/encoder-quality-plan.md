@@ -196,43 +196,78 @@ same commands as Phase 1's baseline:
 ## Phase 3: Level and loudness
 
 Depends on: Phase 2. Changes C1 and the rest of C2. One regeneration of
-the reference data.
+the reference data. Done 2026-10-13; the sweeps and the reasons are in HLD
+§9, "Level and loudness, from the PHROM round trip", and the design in HLD
+§8, "Level setting".
 
-1. **Peak limit with a clip budget.** In `LevelSetter::SetLevels()` the
-   limiter's criterion becomes: no lattice wrap (±512, datasheet §12.3),
-   and the share of samples beyond ±127 within a budget (1 in 1000, the
-   PHROM's 0.21 % mean), in place of the hard `kPeakLimit` 120. The
-   budget and a ceiling (about 160) are constants (D2). Unit tests over a
-   mocked synthesis.
-   - **Acceptance:** on ARCTIC the median sounding RMS is within 1 dB of
-     the PHROM's 21.8 with `target_rms` 24; clipped samples ≤ 0.3 % in
-     every file; no wraps; limited frames fall by more than half; the
-     corpus median score within 0.005 of Phase 2's.
-2. **Loudness-weighted level.** The frame level the encoder aims at
-   (`FrameAnalyser::Features()`) and the level it measures of its output
-   (`MeasureOutputLevels()`) are taken after the same 279 Hz first-order
-   high-pass, so bass does not count as loudness. Unit tests: a 100 Hz
-   tone and a 1 kHz tone of equal RMS get the energies their weighted
-   levels imply.
-   - **Acceptance:** ARCTIC encodings' A-weighted RMS within 1.5 dB of the
-     PHROM's 14.5 with the *BBC Micro* preset, and within 3 dB without it;
-     corpus score within 0.005.
-3. **`target_rms`.** With tasks 1–2 in, sweep `target_rms` 24, 27 and 30
-   on loudness, clipped samples and score, and set the default (expected
-   30). The *BBC Micro* preset stays off by default (D3); the sweep records
-   the loudness with and without it for the user manual.
-   - **Acceptance:** the chosen default reaches task 2's loudness target
-     on ARCTIC and TTS; the measures CLI reports it; `encoder.md` tells
-     users of a BBC Micro to choose the preset and why.
-4. **Reference data, version and documentation.** Regenerate
-   `app/golden/encoder/` and `app/golden/quality/` in their own commit with
-   the before-and-after quality table; bump `kEncoderVersion`; update HLD
-   §8 ("Fixed options", the limiter), §9, `encoder-options.md`, and
-   `encoder.md`; add the loudness figures to the corpus check's
-   `measures.tsv`.
-   - **Acceptance:** `corpus-check.sh` passes against the new reference;
-     a listening check of five loud and five quiet files confirms no
-     audible clipping.
+1. **Peak limit with a clip budget.** The limiter allows no lattice wrap,
+   no frame peak over 160 (`kPeakCeiling`) and at most 1 sample in 1000
+   beyond ±127 (`kClipBudget`), lowering the frames that clip most while
+   the phrase is over the budget; constants (D2). Unit tests over the
+   reference synthesiser, which is pure (the clip budget and ceiling at
+   five gains).
+   - **Acceptance** (with this change alone, `target_rms` 24 of level):
+     ARCTIC median sounding RMS 21.9 (PHROM 21.8; ≤ 1 dB); worst file
+     0.100 % clipped (≤ 0.3 %); no wraps; frames lowered 490 to 163
+     (more than half fewer); corpus median 0.734 (Phase 2 0.730; within
+     0.005 or better). Met.
+2. **Loudness-weighted level.** `FrameFeatures::loudness`,
+   `MeasureOutputLoudness()` and `GainOf()` with `loudness` take the level
+   after `LoudnessHighPass()` (279 Hz, first order, the quality measures'
+   `BbcHighPass()` now shares it). Unit tests: 100 Hz and 1 kHz tones of
+   equal RMS get loudnesses the high-pass's gain implies, in the features
+   and in the output, and the weighted open-loop gain of a flat filter.
+   - **Acceptance:** corpus score within 0.005: met (median 0.742 at the
+     default). ARCTIC A-weighted RMS within 1.5 dB of the PHROM's 14.5 with
+     the *BBC Micro* preset and within 3 dB without: **not met** (12.4 and
+     10.6 at the default; 13.2 and 11.0 at 24, which costs ARCTIC score).
+     ARCTIC is darker than the PHROM and its pauses lower its whole-talk
+     RMS; on the PHROM's own words the default matches the PHROM's
+     loudness (A-weighted +0.0 dB), which was taken instead (D8).
+3. **`target_rms`.** Now a loudness, so the plan's 24 to 30 (of level)
+   no longer applied: swept 16, 18, 20, 24 (and 27, 30 on ARCTIC), with
+   and without the preset. Chosen with the user: **20** (D8), the
+   reference's number but of loudness. The preset stays off by default
+   (D3); `encoder.md` ("The level") tells users of a BBC Micro to choose
+   it and why.
+   - **Acceptance:** the default reaches the PHROM's loudness on the
+     PHROM's own words; the measures CLI reports the loudness;
+     `encoder.md` explains the preset. Met, with task 2's ARCTIC bound
+     relaxed (D8).
+4. **Reference data, version and documentation.** The encoder reference
+   data cannot be regenerated from the Python reference, so its frames and
+   level-setting intermediates now come from the C++ encoder (D7):
+   `encoder.py` runs the new by-hand writer `EncoderReferenceWriter`, the
+   Python still writes the stages before. `app/golden/quality/` was
+   regenerated from the new frames (with the flake's REAPER tool now
+   built without fused multiply-add contraction, as SPTK is, so its
+   tracks match on arm64). `kEncoderVersion` 1.3.0; the fixture projects
+   with recordings re-encoded and their export hashes recorded again.
+   HLD §8 ("Level setting", "Options"), §9, §13, `encoder-options.md`,
+   `encoder.md`, `project-file.md`, `app/golden/README.md`, TESTING.md
+   updated. The corpus check's `measures.tsv` loudness figures were
+   already in `speak5220-cli measure` (Phase 1); the corpus check itself
+   was left as it was.
+   - **Acceptance:** `corpus-check.sh` passes against the new reference
+     (972 of 972 identical; Optimise raises 240 of 243 files): met.
+     Encoding takes 0.0079 s per second of speech on one core (Phase 2:
+     0.0085). The listening check of five loud and five quiet files is
+     the user's.
+
+**Baseline for the later phases.** The defaults after Phase 3, by the
+same commands:
+
+| Measure | Phase 2 defaults | Phase 3 defaults |
+|---|---|---|
+| ARCTIC (33): score median / mean | 0.698 / 0.695 | 0.708 / 0.701 |
+| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 2.97 dB, 5.5 %, 18.4 %, 0.764 | 2.88 dB, 5.7 %, 18.9 %, 0.765 |
+| ARCTIC: bytes; sounding RMS, peak, clipped (mean), BBC Micro RMS, A-weighted RMS | 20,298; 19.6, 118, 0, 11.6, 8.5 | 20,452; 24.7, 146, 0.082 %, 14.5, 10.6 |
+| Corpus (243): score median / mean; bytes | 0.730 / 0.732; 122,016 | 0.742 / 0.742; 122,687 |
+| TTS (64): score median / mean | 0.747 / 0.726 | 0.730 / 0.741 |
+| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 97.2 %; 17 / 28 / 7 / 26 | 97.2 %; 16 / 28 / 7 / 26 |
+| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 395; 25; 1.98 dB; +0.36 / +0.78 | 393; 23; 1.99 dB; +0.58 / +0.80 |
+| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 | 21.8 / 21.5, 124 / 126, 14.5 / 14.6 |
+| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 13; 23 of 152; 81 of 553 | 17; 22 of 152; 81 of 553 |
 
 ## Phase 4: Voicing onsets and fades
 
@@ -310,6 +345,8 @@ Agreed with the user on the investigation's figures.
 | D4. Pitch tracker (Phase 5 task 1) | REAPER-led, or the present tracker made robust | Prototype both behind `IPitchTracker`; REAPER unless it slows Optimise by more than about a third |
 | D5. Reference data | Regenerate once per phase (3, 4, 5), or once after Phase 5 | Once per phase, so each change's quality is recorded on its own commit |
 | D6. Voicing threshold (Phase 2 task 1; 2026-10-13) | 0.5 (expected), 0.55 (the least meeting the round-trip bounds) or 0.6 | 0.6: the best corpus mean and fewest Poor files, 97.2 % round-trip agreement; ARCTIC's median VDE (18.4 %) over the 16 % bound accepted, as VDE is against a tracker's voicing of the source |
+| D7. Reference data after an algorithm change (Phase 3 task 4; 2026-10-13) | Advanced options whose old values reproduce the Python reference, leaving the data unchanged; changing the Python reference in `investigation/`; or the C++ encoder's own output as the reference | The C++ encoder's own frames and level-setting intermediates; the Python still checks the stages before the level setting. Phases 4 and 5 regenerate the same way |
+| D8. `target_rms` (Phase 3 task 3; 2026-10-13) | 16 (closest energy indices on the round trip, but the PHROM's words 1 dB quieter than the PHROM), 18, 20 (the PHROM's loudness on its own words), 24 | 20. The ARCTIC A-weighted bounds of task 2 relaxed: they need 24 to 30, which lowers the ARCTIC score and leaves the consonants louder still |
 
 ## Risks
 

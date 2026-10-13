@@ -34,7 +34,8 @@ namespace speak5220::core::encoder {
 // the same audio and options can give different frames (AGENTS.md §3.1).
 // 1.1.0: quiet pauses (QuietPauses()), on by default.
 // 1.2.0: the noise gate mutes everything under its level.
-inline constexpr std::string_view kEncoderVersion = "1.2.0";
+// 1.3.0: the level aims at loudness, and the limiter has a clip budget.
+inline constexpr std::string_view kEncoderVersion = "1.3.0";
 
 // The analysis behind an encoding, for tests and the waveform view.
 // Output sample kReachedSample + 200 j of the reference synthesis
@@ -104,8 +105,9 @@ OpeningTrim TrimFaintOpening(std::vector<PlanEntry>& plan,
 // tms5220enc.py encodeDetailed(): segment, track pitch, classify voicing
 // (then smooth short runs of it), measure features (from the preprocessed
 // recording; the rest from it before its bass cut and treble tilt), plan, drop
-// a faint opening, hold resonant filters, shape the levels, set the gain from
-// the target RMS, set the energies, then fades, the stop and quiet pauses.
+// a faint opening, hold resonant filters, shape the frames' loudness, set the
+// gain from the target RMS, set the energies, then fades, the stop and quiet
+// pauses. The reference shapes and aims at the frames' levels instead.
 // Thread-safe if the stages are.
 class Encoder : public IEncoder {
  public:

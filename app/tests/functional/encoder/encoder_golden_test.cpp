@@ -2,7 +2,7 @@
  * File:        encoder_golden_test.cpp
  * Module:      encoder tests
  * Purpose:     Encodes the reference corpus and compares the frames with the
- *              Python reference encoder's (plan §3.2)
+ *              reference frames of app/golden/encoder/ (plan §3.2)
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -115,8 +115,7 @@ CorpusTally CheckCorpus(
       if (!result.IsOk()) {
         continue;
       }
-      ReferenceEncoding expected = ref->second;
-      expected.frames = ReferenceFrames(ref->second.frames);
+      const ReferenceEncoding& expected = ref->second;
       const EncodingComparison cmp = CompareEncoding(expected, result->frames);
       ++tally.files;
       tally.identical += cmp.identical ? 1 : 0;

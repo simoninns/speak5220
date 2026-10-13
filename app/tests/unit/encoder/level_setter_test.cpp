@@ -14,9 +14,11 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdlib>
+#include <numbers>
 #include <vector>
 
 #include "core/dsp/fft.h"
+#include "core/encoder/encoder_filters.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
 #include "core/encoder/frame_endings.h"
@@ -121,7 +123,86 @@ TEST(LevelSetterTest, SlowGainControlBringsAQuietStretchUp) {
   EXPECT_LT(out[10], 0.2);
 }
 
-// No output code beyond 120 (tms5220enc.py's peakLimit, fixed).
+// The samples of `out` beyond the DAC's +-127.
+int Clipped(const synth::ReferenceSynthesis& out) {
+  return static_cast<int>(std::ranges::count_if(
+      out.codes, [](int c) { return std::abs(c) > 127; }));
+}
+
+int Peak(const synth::ReferenceSynthesis& out) {
+  int peak = 0;
+  for (const int c : out.codes) {
+    peak = std::max(peak, std::abs(c));
+  }
+  return peak;
+}
+
+// Equal-amplitude tones of 100 Hz and 1 kHz: the same level, but the low
+// tone's loudness is that of the loudness high-pass at 100 Hz.
+TEST(LevelSetterTest, OutputLoudnessIsTheLevelAfterTheLoudnessHighPass) {
+  std::vector<int> low(4000);
+  std::vector<int> high(4000);
+  for (std::size_t n = 0; n < low.size(); ++n) {
+    const double t = 2.0 * std::numbers::pi * static_cast<double>(n) / 8000.0;
+    low[n] = static_cast<int>(std::lround(100.0 * std::sin(100.0 * t)));
+    high[n] = static_cast<int>(std::lround(100.0 * std::sin(1000.0 * t)));
+  }
+  const OutputLevels low_level = MeasureOutputLevels(low, 10);
+  const OutputLevels low_loud = MeasureOutputLoudness(low, 10);
+  const OutputLevels high_loud = MeasureOutputLoudness(high, 10);
+  // |H|^2 at bins of 50 Hz: 100 Hz is bin 2, 1 kHz bin 20.
+  const std::vector<double> power = LoudnessHighPassPower(81);
+  EXPECT_NEAR(low_loud.level[8] / low_level.level[8], std::sqrt(power[2]),
+              0.01);
+  EXPECT_NEAR(high_loud.level[8] / MeasureOutputLevels(high, 10).level[8],
+              std::sqrt(power[20]), 0.01);
+  // The peaks are the codes' own.
+  EXPECT_EQ(low_loud.peak, low_level.peak);
+}
+
+TEST(LevelSetterTest, LoudnessGainOfAFlatFilterWeighsTheNoiseByTheHighPass) {
+  dsp::PocketFft fft;
+  // A flat filter's noise output is white, so its loudness is its RMS (0.5,
+  // above) times the root of the high-pass's mean power gain.
+  const std::vector<double> power = LoudnessHighPassPower(2049);
+  std::vector<double> full(power.begin(), power.end());
+  full.insert(full.end(), power.begin() + 1, power.end() - 1);
+  double mean = 0.0;
+  for (const double v : full) {
+    mean += v;
+  }
+  mean /= static_cast<double>(full.size());
+  EXPECT_NEAR(GainOf(fft, {}, 0, /*loudness=*/true), 0.5 * std::sqrt(mean),
+              kTolerance);
+  EXPECT_LT(GainOf(fft, {}, 100, /*loudness=*/true), GainOf(fft, {}, 100));
+}
+
+// No lattice wrap, no code beyond 160, and at most 1 sample in 1000 beyond
+// the DAC's +-127, which the limiter allows rather than holding every code
+// within 120 as the reference does.
+TEST(LevelSetterTest, ClipsNoMoreThanTheBudgetAndPassesNoPeakOverTheCeiling) {
+  dsp::PocketFft fft;
+  LevelSetter setter(fft);
+  std::vector<PlanEntry> plan(60, Voiced(PlanKind::kRepeat));
+  for (std::size_t j = 0; j < plan.size(); j += 10) {
+    plan[j] = Voiced();
+  }
+  const std::vector<double> levels(plan.size(), 0.1);
+  bool clipped_any = false;
+  for (const double gain : {100.0, 200.0, 300.0, 500.0, 2000.0}) {
+    const std::vector<int> energies =
+        setter.SetLevels(plan, levels, gain, nullptr);
+    const synth::ReferenceSynthesis out =
+        synth::ReferenceSynthesizer::Synthesize(
+            AddFades(ToFrames(plan, energies)));
+    EXPECT_EQ(out.wrapped_samples, 0) << gain;
+    EXPECT_LE(Peak(out), 160) << gain;
+    EXPECT_LE(Clipped(out), static_cast<int>(out.codes.size() / 1000)) << gain;
+    clipped_any = clipped_any || Clipped(out) > 0;
+  }
+  EXPECT_TRUE(clipped_any);
+}
+
 TEST(LevelSetterTest, SetLevelsKeepsSilenceAndRespectsThePeakLimit) {
   dsp::PocketFft fft;
   LevelSetter setter(fft);
@@ -142,11 +223,8 @@ TEST(LevelSetterTest, SetLevelsKeepsSilenceAndRespectsThePeakLimit) {
   }
   const synth::ReferenceSynthesis out = synth::ReferenceSynthesizer::Synthesize(
       AddFades(ToFrames(plan, energies)));
-  int peak = 0;
-  for (const int c : out.codes) {
-    peak = std::max(peak, std::abs(c));
-  }
-  EXPECT_LE(peak, 120);
+  EXPECT_LE(Peak(out), 160);
+  EXPECT_LE(Clipped(out), static_cast<int>(out.codes.size() / 1000));
   EXPECT_EQ(out.wrapped_samples, 0);
 }
 

@@ -392,6 +392,10 @@
             # Its CMakeLists.txt asks for a CMake older than current ones
             # accept, and has no install rule
             cmakeFlags = [ "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" ];
+            # Without fused multiply-add contraction, as SPTK above, so its
+            # tracks are the same on every platform (Clang contracts on
+            # arm64, which moves a frame of the reference tracks)
+            env.NIX_CFLAGS_COMPILE = "-ffp-contract=off";
             installPhase = ''
               install -Dm755 reaper $out/bin/reaper
             '';

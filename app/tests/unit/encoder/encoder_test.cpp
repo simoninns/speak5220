@@ -67,10 +67,13 @@ class EncoderTest : public ::testing::Test {
             .offset = 500,
             .c0 = 222};
   }
+  // Two frames of loudness `a` and `b`, and of ten times that level.
   static std::vector<FrameFeatures> FeaturesWithLevels(double a, double b) {
     std::vector<FrameFeatures> feats(2);
-    feats[0].level = a;
-    feats[1].level = b;
+    feats[0].loudness = a;
+    feats[1].loudness = b;
+    feats[0].level = 10.0 * a;
+    feats[1].level = 10.0 * b;
     return feats;
   }
 
@@ -99,6 +102,7 @@ TEST_F(EncoderTest, RunsStagesInOrderWithTheOptions) {
     EXPECT_CALL(analyser_, Features(_, _, Eq(options)))
         .WillOnce(Return(FeaturesWithLevels(0.1, 0.2)));
     EXPECT_CALL(repeat_search_, Plan(_, Eq(options))).WillOnce(Return(plan));
+    // The loudness is shaped and aimed at, not the level.
     EXPECT_CALL(level_setter_,
                 ShapeLevels(ElementsAre(0.1, 0.2), _, Eq(options)))
         .WillOnce(Return(std::vector<double>{0.1, 0.2}));

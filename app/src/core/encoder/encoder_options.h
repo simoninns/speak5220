@@ -39,9 +39,12 @@ struct PreEmphasis {
 // Everything that controls a phrase's encoding: how its recording is
 // preprocessed (preprocess, applied by preprocess::Preprocess() before the
 // encoder's stages) and the encoder's own options. The defaults are those of
-// tms5220enc.py DEFAULTS but for target_rms, window, voicing_evidence,
-// level_agc and voicing_threshold, chosen for the best median quality
-// score on the corpus (HLD §9), and the options the reference does not
+// tms5220enc.py DEFAULTS but for window, voicing_evidence and level_agc,
+// chosen for the best median quality score on the corpus, and
+// voicing_threshold and repeat_lambda, chosen against Acorn's PHROM
+// (HLD §9); target_rms keeps the reference's 20, of loudness (the level
+// after LoudnessHighPass()) rather than level; and the options the
+// reference does not
 // have: resonance_hold_db, 14, and voicing_min_run, 2, with no
 // preprocessing. The reference's other options are fixed at its defaults
 // (HLD §8, "Options").
@@ -52,8 +55,11 @@ struct EncoderOptions {
   // The preprocessing: the noise gate, the bass cut, the treble tilt, the
   // de-esser and the normaliser. Not in the reference encoder.
   preprocess::PreprocessOptions preprocess;
-  // RMS of the output over sounding frames, in codes.
-  double target_rms = 24.0;
+  // RMS of the output over sounding frames, in codes, after the loudness
+  // high-pass (LoudnessHighPass()), so bass does not count. The
+  // reference's is 20 too, but of the plain output; 20 gives Acorn's
+  // PHROM's own words its loudness (HLD §9).
+  double target_rms = 20.0;
   // Bits a repeat run may trade per dB of prediction error. The
   // reference's is 70; 300 comes near Acorn's PHROM's repeats (HLD §9).
   double repeat_lambda = 300.0;

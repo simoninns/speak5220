@@ -65,7 +65,7 @@ TEST_F(EncoderSettingsFormTest, HasAnEditorOfTheRightKindForEveryOption) {
 }
 
 TEST_F(EncoderSettingsFormTest, SlidersShowTheValueWithItsUnit) {
-  EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("24 codes"));
+  EXPECT_EQ(form_.Slider("target_rms")->Text(), QStringLiteral("20 codes"));
   EXPECT_EQ(form_.Slider("gate_db")->Text(), QStringLiteral("45 dB"));
   EXPECT_EQ(form_.Slider("window")->Text(), QStringLiteral("32 ms"));
   EXPECT_EQ(form_.Slider("voicing_threshold")->Text(), QStringLiteral("0.6"));
@@ -132,7 +132,7 @@ TEST_F(EncoderSettingsFormTest, MarksOptionsThatDifferFromTheBaseline) {
   EXPECT_FALSE(form_.ResetButton("gate_db")->isEnabled());
   EXPECT_TRUE(form_.ResetButton("target_rms")
                   ->toolTip()
-                  .contains(QStringLiteral("the project default (24)")));
+                  .contains(QStringLiteral("the project default (20)")));
 }
 
 TEST_F(EncoderSettingsFormTest, ResetButtonPutsAnOptionBackToTheBaseline) {
@@ -328,7 +328,7 @@ TEST_F(EncoderSettingsFormTest, PresetChooserSetsAndShowsThePreprocessing) {
   EXPECT_DOUBLE_EQ(form_.Slider("treble_tilt")->Value(), 0.4);
   EXPECT_TRUE(form_.IsMarked("treble_tilt"));
   // The encoder's options are left as they were.
-  EXPECT_EQ(form_.Options().target_rms, 24.0);
+  EXPECT_EQ(form_.Options().target_rms, 20.0);
 
   // Choosing it again changes nothing, and so does not signal.
   emit presets->activated(1);

@@ -173,6 +173,7 @@ std::vector<FrameFeatures> FrameAnalyser::Features(
   const std::vector<double> lagw = LagWindow(options.lag_window_hz);
   const std::vector<double> xp =
       dsp::FirFilter(PreEmphasisFilter(options.pre_emphasis), x);
+  const std::vector<double> xl = LoudnessHighPass(x);
   // Sample i is at i + win of the padded signals.
   std::vector<double> pad(x.size() + (2 * uwin) + kFrameSamples, 0.0);
   std::vector<double> padp(pad.size(), 0.0);
@@ -187,6 +188,7 @@ std::vector<FrameFeatures> FrameAnalyser::Features(
     FrameFeatures f;
     f.centre = c;
     f.level = FrameRms(x, c);
+    f.loudness = FrameRms(xl, c);
     f.voiced = voicing[j].voiced;
     f.period = voicing[j].period;
     const int ac =

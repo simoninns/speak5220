@@ -2,7 +2,8 @@
  * File:        encoder_filters.h
  * Module:      encoder
  * Purpose:     The encoder's fixed filters: the 60 Hz high-pass, the 1 kHz
- *              low-pass and the analysis pre-emphasis
+ *              low-pass, the analysis pre-emphasis and the loudness
+ *              high-pass
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -11,6 +12,7 @@
 #ifndef SPEAK5220_CORE_ENCODER_ENCODER_FILTERS_H_
 #define SPEAK5220_CORE_ENCODER_ENCODER_FILTERS_H_
 
+#include <cstddef>
 #include <span>
 #include <vector>
 
@@ -36,6 +38,21 @@ std::vector<double> ChirpInverse();
 // The pre-emphasis FIR for `pre_emphasis`: ChirpInverse(), or 1 - mu z^-1.
 // Re-implements tms5220enc.py preEmphasisFilter().
 std::vector<double> PreEmphasisFilter(const PreEmphasis& pre_emphasis);
+
+// The corner of the first-order high-pass of the BBC Micro's speech path
+// (C21/R31; docs/technical/hardware/audio-output-stage.md), through which
+// the encoder measures loudness.
+inline constexpr double kLoudnessHighPassHz = 279.0;
+
+// `x` (8 kHz) through a first-order high-pass at kLoudnessHighPassHz: the
+// bilinear transform, prewarped, starting at rest, as
+// scipy.signal.lfilter() would. The levels the encoder aims at and
+// measures are taken after it, so bass does not count as loudness. O(n).
+std::vector<double> LoudnessHighPass(std::span<const double> x);
+
+// The power gain |H|^2 of LoudnessHighPass() at each of the `bins` bins of
+// a real FFT of size 2 (bins - 1), from 0 Hz to half the sample rate.
+std::vector<double> LoudnessHighPassPower(std::size_t bins);
 
 }  // namespace speak5220::core::encoder
 

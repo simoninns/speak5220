@@ -310,7 +310,7 @@ TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
                                                  {"pre_emphasis", "chirp"}}})
           .IsOk());
   const std::string yaml = ProjectYamlOf(project);
-  EXPECT_THAT(yaml, HasSubstr("    target_rms: 24\n    repeat_lambda: 300\n"));
+  EXPECT_THAT(yaml, HasSubstr("    target_rms: 20\n    repeat_lambda: 300\n"));
   EXPECT_THAT(yaml, HasSubstr("    window: 256\n"));
   EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.6\n"));
@@ -334,7 +334,7 @@ TEST_F(ProjectSerializerTest, EveryOptionIsWrittenTheNoiseGateUnsetAsNull) {
                                   "    normalise_db: null\n"
                                   "    normalise_ratio: 3\n"
                                   "  default_encoder:\n"
-                                  "    target_rms: 24\n"));
+                                  "    target_rms: 20\n"));
   EXPECT_THAT(defaults, HasSubstr("    voicing_evidence: 5\n"
                                   "    voicing_min_run: 2\n"
                                   "    level_agc: 1.25\n"));

@@ -317,12 +317,12 @@ TEST_F(EncoderPanelTest, ResetRestoresTheProjectDefaults) {
   EXPECT_TRUE(panel_.Form()->IsMarked("treble_tilt"));
   ASSERT_TRUE(panel_.ResetButton()->isEnabled());
   EXPECT_CALL(encoding_.encoder,
-              Encode(_, kSampleRate, Field(&EncoderOptions::target_rms, 24.0)))
+              Encode(_, kSampleRate, Field(&EncoderOptions::target_rms, 20.0)))
       .Times(1);
   panel_.ResetButton()->click();
   QCoreApplication::processEvents();
   EXPECT_TRUE(Phrase(1).encoder.empty());
-  EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 24.0);
+  EXPECT_DOUBLE_EQ(Slider("target_rms")->Value(), 20.0);
   EXPECT_DOUBLE_EQ(Slider("treble_tilt")->Value(), 0.0);
   EXPECT_EQ(panel_.Form()->PresetBox()->currentIndex(), 0);
   EXPECT_FALSE(panel_.ResetButton()->isEnabled());
@@ -444,7 +444,7 @@ TEST(EncoderPanelRefusalTest,
   panel.ReEncode();
   QCoreApplication::processEvents();
   EXPECT_EQ(failure, QStringLiteral("over the budget"));
-  EXPECT_DOUBLE_EQ(rms->Value(), 24.0);
+  EXPECT_DOUBLE_EQ(rms->Value(), 20.0);
   EXPECT_EQ(stack.count(), 0);
 }
 

@@ -14,28 +14,31 @@ shows them:
 - **[Encoder](#encoder)**: how the preprocessed recording is encoded into
   TMS5220 frames.
 
-The encoder reproduces the frames of the project's reference encoder
-(`investigation/encoder/tms5220enc.py`) exactly, so its options mean
+The encoder follows the project's reference encoder
+(`investigation/encoder/tms5220enc.py`) step by step, so its options mean
 what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md). The
 exceptions are `resonance_hold_db` and `voicing_min_run`, and the
-preprocessing, which the reference does not have. Six defaults differ
-from the reference's. Four give the best typical
+preprocessing, which the reference does not have, and `target_rms`, which
+here measures loudness: the output's level after the BBC Micro's 279 Hz
+high-pass, so bass does not count. Five defaults differ from the
+reference's. Three give the best typical
 [quality rating](../user-manual/encoder.md#the-quality-rating) over a
-corpus of 243 recordings: `target_rms` 24 (the reference's is 20),
-`window` 256 (240), `voicing_evidence` 5 (4) and `level_agc` 1.25 (1).
-The other two, `voicing_threshold` 0.6 (0.3), with `voicing_min_run` 2,
-and `repeat_lambda` 300 (70), bring the encoder's voicing and its repeat
+corpus of 243 recordings: `window` 256 (the reference's is 240),
+`voicing_evidence` 5 (4) and `level_agc` 1.25 (1). The other two,
+`voicing_threshold` 0.6 (0.3), with `voicing_min_run` 2, and
+`repeat_lambda` 300 (70), bring the encoder's voicing and its repeat
 frames near those of Acorn's own PHROM phrases, and raise the typical
-rating over the corpus too.
+rating over the corpus too. `target_rms` keeps the reference's 20, which
+as a loudness gives Acorn's own phrases their own loudness back.
 
-The reference's other options are fixed at its defaults (below). The
-encoder also always gives pauses a quiet frame
-([quiet pauses](../user-manual/encoder.md#quiet-pauses)), which the
-reference does not. So with no preprocessing, the reference's values,
-and the options the reference does not have off (`resonance_hold_db`
-unset, `voicing_min_run` 1), the encoder gives the reference's frames
-with their pauses quietened.
+The reference's other options are fixed (below). The encoder also always
+gives pauses a quiet frame
+([quiet pauses](../user-manual/encoder.md#quiet-pauses)), and sets the
+level differently from the reference: it measures loudness rather than
+level, and lets the loudest peaks clip a little, as Acorn's phrases do
+([the level](../user-manual/encoder.md#the-level)). So its frames are
+not the reference's, though every stage before the level setting is.
 
 Options are set in the [project file](project-file.md):
 `default_preprocess` and `default_encoder` hold the project's values,
@@ -90,7 +93,7 @@ Project files and the command line treat the two groups alike.
 
 | Key | Reference encoder | Meaning | Type | Default | Range | Slider |
 |---|---|---|---|---|---|---|
-| `target_rms` | `targetRms` | RMS of the output over sounding frames, in DAC codes | Number | 24 | 1 to 100 | 5 to 50 codes, steps of 0.5 |
+| `target_rms` | `targetRms` | RMS of the output over sounding frames, in DAC codes, measured after a 279 Hz high-pass (the BBC Micro's), so bass does not count | Number | 20 | 1 to 100 | 5 to 50 codes, steps of 0.5 |
 | `repeat_lambda` | `repeatLambda` | Bits a run of repeats may save per dB of extra prediction error; lower gives fewer bits | Number | 300 | 0 to 1000 | 0 to 600, steps of 5 |
 | `gate_db` (*Advanced*) | `gateDb` | Frames this many dB below the loudest frame become silence | Number | 45 | 10 to 90 | 20 to 70 dB, steps of 0.5 |
 | `pre_emphasis` | `preEmphasis` | Pre-emphasis for the voiced analysis: `"chirp"` whitens the chip's excitation pulse; a number μ uses 1 − μz⁻¹ | `"chirp"` or a number | `"chirp"` | μ from 0 to 0.99 | μ from 0.5 to 0.99, steps of 0.01 |
@@ -105,13 +108,13 @@ Project files and the command line treat the two groups alike.
 ## Fixed settings
 
 The reference encoder has seven more options, which Speak5220 fixes at
-the values below. Changing them made no difference worth keeping over the
+the values below (`peakLimit` it replaces). Changing them made no difference worth keeping over the
 corpus of 243 recordings, or did what another option already does:
 
 | Reference option | Fixed at | Why |
 |---|---|---|
 | `targetPeak` | Unset: the level is set by `target_rms` | A second way to set the loudness. A peak of 100 lowered the median score from 0.718 to 0.673 |
-| `peakLimit` | 120 | A safety limit within the DAC's ±127 |
+| `peakLimit` | Replaced: no peak over 160, and at most 1 sample in 1000 over the DAC's ±127, which clips it | The reference's 120 held every peak inside the DAC's range, so the peaks rather than `target_rms` set the level and phrases came out quieter than Acorn's own, which clip 0.21 % of their samples ([the level](../user-manual/encoder.md#the-level)) |
 | `repeats` | On | `repeat_lambda` already sets how many repeat frames are used |
 | `iterations` | 5 passes | 3 or 8 passes moved no file's score by more than 0.02 |
 | `fadeUnvoiced` | On | Hiss fades out instead of stopping abruptly |

@@ -1,8 +1,10 @@
 # Reference data
 
 What the retired reference emulator (`investigation/emulator/`) and
-encoder (`investigation/encoder/tms5220enc.py`) produced, and what
-independent implementations of the quality measures give, for the application's functional tests to compare against
+encoder (`investigation/encoder/tms5220enc.py`) produced, the C++
+encoder's own level setting and frames where it departs from the
+reference encoder, and what independent implementations of the quality
+measures give, for the application's functional tests to compare against
 (application plan §1.4). The build and tests read only these files.
 
 Written by `app/scripts/golden/generate_golden.py` (`emulator/`,
@@ -26,28 +28,40 @@ nix develop --command python3 app/scripts/golden/generate_golden.py --check
 | `packaging/acorn.bin`, `ti_indexed.bin` | Acorn PHROM and TI indexed images of the words in `words.tsv`, with their word tables (`*_table.tsv`) and the Acorn ASCII map (`acorn_ascii.tsv`) |
 | `packaging/wordNN.csv`, `wordNN_external.bin` | Each word's frames and its Speak External stream |
 | `encoder/option_sets.tsv` | The encoder option sets: the defaults and three fixed combinations that between them change every option the application has, as JSON (the reference's other options stay at their defaults, where the application fixes them) |
-| `encoder/frames/SET.tsv` | For each option set, every corpus file's frame count, near-tie frames (`-` for none) and packed frames (hex) |
+| `encoder/frames/SET.tsv` | For each option set, every corpus file's frame count, near-tie frames (`-` for none) and packed frames (hex), from the C++ encoder |
 | `encoder/inputs/NAME.wav` | WAV copies of the corpus subset (public-domain and CC0 voices only) |
-| `encoder/intermediates/NAME.json` | `encodeDetailed()`'s intermediate values for each subset file, default options |
+| `encoder/intermediates/NAME.json` | For each subset file with the reference's default options, `encodeDetailed()`'s intermediate values up to the plan, and in `encode` the C++ encoder's level setting and frames |
 | `quality/measures/scores/SET.tsv` | For each option set, each subset file's reference encoding measured by independent implementations of the quality measures (plan §3.3): the alignment lag, the frames the voice activity mask keeps, the mean log spectral distortion and its percentages of frames over 2 and 4 dB, REAPER's and Harvest's gross pitch error, F0 RMSE (cents) and voicing decision error, and ESTOI |
 | `quality/measures/masks/SET.tsv` | Each subset file's voice activity mask, from py-webrtcvad, one character per 10 ms frame (`1` for speech) |
 | `quality/measures/tracks/SET/NAME.tsv` | Each subset file's F0 tracks every 10 ms (0 where unvoiced), of the prepared original and output, from REAPER's command-line tool and from Harvest through pyworld |
 
-The encoder's data is written by `app/scripts/golden/encoder.py`:
+The encoder's data is written by `app/scripts/golden/encoder.py`, with the
+functional tests built (it runs the C++ encoder's by-hand writer,
+`EncoderReferenceWriter`, on WAV copies of the corpus):
 
 ```bash
 nix develop --command python3 app/scripts/golden/encoder.py --check
 ```
 
-A near-tie frame is one whose coding the Python encoder changes when the
-input is disturbed at the level of floating-point noise (a relative 1e-9);
-the C++ encoder may differ from the reference there, and only there (plan
-§3.2). The script's docstring gives the disturbances.
+The C++ encoder's level setting departs from the reference's (encoder
+version 1.3.0; docs-tech/design/high-level-design.md §8, "Level setting"),
+so since then the frames and the level-setting intermediates are its own,
+regenerated with each intended change to it, and the Python provides the
+stages before (HLD §13). A near-tie frame is one whose coding changes when
+the input is disturbed at the level of floating-point noise; the C++
+encoder could differ from the reference there, and only there (plan §3.2).
+The Python reference had none, and the C++ encoder, which gives the same
+frames on every platform, marks none. The Python's floating-point values
+differ in their last bits between platforms (a relative 1e-11), within the
+tests' tolerance, so `--check` reports the intermediates as differing on
+a platform other than the one that wrote them.
 
 The quality measures' data is written by `app/scripts/golden/measures.py`,
 which runs the built reference emulator (`make -C investigation/emulator`
-first), REAPER's command-line tool and the Python packages of the default
-Nix shell (py-webrtcvad, pystoi, pyworld):
+first), REAPER's command-line tool (built, like the SPTK the application
+uses, without fused multiply-add contraction, so its tracks are the same
+on every platform) and the Python packages of the default Nix shell
+(py-webrtcvad, pystoi, pyworld):
 
 ```bash
 nix develop --command python3 app/scripts/golden/measures.py --check

@@ -33,9 +33,10 @@ class ILevelSetter {
                                           const EncoderOptions& options) = 0;
 
   // One energy index per plan entry (0 for silence), aiming each sounding
-  // frame's output level at levels[j] x gain codes, with no output code
-  // beyond 120 and no lattice wrap. `stats`, if not null, receives what the
-  // limiter changed.
+  // frame's output loudness (MeasureOutputLoudness()) at levels[j] x gain
+  // codes, with no lattice wrap, no output code beyond 160 and at most 1
+  // sample in 1000 beyond the DAC's +-127. `stats`, if not null, receives
+  // what the limiter changed.
   virtual std::vector<int> SetLevels(std::span<const PlanEntry> plan,
                                      std::span<const double> levels,
                                      double gain, LevelStats* stats) = 0;
@@ -44,9 +45,11 @@ class ILevelSetter {
 // The output RMS in codes of the filter of reflection coefficients
 // `k_values` at energy value 1 (speak5220 datasheet §12.3: code =
 // E x h / 128): white excitation of RMS 64 for period 0, else the chirp
-// every `period` samples. Re-implements tms5220enc.py _gainOf().
+// every `period` samples; with `loudness`, after LoudnessHighPass().
+// Re-implements tms5220enc.py _gainOf(), which has no `loudness`.
 // O(4096 log 4096).
-double GainOf(dsp::IFft& fft, std::span<const double> k_values, int period);
+double GainOf(dsp::IFft& fft, std::span<const double> k_values, int period,
+              bool loudness = false);
 
 // The K values in force at each frame for the open-loop gain: those of the
 // last full frame, 10 for a voiced frame after a voiced full frame, else 4;
@@ -63,14 +66,23 @@ struct OutputLevels {
 OutputLevels MeasureOutputLevels(std::span<const int> codes, int frames,
                                  int peak_half = 100);
 
+// As MeasureOutputLevels(), with each frame's level taken after
+// LoudnessHighPass(): the loudness the level setter aims at. The peaks are
+// of `codes` itself. O(codes + frames x 200).
+OutputLevels MeasureOutputLoudness(std::span<const int> codes, int frames,
+                                   int peak_half = 100);
+
 // ILevelSetter as tms5220enc.py _shapeLevels() and _setLevels() with its
-// default iterations, peakLimit and compression: an open-loop energy from
-// each frame's gain; up to five closed-loop passes through the reference
+// default iterations and compression: an open-loop energy from each
+// frame's gain; up to five closed-loop passes through the reference
 // synthesiser, moving each frame 70% of the way to its target in dB and
 // keeping the best pass; frames far too loud even at energy 1 made silent;
-// then a limiter that lowers frames whose peak is over 120, and a safety
-// net that lowers everything until nothing wraps. Thread-safe if the IFft
-// is.
+// then a limiter that lowers frames whose peak is over 160 and, while more
+// than 1 sample in 1000 passes +-127, the frames that clip the most, and a
+// safety net that lowers everything until the output is within those
+// limits and nothing wraps. Unlike the reference, levels are measured
+// after LoudnessHighPass() (in the open-loop gain too), and its limiter
+// holds every code within 120 instead. Thread-safe if the IFft is.
 class LevelSetter : public ILevelSetter {
  public:
   // `fft` must outlive the level setter.
