@@ -208,6 +208,27 @@ class SetEncodingsCommand : public ProjectCommand {
   std::vector<core::project::EncodingChange> previous_;
 };
 
+// Replaces phrases, each keeping its place in the list, with other
+// versions of themselves (the same ids), as one step named `text` (Revert
+// to Saved): RemovePhrases() of them all, then InsertPhrases() of the
+// versions where they were, so names the phrases swap between them are
+// free. All or none: if the insertion fails, the phrases are put back.
+// Reversed the same way with the phrases removed.
+class ReplacePhrasesCommand : public ProjectCommand {
+ public:
+  ReplacePhrasesCommand(core::project::IProjectEditor& editor,
+                        std::vector<core::project::Phrase> phrases,
+                        const QString& text);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  std::vector<core::project::Phrase> phrases_;
+  std::vector<core::project::PlacedPhrase> replaced_;
+};
+
 // SetDefaultEncoder(); reversed by SetDefaultEncoder() with the previous
 // options.
 class SetDefaultEncoderCommand : public ProjectCommand {

@@ -88,6 +88,12 @@ core::Status ProjectEdits::SetDefaultEncoder(
   return Push(std::make_unique<SetDefaultEncoderCommand>(*editor_, options));
 }
 
+core::Status ProjectEdits::ReplacePhrases(std::vector<project::Phrase> phrases,
+                                          const QString& text) {
+  return Push(std::make_unique<ReplacePhrasesCommand>(
+      *editor_, std::move(phrases), text));
+}
+
 core::Status ProjectEdits::Push(std::unique_ptr<ProjectCommand> command) {
   if (core::Status status = command->Execute(); !status.IsOk()) {
     return status;

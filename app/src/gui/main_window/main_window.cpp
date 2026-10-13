@@ -120,6 +120,8 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
           &MainWindow::UpdateTitle);
   connect(&document_, &ProjectDocument::PathChanged, this,
           &MainWindow::UpdateTitle);
+  connect(&document_, &ProjectDocument::SavedChanged, this,
+          &MainWindow::OnProjectChanged);
   connect(&model_, &PhraseListModel::EditFailed, this,
           [this](const QString& message) {
             ShowError(QStringLiteral("Edit Phrases"), message);
@@ -335,6 +337,12 @@ void MainWindow::CreateActions() {
   connect(optimise_action_, &QAction::triggered, this,
           [this] { Optimise(EncodableSelection()); });
 
+  revert_action_ = new QAction(QStringLiteral("Re&vert to Saved"), this);
+  revert_action_->setToolTip(QStringLiteral(
+      "Put the selected phrases back as they were when last saved"));
+  connect(revert_action_, &QAction::triggered, this,
+          &MainWindow::RevertSelected);
+
   export_action_ = new QAction(QStringLiteral("&Export..."), this);
   export_action_->setToolTip(QStringLiteral(
       "Export PHROM images, C headers or WAV files, or run a saved preset"));
@@ -372,6 +380,8 @@ void MainWindow::CreateMenus() {
   phrase->addSeparator();
   phrase->addAction(re_encode_action_);
   phrase->addAction(optimise_action_);
+  phrase->addSeparator();
+  phrase->addAction(revert_action_);
 
   QMenu* exports = menuBar()->addMenu(QStringLiteral("E&xport"));
   exports->addAction(export_action_);
@@ -556,7 +566,7 @@ void MainWindow::ShowAbout() {
 }
 
 void MainWindow::OnProjectChanged() {
-  model_.SetProject(document_.Project());
+  model_.SetProject(document_.Project(), &document_.Saved());
   status_label_->setText(ProjectSizeText(document_.Project().Allocation()));
   OnSelectionChanged();
 }
@@ -602,6 +612,7 @@ void MainWindow::UpdateActions() {
   sort_action_->setEnabled(model_.PhraseCount() > 1);
   re_encode_action_->setEnabled(!StaleSelection().empty());
   optimise_action_->setEnabled(!EncodableSelection().empty());
+  revert_action_->setEnabled(!RevertibleSelection().empty());
   export_action_->setEnabled(model_.PhraseCount() > 0);
 }
 
@@ -631,6 +642,40 @@ std::vector<project::PhraseId> MainWindow::StaleSelection() const {
     }
   }
   return ids;
+}
+
+std::vector<project::PhraseId> MainWindow::RevertibleSelection() const {
+  std::vector<project::PhraseId> ids;
+  for (const int row : panel_->SelectedRows()) {
+    const project::PhraseId id = model_.IdAt(row);
+    if (document_.SavedPhrase(id) != nullptr &&
+        document_.IsPhraseModified(id)) {
+      ids.push_back(id);
+    }
+  }
+  return ids;
+}
+
+void MainWindow::RevertSelected() {
+  const std::vector<project::PhraseId> ids = RevertibleSelection();
+  if (ids.empty()) {
+    return;
+  }
+  std::vector<project::Phrase> saved;
+  saved.reserve(ids.size());
+  for (const project::PhraseId& id : ids) {
+    saved.push_back(*document_.SavedPhrase(id));
+  }
+  const QString text =
+      saved.size() == 1
+          ? QStringLiteral("Revert %1 to Saved")
+                .arg(QString::fromStdString(saved.front().name))
+          : QStringLiteral("Revert %1 Phrases to Saved").arg(saved.size());
+  if (const core::Status status =
+          document_.Edits().ReplacePhrases(std::move(saved), text);
+      !status.IsOk()) {
+    ShowError(QStringLiteral("Revert to Saved"), ToQString(status.Message()));
+  }
 }
 
 void MainWindow::Optimise(const std::vector<project::PhraseId>& ids) {

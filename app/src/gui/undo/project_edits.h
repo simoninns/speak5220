@@ -53,6 +53,10 @@ class ProjectEdits {
   core::Status SetEncodings(SetEncodingsCommand::Changes changes,
                             const QString& text);
   core::Status SetDefaultEncoder(core::encoder::EncoderOptions options);
+  // Replaces phrases with other versions of themselves, in place, as one
+  // step named `text`; all or none (ReplacePhrasesCommand).
+  core::Status ReplacePhrases(std::vector<core::project::Phrase> phrases,
+                              const QString& text);
 
  private:
   core::Status Push(std::unique_ptr<ProjectCommand> command);

@@ -72,14 +72,19 @@ class PhraseListModel : public QAbstractListModel {
   static constexpr int kWordNumberRole = Qt::UserRole + 6;
   // The PHROM this row starts, for PHROM 2 onwards (int); 0 otherwise.
   static constexpr int kPhromStartRole = Qt::UserRole + 7;
+  // Whether the phrase differs from its saved version, or has none (bool).
+  static constexpr int kModifiedRole = Qt::UserRole + 8;
 
   explicit PhraseListModel(ProjectEdits& edits, QObject* parent = nullptr);
 
   // Shows `project`'s phrases and allocation, replacing the rows (a model
   // reset). Whether each encoding is current is remembered per phrase,
   // keyed by its settings and stored hash, so an edit elsewhere does not
-  // hash every phrase's audio again.
-  void SetProject(const core::project::Project& project);
+  // hash every phrase's audio again. With `saved`, the project as last
+  // saved, each phrase that differs from its version there, or is not
+  // there, is marked modified; without it none is.
+  void SetProject(const core::project::Project& project,
+                  const core::project::Project* saved = nullptr);
 
   // The number of rows: rowCount() of the root.
   int PhraseCount() const { return static_cast<int>(rows_.size()); }
@@ -131,6 +136,7 @@ class PhraseListModel : public QAbstractListModel {
     EncodingState state = EncodingState::kNotEncoded;
     core::project::PhraseSlot slot;
     int phrom_start = 0;
+    bool modified = false;
   };
 
   // A remembered staleness check: the inputs it was made from, and the

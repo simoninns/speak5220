@@ -8,6 +8,7 @@
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
  */
 
+#include <QAction>
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
@@ -38,8 +39,10 @@
 #include "gui/main_window/dialogs.h"
 #include "gui/main_window/main_window.h"
 #include "gui/main_window/project_document.h"
+#include "gui/phrase_list/phrase_list_model.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/support/gui_mocks.h"
+#include "gui/undo/project_edits.h"
 #include "support/project_builder.h"
 
 namespace speak5220::app {
@@ -233,6 +236,64 @@ TEST_F(MainWindowProjectTest, SaveWritesBackInTheSameForm) {
   ProjectDocument reopened;
   ASSERT_TRUE(reopened.Open(path).IsOk());
   EXPECT_EQ(reopened.Project().Phrases().front().name, "HELLO THERE");
+}
+
+// Phrases changed since the last save are marked in the list and can be
+// put back as saved, in one undoable step; saving clears the marks.
+TEST_F(MainWindowProjectTest, ChangedPhrasesAreMarkedAndCanBeReverted) {
+  const QString path = CopyFixture(QStringLiteral("general/many-phrases"));
+  ASSERT_TRUE(window_.OpenProject(path));
+  const core::project::Project saved = window_.Document().Project();
+  const std::vector<core::project::PhraseId> ids = saved.Order();
+  const auto marked = [this](int row) {
+    return window_.Model()
+        .index(row)
+        .data(PhraseListModel::kModifiedRole)
+        .toBool();
+  };
+  QAction* revert = nullptr;
+  for (QAction* action : window_.findChildren<QAction*>()) {
+    if (action->text() == QStringLiteral("Re&vert to Saved")) {
+      revert = action;
+    }
+  }
+  ASSERT_NE(revert, nullptr);
+  window_.Panel()->Select({ids[0], ids[1]});
+  EXPECT_FALSE(marked(0));
+  EXPECT_FALSE(revert->isEnabled());
+
+  // The first two phrases swap names; the third gets a description.
+  ProjectEdits& edits = window_.Document().Edits();
+  const std::string first = saved.Phrases()[0].name;
+  const std::string second = saved.Phrases()[1].name;
+  ASSERT_TRUE(edits.RenamePhrase(ids[0], "SPARE").IsOk());
+  ASSERT_TRUE(edits.RenamePhrase(ids[1], first).IsOk());
+  ASSERT_TRUE(edits.RenamePhrase(ids[0], second).IsOk());
+  ASSERT_TRUE(edits.SetDescription(ids[2], "changed").IsOk());
+  EXPECT_TRUE(marked(0));
+  EXPECT_TRUE(marked(1));
+  EXPECT_TRUE(marked(2));
+  EXPECT_FALSE(marked(3));
+  EXPECT_TRUE(revert->isEnabled());
+
+  revert->trigger();
+  EXPECT_EQ(window_.Document().Project().Phrases()[0], saved.Phrases()[0]);
+  EXPECT_EQ(window_.Document().Project().Phrases()[1], saved.Phrases()[1]);
+  EXPECT_EQ(window_.Document().UndoStack().undoText(),
+            QStringLiteral("Revert 2 Phrases to Saved"));
+  EXPECT_FALSE(marked(0));
+  EXPECT_TRUE(marked(2));
+  EXPECT_FALSE(revert->isEnabled());
+  EXPECT_EQ(window_.Panel()->SelectedIds(),
+            (std::vector<core::project::PhraseId>{ids[0], ids[1]}));
+  window_.Document().UndoStack().undo();
+  EXPECT_EQ(window_.Document().Project().Phrases()[0].name, second);
+  EXPECT_TRUE(marked(0));
+
+  ASSERT_TRUE(window_.Save());
+  EXPECT_FALSE(marked(0));
+  EXPECT_FALSE(marked(2));
+  EXPECT_FALSE(revert->isEnabled());
 }
 
 TEST_F(MainWindowProjectTest, ClosingWithUnsavedChangesSavesWhenAsked) {

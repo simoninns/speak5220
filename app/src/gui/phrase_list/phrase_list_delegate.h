@@ -24,8 +24,10 @@ class QPainter;
 namespace speak5220::app {
 
 // Plan §5: each row shows the phrase's name, its state (stale, not
-// encoded, locked) and its size in bytes; the name of a phrase too large
-// for a PHROM is in the theme's warning colour; a row with
+// encoded, locked) and its size in bytes; the name of a phrase changed
+// since the project was last saved is marked, as the window title marks
+// a modified project; the name of a phrase too large for a PHROM is in
+// the theme's warning colour; a row with
 // PhraseListModel::kPhromStartRole has a "PHROM N" divider above it.
 // GUI thread only.
 class PhraseListDelegate : public QStyledItemDelegate {
@@ -34,6 +36,9 @@ class PhraseListDelegate : public QStyledItemDelegate {
  public:
   using QStyledItemDelegate::QStyledItemDelegate;
 
+  // The name drawn for a row: the phrase's name, with " *" after it when
+  // PhraseListModel::kModifiedRole is set.
+  static QString NameText(const QModelIndex& index);
   // The text drawn at the right of a row: "312 B", "312 B · stale",
   // "not encoded", "1.2 KB · locked".
   static QString DetailText(const QModelIndex& index);
@@ -46,6 +51,11 @@ class PhraseListDelegate : public QStyledItemDelegate {
              const QModelIndex& index) const override;
   QSize sizeHint(const QStyleOptionViewItem& option,
                  const QModelIndex& index) const override;
+
+ protected:
+  // Draws NameText() as the row's text.
+  void initStyleOption(QStyleOptionViewItem* option,
+                       const QModelIndex& index) const override;
 
  private:
   static int DividerHeight(const QStyleOptionViewItem& option,

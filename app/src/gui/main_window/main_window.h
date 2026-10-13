@@ -57,11 +57,12 @@ class PhraseWaveforms;
 // (EncoderPanel), each tab's waveform above its settings; the status bar shows
 // the project's size in KB and PHROMs. Menus: File (new, open, recent, save,
 // save as, quit), Edit (undo, redo), Phrase (add, remove, move up and down,
-// sort A-Z, re-encode, optimise), Export, Audio (chip output, output filter),
-// Help.
+// sort A-Z, re-encode, optimise, revert to saved), Export, Audio (chip
+// output, output filter), Help.
 //
 // The title is the project's file name, marked while it has unsaved
-// changes; replacing or closing a modified project asks first. Questions
+// changes, as the phrase list marks each phrase changed since the last
+// save; replacing or closing a modified project asks first. Questions
 // go through IDialogs, the recent-file list through IRecentFilesStore,
 // what the user chose to see and hear (the tab shown, the advanced encoder
 // settings, the output filter and chip output of the Audio menu) through
@@ -119,6 +120,12 @@ class MainWindow : public QMainWindow {
   void ReEncodeSelected();
   // Batch re-encodings started and not yet finished.
   int EncodesRunning() const { return encodes_running_; }
+  // Puts the selected phrases changed since the project was last saved
+  // back as they were saved: name, description, play start, settings and
+  // encoding, each keeping its place in the list. One undoable step;
+  // all or none, a failure (such as a saved name another phrase has taken
+  // since) being reported.
+  void RevertSelected();
 
   // Asks for an export (IDialogs::AskExport(), which asks before
   // replacing existing files), then runs it in the background and writes
@@ -188,6 +195,8 @@ class MainWindow : public QMainWindow {
   std::vector<core::project::PhraseId> EncodableSelection() const;
   // Those of them that are not encoded, or stale.
   std::vector<core::project::PhraseId> StaleSelection() const;
+  // The selected phrases that were saved and have changed since.
+  std::vector<core::project::PhraseId> RevertibleSelection() const;
 
   IDialogs* dialogs_;
   IRecentFilesStore* recent_store_;
@@ -247,6 +256,7 @@ class MainWindow : public QMainWindow {
   QAction* sort_action_ = nullptr;
   QAction* re_encode_action_ = nullptr;
   QAction* optimise_action_ = nullptr;
+  QAction* revert_action_ = nullptr;
   QAction* export_action_ = nullptr;
   QAction* about_action_ = nullptr;
 };

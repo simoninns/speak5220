@@ -14,6 +14,7 @@
 #include <QString>
 #include <QUndoStack>
 
+#include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/util/status.h"
 #include "gui/undo/project_edits.h"
@@ -21,8 +22,10 @@
 namespace speak5220::app {
 
 // The project the main window shows: the core Project, the undo stack its
-// edits go onto (ProjectEdits), and the file it was opened from or saved
-// to. It is modified when the undo stack is away from its clean state.
+// edits go onto (ProjectEdits), the file it was opened from or saved to,
+// and the project as it was last opened or saved, against which each
+// phrase can be compared and reverted. It is modified when the undo stack
+// is away from its clean state.
 // Opening and saving use the core's stores and serializer, so the GUI and
 // the CLI read and write the same files. GUI thread only.
 class ProjectDocument : public QObject {
@@ -48,6 +51,15 @@ class ProjectDocument : public QObject {
   bool IsModified() const { return !undo_stack_.isClean(); }
   // The file or directory name, or kUntitledName.
   QString DisplayName() const;
+  // The project as last opened or saved; empty for a new project.
+  const core::project::Project& Saved() const { return saved_; }
+  // The phrase with `id` as last saved, or nullptr if it has not been
+  // saved.
+  const core::project::Phrase* SavedPhrase(
+      const core::project::PhraseId& id) const;
+  // Whether the phrase with `id` differs from its saved version, or has
+  // none. Its place in the list is not part of it.
+  bool IsPhraseModified(const core::project::PhraseId& id) const;
 
   // Replaces the project with an empty one, not yet saved.
   void New();
@@ -69,6 +81,9 @@ class ProjectDocument : public QObject {
   void Changed();
   void ModifiedChanged(bool modified);
   void PathChanged();
+  // Saved() changed: the project was saved. Opening or replacing it
+  // signals Changed() instead.
+  void SavedChanged();
 
  private:
   core::Status SaveTo(const core::project::Project& project,
@@ -76,6 +91,7 @@ class ProjectDocument : public QObject {
   void Replace(core::project::Project project, const QString& path);
 
   core::project::Project project_;
+  core::project::Project saved_;
   QUndoStack undo_stack_;
   ProjectEdits edits_{project_, undo_stack_};
   QString path_;

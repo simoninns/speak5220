@@ -53,6 +53,13 @@ Each row shows:
   **Phrase > Re-encode**), **not encoded** if it has no frames yet, or
   **locked** if its frames are never re-encoded.
 
+A phrase changed since the project was last saved has `*` after its name,
+as the title bar marks the project. That covers its name, description,
+[play start](waveforms.md#the-play-start), its own settings and its
+encoding, and a phrase added since the last save. Moving a phrase does not
+mark it, and changing the project's defaults marks none (though phrases
+that follow them may become stale). Saving clears every mark.
+
 A row with a **PHROM 2**, **PHROM 3**, ... band above it is the first
 phrase of that PHROM. A phrase too large for an empty PHROM is shown in
 red; its tooltip gives its size. Hovering over any row shows its PHROM,
@@ -69,10 +76,17 @@ The buttons above the list, and the **Phrase** menu:
 | A-Z | Sort A-Z | | Sorts every phrase by name |
 | | Re-encode | Ctrl+E | Encodes the selected phrases that are not encoded or are stale, with their settings (see [re-encoding several phrases](encoder.md#re-encoding-several-phrases)) |
 | | Optimise... | Ctrl+Shift+O | Searches the selected phrases' settings for the best quality (see [Optimise](encoder.md#optimise)) |
+| | Revert to Saved | | Puts the selected phrases marked `*` back as they were when the project was last saved or opened: name, description, play start, settings and encoding. Each keeps its place in the list. One step, which Undo takes back |
 
 Select several phrases with Shift or Ctrl and a click. Moving several
 phrases keeps them in their order and gathers them together: Move Up puts
 them all just above the first of them.
+
+Revert to Saved is offered when a selected phrase has been saved and has
+changed since. A phrase added since the last save has nothing to revert
+to; remove it instead. If a phrase's saved name has since been given to
+another phrase that is not being reverted, nothing is reverted and the
+clash is reported: rename the other phrase, or select both.
 
 **Drag and drop.** Drag phrases to another place in the list to move them.
 Drop WAV files from a file manager onto the list to import them where they
@@ -137,8 +151,8 @@ The window remembers both choices for next time.
 some platforms) step through every change to the phrases: adding,
 removing, moving, sorting, renaming, changing a description, moving
 the [play start](waveforms.md#the-play-start), changing a phrase's
-settings or the project's defaults, re-encoding and accepting
-[Optimise](encoder.md#optimise)'s results. The menu
+settings or the project's defaults, re-encoding, accepting
+[Optimise](encoder.md#optimise)'s results and reverting to saved. The menu
 names the step, for example **Undo Rename to HELLO**. Undoing back to the
 last save clears the unsaved-changes mark. Opening or starting a project
 clears the history.

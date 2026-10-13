@@ -30,7 +30,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality, BBC BASIC II tokenisations, output hashes) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`, `bbc/`, `benchmark/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers and drag and drop, phrase names and descriptions, undo/redo, the status bar (§15); the Original, Preprocess and Encode tabs with their waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers, drag and drop and changed-phrase marks, revert to saved, phrase names and descriptions, undo/redo, the status bar (§15); the Original, Preprocess and Encode tabs with their waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
 | `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
@@ -1489,9 +1489,15 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
 ```
 
 - **`ProjectDocument`** owns the core `Project`, the `QUndoStack` and the
-  path. It is modified while the stack is away from its clean index, and
+  path, and a copy of the project as last opened or saved (`Saved()`;
+  empty for a new project). It is modified while the stack is away from
+  its clean index, and
   emits `Changed()` on every index change (edit, undo, redo) and when a
-  project is opened or started. Opening and saving use
+  project is opened or started, and `SavedChanged()` after a save, on
+  which the window refreshes the list as on `Changed()`. A phrase is
+  modified (`IsPhraseModified()`) when it differs from its saved version
+  (`Phrase`'s `operator==`, so its place in the list does not count) or
+  has none. Opening and saving use
   `MakeProjectStore()` and `ProjectSerializer`, as the CLI does. Opening a
   `project.yaml` opens its directory. Save keeps the project's form; Save
   As always writes a `.s5proj` file, adding the extension, and gives a
@@ -1507,7 +1513,14 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   `redo()` and the returned reverse in `undo()` (table in §14).
   `SetEncodingsCommand` applies `SetEncoding()` to several phrases as one
   step (Optimise, Re-encode); if one fails, those already changed are put
-  back and nothing is pushed, and undo reverses them latest first. An undo
+  back and nothing is pushed, and undo reverses them latest first.
+  `ReplacePhrasesCommand` (Phrase > Revert to Saved, with the selected
+  modified phrases' saved versions) is `RemovePhrases()` of them all then
+  `InsertPhrases()` of the versions at the indices returned, so each keeps
+  its place and names swapped between them are free; if the insertion
+  fails (a saved name another phrase has taken since, or the budget) the
+  removed phrases go back and nothing is pushed. Its reverse is the same
+  with the phrases it removed. An undo
   or redo that fails regardless is logged and the command made obsolete,
   so the stack drops it.
 - **`PhraseListModel`** is a flat list model of a snapshot: the main
@@ -1518,7 +1531,10 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   and word number, and `kPhromStartRole` for the first phrase of each
   PHROM after the first, taken from `PhromAllocation::phroms`. The
   delegate draws that row taller, with a "PHROM N" band; it draws the name
-  of a phrase too large for a PHROM in the theme's warning colour (§16). Whether an encoding is current
+  of a phrase too large for a PHROM in the theme's warning colour (§16),
+  and `NameText()`, the name with " *" after it, for a row with
+  `kModifiedRole`, which `SetProject()` sets from the saved project it is
+  given (`ProjectDocument::Saved()`). Whether an encoding is current
   (`EncodingCache::IsCurrent()`, which hashes the audio) is remembered per
   phrase, keyed by the default options, the phrase's overrides, the stored
   hash and version, and the audio's length, so an edit does not hash every
@@ -1585,6 +1601,8 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   Phrase and Audio; until then it was left out rather than shown disabled.
 - `speak5220 [PROJECT]` opens a project at start-up; the plan does not
   mention it.
+- The `*` on phrases changed since the last save, and Phrase > Revert to
+  Saved, are not in the plan.
 
 **Acceptance** (plan Phase 5, met):
 
@@ -1598,7 +1616,9 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   refused character shows a message and leaves the name unchanged;
 - GUI unit tests check each command's `redo()` and `undo()` against a
   mocked `IProjectEditor`, that undoing a sort restores the previous order
-  (also on a real `Project`), and that a failed operation is not pushed;
+  (also on a real `Project`), that a failed operation is not pushed, and
+  that reverting puts phrases that swapped names back in place, all or
+  none; a functional test marks, reverts and saves phrases of a fixture;
 - GUI unit tests format the status text for given allocations;
 - the whole GUI test set passes under ASan and UBSan.
 

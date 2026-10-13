@@ -278,6 +278,55 @@ core::Status SetEncodingsCommand::Revert() {
   return core::OkStatus();
 }
 
+ReplacePhrasesCommand::ReplacePhrasesCommand(
+    project::IProjectEditor& editor, std::vector<project::Phrase> phrases,
+    const QString& text)
+    : ProjectCommand(editor, text), phrases_(std::move(phrases)) {}
+
+core::Status ReplacePhrasesCommand::Apply() {
+  std::vector<project::PhraseId> ids;
+  ids.reserve(phrases_.size());
+  for (const project::Phrase& phrase : phrases_) {
+    ids.push_back(phrase.id);
+  }
+  core::StatusOr<std::vector<project::PlacedPhrase>> removed =
+      Editor().RemovePhrases(ids);
+  if (!removed.IsOk()) {
+    return removed.GetStatus();
+  }
+  // Each version where its phrase was, in the removed phrases' ascending
+  // order.
+  std::vector<project::PlacedPhrase> placed;
+  placed.reserve(removed->size());
+  for (const project::PlacedPhrase& old : *removed) {
+    for (const project::Phrase& phrase : phrases_) {
+      if (phrase.id == old.phrase.id) {
+        placed.push_back({.index = old.index, .phrase = phrase});
+      }
+    }
+  }
+  if (core::Status status = Editor().InsertPhrases(std::move(placed));
+      !status.IsOk()) {
+    if (const core::Status put_back = Editor().InsertPhrases(*removed);
+        !put_back.IsOk()) {
+      core::Logger(core::kLogModuleGui)
+          ->error("cannot put back the phrases: {}", put_back.Message());
+    }
+    return status;
+  }
+  replaced_ = std::move(*removed);
+  return core::OkStatus();
+}
+
+core::Status ReplacePhrasesCommand::Revert() {
+  if (core::Status status =
+          Editor().RemovePhrases(IdsOf(replaced_)).GetStatus();
+      !status.IsOk()) {
+    return status;
+  }
+  return Editor().InsertPhrases(replaced_);
+}
+
 SetDefaultEncoderCommand::SetDefaultEncoderCommand(
     project::IProjectEditor& editor, core::encoder::EncoderOptions options)
     : ProjectCommand(editor, QStringLiteral("Change Project Defaults")),

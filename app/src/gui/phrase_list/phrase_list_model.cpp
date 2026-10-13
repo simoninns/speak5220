@@ -84,7 +84,8 @@ QString StateText(EncodingState state) {
 PhraseListModel::PhraseListModel(ProjectEdits& edits, QObject* parent)
     : QAbstractListModel(parent), edits_(&edits) {}
 
-void PhraseListModel::SetProject(const project::Project& project) {
+void PhraseListModel::SetProject(const project::Project& project,
+                                 const project::Project* saved) {
   const project::PhromAllocation allocation = project.Allocation();
   const std::string defaults_key =
       DefaultsKey(project.Settings().default_encoder);
@@ -100,6 +101,10 @@ void PhraseListModel::SetProject(const project::Project& project) {
     row.name = QString::fromStdString(phrase.name);
     row.state = StateOf(phrase, project, defaults_key);
     row.slot = allocation.phrases[i];
+    if (saved != nullptr) {
+      const project::Phrase* before = saved->FindPhrase(phrase.id);
+      row.modified = before == nullptr || *before != phrase;
+    }
     rows.push_back(std::move(row));
     if (const auto check = current_checks_.find(phrase.id);
         check != current_checks_.end()) {
@@ -255,6 +260,8 @@ QVariant PhraseListModel::data(const QModelIndex& index, int role) const {
       return placed ? row.slot.word_number : 0;
     case kPhromStartRole:
       return row.phrom_start;
+    case kModifiedRole:
+      return row.modified;
     default:
       return {};
   }
@@ -280,6 +287,9 @@ QString PhraseListModel::ToolTip(const Row& row) const {
       break;
   }
   parts << StateText(row.state);
+  if (row.modified) {
+    parts << QStringLiteral("changed since last saved");
+  }
   return parts.join(QStringLiteral("; "));
 }
 

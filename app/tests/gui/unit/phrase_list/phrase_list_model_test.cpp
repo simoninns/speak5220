@@ -194,6 +194,32 @@ TEST_F(PhraseListModelTest, DelegateTextShowsSizeAndState) {
             QStringLiteral("50 B · locked"));
 }
 
+// Phrases that differ from their saved versions, or have none, are marked;
+// their place in the list does not count.
+TEST_F(PhraseListModelTest, MarksPhrasesChangedSinceTheLastSave) {
+  const Project saved =
+      ProjectWith({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});
+  Phrase renamed = AudioPhrase(1, "UNO");
+  model_.SetProject(
+      ProjectWith({AudioPhrase(2, "TWO"), renamed, AudioPhrase(3, "NEW")}),
+      &saved);
+  EXPECT_FALSE(Data(0, PhraseListModel::kModifiedRole).toBool());
+  EXPECT_TRUE(Data(1, PhraseListModel::kModifiedRole).toBool());
+  EXPECT_TRUE(Data(2, PhraseListModel::kModifiedRole).toBool());
+  EXPECT_EQ(PhraseListDelegate::NameText(model_.index(0)),
+            QStringLiteral("TWO"));
+  EXPECT_EQ(PhraseListDelegate::NameText(model_.index(1)),
+            QStringLiteral("UNO *"));
+  EXPECT_EQ(Data(1, Qt::DisplayRole).toString(), QStringLiteral("UNO"));
+  EXPECT_TRUE(Data(1, Qt::ToolTipRole)
+                  .toString()
+                  .endsWith(QStringLiteral("changed since last saved")));
+
+  // Without a saved project, nothing is marked.
+  model_.SetProject(ProjectWith({renamed}));
+  EXPECT_FALSE(Data(0, PhraseListModel::kModifiedRole).toBool());
+}
+
 TEST_F(PhraseListModelTest, MoveUpPlacesThemBeforeTheRowAbove) {
   ShowFourPhrases();
   EXPECT_CALL(

@@ -39,6 +39,20 @@ constexpr int kDetailMargin = 6;
 
 }  // namespace
 
+QString PhraseListDelegate::NameText(const QModelIndex& index) {
+  QString name = index.data(Qt::DisplayRole).toString();
+  if (index.data(PhraseListModel::kModifiedRole).toBool()) {
+    name += QStringLiteral(" *");
+  }
+  return name;
+}
+
+void PhraseListDelegate::initStyleOption(QStyleOptionViewItem* option,
+                                         const QModelIndex& index) const {
+  QStyledItemDelegate::initStyleOption(option, index);
+  option->text = NameText(index);
+}
+
 QString PhraseListDelegate::DetailText(const QModelIndex& index) {
   QStringList parts;
   const QVariant size = index.data(PhraseListModel::kSizeRole);

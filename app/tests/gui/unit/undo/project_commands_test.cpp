@@ -285,6 +285,54 @@ TEST(ProjectCommandsOnProjectTest, UndoingSortRestoresThePreviousOrder) {
             (std::vector<PhraseId>{TestId(2), TestId(3), TestId(1)}));
 }
 
+// Two phrases that swapped names are put back in one step, in place; the
+// names are free since both are removed first.
+TEST(ProjectCommandsOnProjectTest, ReplacingPhrasesPutsThemBackInPlace) {
+  core::project::Project project = ProjectWith(
+      {AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO"), AudioPhrase(3, "THREE")});
+  const core::project::Project saved = project;
+  QUndoStack stack;
+  ProjectEdits edits(project, stack);
+  ASSERT_TRUE(edits.RenamePhrase(TestId(1), "SPARE").IsOk());
+  ASSERT_TRUE(edits.RenamePhrase(TestId(3), "ONE").IsOk());
+  ASSERT_TRUE(edits.RenamePhrase(TestId(1), "THREE").IsOk());
+  ASSERT_TRUE(edits.SetDescription(TestId(3), "changed").IsOk());
+  const core::project::Project edited = project;
+
+  ASSERT_TRUE(edits
+                  .ReplacePhrases({*saved.FindPhrase(TestId(3)),
+                                   *saved.FindPhrase(TestId(1))},
+                                  QStringLiteral("Revert 2 Phrases to Saved"))
+                  .IsOk());
+  EXPECT_EQ(project, saved);
+  EXPECT_EQ(stack.undoText(), QStringLiteral("Revert 2 Phrases to Saved"));
+  stack.undo();
+  EXPECT_EQ(project, edited);
+  stack.redo();
+  EXPECT_EQ(project, saved);
+}
+
+// A version whose name another phrase has taken is refused, and the phrases
+// are left as they were.
+TEST(ProjectCommandsOnProjectTest, ReplacingPhrasesIsAllOrNothing) {
+  core::project::Project project =
+      ProjectWith({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});
+  const core::project::Project saved = project;
+  QUndoStack stack;
+  ProjectEdits edits(project, stack);
+  ASSERT_TRUE(edits.RenamePhrase(TestId(1), "FIRST").IsOk());
+  ASSERT_TRUE(edits.RenamePhrase(TestId(2), "ONE").IsOk());
+  ASSERT_TRUE(edits.SetDescription(TestId(1), "changed").IsOk());
+  const core::project::Project edited = project;
+  const int steps = stack.count();
+  EXPECT_FALSE(edits
+                   .ReplacePhrases({*saved.FindPhrase(TestId(1))},
+                                   QStringLiteral("Revert ONE to Saved"))
+                   .IsOk());
+  EXPECT_EQ(project, edited);
+  EXPECT_EQ(stack.count(), steps);
+}
+
 TEST(ProjectCommandsOnProjectTest, EveryOperationUndoesToTheSameProject) {
   core::project::Project project =
       ProjectWith({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});

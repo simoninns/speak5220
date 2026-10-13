@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "core/audio/sndfile_wav_io.h"
+#include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_serializer.h"
 #include "core/project/project_store.h"
@@ -55,6 +56,17 @@ QString ProjectDocument::DisplayName() const {
   return QFileInfo(path_).fileName();
 }
 
+const project::Phrase* ProjectDocument::SavedPhrase(
+    const project::PhraseId& id) const {
+  return saved_.FindPhrase(id);
+}
+
+bool ProjectDocument::IsPhraseModified(const project::PhraseId& id) const {
+  const project::Phrase* phrase = project_.FindPhrase(id);
+  const project::Phrase* saved = saved_.FindPhrase(id);
+  return phrase != nullptr && (saved == nullptr || *phrase != *saved);
+}
+
 void ProjectDocument::New() { Replace(project::Project(), QString()); }
 
 core::Status ProjectDocument::Open(const QString& path) {
@@ -88,7 +100,9 @@ core::Status ProjectDocument::Save() {
   if (core::Status status = SaveTo(project_, path_); !status.IsOk()) {
     return status;
   }
+  saved_ = project_;
   undo_stack_.setClean();
+  emit SavedChanged();
   return core::OkStatus();
 }
 
@@ -112,9 +126,11 @@ core::Status ProjectDocument::SaveAs(const QString& path) {
   }
   // The name is set outside the undo stack; the project is saved with it.
   project_ = std::move(saved);
+  saved_ = project_;
   path_ = file_path;
   undo_stack_.setClean();
   emit PathChanged();
+  emit SavedChanged();
   return core::OkStatus();
 }
 
@@ -135,6 +151,7 @@ core::Status ProjectDocument::SaveTo(const project::Project& project,
 void ProjectDocument::Replace(project::Project project, const QString& path) {
   undo_stack_.clear();
   project_ = std::move(project);
+  saved_ = project_;
   path_ = path;
   emit PathChanged();
   emit ModifiedChanged(false);
