@@ -382,7 +382,7 @@ constexpr std::array<std::pair<std::string_view, double CachedQuality::*>, 7>
         {"score", &CachedQuality::score},
     }};
 
-std::string FramesYaml(const CachedEncoding& encoding) {
+std::string EncodingYaml(const CachedEncoding& encoding) {
   YAML::Emitter out;
   BeginDocument(out);
   out << YAML::Key << "encoder_version" << YAML::Value;
@@ -1065,8 +1065,8 @@ Status ReadQuality(const YAML::Node& node, const Where& where,
   return OkStatus();
 }
 
-StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
-                                        const std::string& file) {
+StatusOr<CachedEncoding> ReadEncodingYaml(
+    const std::vector<std::uint8_t>& bytes, const std::string& file) {
   StatusOr<YAML::Node> root = ParseYaml(bytes, file);
   if (!root.IsOk()) {
     return root.GetStatus();
@@ -1116,6 +1116,15 @@ StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
 
 }  // namespace
 
+std::string FramesYaml(const CachedEncoding& encoding) {
+  return EncodingYaml(encoding);
+}
+
+StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
+                                        const std::string& file) {
+  return ReadEncodingYaml(bytes, file);
+}
+
 ProjectSerializer::ProjectSerializer(audio::IWavCodec& codec)
     : codec_(&codec) {}
 
@@ -1151,7 +1160,7 @@ StatusOr<ProjectFiles> ProjectSerializer::ToFiles(const Project& project) {
       }
       if (phrase.encoding.has_value()) {
         if (Status status = add(directory + std::string(kFramesYamlName),
-                                Bytes(FramesYaml(*phrase.encoding)));
+                                Bytes(EncodingYaml(*phrase.encoding)));
             !status.IsOk()) {
           return status;
         }
@@ -1217,7 +1226,7 @@ StatusOr<Project> ProjectSerializer::FromFiles(const ProjectFiles& files) {
       }
       if (const auto frames = files.find(frames_path); frames != files.end()) {
         StatusOr<CachedEncoding> encoding =
-            ReadFramesYaml(frames->second, frames_path);
+            ReadEncodingYaml(frames->second, frames_path);
         if (!encoding.IsOk()) {
           return encoding.GetStatus();
         }

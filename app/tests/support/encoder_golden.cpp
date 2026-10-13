@@ -28,6 +28,7 @@
 #include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -137,6 +138,27 @@ StatusOr<std::map<std::string, EncoderOptions>> ReadOptionSets(
     sets[row.at("name")] = options;
   }
   return sets;
+}
+
+StatusOr<EncoderOptions> EncoderOptionsFromText(std::string_view text) {
+  EncoderOptions options;
+  std::string_view rest = text;
+  while (!rest.empty()) {
+    const std::size_t comma = rest.find(',');
+    const std::string_view item = rest.substr(0, comma);
+    rest = comma == std::string_view::npos ? "" : rest.substr(comma + 1);
+    const std::size_t equals = item.find('=');
+    if (equals == std::string_view::npos) {
+      return core::InvalidArgumentError("option \"" + std::string(item) +
+                                        "\" is not KEY=VALUE");
+    }
+    if (core::Status status = core::encoder::SetEncoderOption(
+            options, item.substr(0, equals), item.substr(equals + 1));
+        !status.IsOk()) {
+      return status;
+    }
+  }
+  return options;
 }
 
 StatusOr<std::map<std::string, ReferenceEncoding>> ReadReferenceEncodings(

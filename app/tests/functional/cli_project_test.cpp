@@ -2,7 +2,7 @@
  * File:        cli_project_test.cpp
  * Module:      cli tests
  * Purpose:     Runs speak5220-cli's project commands end to end: new, add,
- *              encode and export
+ *              encode, export, synth and measure
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -12,21 +12,27 @@
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <vector>
 
 #include "core/audio/sndfile_wav_io.h"
 #include "core/audio/wav_io.h"
 #include "core/encoder/encoder.h"
+#include "core/lpc/frame.h"
+#include "core/lpc/frame_codec.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/project.h"
 #include "core/project/project_serializer.h"
 #include "core/project/project_store.h"
 #include "core/project/zip_project_store.h"
+#include "core/synth/synth.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -297,6 +303,104 @@ TEST_F(CliProjectTest, AddSetsTheDescriptionOfOnePhrase) {
   EXPECT_EQ(loaded->Phrases()[0].description, "");
   EXPECT_EQ(loaded->Phrases()[1].description,
             "Lord, but I'm glad to see you again, Phil.");
+}
+
+TEST_F(CliProjectTest, NewSetsTheDefaultEncoderOptions) {
+  const fs::path path = Path("options.s5proj");
+  const CliRun run =
+      RunCli({QStringLiteral("new"), Q(path), QStringLiteral("--option"),
+              QStringLiteral("repeat_lambda=300"), QStringLiteral("--option"),
+              QStringLiteral("bass_cut_hz=200")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  const core::StatusOr<project::Project> loaded = Load(path);
+  ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
+  EXPECT_EQ(loaded->Settings().default_encoder.repeat_lambda, 300.0);
+  EXPECT_EQ(loaded->Settings().default_encoder.preprocess.bass_cut_hz, 200.0);
+
+  CliRun bad =
+      RunCli({QStringLiteral("new"), Q(Path("bad.s5proj")),
+              QStringLiteral("--option"), QStringLiteral("no_such_option=1")});
+  EXPECT_EQ(bad.exit_code, 1);
+  EXPECT_FALSE(fs::exists(Path("bad.s5proj")));
+  bad = RunCli({QStringLiteral("new"), Q(Path("bad.s5proj")),
+                QStringLiteral("--option"), QStringLiteral("repeat_lambda")});
+  EXPECT_EQ(bad.exit_code, 2);
+}
+
+TEST_F(CliProjectTest, SynthWritesTheChipsOutputOfAFramesFile) {
+  const std::vector<core::lpc::Frame> frames = {
+      core::lpc::Frame::Voiced(10, 30, {20, 10, 7, 8, 8, 8, 8, 4, 4, 4}),
+      core::lpc::Frame::Repeat(9, 30),
+      core::lpc::Frame::Unvoiced(6, {20, 10, 7, 8}), core::lpc::Frame::Stop()};
+  const fs::path yaml = Path("word.frames.yaml");
+  std::ofstream(yaml) << project::FramesYaml({.frames = frames});
+  const CliRun run = RunCli({QStringLiteral("synth"), Q(yaml),
+                             QStringLiteral("--output"), Q(Path("word.wav"))});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  EXPECT_THAT(run.out, HasSubstr("4 frames"));
+
+  const core::StatusOr<core::audio::DecodedWav> wav =
+      core::audio::SndfileWavReader().Read(Path("word.wav"));
+  ASSERT_TRUE(wav.IsOk()) << wav.GetStatus().ToString();
+  EXPECT_EQ(wav->sample_rate, 8000);
+  const core::StatusOr<std::vector<std::uint8_t>> packed =
+      core::lpc::FrameCodec::Pack(frames);
+  ASSERT_TRUE(packed.IsOk());
+  core::synth::Synth synth;
+  const core::StatusOr<core::synth::SynthResult> spoken =
+      synth.Synthesize(*packed, core::synth::SynthPath::kVsm);
+  ASSERT_TRUE(spoken.IsOk());
+  ASSERT_EQ(wav->samples.size(), spoken->samples.size());
+  for (std::size_t i = 0; i < wav->samples.size(); ++i) {
+    ASSERT_EQ(static_cast<int>(wav->samples[i] * 32768.0F), spoken->samples[i])
+        << "sample " << i;
+  }
+
+  EXPECT_EQ(RunCli({QStringLiteral("synth"), Q(yaml)}).exit_code, 2);
+  EXPECT_EQ(RunCli({QStringLiteral("synth"), Q(Path("missing.yaml")),
+                    QStringLiteral("--output"), Q(Path("x.wav"))})
+                .exit_code,
+            1);
+}
+
+TEST_F(CliProjectTest, MeasureWritesOneRowPerPhrase) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  CliRun run = RunCli({QStringLiteral("measure"), Q(path),
+                       QStringLiteral("--output"), Q(Path("measures"))});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("has no encoding"));
+
+  ASSERT_EQ(RunCli({QStringLiteral("encode"), Q(path)}).exit_code, 0);
+  run = RunCli({QStringLiteral("measure"), Q(path), QStringLiteral("--output"),
+                Q(Path("measures"))});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  std::ifstream tsv(Path("measures") / "measures.tsv");
+  std::string header;
+  std::string row;
+  ASSERT_TRUE(std::getline(tsv, header));
+  ASSERT_TRUE(std::getline(tsv, row));
+  EXPECT_THAT(header, HasSubstr("score"));
+  EXPECT_THAT(header, HasSubstr("a_weighted_rms"));
+  const auto columns = [](const std::string& line) {
+    std::vector<std::string> fields;
+    std::stringstream stream(line);
+    std::string field;
+    while (std::getline(stream, field, '\t')) {
+      fields.push_back(field);
+    }
+    return fields;
+  };
+  const std::vector<std::string> names = columns(header);
+  const std::vector<std::string> values = columns(row);
+  ASSERT_EQ(values.size(), names.size());
+  EXPECT_EQ(values[0], "HELLO");
+  EXPECT_EQ(values[1], "speech.wav");
+  for (std::size_t i = 2; i < values.size(); ++i) {
+    EXPECT_FALSE(values[i].empty()) << names[i];
+  }
+  std::string extra;
+  EXPECT_FALSE(std::getline(tsv, extra));
 }
 
 TEST_F(CliProjectTest, FailuresExitWithCode1) {

@@ -1,0 +1,7 @@
+name	options
+default	
+threshold_0.5	voicing_threshold=0.5
+lambda_140	repeat_lambda=140
+lambda_300	repeat_lambda=300
+threshold_0.5_lambda_300	voicing_threshold=0.5,repeat_lambda=300
+threshold_0.5_lambda_300_evidence_2.5	voicing_threshold=0.5,repeat_lambda=300,voicing_evidence=2.5

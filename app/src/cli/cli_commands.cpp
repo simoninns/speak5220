@@ -1,7 +1,8 @@
 /*
  * File:        cli_commands.cpp
  * Module:      cli
- * Purpose:     The speak5220-cli commands: new, add, encode and export
+ * Purpose:     The speak5220-cli commands: new, add, encode, export, synth
+ *              and measure
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -14,7 +15,11 @@
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
+#include <cstdint>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
+#include <iterator>
 #include <memory>
 #include <optional>
 #include <set>
@@ -27,6 +32,10 @@
 #include "core/audio/sndfile_wav_io.h"
 #include "core/dsp/resampler.h"
 #include "core/encoder/encoder.h"
+#include "core/encoder/encoder_options.h"
+#include "core/lpc/frame.h"
+#include "core/lpc/frame_codec.h"
+#include "core/preprocess/preprocess.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
@@ -34,6 +43,9 @@
 #include "core/project/project_export.h"
 #include "core/project/project_serializer.h"
 #include "core/project/project_store.h"
+#include "core/quality/loudness.h"
+#include "core/quality/quality_assessor.h"
+#include "core/synth/reference_synthesizer.h"
 #include "core/synth/synth.h"
 #include "core/util/file_digest.h"
 #include "core/util/logging.h"
@@ -51,6 +63,15 @@ const QCommandLineOption& NameOption() {
       QStringLiteral("new: the project's name. add: the phrase's name (one "
                      "file only)."),
       QStringLiteral("name"));
+  return kOption;
+}
+
+const QCommandLineOption& EncoderOptionOption() {
+  static const QCommandLineOption kOption(
+      QStringLiteral("option"),
+      QStringLiteral("new: set a default encoder option, as KEY=VALUE "
+                     "(repeatable)."),
+      QStringLiteral("key=value"));
   return kOption;
 }
 
@@ -79,8 +100,9 @@ const QCommandLineOption& ForceOption() {
 const QCommandLineOption& OutputOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("output"),
-      QStringLiteral("Write the project (new, add, encode) or the exported "
-                     "files (export) into this directory."),
+      QStringLiteral("Write the project (new, add, encode), the exported "
+                     "files (export) or the measures (measure) into this "
+                     "directory; synth: the WAV file to write."),
       QStringLiteral("dir"));
   return kOption;
 }
@@ -225,7 +247,9 @@ core::Status SaveProject(const project::Project& project,
 
 int RunNew(const QCommandLineParser& parser, const QStringList& arguments) {
   if (arguments.size() != 1) {
-    return Usage("usage: speak5220-cli new PROJECT [--name NAME]");
+    return Usage(
+        "usage: speak5220-cli new PROJECT [--name NAME] "
+        "[--option KEY=VALUE]...");
   }
   const fs::path input = Normalised(ToPath(arguments.front()));
   const fs::path output = OutputProjectPath(parser, input);
@@ -238,6 +262,19 @@ int RunNew(const QCommandLineParser& parser, const QStringList& arguments) {
   settings.name = parser.isSet(NameOption())
                       ? parser.value(NameOption()).toStdString()
                       : PathText(output.stem());
+  for (const QString& item : parser.values(EncoderOptionOption())) {
+    const qsizetype equals = item.indexOf(QLatin1Char('='));
+    if (equals <= 0) {
+      return Usage("--option takes KEY=VALUE, not \"" + item.toStdString() +
+                   "\"");
+    }
+    if (core::Status status = core::encoder::SetEncoderOption(
+            settings.default_encoder, item.left(equals).toStdString(),
+            item.mid(equals + 1).toStdString());
+        !status.IsOk()) {
+      return Fail("--option " + item.toStdString() + ": " + status.Message());
+    }
+  }
   if (core::Status status = created.SetSettings(std::move(settings));
       !status.IsOk()) {
     return Fail(status);
@@ -444,20 +481,203 @@ int RunExport(const QCommandLineParser& parser, const QStringList& arguments) {
   return kExitSuccess;
 }
 
+// Reads a whole file.
+core::StatusOr<std::vector<std::uint8_t>> ReadFileBytes(const fs::path& path) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in) {
+    return core::NotFoundError("cannot open " + PathText(path));
+  }
+  std::vector<std::uint8_t> bytes((std::istreambuf_iterator<char>(in)),
+                                  std::istreambuf_iterator<char>());
+  if (in.bad()) {
+    return core::UnavailableError("cannot read " + PathText(path));
+  }
+  return bytes;
+}
+
+int RunSynth(const QCommandLineParser& parser, const QStringList& arguments) {
+  if (arguments.size() != 1 || !parser.isSet(OutputOption())) {
+    return Usage("usage: speak5220-cli synth FRAMES.yaml --output FILE.wav");
+  }
+  const fs::path input = ToPath(arguments.front());
+  const fs::path output = ToPath(parser.value(OutputOption()));
+  core::StatusOr<std::vector<std::uint8_t>> bytes = ReadFileBytes(input);
+  if (!bytes.IsOk()) {
+    return Fail(bytes.GetStatus());
+  }
+  core::StatusOr<project::CachedEncoding> read =
+      project::ReadFramesYaml(*bytes, PathText(input));
+  if (!read.IsOk()) {
+    return Fail(read.GetStatus());
+  }
+  const std::vector<core::lpc::Frame> frames =
+      core::lpc::EnsureStop(read->frames);
+  core::StatusOr<std::vector<std::uint8_t>> packed =
+      core::lpc::FrameCodec::Pack(frames);
+  if (!packed.IsOk()) {
+    return Fail(PathText(input) + ": " + packed.GetStatus().Message());
+  }
+  core::synth::Synth synth({}, core::synth::SynthCache::kOff);
+  core::StatusOr<core::synth::SynthResult> spoken =
+      synth.Synthesize(*packed, core::synth::SynthPath::kVsm);
+  if (!spoken.IsOk()) {
+    return Fail(spoken.GetStatus());
+  }
+  // The I/O codes x 64 (synth::kSampleScale), before the DAC clips them:
+  // the reference emulator's --wav convention.
+  constexpr float kInt16Scale = 32768.0F;
+  std::vector<float> samples(spoken->samples.size());
+  for (std::size_t i = 0; i < samples.size(); ++i) {
+    samples[i] = static_cast<float>(spoken->samples[i]) / kInt16Scale;
+  }
+  core::audio::SndfileWavWriter writer;
+  if (core::Status status =
+          writer.Write(output, samples, project::kProjectSampleRate,
+                       core::audio::WavOutputFormat::kPcm16);
+      !status.IsOk()) {
+    return Fail(status);
+  }
+  Out() << "wrote " << ToQString(PathText(output)) << " (" << frames.size()
+        << " frames, " << samples.size() << " samples)" << Qt::endl;
+  return kExitSuccess;
+}
+
+// The measures file's columns (docs/application/reference/cli-options.md).
+constexpr std::string_view kMeasuresHeader =
+    "name\tsource\tframes\tbytes\tscore\tenvelope_score\tpitch_score\t"
+    "intelligibility_score\tlsd_db\tlsd_over_2db\tlsd_over_4db\t"
+    "gross_pitch_error\tf0_rmse_cents\tvoicing_error\testoi\tspeech_frames\t"
+    "sounding_rms\tpeak\tclipped_percent\twrapped_samples\tbbc_rms\t"
+    "a_weighted_rms";
+
+int RunMeasure(const QCommandLineParser& parser, const QStringList& arguments) {
+  if (arguments.size() != 1 || !parser.isSet(OutputOption())) {
+    return Usage("usage: speak5220-cli measure PROJECT --output DIR");
+  }
+  const fs::path input = Normalised(ToPath(arguments.front()));
+  core::StatusOr<project::Project> loaded = LoadProject(input);
+  if (!loaded.IsOk()) {
+    return Fail(loaded.GetStatus());
+  }
+  const project::Project& opened = *loaded;
+  for (const project::Phrase& phrase : opened.Phrases()) {
+    if (!phrase.encoding.has_value()) {
+      return Fail(phrase.name +
+                  " has no encoding: run \"speak5220-cli encode\" first");
+    }
+  }
+  const fs::path directory = ToPath(parser.value(OutputOption()));
+  std::error_code error;
+  fs::create_directories(directory, error);
+  if (error) {
+    return Fail("cannot create " + PathText(directory) + ": " +
+                error.message());
+  }
+  const fs::path report_path = directory / "measures.tsv";
+  std::ofstream report(report_path);
+  if (!report) {
+    return Fail("cannot write " + PathText(report_path));
+  }
+  report << kMeasuresHeader << '\n';
+  // Enough digits to compare runs and reproduce the corpus checks.
+  constexpr int kDigits = 10;
+  report << std::setprecision(kDigits);
+
+  core::synth::Synth synth({}, core::synth::SynthCache::kOff);
+  core::quality::QualityAssessor assessor(synth);
+  constexpr double kPercent = 100.0;
+  int measured = 0;
+  for (const project::Phrase& phrase : opened.Phrases()) {
+    if (!phrase.encoding.has_value()) {
+      continue;  // Refused above.
+    }
+    const std::vector<core::lpc::Frame>& frames = phrase.encoding->frames;
+    core::StatusOr<int> bytes = project::PackedSize(frames);
+    if (!bytes.IsOk()) {
+      return Fail(phrase.name + ": " + bytes.GetStatus().Message());
+    }
+    report << phrase.name << '\t'
+           << (phrase.source.has_value() ? phrase.source->file : "") << '\t'
+           << frames.size() << '\t' << *bytes << '\t';
+    // The quality against the preprocessed source, as the encoder panel
+    // measures it; blank for a phrase made from frames alone or with too
+    // little speech.
+    std::optional<core::quality::QualityAssessment> quality;
+    if (!phrase.audio.empty()) {
+      core::StatusOr<core::encoder::EncoderOptions> options =
+          project::EffectiveEncoderOptions(opened.Settings().default_encoder,
+                                           phrase.encoder);
+      if (!options.IsOk()) {
+        return Fail(phrase.name + ": " + options.GetStatus().Message());
+      }
+      const std::vector<double> source =
+          core::preprocess::Preprocess(
+              std::vector<double>(phrase.audio.begin(), phrase.audio.end()),
+              options->preprocess)
+              .samples;
+      core::StatusOr<core::quality::QualityAssessment> assessed =
+          assessor.Assess(source, frames);
+      if (assessed.IsOk()) {
+        quality = *assessed;
+      } else {
+        Err() << "speak5220-cli: warning: " << ToQString(phrase.name)
+              << ": cannot measure the quality: "
+              << ToQString(assessed.GetStatus().Message()) << Qt::endl;
+      }
+    }
+    if (quality.has_value()) {
+      const core::quality::QualityMeasurement& m = quality->measures;
+      const core::quality::QualityScore& s = quality->score;
+      report << s.overall << '\t' << s.components.envelope << '\t'
+             << s.components.pitch << '\t';
+      if (s.components.intelligibility.has_value()) {
+        report << *s.components.intelligibility;
+      }
+      report << '\t' << m.envelope.mean_db << '\t' << m.envelope.over_2db
+             << '\t' << m.envelope.over_4db << '\t' << m.pitch.gross_error
+             << '\t' << m.pitch.f0_rmse_cents << '\t' << m.pitch.voicing_error
+             << '\t';
+      if (m.estoi.has_value()) {
+        report << *m.estoi;
+      }
+      report << '\t' << m.speech_frames << '\t';
+    } else {
+      report << "\t\t\t\t\t\t\t\t\t\t\t\t";
+    }
+    const core::synth::ReferenceSynthesis spoken =
+        core::synth::ReferenceSynthesizer::Synthesize(frames);
+    const core::quality::Loudness loudness = core::quality::MeasureLoudness(
+        spoken.codes, frames, spoken.wrapped_samples);
+    report << loudness.sounding_rms << '\t' << loudness.peak << '\t'
+           << kPercent * loudness.clipped << '\t' << loudness.wrapped_samples
+           << '\t' << loudness.high_passed_rms << '\t'
+           << loudness.a_weighted_rms << '\n';
+    ++measured;
+  }
+  if (!report) {
+    return Fail("cannot write " + PathText(report_path));
+  }
+  Out() << "measured " << measured << " phrase(s) into "
+        << ToQString(PathText(report_path)) << Qt::endl;
+  return kExitSuccess;
+}
+
 }  // namespace
 
 void AddCommandOptions(QCommandLineParser& parser) {
   parser.addPositionalArgument(
       QStringLiteral("command"),
-      QStringLiteral("new, add, encode or export. With none, prints the "
-                     "version."),
+      QStringLiteral("new, add, encode, export, synth or measure. With none, "
+                     "prints the version."),
       QStringLiteral("[command]"));
   parser.addPositionalArgument(
       QStringLiteral("arguments"),
       QStringLiteral("The project (a .s5proj file, or a directory for the "
-                     "unpacked form), then for add the WAV files."),
+                     "unpacked form), then for add the WAV files; for synth, "
+                     "a frames.yaml file."),
       QStringLiteral("[arguments...]"));
   parser.addOption(NameOption());
+  parser.addOption(EncoderOptionOption());
   parser.addOption(DescriptionOption());
   parser.addOption(NormaliseOption());
   parser.addOption(ForceOption());
@@ -488,8 +708,14 @@ int RunCommand(const QCommandLineParser& parser, const QStringList& arguments) {
   if (command == QStringLiteral("export")) {
     return RunExport(parser, rest);
   }
+  if (command == QStringLiteral("synth")) {
+    return RunSynth(parser, rest);
+  }
+  if (command == QStringLiteral("measure")) {
+    return RunMeasure(parser, rest);
+  }
   return Usage("unknown command \"" + command.toStdString() +
-               "\": use new, add, encode or export");
+               "\": use new, add, encode, export, synth or measure");
 }
 
 }  // namespace speak5220::cli

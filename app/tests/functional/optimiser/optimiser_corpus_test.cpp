@@ -19,7 +19,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "core/encoder/encoder.h"
@@ -54,22 +53,10 @@ std::map<std::string, std::filesystem::path> CorpusFiles(const char* corpus) {
 // Options from text such as "target_rms=18,noise_gate_db=30" over the
 // defaults; empty or unset text gives the defaults.
 core::encoder::EncoderOptions OptionsFromText(const char* text) {
-  core::encoder::EncoderOptions options;
-  std::string_view rest = text == nullptr ? "" : text;
-  while (!rest.empty()) {
-    const std::size_t comma = rest.find(',');
-    const std::string_view item = rest.substr(0, comma);
-    rest = comma == std::string_view::npos ? "" : rest.substr(comma + 1);
-    const std::size_t equals = item.find('=');
-    EXPECT_NE(equals, std::string_view::npos) << item;
-    if (equals == std::string_view::npos) {
-      continue;
-    }
-    const core::Status set = core::encoder::SetEncoderOption(
-        options, item.substr(0, equals), item.substr(equals + 1));
-    EXPECT_TRUE(set.IsOk()) << set.ToString();
-  }
-  return options;
+  const core::StatusOr<core::encoder::EncoderOptions> options =
+      EncoderOptionsFromText(text == nullptr ? "" : text);
+  EXPECT_TRUE(options.IsOk()) << options.GetStatus().ToString();
+  return options.IsOk() ? *options : core::encoder::EncoderOptions{};
 }
 
 // The options' fields as report columns: the header, then each value.

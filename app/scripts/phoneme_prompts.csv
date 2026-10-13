@@ -1,0 +1,39 @@
+id,text,consonant,position
+sea,sea,S,initial
+sun,sun,S,initial
+six,six,S,final
+kiss,kiss,S,final
+yes,yes,S,final
+sister,sister,S,initial
+science,science,S,initial
+seven,seven,S,initial
+she,she,SH,initial
+shop,shop,SH,initial
+fish,fish,SH,final
+wash,wash,SH,final
+cheese,cheese,CH,initial
+chip,chip,CH,initial
+chess,chess,CH,initial
+choose,choose,CH,initial
+church,church,CH,final
+each,each,CH,final
+match,match,CH,final
+cat,cat,K,initial
+kick,kick,K,initial
+key,key,K,initial
+back,back,K,final
+book,book,K,final
+tea,tea,T,initial
+top,top,T,initial
+bat,bat,T,final
+sit,sit,T,final
+fan,fan,F,initial
+feet,feet,F,initial
+off,off,F,final
+leaf,leaf,F,final
+sixty_six,sixty six,S,final
+sea_shells,she sells sea shells,S,final
+sent_s,Sally sings sad songs since Sunday,S,sentence
+sent_ch,Charlie chose cheap cherries and chips,CH,sentence
+sent_k,Kate kicked the cold cup across the kitchen,K,sentence
+sent_mixed,The quick brown fox jumps over the lazy dog,,sentence

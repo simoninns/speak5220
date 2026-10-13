@@ -460,14 +460,42 @@ hand, and only to create or, by agreement, regenerate the reference data
   `build/app/test-projects/arctic.s5proj`. It is derived from committed
   files, so it is generated, not committed; it is run by hand in the
   default Nix shell (`nix develop --command app/scripts/arctic-project.sh`).
-- **By-hand tests.** The full-corpus check and the timing are functional
+- The encoder-quality diagnostics
+  ([encoder-quality-plan.md](docs-tech/encoder-quality-plan.md), Phase 1;
+  HLD §9, "Diagnostics") judge changes to the encoder by figures:
+  - `app/scripts/phrom-check.sh` writes every word of Acorn PHROM A as
+    frames and as the chip's output (`phrom_roundtrip.py`, into
+    `build/app/phrom-roundtrip/`; each word's frames must pack back to the
+    image's bytes), encodes the 157 speech words and compares the
+    encodings with the PHROM's frames (`PhromRoundTripCheck`), writing
+    `build/app/phrom-check/phrom-roundtrip.tsv` and a summary.
+  - `app/scripts/option_sweep.py` encodes a directory of WAV files with
+    each option set of a table (by default
+    `app/scripts/sweeps/encoder-quality.tsv`) through the CLI (`new
+    --option`, `add`, `encode`, `measure`), with `--phrom` the round trip
+    too, and prints one row of medians per set, into
+    `build/app/option-sweep/`.
+  - `app/scripts/phoneme-check.sh` renders the phoneme test set
+    (`phoneme_prompts.csv`, by `phoneme_corpus.py`, with Piper on Linux or
+    `--engine say` on macOS, into the gitignored `local/phoneme-corpus/`,
+    recording each file's SHA-256), encodes it and reports per file how its
+    consonant and vowel came out (`PhonemeCheck`), into
+    `build/app/phoneme-check/`.
+
+  Each takes the encoder options as `SPEAK5220_PHROM_OPTIONS` or
+  `SPEAK5220_PHONEME_OPTIONS` (the form of `SPEAK5220_OPTIONS`). They are
+  run by hand in the default Nix shell.
+- **By-hand tests.** The full-corpus check, the timing and the
+  encoder-quality diagnostics are functional
   tests with Google Test's `DISABLED_` prefix: CTest lists them as disabled
   and never runs them. The scripts run them with
   `--gtest_also_run_disabled_tests`, passing their inputs and report files
   in environment variables (`SPEAK5220_CORPUS_DIR`,
   `SPEAK5220_CORPUS_REPORT`, `SPEAK5220_QUALITY_REPORT`,
   `SPEAK5220_OPTIMISE_REPORT`, `SPEAK5220_BENCHMARK_DIR`,
-  `SPEAK5220_BENCHMARK_REPORT`, `SPEAK5220_BENCHMARK_PROJECT`).
+  `SPEAK5220_BENCHMARK_REPORT`, `SPEAK5220_BENCHMARK_PROJECT`,
+  `SPEAK5220_PHROM_DIR`, `SPEAK5220_PHROM_REPORT`,
+  `SPEAK5220_PHONEME_DIR`, `SPEAK5220_PHONEME_REPORT`).
 - The functional suites point their output at a `QTemporaryDir`, so
   `ctest -L functional` never writes into the source tree.
 
@@ -481,6 +509,7 @@ hand, and only to create or, by agreement, regenerate the reference data
 | Windows and macOS | Both lanes on Windows and macOS | Only for a release (a `v*` tag) or when started by hand |
 | Sanitisers | Both lanes under ASan and UBSan (Debug) | Every push in CI, on Linux |
 | By hand | `corpus-check.sh`, `output-hashes.sh`, `benchmark.sh`, `bbc-check.sh`; the BBC Micro hardware check ([BBC Micro disc](docs/application/user-manual/bbc-disc.md)) | Before a release, and for any change to the encoder, packaging or BBC export |
+| By hand | `phrom-check.sh`, `option_sweep.py`, `phoneme-check.sh` | For a change meant to improve the encoder's output (the encoder-quality plan) |
 
 The default CI unit lane must stay fast and mocked. Do **not** add
 functional tests to it.

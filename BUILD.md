@@ -131,11 +131,16 @@ nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-me
 nix develop .#app --command app/scripts/run-projects.sh   # encodes copies of the fixture projects and runs their export presets
 nix develop .#app --command app/scripts/output-hashes.sh  # checks those exports against the recorded hashes in app/golden/output-hashes/
 nix develop --command app/scripts/bbc-check.sh            # boots the BBC Micro discs on MAME's emulated BBC Micro and drives the player
+nix develop --command app/scripts/phrom-check.sh          # encodes Acorn PHROM A's own output and compares the encodings with its frames
+nix develop --command python3 app/scripts/option_sweep.py --input build/app/generated-corpus --phrom   # compares the option sets of app/scripts/sweeps/
+nix develop --command app/scripts/phoneme-check.sh --engine say   # renders and encodes the phoneme test set (Piper on Linux: leave out --engine)
 ```
 
 `bbc-check.sh` needs MAME, which it takes from `PATH` or else runs with `nix shell nixpkgs#mame` (MAME is not in the dev shells: it is large and used only here), and the ROM set in `local/mame/roms/`. Its recordings, logs and summary go to `build/app/bbc-check/`.
 
 `corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`, and the fixtures' exports to `build/app/project-output/SUITE/`.
+
+The encoder-quality diagnostics (TESTING.md) need the default shell's Python (soundfile, NumPy, SciPy). `phrom-check.sh` writes the PHROM's words to `build/app/phrom-roundtrip/` and its report to `build/app/phrom-check/`; `option_sweep.py` writes to `build/app/option-sweep/`. `phoneme-check.sh` renders into the gitignored `local/phoneme-corpus/ENGINE/`: with Piper, which the default shell has on Linux only, after `python3 app/scripts/phoneme_corpus.py fetch` has downloaded the pinned voices into `local/piper/`; with `--engine say`, with macOS's own voices. Its report goes to `build/app/phoneme-check/`.
 
 ### Format and lint
 

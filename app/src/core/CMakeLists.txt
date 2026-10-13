@@ -62,6 +62,8 @@ add_library(
     quality/encoded_audio.cpp
     quality/envelope_distortion.cpp
     quality/estoi.cpp
+    quality/frame_track_comparison.cpp
+    quality/loudness.cpp
     quality/lpc_envelope.cpp
     quality/numpy_normal.cpp
     quality/output_alignment.cpp

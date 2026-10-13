@@ -57,8 +57,12 @@ app/
                                 benchmark.sh, arctic-project.sh,
                                 generate_corpus.py,
                                 generate_filter_constants.py (§8);
+                                phrom-check.sh, phrom_roundtrip.py,
+                                option_sweep.py, phoneme-check.sh,
+                                phoneme_corpus.py, phoneme_prompts.csv (§9);
                                 run-projects.sh, output-hashes.sh (§18),
                                 bbc-check.sh (§19)
+    sweeps/                     option sets for option_sweep.py (§9)
     bbc/                        the MAME scripts of the BBC Micro check:
                                 player.lua, tokenise.lua, basic_in_mame.py,
                                 emulator_check.py (§19)
@@ -90,8 +94,9 @@ app/
       encoder/                  Encoder and its stages, EncoderOptions (§8)
       quality/                  the quality measures, the adapters over
                                 libfvad and SPTK, the overall score,
-                                QualityAssessor, the anchor vocoder (§9),
-                                the output alignment and
+                                QualityAssessor, the anchor vocoder, the
+                                loudness figures and the frame track
+                                comparison (§9), the output alignment and
                                 RenderEncodedAudio (§16)
       bbc/                      BasicTokeniser, DfsDisc, BbcDisc and the
                                 player's source, speak.bas (§19)
@@ -289,8 +294,9 @@ Phase 2 task 7).
     interfaces;
   - `encoder_golden`: readers for `app/golden/encoder/` (option sets,
     reference encodings with their near-tie frames, JSON intermediates via
-    `QJsonDocument`, WAV inputs as doubles) and `CompareEncoding()`, which
-    applies the acceptance rule of §8;
+    `QJsonDocument`, WAV inputs as doubles), `EncoderOptionsFromText()`
+    (the `KEY=VALUE,...` options the by-hand checks take) and
+    `CompareEncoding()`, which applies the acceptance rule of §8;
   - `measures_golden`: readers for `app/golden/quality/measures/` (the
     scores, masks and pitch tracks) and `PrepareReferenceEncodings()`, which
     speaks and prepares the subset's reference encodings as the quality
@@ -317,8 +323,10 @@ Phase 2 task 7).
   run them with `--gtest_also_run_disabled_tests`, passing inputs and an
   output file through environment variables: the full-corpus check
   (`EncoderCorpusCheck`, `QualityCorpusCheck` and `OptimiserCorpusCheck`,
-  `corpus-check.sh`) and the timings (`EncoderBenchmark`,
-  `QualityBenchmark` and `OptimiserBenchmark`, `benchmark.sh`).
+  `corpus-check.sh`), the timings (`EncoderBenchmark`,
+  `QualityBenchmark` and `OptimiserBenchmark`, `benchmark.sh`), and the
+  encoder-quality diagnostics (`PhromRoundTripCheck`, `phrom-check.sh`;
+  `PhonemeCheck`, `phoneme-check.sh`; §9).
 - GUI test binaries use `speak5220_gui_test_main`, which selects the
   offscreen platform unless `QT_QPA_PLATFORM` is already set, then creates a
   `QApplication` and runs Google Test. `app/tests/gui/support/gui_mocks.h`
@@ -762,6 +770,8 @@ the project caches the figures with each encoding (§14, §17).
 | `ToCachedQuality()`, `FromCachedQuality()` | `cached_quality` | The figures a project caches with an encoding (§14), and the assessment they give back |
 | `RenderEncodedAudio()`, `AlignOutput()` | `encoded_audio`, `output_alignment` | The chip's output spoken and placed against the source by `speechqual.py`'s alignment (`align()`, `refine()`, `placed()`, `matchLevel()`): for display (§16) and for the measures |
 | `AnchorVocoder()` | `anchor_vocoder`, `numpy_normal`, `normal_ziggurat_tables.h` | `speechqual.py`'s unquantised LPC-10 vocoder, for the calibration (below) |
+| `MeasureLoudness()`, `BbcHighPass()`, `AWeighted()` | `loudness` | The loudness of the chip's output (below, "Diagnostics") |
+| `CompareFrameTracks()`, `DescribeFrameTrack()`, `AddComparison()` | `frame_track_comparison` | An encoding's frames against reference frames of the same speech (below, "Diagnostics") |
 
 **Preparing the signals** (plan §3.3's six steps, as fixed in Phase 8):
 
@@ -1066,6 +1076,64 @@ generator (PCG64, XSL-RR 128/64, from the state of
 `numpy.random.default_rng(1)`) and its ziggurat normal sampler, with
 NumPy's tables, bit for bit.
 
+**Diagnostics** (docs-tech/encoder-quality-plan.md, Phase 1). Two
+measures that are not part of the score help find what the encoder does
+wrong; the investigation behind them is
+[encoder-quality-investigation.md](../encoder-quality-investigation.md).
+
+- `MeasureLoudness()`: from the chip's codes and the frames, the sounding
+  RMS (the RMS of `MeasureOutputLevels()` over the voiced, unvoiced and
+  repeat frames, what `target_rms` aims at), the peak code, the share of
+  samples beyond ±127 that the DAC clips, the lattice wraps, and from
+  sample 200 the RMS after the BBC Micro's 279 Hz first-order high-pass
+  (§16) and the A-weighted RMS (IEC 61672-1 through the bilinear
+  transform at 8 kHz, as cascaded first-order sections). The score scales
+  the output to the source, so it cannot see loudness; these can.
+- `CompareFrameTracks()`: both tracks are spoken by the reference
+  synthesiser and lined up by their output levels (the frame shift within
+  ±3 with the least mean level difference in dB); then, frame by frame,
+  the voicing (a repeat takes it from its pitch), with the reference's
+  voiced frames that the encoding does not voice split by where they fall
+  in the reference's voiced run (inside, its first frame, its last), the
+  lag of the encoding's voicing onset and offset after each of the
+  reference's, and for frames of the same voicing the energy index
+  difference, the filter shape error (the RMS in dB of the difference of
+  the two lattice filters' log responses less its mean) and the pitch
+  difference in semitones. `DescribeFrameTrack()` counts each track's
+  repeats and repeat runs, its bits, and its fade-outs (unvoiced repeats
+  of falling energy after an unvoiced frame that end the sound, as
+  `AddFades()` makes them).
+
+They are used by the CLI's `measure` command (§11) and by three by-hand
+tools, which judge the encoder-quality plan's later phases:
+
+- `phrom-check.sh`: `phrom_roundtrip.py` parses every word of Acorn PHROM
+  A from its image (the manifest in `investigation/proms/`), checks that
+  its frames pack back to the image's bytes (datasheet §12.11), and speaks
+  it with `speak5220-cli synth`; `PhromRoundTripCheck` encodes each of the
+  157 speech words' output and compares the encoding with the PHROM's own
+  frames, with `CompareFrameTracks()` and `MeasureLoudness()`, per word and
+  in total.
+- `option_sweep.py`: for each option set of a table
+  (`app/scripts/sweeps/`), a project with those defaults (`speak5220-cli
+  new --option`) is encoded and measured, optionally with the round trip,
+  and one row of medians is printed per set.
+- `phoneme-check.sh`: `phoneme_corpus.py` renders `phoneme_prompts.csv`
+  (words and sentences isolating S, SH, CH, K, T and F) with Piper or
+  macOS's `say`, recording each file's SHA-256; `PhonemeCheck` encodes each
+  file and reports its score and pitch errors, how many of its consonant's
+  frames (before the first, or after the last, frame at which REAPER finds
+  the source voiced) are voiced, the consonant's level against the vowel in
+  the source and the encoding, loud unvoiced frames before voicing, fade
+  frames and the share of repeats in voiced sound.
+
+On the defaults, the round trip gives 93.7 % voicing agreement over 2770
+matched frames, 1184 repeats and 42 fade-outs; the investigation's figures
+(93.9 %, 2737, 1164, 37) are reproduced exactly when the words are spoken
+by the reference synthesiser, whose output ends one idle frame sooner than
+the emulator's: the encoder is sensitive to the length of the idle tail
+(plan, Phase 1).
+
 ## 10. Third-party libraries
 
 | Need | Library | Licence | Status |
@@ -1105,12 +1173,15 @@ Both executables are thin front ends over `s5core`.
 - `speak5220-cli` uses `QCoreApplication` and `QCommandLineParser`. It has
   `--help`, `--version` and the logging options of §12, and with no
   command prints `speak5220-cli <version>` to stdout.
-- Its commands (`cli/cli_commands`) are `new`, `add`, `encode` and
-  `export`, each a thin sequence of core calls: `MakeProjectStore()` and
-  `ProjectSerializer` to open and save, `PhraseImporter` and
+- Its commands (`cli/cli_commands`) are `new`, `add`, `encode`,
+  `export`, `measure` and `synth`, each a thin sequence of core calls:
+  `MakeProjectStore()` and `ProjectSerializer` to open and save
+  (`SetEncoderOption()` for `new --option`), `PhraseImporter` and
   `Project::InsertPhrases()` to add, `EncodingCache::Refresh()` to encode,
   `CheckEncodingsCurrent()`, `RunExport()` and `WriteExportedFiles()` to
-  export (§18). `--output DIR` writes the project (or the
+  export (§18), `QualityAssessor` over each phrase's preprocessed source and
+  `MeasureLoudness()` to measure (§9), and `ReadFramesYaml()`,
+  `FrameCodec::Pack()` and `Synth`'s VSM path to speak a frames file. `--output DIR` writes the project (or the
   exported files) into a directory of the caller's choosing, so the fixture
   projects can be encoded and exported without being changed (TESTING.md).
   It imports sequentially and encodes inline: there is nothing to wait for.

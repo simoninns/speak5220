@@ -2,7 +2,8 @@
 
 `speak5220-cli` is the application's command-line tool. It creates
 projects, imports WAV files into them, encodes them and exports them,
-with the same results as the GUI gives. Run on its own, it
+with the same results as the GUI gives. It can also measure a project's
+encodings and speak a frames file. Run on its own, it
 prints its name and version.
 
 ```bash
@@ -18,16 +19,22 @@ for the unpacked (directory) form.
 
 ```bash
 speak5220-cli new words.s5proj --name "My PHROM"
+speak5220-cli new loud.s5proj --option target_rms=30 --option bass_cut_hz=200
 speak5220-cli add words.s5proj hello.wav goodbye.wav
 speak5220-cli add words.s5proj seven.wav --name SEVEN --normalise
 speak5220-cli encode words.s5proj
 speak5220-cli export words.s5proj --output out --format acorn-phrom
 speak5220-cli export words.s5proj --output out --format c-header-speak-external --phrase HELLO --licence CC0-1.0
 speak5220-cli export words.s5proj --output out --preset phrom
+speak5220-cli measure words.s5proj --output measures
+speak5220-cli synth word.frames.yaml --output word.wav
 ```
 
 - **`new PROJECT`** creates an empty project. `--name` sets its name (by
-  default, the file name). An existing file or directory is never replaced.
+  default, the file name). `--option KEY=VALUE`, which may be repeated,
+  sets one of the project's [default options](encoder.md), under the
+  name and in the form the project file uses. An existing file or
+  directory is never replaced.
 - **`add PROJECT FILE.wav...`** imports WAV files as new phrases at the end
   of the list (see [importing audio](projects.md#importing-audio)). Each
   phrase is named from its file name, or by `--name` when one file is
@@ -52,6 +59,18 @@ speak5220-cli export words.s5proj --output out --preset phrom
   `--phrase NAME`, which may be repeated, exports only those phrases. Every
   phrase exported must be encoded with its current settings first, except
   for the original or preprocessed audio. Existing files of the same names are replaced.
+- **`measure PROJECT --output DIR`** measures every phrase's encoding and
+  writes `DIR/measures.tsv`, one row per phrase: its size, its quality
+  score and the measures behind it, as the [encoder panel](encoder.md)
+  shows them, and the loudness of the chip's output: its level where it
+  sounds, its peak, the samples the DAC clips, and its level through a
+  BBC Micro's speech path and A-weighted. Every phrase must be encoded
+  first. The columns are listed in the
+  [reference](../reference/cli-options.md#measures).
+- **`synth FRAMES.yaml --output FILE.wav`** speaks a frames file (a
+  phrase's `frames.yaml`, or any file with a `frames` list in that form)
+  through the emulated chip, as a PHROM word is spoken, and writes the
+  chip's output as an 8 kHz WAV file, before the DAC clips it.
 
 `new`, `add` and `encode` save the project in place, keeping the previous
 version as `PROJECT~`. With `--output DIR` they write the project into
@@ -86,8 +105,8 @@ speak5220 --log-level trace --log-file trace.log --no-console-log
     the GUI has no console, so a log file is the only way to see its log.
 
 A command that fails prints a message and exits with code 1. A command line
-that cannot be used (an unknown command or level, missing arguments, or
-`--no-console-log` without `--log-file`) prints a message and exits with
-code 2. Every option is listed in the
+that cannot be used (an unknown command or level, missing arguments,
+`--option` without `=`, or `--no-console-log` without `--log-file`) prints
+a message and exits with code 2. Every option is listed in the
 [command-line options](../reference/cli-options.md) reference, and the
 messages in [troubleshooting](troubleshooting.md).

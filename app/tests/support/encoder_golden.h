@@ -19,6 +19,7 @@
 #include <set>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "core/encoder/encoder_options.h"
@@ -57,6 +58,13 @@ std::vector<core::lpc::Frame> ReferenceFrames(
 // ReferenceEncoderOptions().
 core::StatusOr<std::map<std::string, core::encoder::EncoderOptions>>
 ReadOptionSets(const std::filesystem::path& path);
+
+// Options from text such as "target_rms=18,noise_gate_db=30" over the
+// application's defaults (EncoderOptions{}), the form the by-hand checks
+// take in SPEAK5220_OPTIONS and their kin; empty text gives the defaults.
+// Fails for an item without '=' or one SetEncoderOption() refuses.
+core::StatusOr<core::encoder::EncoderOptions> EncoderOptionsFromText(
+    std::string_view text);
 
 // The encodings of frames/SET.tsv, by corpus file name.
 core::StatusOr<std::map<std::string, ReferenceEncoding>> ReadReferenceEncodings(

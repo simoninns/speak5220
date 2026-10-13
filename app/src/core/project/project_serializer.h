@@ -11,9 +11,13 @@
 #ifndef SPEAK5220_CORE_PROJECT_PROJECT_SERIALIZER_H_
 #define SPEAK5220_CORE_PROJECT_PROJECT_SERIALIZER_H_
 
+#include <cstdint>
+#include <string>
 #include <string_view>
+#include <vector>
 
 #include "core/audio/wav_io.h"
+#include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_store.h"
 #include "core/util/status.h"
@@ -25,6 +29,15 @@ inline constexpr std::string_view kProjectYamlPath = "project.yaml";
 inline constexpr std::string_view kPhrasesDirectory = "phrases";
 inline constexpr std::string_view kSourceWavName = "source.wav";
 inline constexpr std::string_view kFramesYamlName = "frames.yaml";
+
+// A phrase's frames.yaml (plan §4): the encoder version, the settings
+// hash, the frames, one flow mapping each, and the cached quality. Pure.
+std::string FramesYaml(const CachedEncoding& encoding);
+
+// Reads a frames.yaml; `file` names it in messages. Keys other than
+// "frames" are optional. Fails for a missing or invalid frame. Pure.
+StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
+                                        const std::string& file);
 
 // Plan §4: the project's metadata as YAML 1.2 (yaml-cpp), with snake_case
 // keys named after the C++ fields; each phrase's audio as 8 kHz mono
