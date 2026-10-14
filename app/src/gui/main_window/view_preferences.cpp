@@ -13,10 +13,12 @@
 #include <QSettings>
 #include <QString>
 #include <QVariant>
+#include <optional>
 #include <string>
 #include <string_view>
 
 #include "core/dsp/output_filter.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
@@ -74,6 +76,17 @@ void SettingsViewPreferences::SetOutputPin(core::synth::OutputPin pin) {
   settings_.setValue(
       QString::fromLatin1(kOutputPinKey),
       QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
+}
+
+int SettingsViewPreferences::ChosenChipClock() {
+  bool ok = false;
+  const int hz = settings_.value(QString::fromLatin1(kChipClockKey)).toInt(&ok);
+  return (ok ? core::synth::ChipClockFromHz(hz) : std::nullopt)
+      .value_or(core::synth::kNominalClockHz);
+}
+
+void SettingsViewPreferences::SetChipClock(int clock_hz) {
+  settings_.setValue(QString::fromLatin1(kChipClockKey), clock_hz);
 }
 
 ThemeChoice SettingsViewPreferences::ChosenTheme() {

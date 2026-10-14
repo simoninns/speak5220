@@ -23,6 +23,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/dsp/resampler.h"
+#include "core/synth/chip_clock.h"
 #include "core/util/clock.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
@@ -101,7 +102,8 @@ core::Status Player::Play(PlaybackSource source,
   if (IsFiltered(source)) {
     // The whole buffer, so the filters' state at any start is as it
     // would be had it played from the beginning.
-    filtered_ = core::dsp::FilterDacOutput(filter_, ToFloat(samples_));
+    filtered_ = core::dsp::FilterDacOutput(filter_, ToFloat(samples_),
+                                           SampleRateOf(source));
   }
   start_ =
       (start < 0 || std::cmp_greater_equal(start, samples_.size())) ? 0 : start;
@@ -147,7 +149,8 @@ void Player::Tick() {
   }
   const std::int64_t elapsed = std::min(clock_->NowMicroseconds() - started_us_,
                                         output_->ProcessedMicroseconds());
-  const std::int64_t played = elapsed * kSampleRate / kMicrosecondsPerSecond;
+  const std::int64_t played =
+      elapsed * SampleRateOf(source_) / kMicrosecondsPerSecond;
   const auto end = static_cast<std::int64_t>(samples_.size());
   if (output_->IsFinished() || base_ + played >= end) {
     Stop();
@@ -168,15 +171,32 @@ void Player::SetOutputFilter(core::dsp::OutputFilter filter) {
   }
 }
 
+void Player::SetChipClock(int clock_hz) {
+  if (clock_hz == clock_hz_) {
+    return;
+  }
+  clock_hz_ = clock_hz;
+  if (state_ != PlaybackState::kStopped && IsChipOutput(source_)) {
+    Stop();
+  }
+}
+
 bool Player::IsFiltered(PlaybackSource source) const {
   return filter_ != core::dsp::OutputFilter::kNone && IsChipOutput(source);
 }
 
+int Player::SampleRateOf(PlaybackSource source) const {
+  return IsChipOutput(source) ? core::synth::ChipSampleRate(clock_hz_)
+                              : kSampleRate;
+}
+
 core::Status Player::StartOutput(int from) {
-  // The rest of the buffer: the filtered output at 48 kHz, or the samples
-  // themselves at 8 kHz.
+  // The rest of the buffer: the filtered output, or the samples
+  // themselves.
   const bool filtered = !filtered_.empty();
-  const int source_rate = filtered ? core::dsp::kOutputRate : kSampleRate;
+  const int sample_rate = SampleRateOf(source_);
+  const int source_rate =
+      filtered ? sample_rate * core::dsp::kOutputOversampling : sample_rate;
   const std::vector<float> rest =
       filtered ? std::vector<float>(
                      filtered_.begin() + (static_cast<std::ptrdiff_t>(from) *

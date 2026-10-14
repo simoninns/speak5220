@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "core/dsp/output_filter.h"
+#include "core/synth/chip_clock.h"
 #include "core/util/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -257,6 +258,47 @@ TEST_F(PlayerTest, RecordingsAreNotPlayedThroughTheOutputFilter) {
   EXPECT_CALL(output_, Start(SizeIs(8000), Player::kSampleRate));
   ASSERT_TRUE(
       player_.Play(PlaybackSource::kPreprocessed, Numbered(), 0).IsOk());
+}
+
+TEST_F(PlayerTest, ChipClockStartsNominal) {
+  EXPECT_EQ(player_.ChipClock(), core::synth::kNominalClockHz);
+}
+
+// 720 kHz gives 9000 samples a second, and the playhead moves at that rate.
+TEST_F(PlayerTest, ChipClockSetsTheRateOfTheEncodedAudio) {
+  player_.SetChipClock(720000);
+  EXPECT_CALL(output_, Start(SizeIs(8000), 9000));
+  ASSERT_TRUE(player_.Play(PlaybackSource::kEncoded, Numbered(), 0).IsOk());
+  clock_.now_us += 100 * kMillisecond;
+  EXPECT_CALL(output_, ProcessedMicroseconds())
+      .WillRepeatedly(Return(100 * kMillisecond));
+  player_.Tick();
+  EXPECT_EQ(player_.Position(), 900);
+}
+
+TEST_F(PlayerTest, ChipClockLeavesTheRecordingsAt8Kilohertz) {
+  player_.SetChipClock(560000);
+  EXPECT_CALL(output_, Start(SizeIs(8000), Player::kSampleRate));
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+}
+
+TEST_F(PlayerTest, ChipClockSetsTheRateOfTheFilteredAudio) {
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  player_.SetChipClock(560000);
+  EXPECT_CALL(output_, PlaybackRate(7000 * 6)).WillOnce(Return(48000));
+  EXPECT_CALL(resampler_, Resample(SizeIs(8000 * 6), 7000 * 6, 48000))
+      .WillOnce(Return(std::vector<float>(48000)));
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kBeforeOptimise, Numbered(), 0).IsOk());
+}
+
+TEST_F(PlayerTest, ChangingTheChipClockStopsOnlyTheEncodedAudio) {
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+  player_.SetChipClock(600000);
+  EXPECT_EQ(player_.State(), PlaybackState::kPlaying);
+  ASSERT_TRUE(player_.Play(PlaybackSource::kEncoded, Numbered(), 0).IsOk());
+  player_.SetChipClock(620000);
+  EXPECT_EQ(player_.State(), PlaybackState::kStopped);
 }
 
 TEST(PlaybackSourceTest, OnlyTheEncodingsAreTheChipsOutput) {

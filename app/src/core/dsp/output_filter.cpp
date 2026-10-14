@@ -12,7 +12,9 @@
 #include "core/dsp/output_filter.h"
 
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <numbers>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -31,33 +33,53 @@ constexpr std::array<OutputFilterInfo, 2> kFilters = {{
      .label = "BBC Micro"},
 }};
 
-// The BBC Micro's speech path at kOutputRate, as
-// scipy.signal.butter(order, hz, kind, fs=48000, output="sos") gives it:
-// the C21/R31 high-pass (1st order, 279 Hz), then the IC17 Sallen-Key
-// low-passes (2nd-order Butterworth, 6.95 kHz) before and after the
-// mixer. The full circuit differs from this cascade by at most 0.1 dB from
-// 30 Hz to 20 kHz (docs/technical/hardware/audio-output-stage.md, "Overall
-// response"); investigation/tools/process.py listenAudio() uses the same.
-constexpr SosSection kBbcHighPass = {
-    .b = {0.9820650013779968, -0.9820650013779968, 0.0},
-    .a = {-0.9641300027559936, 0.0}};
-constexpr SosSection kBbcLowPass = {
-    .b = {0.12388333267370166, 0.24776666534740333, 0.12388333267370166},
-    .a = {-0.7880350454339105, 0.2835683761287171}};
-constexpr std::array<SosSection, 3> kBbcSections = {kBbcHighPass, kBbcLowPass,
-                                                    kBbcLowPass};
+// The BBC Micro's speech path: the C21/R31 high-pass (1st order, 279 Hz),
+// then the IC17 Sallen-Key low-passes (2nd-order Butterworth, 6.95 kHz)
+// before and after the mixer. The full circuit differs from this cascade
+// by at most 0.1 dB from 30 Hz to 20 kHz
+// (docs/technical/hardware/audio-output-stage.md, "Overall response");
+// investigation/tools/process.py listenAudio() uses the same.
+constexpr double kBbcHighPassHz = 279.0;
+constexpr double kBbcLowPassHz = 6950.0;
 
-std::span<const SosSection> SectionsFor(OutputFilter filter) {
+// A 1st-order high-pass at `cutoff_hz`, by the bilinear transform with the
+// cutoff prewarped, as scipy.signal.butter(1, cutoff_hz, "highpass",
+// fs=rate, output="sos") gives it.
+SosSection FirstOrderHighPass(double cutoff_hz, double rate) {
+  const double k = std::tan(std::numbers::pi * cutoff_hz / rate);
+  const double norm = 1.0 / (1.0 + k);
+  SosSection section;
+  section.b = {norm, -norm, 0.0};
+  section.a = {(k - 1.0) * norm, 0.0};
+  return section;
+}
+
+// A 2nd-order Butterworth low-pass at `cutoff_hz`, as
+// scipy.signal.butter(2, cutoff_hz, "lowpass", fs=rate, output="sos")
+// gives it.
+SosSection ButterworthLowPass(double cutoff_hz, double rate) {
+  const double k = std::tan(std::numbers::pi * cutoff_hz / rate);
+  const double norm = 1.0 / (1.0 + (std::numbers::sqrt2 * k) + (k * k));
+  SosSection section;
+  section.b = {k * k * norm, 2.0 * k * k * norm, k * k * norm};
+  section.a = {2.0 * ((k * k) - 1.0) * norm,
+               (1.0 - (std::numbers::sqrt2 * k) + (k * k)) * norm};
+  return section;
+}
+
+}  // namespace
+
+std::vector<SosSection> OutputFilterSections(OutputFilter filter, double rate) {
   switch (filter) {
-    case OutputFilter::kBbcMicro:
-      return kBbcSections;
+    case OutputFilter::kBbcMicro: {
+      const SosSection low_pass = ButterworthLowPass(kBbcLowPassHz, rate);
+      return {FirstOrderHighPass(kBbcHighPassHz, rate), low_pass, low_pass};
+    }
     case OutputFilter::kNone:
       break;
   }
   return {};
 }
-
-}  // namespace
 
 std::span<const OutputFilterInfo> OutputFilters() { return kFilters; }
 
@@ -80,7 +102,8 @@ std::optional<OutputFilter> OutputFilterFromKey(std::string_view key) {
 }
 
 std::vector<float> FilterDacOutput(OutputFilter filter,
-                                   std::span<const float> samples) {
+                                   std::span<const float> samples,
+                                   int sample_rate) {
   if (samples.empty()) {
     return {};
   }
@@ -92,7 +115,8 @@ std::vector<float> FilterDacOutput(OutputFilter filter,
   for (const float v : samples) {
     held.insert(held.end(), kOutputOversampling, v - first);
   }
-  const std::span<const SosSection> sections = SectionsFor(filter);
+  const std::vector<SosSection> sections = OutputFilterSections(
+      filter, static_cast<double>(sample_rate) * kOutputOversampling);
   if (sections.empty()) {
     // Nothing to settle: the samples as they were.
     for (double& v : held) {

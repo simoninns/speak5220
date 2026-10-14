@@ -17,6 +17,8 @@
 #include <string_view>
 #include <vector>
 
+#include "core/dsp/iir_filter.h"
+
 namespace speak5220::core::dsp {
 
 // The audio stage after the DAC.
@@ -44,20 +46,32 @@ const OutputFilterInfo& InfoFor(OutputFilter filter);
 // The filter with `key`, or none for an unknown key.
 std::optional<OutputFilter> OutputFilterFromKey(std::string_view key);
 
-// The filters run at this multiple of the chip's 8 kHz, so that the DAC's
-// staircase and its images above 4 kHz are modelled: 48 kHz.
+// The chip's sample rate at its nominal clock (speak5220 datasheet §2).
+inline constexpr int kChipSampleRate = 8000;
+// The filters run at this multiple of the chip's sample rate, so that the
+// DAC's staircase and its images above half that rate are modelled.
 inline constexpr int kOutputOversampling = 6;
-inline constexpr int kOutputRate = 8000 * kOutputOversampling;
+// The filters' rate at the nominal clock: 48 kHz.
+inline constexpr int kOutputRate = kChipSampleRate * kOutputOversampling;
 
-// The output of a DAC that holds each of `samples` (8 kHz, full scale
-// +-1) for one sample period, through `filter`, at kOutputRate:
-// kOutputOversampling values per sample. The filters' passband gain is 1,
+// `filter` as second-order sections at `rate` (Hz), the analogue stage's
+// corners at the same frequencies whatever the rate; none for kNone.
+// Pure; thread-safe.
+std::vector<SosSection> OutputFilterSections(OutputFilter filter, double rate);
+
+// The output of a DAC that holds each of `samples` (at `sample_rate`,
+// full scale +-1) for one sample period, through `filter`, at
+// `sample_rate` x kOutputOversampling: kOutputOversampling values per
+// sample. A chip clocked off its nominal rate gives its samples at another
+// rate (core::synth::ChipSampleRate()); the analogue stage after it stays
+// the same. The filters' passband gain is 1,
 // so the level stays as it was; the analogue stage's own gain is left
 // out. kNone gives the held samples alone. The filters start at rest with
 // the first sample taken as zero, so a constant start has no transient.
 // O(n). Pure; thread-safe.
 std::vector<float> FilterDacOutput(OutputFilter filter,
-                                   std::span<const float> samples);
+                                   std::span<const float> samples,
+                                   int sample_rate = kChipSampleRate);
 
 // FilterDacOutput() with one value per 8 kHz sample, the mean over its
 // period, for a waveform drawn at 8 kHz. kNone returns `samples`

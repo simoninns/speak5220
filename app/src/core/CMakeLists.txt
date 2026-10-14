@@ -73,6 +73,7 @@ add_library(
     quality/quality_score.cpp
     quality/signal_preparation.cpp
     quality/voice_activity.cpp
+    synth/chip_clock.cpp
     synth/output_pin.cpp
     synth/reference_synthesizer.cpp
     synth/synth.cpp

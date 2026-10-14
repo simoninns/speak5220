@@ -22,6 +22,7 @@
 #include "core/dsp/resampler.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/file_digest.h"
@@ -149,6 +150,13 @@ class MainWindow : public QMainWindow {
   void SetOutputPin(core::synth::OutputPin pin);
   // The Audio > Chip Output menu's item for `pin`.
   QAction* OutputPinAction(core::synth::OutputPin pin) const;
+  // Plays the chip's output as the chip clocked at `clock_hz` (Audio >
+  // Chip Clock) would give it, here and in the Optimise window; stops
+  // encoded audio playing. One of core::synth::ChipClocks(). Remembered
+  // between sessions.
+  void SetChipClock(int clock_hz);
+  // The Audio > Chip Clock menu's item for `clock_hz`.
+  QAction* ChipClockAction(int clock_hz) const;
   // Shows the application in the theme `choice` (View > Theme): whoever
   // applies it listens to ThemeChanged(). Remembered between sessions.
   void SetTheme(ThemeChoice choice);
@@ -257,6 +265,10 @@ class MainWindow : public QMainWindow {
   // One per core::synth::OutputPins(), in its order, in an exclusive group.
   QActionGroup* output_pin_group_ = nullptr;
   std::vector<QAction*> output_pin_actions_;
+  // One per core::synth::ChipClocks(), in its order, in an exclusive
+  // group.
+  QActionGroup* chip_clock_group_ = nullptr;
+  std::vector<QAction*> chip_clock_actions_;
   // One per kThemeChoices, in its order, in an exclusive group.
   QActionGroup* theme_group_ = nullptr;
   std::vector<QAction*> theme_actions_;

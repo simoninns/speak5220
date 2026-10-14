@@ -48,6 +48,7 @@
 #include "core/project/phrase_importer.h"
 #include "core/project/project_export.h"
 #include "core/project/project_store.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "core/synth/synth.h"
 #include "core/util/logging.h"
@@ -151,6 +152,7 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
 
   SetOutputFilter(view_preferences_->ChosenOutputFilter());
   SetOutputPin(view_preferences_->ChosenOutputPin());
+  SetChipClock(view_preferences_->ChosenChipClock());
   SetTheme(view_preferences_->ChosenTheme());
 
   OnProjectChanged();
@@ -218,6 +220,25 @@ QAction* MainWindow::OutputPinAction(core::synth::OutputPin pin) const {
   for (std::size_t i = 0; i < pins.size(); ++i) {
     if (pins[i].pin == pin && i < output_pin_actions_.size()) {
       return output_pin_actions_[i];
+    }
+  }
+  return nullptr;
+}
+
+void MainWindow::SetChipClock(int clock_hz) {
+  player_->SetChipClock(clock_hz);
+  if (QAction* action = ChipClockAction(clock_hz); action != nullptr) {
+    action->setChecked(true);
+  }
+  view_preferences_->SetChipClock(clock_hz);
+}
+
+QAction* MainWindow::ChipClockAction(int clock_hz) const {
+  const std::span<const core::synth::ChipClockInfo> clocks =
+      core::synth::ChipClocks();
+  for (std::size_t i = 0; i < clocks.size(); ++i) {
+    if (clocks[i].hz == clock_hz && i < chip_clock_actions_.size()) {
+      return chip_clock_actions_[i];
     }
   }
   return nullptr;
@@ -334,6 +355,22 @@ void MainWindow::CreateActions() {
     output_pin_actions_.push_back(action);
   }
 
+  chip_clock_group_ = new QActionGroup(this);
+  for (const core::synth::ChipClockInfo& info : core::synth::ChipClocks()) {
+    auto* action = new QAction(ToQString(info.label), chip_clock_group_);
+    action->setCheckable(true);
+    action->setStatusTip(
+        info.hz == core::synth::kNominalClockHz
+            ? QStringLiteral("Hear the chip's output at its nominal clock, "
+                             "8000 samples a second")
+            : QStringLiteral("Hear the chip's output as a chip clocked at "
+                             "this rate gives it: %1 samples a second")
+                  .arg(core::synth::ChipSampleRate(info.hz)));
+    connect(action, &QAction::triggered, this,
+            [this, hz = info.hz] { SetChipClock(hz); });
+    chip_clock_actions_.push_back(action);
+  }
+
   add_action_ = new QAction(QStringLiteral("&Add Phrases..."), this);
   add_action_->setIconText(QStringLiteral("+"));
   add_action_->setToolTip(QStringLiteral("Add phrases from WAV files"));
@@ -445,6 +482,10 @@ void MainWindow::CreateMenus() {
   QMenu* output_filter = audio->addMenu(QStringLiteral("Output &Filter"));
   for (QAction* action : output_filter_actions_) {
     output_filter->addAction(action);
+  }
+  QMenu* chip_clock = audio->addMenu(QStringLiteral("Chip &Clock"));
+  for (QAction* action : chip_clock_actions_) {
+    chip_clock->addAction(action);
   }
 
   QMenu* help = menuBar()->addMenu(QStringLiteral("&Help"));

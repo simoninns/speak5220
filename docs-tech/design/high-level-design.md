@@ -19,7 +19,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `util/` (Status, logging, version, numbers as text, SHA-256, task runners, file digests, clock) | Implemented |
 | `s5core`: `lpc/` (tables, frames, bit stream, frame statistics) | Implemented |
 | `s5core`: `emulator/` (`Tms5220`, `Tms6100`, host procedures) | Implemented, matching the C reference sample for sample |
-| `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins) | Implemented |
+| `s5core`: `synth/` (`Synth`, `ReferenceSynthesizer`, the output pins, the chip clocks) | Implemented |
 | `s5core`: `packaging/` (Acorn PHROM, TI indexed, Speak External, C headers) | Implemented |
 | `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the noise gate, the de-esser, the output filters) | Implemented |
@@ -80,7 +80,7 @@ app/
       lpc/                      coding tables, Frame, FrameCodec, BitReverse,
                                 FrameStatistics
       emulator/                 Tms5220, Tms6100, ChipDriver, interfaces
-      synth/                    Synth, ReferenceSynthesizer, OutputPin
+      synth/                    Synth, ReferenceSynthesizer, OutputPin, ChipClock
       packaging/                AcornPhrom, TiIndexed, SpeakExternalStream,
                                 CHeader (§18)
       audio/                    WAV interfaces, the libsndfile adapters, the
@@ -363,7 +363,8 @@ Plan §2.2, with the names as built.
 | `SincResampler` (`IResampler`) | **Implemented** (`core/dsp/resampler`): libsamplerate `SRC_SINC_BEST_QUALITY` |
 | `PocketFft` (`IFft`) | **Implemented** (`core/dsp/fft`): real FFTs with NumPy's conventions |
 | Filters, sums, LPC analysis | **Implemented** (`core/dsp/iir_filter`, `array_math`, `lpc_analysis`, `filter_constants.h`): §8 |
-| `OutputFilter`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at 48 kHz through a computer's audio stage (none, or the BBC Micro's), for listening and display only (§16) |
+| `ChipClocks()`, `ChipSampleRate()` | **Implemented** (`core/synth/chip_clock`): the oscillator rates the chip's output can be played at, 560 to 720 kHz in 20 kHz steps around the nominal 640 kHz, and the sample rate each gives (`fosc` / 80, datasheet §2), for listening only (§16) |
+| `OutputFilter`, `OutputFilterSections()`, `FilterDacOutput()`, `FilterSamples()` | **Implemented** (`core/dsp/output_filter`): the DAC's held samples at six times the chip's sample rate (48 kHz at the nominal clock) through a computer's audio stage (none, or the BBC Micro's), whose sections are designed for that rate so its corners stay put, for listening and display only (§16) |
 | `NoiseGate()`, `NoiseGateGain()`, `GatedSpans()` | **Implemented** (`core/dsp/noise_gate`): mutes stretches below a level relative to the loudest, opening and closing at a set speed, for the `noise_gate_db` and `noise_gate_ms` options (§8), and reports the stretches it turns down by more than 6 dB for the waveform's shading (§16) |
 | `DeEss()`, `DeEsserGain()` | **Implemented** (`core/dsp/de_esser`): turns a recording's treble band down where it is most of the sound, for the `de_ess_db` option (§8) |
 | `CentredRms()`, `SpreadDips()`, `SpreadPeaks()` | **Implemented** (`core/dsp/envelope`): the level and gain envelopes the noise gate and de-esser share (§8) |
@@ -1977,13 +1978,17 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   the phrase's tab shown, by its `PhraseTabKey()`, and the
   output filter chosen in the **Audio > Output Filter** menu, by its
   `OutputFilterInfo::key`, and the pin chosen in **Audio > Chip Output**,
-  by its `OutputPinInfo::key`, and the theme chosen in **View > Theme**,
+  by its `OutputPinInfo::key`, and the clock chosen in **Audio > Chip
+  Clock**, in Hz, and the theme chosen in **View > Theme**,
   by its `ThemeChoiceKey()`) is kept the same way through
   `IViewPreferences` (`SettingsViewPreferences`). `MainWindow::SetOutputFilter()`
   passes the filter to the `Player` and to `PhraseWaveforms`, ticks its
   menu item and saves it. `MainWindow::SetOutputPin()` does the same with
   the pin for `PhraseWaveforms` and the `OptimiseDialog`, first stopping
   encoded audio that was taken from the other pin.
+  `MainWindow::SetChipClock()` passes the clock to the `Player`, ticks
+  its menu item and saves it; a saved rate not in `ChipClocks()` gives
+  the nominal clock.
   `MainWindow::SetTheme()` ticks its menu item, saves the choice and
   emits `ThemeChanged()`, which `main()` passes to the
   `ColourSchemeFollower`.
@@ -2203,9 +2208,14 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   preprocessed recordings) is played as `FilterDacOutput()` gives it: each sample held for 6 values at 48 kHz, through the filter's
   second-order sections, the whole buffer at `Play()` so the filters'
   state at any start is as from the beginning, then resampled from 48 kHz
-  if the device does not take it. The playhead still counts 8 kHz
-  samples. Changing the filter stops the chip's output if it is playing
-  or paused. `QtAudioOutput` plays mono 16-bit from a `QBuffer` in pull
+  if the device does not take it. The chip's output is played at the
+  sample rate of the chip's clock (`Player::SetChipClock()`,
+  `ChipSampleRate()`), and filtered at six times that with the sections
+  `OutputFilterSections()` designs for it, so a faster clock raises the
+  pitch and shortens the frames while the audio stage stays the same; the
+  recordings stay at 8 kHz. The playhead still counts the samples given to
+  `Play()`, at the rate they play. Changing the filter or the clock stops
+  the chip's output if it is playing or paused. `QtAudioOutput` plays mono 16-bit from a `QBuffer` in pull
   mode on the default device, using the device's channel count (each
   sample copied to every channel) if it refuses mono.
 - **Colours.** `ColoursFor(palette)` returns the light or the dark set of

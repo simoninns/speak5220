@@ -24,6 +24,7 @@
 #include "core/encoder/encoder.h"
 #include "core/project/phrase.h"
 #include "core/quality/quality_assessor.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
@@ -81,6 +82,8 @@ class FakeViewPreferences : public app::IViewPreferences {
   }
   core::synth::OutputPin ChosenOutputPin() override { return pin; }
   void SetOutputPin(core::synth::OutputPin chosen) override { pin = chosen; }
+  int ChosenChipClock() override { return clock_hz; }
+  void SetChipClock(int chosen) override { clock_hz = chosen; }
   app::ThemeChoice ChosenTheme() override { return theme; }
   void SetTheme(app::ThemeChoice chosen) override { theme = chosen; }
 
@@ -88,6 +91,7 @@ class FakeViewPreferences : public app::IViewPreferences {
   app::PhraseTab phrase_tab = app::PhraseTab::kOriginal;
   core::dsp::OutputFilter filter = core::dsp::OutputFilter::kNone;
   core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
+  int clock_hz = core::synth::kNominalClockHz;
   app::ThemeChoice theme = app::ThemeChoice::kAuto;
 };
 

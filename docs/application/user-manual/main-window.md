@@ -151,7 +151,11 @@ loud samples and has the real DAC's uneven steps, or **I/O (10-bit
 codes)**, unclipped. See
 [chip output](waveforms.md#chip-output).
 
-The window remembers both choices for next time.
+**Audio > Chip Clock** chooses the clock the chip's output is played at:
+**640 kHz (nominal)** (the default), or a rate from 560 kHz to 720 kHz in
+20 kHz steps. See [chip clock](waveforms.md#chip-clock).
+
+The window remembers these choices for next time.
 
 ## Undo and redo
 

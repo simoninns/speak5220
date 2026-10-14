@@ -34,6 +34,7 @@
 #include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
@@ -152,6 +153,27 @@ TEST_F(MainWindowTest, OutputFilterMenuSetsTheFilterAndRemembersIt) {
   EXPECT_EQ(playback_.player.Filter(), OutputFilter::kBbcMicro);
   EXPECT_EQ(window_.Waveforms()->Filter(), OutputFilter::kBbcMicro);
   EXPECT_EQ(preferences_.filter, OutputFilter::kBbcMicro);
+}
+
+TEST_F(MainWindowTest, ChipClockMenuSetsTheClockAndRemembersIt) {
+  EXPECT_TRUE(
+      window_.ChipClockAction(core::synth::kNominalClockHz)->isChecked());
+  window_.ChipClockAction(680000)->trigger();
+  EXPECT_TRUE(window_.ChipClockAction(680000)->isChecked());
+  EXPECT_FALSE(
+      window_.ChipClockAction(core::synth::kNominalClockHz)->isChecked());
+  EXPECT_EQ(playback_.player.ChipClock(), 680000);
+  EXPECT_EQ(preferences_.clock_hz, 680000);
+  EXPECT_EQ(window_.ChipClockAction(123), nullptr);
+}
+
+TEST_F(MainWindowTest, ChipClockStartsAsLastChosen) {
+  FakeViewPreferences chosen;
+  chosen.clock_hz = 600000;
+  MainWindow window(dialogs_, recent_, chosen, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_TRUE(window.ChipClockAction(600000)->isChecked());
+  EXPECT_EQ(playback_.player.ChipClock(), 600000);
 }
 
 TEST_F(MainWindowTest, OutputFilterStartsAsLastChosen) {

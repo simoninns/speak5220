@@ -19,6 +19,7 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/dsp/resampler.h"
+#include "core/synth/chip_clock.h"
 #include "core/util/clock.h"
 #include "core/util/status.h"
 #include "gui/playback/audio_output.h"
@@ -57,13 +58,16 @@ enum class PlaybackState { kStopped, kPlaying, kPaused };
 // called. When the device does not take 8 kHz, the samples are resampled
 // to its rate.
 //
-// The chip's output (IsChipOutput()) is played through the
-// output filter (SetOutputFilter()), if there is one: as the DAC's
-// staircase through that computer's audio stage, at 48 kHz
-// (core::dsp::FilterDacOutput()), resampled to the device's rate if it
-// does not take 48 kHz. The playhead still counts 8 kHz samples. GUI
-// thread only; the output, clock and resampler must
-// outlive the player.
+// The chip's output (IsChipOutput()) is played at the chip's clock
+// (SetChipClock()): at its sample rate there,
+// core::synth::ChipSampleRate(), so a faster clock plays it higher and
+// sooner, as the chip would. It is played through the output filter
+// (SetOutputFilter()), if there is one: as the DAC's staircase through
+// that computer's audio stage, at kOutputOversampling times the chip's
+// rate (core::dsp::FilterDacOutput()), resampled to the device's rate if
+// it does not take that. The playhead still counts the samples given to
+// Play(). GUI thread only; the output, clock and resampler must outlive
+// the player.
 class Player : public QObject {
   Q_OBJECT
 
@@ -95,6 +99,11 @@ class Player : public QObject {
   // Changing it stops the chip's output if it is playing or paused.
   void SetOutputFilter(core::dsp::OutputFilter filter);
   core::dsp::OutputFilter Filter() const { return filter_; }
+  // The chip's oscillator rate, in Hz, that its output is played at;
+  // core::synth::kNominalClockHz at first. Changing it stops the chip's
+  // output if it is playing or paused.
+  void SetChipClock(int clock_hz);
+  int ChipClock() const { return clock_hz_; }
 
   PlaybackState State() const { return state_; }
   // The source of what is playing or paused; meaningless when stopped.
@@ -115,6 +124,9 @@ class Player : public QObject {
   void SetState(PlaybackState state);
   // Whether `source` is played through the output filter.
   bool IsFiltered(PlaybackSource source) const;
+  // The rate the samples of `source` are played at: the chip's at its
+  // clock for its output, kSampleRate for a recording.
+  int SampleRateOf(PlaybackSource source) const;
 
   IAudioOutput* output_;
   core::IClock* clock_;
@@ -125,8 +137,9 @@ class Player : public QObject {
   PlaybackSource source_ = PlaybackSource::kOriginal;
   std::vector<std::int16_t> samples_;
   core::dsp::OutputFilter filter_ = core::dsp::OutputFilter::kNone;
-  // samples_ through the output filter, at core::dsp::kOutputRate, when
-  // the source is filtered; otherwise empty.
+  int clock_hz_ = core::synth::kNominalClockHz;
+  // samples_ through the output filter, at kOutputOversampling times
+  // SampleRateOf(source_), when the source is filtered; otherwise empty.
   std::vector<float> filtered_;
   // Where play started, where the device's buffer starts, the playhead.
   int start_ = 0;

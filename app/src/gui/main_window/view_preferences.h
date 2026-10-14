@@ -14,6 +14,7 @@
 #include <QSettings>
 
 #include "core/dsp/output_filter.h"
+#include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "gui/theme/colour_scheme.h"
 #include "gui/waveform/phrase_tab.h"
@@ -46,6 +47,12 @@ class IViewPreferences {
   virtual core::synth::OutputPin ChosenOutputPin() = 0;
   virtual void SetOutputPin(core::synth::OutputPin pin) = 0;
 
+  // The chip's clock its output is heard at, in Hz; the nominal clock if
+  // never saved, or saved as a rate this version does not offer
+  // (core::synth::ChipClocks()).
+  virtual int ChosenChipClock() = 0;
+  virtual void SetChipClock(int clock_hz) = 0;
+
   // The theme last chosen (View > Theme); Auto if never saved, or saved
   // with a key this version does not know.
   virtual ThemeChoice ChosenTheme() = 0;
@@ -63,6 +70,8 @@ class SettingsViewPreferences : public IViewPreferences {
   static constexpr const char* kOutputFilterKey = "outputFilter";
   // Holds the pin's key (core::synth::OutputPinInfo::key).
   static constexpr const char* kOutputPinKey = "outputPin";
+  // Holds the clock in Hz.
+  static constexpr const char* kChipClockKey = "chipClockHz";
   // Holds the choice's key (ThemeChoiceKey()).
   static constexpr const char* kThemeKey = "theme";
 
@@ -74,6 +83,8 @@ class SettingsViewPreferences : public IViewPreferences {
   void SetOutputFilter(core::dsp::OutputFilter filter) override;
   core::synth::OutputPin ChosenOutputPin() override;
   void SetOutputPin(core::synth::OutputPin pin) override;
+  int ChosenChipClock() override;
+  void SetChipClock(int clock_hz) override;
   ThemeChoice ChosenTheme() override;
   void SetTheme(ThemeChoice choice) override;
 

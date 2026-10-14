@@ -151,6 +151,41 @@ measures and anything exported are unchanged. The window remembers
 the choice for next time. Changing it stops the encoded audio if it is
 playing.
 
+## Chip clock
+
+The chip's sample rate is its oscillator's rate divided by 80: 8000
+samples a second at the nominal 640 kHz
+([datasheet §2](../../technical/datasheet/clock.md)). On a real board the
+oscillator is set by a resistor and capacitor, so it can run somewhat
+fast or slow, and some machines clock the chip off its nominal rate on
+purpose. A different clock changes everything at once: the pitch, the
+formants and the length of every frame move by the same proportion, like
+a tape played at the wrong speed.
+
+To hear the encoded audio as a chip clocked at another rate would play it,
+choose the rate under **Audio > Chip Clock**:
+
+| Clock | Sample rate | Change |
+|---|---|---|
+| 560 kHz | 7000 Hz | −12.5% |
+| 580 kHz | 7250 Hz | −9.4% |
+| 600 kHz | 7500 Hz | −6.3% |
+| 620 kHz | 7750 Hz | −3.1% |
+| 640 kHz (nominal) | 8000 Hz | the default |
+| 660 kHz | 8250 Hz | +3.1% |
+| 680 kHz | 8500 Hz | +6.3% |
+| 700 kHz | 8750 Hz | +9.4% |
+| 720 kHz | 9000 Hz | +12.5% |
+
+The clock changes only the encoded audio played, in the main window and in
+the Optimise window. With an [output filter](#output-filter), the filter's
+corners stay at the same frequencies, as the computer's audio stage does
+not change with the chip's clock. The original and preprocessed recordings
+play at 8 kHz, and the waveforms, the frames, the quality measures and
+anything exported are unchanged. The playhead follows the encoded audio
+at its new rate. The window remembers the choice for next time. Changing
+it stops the encoded audio if it is playing.
+
 ## Frames
 
 The encoded waveform is shaded by the kind of each frame (voiced, unvoiced,
@@ -212,7 +247,9 @@ goes back to the play start.
 Audio plays on the system's default output device. If the device does not
 take 8 kHz audio, the audio is resampled to the device's own rate first.
 With an [output filter](#output-filter), the encoded audio plays at
-48 kHz, or is resampled from 48 kHz to the device's own rate.
+48 kHz, or is resampled from 48 kHz to the device's own rate. At another
+[chip clock](#chip-clock), those rates change with it: 9000 Hz and 54 kHz
+at 720 kHz, for example.
 
 ## Light and dark
 
