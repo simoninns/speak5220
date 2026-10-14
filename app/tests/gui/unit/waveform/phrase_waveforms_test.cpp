@@ -690,6 +690,75 @@ TEST_F(PhraseWaveformsTest, SpeakerPinClipsWhatTheIoPinKeeps) {
               -300 * core::synth::kSampleScale, 1);
 }
 
+TEST_F(PhraseWaveformsTest, DragSelectsInEveryTabAndPlayPlaysJustThat) {
+  ShowPhrase();
+  emit Encoded() -> SelectionRequested(200.4, 1000.6, true);
+  const TimeExtent selected{.begin = 200.0, .end = 1001.0};
+  for (const WaveformView* view : {Original(), Preprocessed(), Encoded()}) {
+    EXPECT_EQ(view->Selection(), selected);
+  }
+  // Not part of the project: nothing to undo.
+  EXPECT_EQ(stack_.count(), 0);
+  EXPECT_CALL(playback_.output, Start(SizeIs(801), _)).Times(3);
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  EXPECT_EQ(playback_.player.Position(), 200);
+  waveforms_.PlayPause(PlaybackSource::kPreprocessed);
+  // The encoded audio plays the same sound.
+  waveforms_.PlayPause(PlaybackSource::kEncoded);
+  EXPECT_EQ(playback_.player.Position(), 200 + kFirstFrameStretch);
+}
+
+TEST_F(PhraseWaveformsTest, SelectionIsLimitedToTheAudio) {
+  ShowPhrase();
+  waveforms_.Select(-50.0, 99999.0);
+  EXPECT_EQ(waveforms_.Selection(),
+            (TimeExtent{.begin = 0.0, .end = kAudioSamples}));
+  // Less than a sample selects nothing.
+  waveforms_.Select(300.0, 300.2);
+  EXPECT_EQ(waveforms_.Selection(), std::nullopt);
+  EXPECT_EQ(Original()->Selection(), std::nullopt);
+}
+
+TEST_F(PhraseWaveformsTest, ClickEscapeOrAnotherPhraseClearsTheSelection) {
+  ShowPhrase();
+  waveforms_.Select(200.0, 1000.0);
+  EXPECT_CALL(editor_, SetPlayStart(TestId(1), 800)).WillOnce(Return(400));
+  emit Original() -> MarkerRequested(800.0);
+  EXPECT_EQ(waveforms_.Selection(), std::nullopt);
+  EXPECT_EQ(Encoded()->Selection(), std::nullopt);
+
+  waveforms_.Select(200.0, 1000.0);
+  emit Preprocessed() -> SelectionClearRequested();
+  EXPECT_EQ(waveforms_.Selection(), std::nullopt);
+
+  waveforms_.Select(200.0, 1000.0);
+  const Phrase other = EncodedPhrase(2, "OTHER", 50);
+  waveforms_.ShowPhrase(&other);
+  EXPECT_EQ(waveforms_.Selection(), std::nullopt);
+  EXPECT_EQ(Original()->Selection(), std::nullopt);
+}
+
+TEST_F(PhraseWaveformsTest, PlaybackFollowsASelectionOnceItIsMade) {
+  ShowPhrase();
+  waveforms_.PlayPause(PlaybackSource::kOriginal);
+  // Still being dragged: playback goes on.
+  waveforms_.Select(200.0, 600.0, false);
+  EXPECT_EQ(playback_.player.Position(), kPlayStart);
+  EXPECT_CALL(playback_.output, Start(SizeIs(600), _));
+  waveforms_.Select(200.0, 800.0);
+  EXPECT_EQ(playback_.player.State(), PlaybackState::kPlaying);
+  EXPECT_EQ(playback_.player.Position(), 200);
+}
+
+TEST_F(PhraseWaveformsTest, ZoomInShowsTheSelectionInEveryTab) {
+  ShowPhrase();
+  waveforms_.Select(200.0, 1000.0);
+  waveforms_.ZoomInButton(PhraseTab::kOriginal)->click();
+  EXPECT_DOUBLE_EQ(Original()->Axis().first, 200.0);
+  EXPECT_DOUBLE_EQ(Original()->Axis().XToSample(Original()->width()), 1000.0);
+  EXPECT_EQ(Encoded()->Axis(), Original()->Axis());
+}
+
 TEST_F(PhraseWaveformsTest, AnotherPhraseStopsPlayback) {
   ShowPhrase();
   waveforms_.PlayPause(PlaybackSource::kOriginal);

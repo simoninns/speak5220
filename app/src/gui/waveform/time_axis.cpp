@@ -55,6 +55,16 @@ TimeAxis ZoomAxis(const TimeAxis& axis, double factor, double anchor_x,
   return ClampAxis(zoomed, extent, width);
 }
 
+TimeAxis ZoomAxisCentred(const TimeAxis& axis, double factor, double centre,
+                         const TimeExtent& extent, int width) {
+  const double fit = FitAxis(extent, width).samples_per_pixel;
+  TimeAxis zoomed = axis;
+  zoomed.samples_per_pixel = std::clamp(axis.samples_per_pixel / factor,
+                                        TimeAxis::kMinSamplesPerPixel, fit);
+  zoomed.first = centre - (Width(width) / 2.0 * zoomed.samples_per_pixel);
+  return ClampAxis(zoomed, extent, width);
+}
+
 TimeAxis ScrollAxis(const TimeAxis& axis, double pixels,
                     const TimeExtent& extent, int width) {
   TimeAxis scrolled = axis;

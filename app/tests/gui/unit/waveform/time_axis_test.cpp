@@ -54,6 +54,16 @@ TEST(TimeAxisTest, ZoomStopsAtTheClosestAndAtTheFit) {
   EXPECT_EQ(ZoomAxis(fit, 0.25, 200.0, kExtent, kWidth), fit);
 }
 
+TEST(TimeAxisTest, CentredZoomPutsTheSampleInTheMiddle) {
+  const TimeAxis fit = FitAxis(kExtent, kWidth);
+  const TimeAxis zoomed = ZoomAxisCentred(fit, 4.0, 1000.0, kExtent, kWidth);
+  EXPECT_DOUBLE_EQ(zoomed.samples_per_pixel, 5.0);
+  EXPECT_DOUBLE_EQ(zoomed.XToSample(kWidth / 2.0), 1000.0);
+  // Near the start, the view stays inside the extent.
+  EXPECT_DOUBLE_EQ(ZoomAxisCentred(fit, 4.0, -150.0, kExtent, kWidth).first,
+                   -200.0);
+}
+
 TEST(TimeAxisTest, ScrollStaysInsideTheExtent) {
   const TimeAxis zoomed{.first = 0.0, .samples_per_pixel = 2.0};
   EXPECT_DOUBLE_EQ(ScrollAxis(zoomed, 50.0, kExtent, kWidth).first, 100.0);

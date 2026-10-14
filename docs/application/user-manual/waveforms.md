@@ -207,10 +207,15 @@ its energy and K1 to K4, and a voiced frame all of them.
 
 | Control | What it does |
 |---|---|
-| **+** and **−** under the waveform | Zoom in or out, about the middle |
+| **+** and **−** under the waveform | Zoom in or out, about the [selection](#selecting-part-of-a-phrase) if there is one, or else the [play start](#the-play-start), which stays in the middle of the waveform |
 | Ctrl + mouse wheel | Zoom in or out about the pointer |
 | Mouse wheel, or the scroll bar under the waveform | Scroll |
 | **Fit** | Show the whole phrase |
+
+With a selection, the first press of **+** zooms in until the
+selection fills the waveform; later presses zoom further into its
+middle. A phrase with neither (one with no source audio) zooms about the
+middle of the waveform.
 
 A waveform fits the whole phrase until you zoom or scroll it, and fits
 again when resized. The closest zoom is 16 pixels per sample.
@@ -232,17 +237,31 @@ file](../reference/project-file.md)), and one step to
 [undo](main-window.md#undo-and-redo). A phrase with no source audio has
 no play start.
 
+## Selecting part of a phrase
+
+Drag across any tab's waveform to select that stretch: it is tinted,
+with a line at each end, on every tab. While there is a selection,
+**▶** plays just the selection, and the zoom buttons zoom into it (see
+[zoom and scroll](#zoom-and-scroll)). Selecting while a waveform plays
+starts it again on the new selection; one that is paused stops.
+
+A click (which moves the play start), Escape in a waveform, or choosing
+another phrase clears the selection, and play goes back to playing from
+the play start. The selection is not part of the project: it is not
+saved, and there is nothing to undo. A phrase with no source audio has
+no selection.
+
 ## Playing
 
 | Control | What it does |
 |---|---|
-| **▶** under the waveform | Plays that tab's waveform from the play start; while playing, the button pauses, and pressing it again goes on from where it paused |
+| **▶** under the waveform | Plays that tab's waveform from the play start, or just the selection; while playing, the button pauses, and pressing it again goes on from where it paused |
 | Space | The same, when the waveform has the keyboard focus (click in it, or Tab to it) |
 
 One waveform plays at a time: playing one stops another. The encoded
 audio starts from the same sound as the recordings, at the play start. A
-green line follows the sound; at the end, playback stops and the line
-goes back to the play start.
+green line follows the sound; at the end (of the selection, if there is
+one), playback stops and the line goes back to where it started.
 
 Audio plays on the system's default output device, or the one chosen in
 [Preferences](main-window.md#preferences). If the device fails while

@@ -93,7 +93,8 @@ Player::~Player() {
 }
 
 core::Status Player::Play(PlaybackSource source,
-                          std::vector<std::int16_t> samples, int start) {
+                          std::vector<std::int16_t> samples, int start,
+                          int end) {
   Stop();
   if (samples.empty()) {
     return core::FailedPreconditionError("there is no audio to play");
@@ -107,8 +108,12 @@ core::Status Player::Play(PlaybackSource source,
     filtered_ = core::dsp::FilterDacOutput(filter_, ToFloat(samples_),
                                            SampleRateOf(source));
   }
-  start_ =
-      (start < 0 || std::cmp_greater_equal(start, samples_.size())) ? 0 : start;
+  const auto size = static_cast<int>(samples_.size());
+  end_ = (end < 0 || end > size) ? size : end;
+  start_ = (start < 0 || start >= end_) ? 0 : start;
+  if (end_ <= start_) {
+    end_ = size;
+  }
   position_ = start_;
   return StartOutput(start_);
 }
@@ -153,8 +158,7 @@ void Player::Tick() {
                                         output_->ProcessedMicroseconds());
   const std::int64_t played =
       elapsed * SampleRateOf(source_) / kMicrosecondsPerSecond;
-  const auto end = static_cast<std::int64_t>(samples_.size());
-  if (output_->IsFinished() || base_ + played >= end) {
+  if (output_->IsFinished() || base_ + played >= end_) {
     const core::Status device = output_->DeviceStatus();
     Stop();
     if (!device.IsOk()) {
@@ -204,8 +208,8 @@ int Player::SampleRateOf(PlaybackSource source) const {
 }
 
 core::Status Player::StartOutput(int from) {
-  // The rest of the buffer: the filtered output, or the samples
-  // themselves.
+  // The rest of the buffer, up to the end: the filtered output, or the
+  // samples themselves.
   const bool filtered = !filtered_.empty();
   const int sample_rate = SampleRateOf(source_);
   const int source_rate =
@@ -214,9 +218,11 @@ core::Status Player::StartOutput(int from) {
       filtered ? std::vector<float>(
                      filtered_.begin() + (static_cast<std::ptrdiff_t>(from) *
                                           core::dsp::kOutputOversampling),
-                     filtered_.end())
+                     filtered_.begin() + (static_cast<std::ptrdiff_t>(end_) *
+                                          core::dsp::kOutputOversampling))
                : ToFloat(std::span<const std::int16_t>(samples_).subspan(
-                     static_cast<std::size_t>(from)));
+                     static_cast<std::size_t>(from),
+                     static_cast<std::size_t>(end_ - from)));
   const int rate = output_->PlaybackRate(source_rate);
   std::vector<std::int16_t> buffer;
   if (rate == source_rate) {

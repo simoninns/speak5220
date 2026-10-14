@@ -54,6 +54,11 @@ TimeAxis ClampAxis(const TimeAxis& axis, const TimeExtent& extent, int width);
 TimeAxis ZoomAxis(const TimeAxis& axis, double factor, double anchor_x,
                   const TimeExtent& extent, int width);
 
+// `axis` zoomed in by `factor`, with source sample `centre` in the middle
+// of the view, then clamped.
+TimeAxis ZoomAxisCentred(const TimeAxis& axis, double factor, double centre,
+                         const TimeExtent& extent, int width);
+
 // `axis` scrolled by `pixels` (positive moves later in time), clamped.
 TimeAxis ScrollAxis(const TimeAxis& axis, double pixels,
                     const TimeExtent& extent, int width);

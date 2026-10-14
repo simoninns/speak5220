@@ -2121,9 +2121,9 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
 
 - **Time.** All three views count time in samples of the phrase's source
   audio (`TimeAxis`: the source sample at pixel 0 and samples per pixel,
-  with fit, clamp, zoom about a pixel and scroll). A view's own samples
-  are placed by a source offset: sample `s + offset` is drawn at source
-  time `s`. The original's offset is 0.
+  with fit, clamp, zoom about a pixel or centred on a sample, and
+  scroll). A view's own samples are placed by a source offset: sample
+  `s + offset` is drawn at source time `s`. The original's offset is 0.
 - **No phrase.** With no phrase shown, each view shows a placeholder under
   a faint backdrop (`WaveformView::Clear()`): the logo, which comes from
   the executable's resources (`app/resources/speak5220.qrc`), so the GUI
@@ -2252,11 +2252,34 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   when the play start is already 0): a waveform playing starts again from
   the new play start, and one paused stops, so the next play starts there
   rather than resuming; the Optimise window's audio is left alone.
+- **Selection.** A press in a view becomes a click on its release, or a
+  drag once the pointer moves `QApplication::startDragDistance()`; the
+  drag asks for the stretch dragged over (`SelectionRequested(begin, end,
+  finished)`, again on each move and `finished` on the release), and
+  Escape asks for it to be cleared (`SelectionClearRequested()`). So a
+  drag never moves the play start. `PhraseWaveforms` rounds and limits
+  the selection to the audio (an empty one clears it), keeps it in
+  `selection_` and gives it to every view (`WaveformView::SetSelection()`),
+  which tints it with the palette's Highlight at alpha 90 and draws its
+  ends. It is view state, not the project's: not saved, not undone.
+  Moving the play start, Escape or another phrase clears it; a finished
+  selection, or clearing it, takes playback there as a move of the play
+  start does, but a drag under way does not, so playback is not
+  restarted on every move.
+- **Zoom anchor.** The zoom buttons zoom about the selection's middle, or
+  else the marker, or else the view's middle, putting it in the middle
+  of the view (`ZoomAxisCentred()`, then clamped). The first zoom in with
+  a selection whose fit is more than 1% closer than the view shows just
+  the selection (`FitAxis()` of the selection, clamped to the extent);
+  after that, zoom in steps by `kZoomStep`. Ctrl+wheel still zooms about
+  the pointer.
 - **Playback.** `Player` plays one buffer at a time: `Play(source,
-  samples, start)`, `Pause()`, `Resume()` (a new buffer from the paused
-  position) and `Stop()`. One tab's waveform plays at a time. The
-  original and preprocessed recordings play from the play start; the
-  encoded audio from `play_start + offset`, limited to its samples. The
+  samples, start, end)`, `Pause()`, `Resume()` (a new buffer from the
+  paused position to the end) and `Stop()`; the end is the last sample
+  unless given (a selection). One tab's waveform plays at a time. The
+  original and preprocessed recordings play from the play start, or the
+  selection's start to its end; the encoded audio from the same sounds,
+  `start + offset` (and `end + offset`), limited to its samples. The
   playhead is the clock time since the device started, but no more than
   `IAudioOutput::ProcessedMicroseconds()`, so it neither runs ahead of the
   audio nor jumps with the device's buffer; a 33 ms `QTimer` moves it, and
@@ -2327,6 +2350,10 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   the project modified.
 - One play start serves every tab (the encoded audio plays from the same
   sound), rather than one marker per waveform.
+- The plan has no selection. A drag selects a stretch, shared by the
+  tabs, which play plays alone and the zoom buttons zoom into; the zoom
+  buttons zoom about it or the play start, rather than the view's
+  middle.
 - The plan's Phase 6 item 1 asks for the dark-mode cause to be fixed in
   the build. No plugin was missing: the default GTK 3 theme does not
   report GNOME's preference, so the fix is in the application, through
@@ -2340,9 +2367,11 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   preference and change is applied, and that the phrase details follow a
   palette change;
 - unit tests check the peak cache against a plain scan, the
-  sample-to-pixel mapping, fit, zoom and scroll limits;
+  sample-to-pixel mapping, fit, zoom and scroll limits, and zooming about
+  the play start and into the selection;
 - unit tests check `Player` with a mocked output and a fake clock (the
-  playhead, pause and resume, the end, resampling, failures);
+  playhead, pause and resume, the end and a selection's end, resampling,
+  failures);
 - unit tests map encoded samples and pointer positions to frames,
   including the start latency, and show the same sound at the same place
   in both panes, and that the shared controls move both;

@@ -266,6 +266,10 @@ void PhraseWaveforms::BuildTrack(Track& track, const QString& tab_title,
   });
   connect(view, &WaveformView::MarkerRequested, this,
           &PhraseWaveforms::MovePlayStart);
+  connect(view, &WaveformView::SelectionRequested, this,
+          &PhraseWaveforms::Select);
+  connect(view, &WaveformView::SelectionClearRequested, this,
+          &PhraseWaveforms::ClearSelection);
   connect(view, &WaveformView::PlayPauseRequested, this,
           [this, source] { PlayPause(source); });
   connect(track.play, &QToolButton::clicked, this,
@@ -323,6 +327,8 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     player_->Stop();
     id_.clear();
     audio_.clear();
+    selection_.reset();
+    ShowSelection();
     UpdatePreprocessed();
     frames_.clear();
     encoded_shown_ = false;
@@ -341,6 +347,8 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
   if (!same_phrase) {
     player_->Stop();
     id_ = phrase->id;
+    selection_.reset();
+    ShowSelection();
     // A phrase's audio never changes once imported (plan §3.1).
     audio_ = phrase->audio;
     UpdatePreprocessed();
@@ -422,27 +430,32 @@ void PhraseWaveforms::PlayPause(PlaybackSource source) {
     }
     return;
   }
+  // From the play start to the end, or just the selection.
+  const int start = selection_.has_value() ? static_cast<int>(selection_->begin)
+                                           : play_start_;
+  const int end =
+      selection_.has_value() ? static_cast<int>(selection_->end) : -1;
   core::Status status = core::OkStatus();
   switch (source) {
     case PlaybackSource::kOriginal:
-      status = player_->Play(source, ToPcm16(audio_), play_start_);
+      status = player_->Play(source, ToPcm16(audio_), start, end);
       break;
     case PlaybackSource::kPreprocessed:
-      status = player_->Play(source, ToPcm16(preprocessed_), play_start_);
+      status = player_->Play(source, ToPcm16(preprocessed_), start, end);
       break;
     case PlaybackSource::kEncoded: {
       if (!encoded_shown_) {
         return;
       }
-      // The same sound as the play start, or the beginning for a phrase
-      // with no source audio.
+      // The same sound, or the beginning for a phrase with no source
+      // audio.
       const int count = static_cast<int>(encoded_audio_.samples.size());
-      const int start =
-          audio_.empty()
-              ? 0
-              : std::clamp(play_start_ + encoded_audio_.source_offset, 0,
-                           count);
-      status = player_->Play(source, encoded_playback_, start);
+      const int offset = encoded_audio_.source_offset;
+      const int encoded_start =
+          audio_.empty() ? 0 : std::clamp(start + offset, 0, count);
+      const int encoded_end = end < 0 ? -1 : std::clamp(end + offset, 0, count);
+      status =
+          player_->Play(source, encoded_playback_, encoded_start, encoded_end);
       break;
     }
     case PlaybackSource::kBeforeOptimise:
@@ -460,6 +473,8 @@ void PhraseWaveforms::MovePlayStart(double source_sample) {
   }
   const int sample = static_cast<int>(std::clamp(
       std::round(source_sample), 0.0, static_cast<double>(audio_.size())));
+  selection_.reset();
+  ShowSelection();
   if (sample != play_start_) {
     if (const core::Status status = edits_->SetPlayStart(id_, sample);
         !status.IsOk()) {
@@ -473,6 +488,39 @@ void PhraseWaveforms::MovePlayStart(double source_sample) {
     }
   }
   FollowPlayStart();
+}
+
+void PhraseWaveforms::Select(double begin, double end, bool finished) {
+  if (id_.empty() || audio_.empty()) {
+    return;
+  }
+  const auto last = static_cast<double>(audio_.size());
+  const double from = std::clamp(std::round(std::min(begin, end)), 0.0, last);
+  const double to = std::clamp(std::round(std::max(begin, end)), 0.0, last);
+  const std::optional<TimeExtent> selection =
+      to > from ? std::optional<TimeExtent>({.begin = from, .end = to})
+                : std::nullopt;
+  if (selection != selection_) {
+    selection_ = selection;
+    ShowSelection();
+  }
+  if (finished) {
+    FollowPlayStart();
+  }
+}
+
+void PhraseWaveforms::ClearSelection() {
+  if (selection_.has_value()) {
+    selection_.reset();
+    ShowSelection();
+    FollowPlayStart();
+  }
+}
+
+void PhraseWaveforms::ShowSelection() {
+  for (const Track& track : tracks_) {
+    track.pane->View()->SetSelection(selection_);
+  }
 }
 
 void PhraseWaveforms::FollowPlayStart() {

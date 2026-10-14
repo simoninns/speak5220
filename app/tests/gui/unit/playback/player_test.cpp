@@ -243,6 +243,50 @@ TEST(ToPcm16Test, RoundsAndClips) {
               ElementsAre(0, 16384, -16384, 32767, -32768, 32767, 0));
 }
 
+TEST_F(PlayerTest, PlaysASelectionToItsEnd) {
+  EXPECT_CALL(output_, Start(SizeIs(2000 - 400), Player::kSampleRate))
+      .WillOnce([](const std::vector<std::int16_t>& samples, int) {
+        EXPECT_EQ(samples.front(), 400);
+        EXPECT_EQ(samples.back(), 1999);
+        return core::OkStatus();
+      });
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kOriginal, Numbered(), 400, 2000).IsOk());
+  // 200 ms is 1600 samples on: past the end of the selection.
+  clock_.now_us += 200 * kMillisecond;
+  EXPECT_CALL(output_, ProcessedMicroseconds())
+      .WillRepeatedly(Return(200 * kMillisecond));
+  player_.Tick();
+  EXPECT_EQ(player_.State(), PlaybackState::kStopped);
+  EXPECT_EQ(player_.Position(), 400);
+}
+
+TEST_F(PlayerTest, ResumedSelectionStillEndsAtItsEnd) {
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kOriginal, Numbered(), 400, 2000).IsOk());
+  clock_.now_us += 100 * kMillisecond;
+  EXPECT_CALL(output_, ProcessedMicroseconds())
+      .WillRepeatedly(Return(100 * kMillisecond));
+  player_.Pause();
+  ASSERT_EQ(player_.Position(), 1200);
+  EXPECT_CALL(output_, Start(SizeIs(2000 - 1200), _));
+  ASSERT_TRUE(player_.Resume().IsOk());
+}
+
+TEST_F(PlayerTest, EndPastTheSamplesPlaysToTheLast) {
+  EXPECT_CALL(output_, Start(SizeIs(8000 - 400), _));
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kOriginal, Numbered(), 400, 99999).IsOk());
+}
+
+TEST_F(PlayerTest, OutputFilterPlaysJustTheSelection) {
+  player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
+  EXPECT_CALL(output_,
+              Start(SizeIs((2000 - 1200) * 6), core::dsp::kOutputRate));
+  ASSERT_TRUE(
+      player_.Play(PlaybackSource::kEncoded, Numbered(), 1200, 2000).IsOk());
+}
+
 TEST_F(PlayerTest, OutputFilterPlaysTheEncodedAudioAt48Kilohertz) {
   player_.SetOutputFilter(core::dsp::OutputFilter::kBbcMicro);
   EXPECT_CALL(output_, PlaybackRate(core::dsp::kOutputRate));

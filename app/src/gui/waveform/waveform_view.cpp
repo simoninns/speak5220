@@ -10,6 +10,7 @@
 
 #include "gui/waveform/waveform_view.h"
 
+#include <QApplication>
 #include <QBrush>
 #include <QColor>
 #include <QEvent>
@@ -69,6 +70,12 @@ constexpr double kScrollPixelsPerNotch = 40.0;
 // How much of the background veils a shaded stretch's waveform: enough to
 // dim it, not to hide it.
 constexpr int kShadeAlpha = 170;
+// How strongly the selection is tinted: enough to see, not to hide the
+// waveform under it.
+constexpr int kSelectionAlpha = 90;
+// A selection whose fit is less than this much closer than the view's
+// zoom is shown already, so zooming in steps instead of fitting it.
+constexpr double kSelectionFitTolerance = 1.01;
 // The backdrop's opacity, enough to be seen without drawing the eye, and
 // its largest share of the view's width and height.
 constexpr double kBackdropOpacity = 0.15;
@@ -147,12 +154,30 @@ void WaveformView::SetAxis(const TimeAxis& axis) {
 }
 
 void WaveformView::ZoomIn() {
-  Apply(ZoomAxis(axis_, kZoomStep, width() / 2.0, extent_, width()), false);
+  // The first zoom in shows just the selection, if the view shows more.
+  if (selection_.has_value()) {
+    const TimeAxis selected =
+        ClampAxis(FitAxis(*selection_, width()), extent_, width());
+    if (selected.samples_per_pixel <
+        axis_.samples_per_pixel / kSelectionFitTolerance) {
+      Apply(selected, selected == FitAxis(extent_, width()));
+      return;
+    }
+  }
+  ZoomBy(kZoomStep);
 }
 
-void WaveformView::ZoomOut() {
+void WaveformView::ZoomOut() { ZoomBy(1.0 / kZoomStep); }
+
+void WaveformView::ZoomBy(double factor) {
+  double centre = axis_.XToSample(width() / 2.0);
+  if (selection_.has_value()) {
+    centre = (selection_->begin + selection_->end) / 2.0;
+  } else if (marker_.has_value()) {
+    centre = *marker_;
+  }
   const TimeAxis zoomed =
-      ZoomAxis(axis_, 1.0 / kZoomStep, width() / 2.0, extent_, width());
+      ZoomAxisCentred(axis_, factor, centre, extent_, width());
   Apply(zoomed, zoomed == FitAxis(extent_, width()));
 }
 
@@ -165,6 +190,13 @@ void WaveformView::ScrollBy(double pixels) {
 void WaveformView::SetMarker(std::optional<int> source_sample) {
   if (marker_ != source_sample) {
     marker_ = source_sample;
+    update();
+  }
+}
+
+void WaveformView::SetSelection(std::optional<TimeExtent> selection) {
+  if (selection_ != selection) {
+    selection_ = selection;
     update();
   }
 }
@@ -245,17 +277,65 @@ void WaveformView::keyPressEvent(QKeyEvent* event) {
     event->accept();
     return;
   }
+  if (event->key() == Qt::Key_Escape && selection_.has_value()) {
+    emit SelectionClearRequested();
+    event->accept();
+    return;
+  }
   QWidget::keyPressEvent(event);
 }
 
 void WaveformView::mousePressEvent(QMouseEvent* event) {
   if (event->button() == Qt::LeftButton && HasSamples()) {
+    // A click or a drag: which, the release or a move will tell.
     setFocus(Qt::MouseFocusReason);
-    emit MarkerRequested(axis_.XToSample(event->position().x()));
+    press_x_ = event->position().x();
+    dragging_ = false;
     event->accept();
     return;
   }
   QWidget::mousePressEvent(event);
+}
+
+void WaveformView::mouseMoveEvent(QMouseEvent* event) {
+  if (press_x_.has_value() && (event->buttons() & Qt::LeftButton) != 0) {
+    const double x = event->position().x();
+    if (!dragging_ &&
+        std::abs(x - *press_x_) >= QApplication::startDragDistance()) {
+      dragging_ = true;
+    }
+    if (dragging_) {
+      RequestSelectionTo(x, false);
+    }
+    event->accept();
+    return;
+  }
+  QWidget::mouseMoveEvent(event);
+}
+
+void WaveformView::mouseReleaseEvent(QMouseEvent* event) {
+  if (event->button() == Qt::LeftButton && press_x_.has_value()) {
+    const double x = event->position().x();
+    if (dragging_) {
+      RequestSelectionTo(x, true);
+    } else if (HasSamples()) {
+      emit MarkerRequested(axis_.XToSample(x));
+    }
+    press_x_.reset();
+    dragging_ = false;
+    event->accept();
+    return;
+  }
+  QWidget::mouseReleaseEvent(event);
+}
+
+void WaveformView::RequestSelectionTo(double x, bool finished) {
+  if (!HasSamples() || !press_x_.has_value()) {
+    return;
+  }
+  const double from = axis_.XToSample(*press_x_);
+  const double to = axis_.XToSample(x);
+  emit SelectionRequested(std::min(from, to), std::max(from, to), finished);
 }
 
 void WaveformView::resizeEvent(QResizeEvent* event) {
@@ -300,6 +380,7 @@ void WaveformView::paintEvent(QPaintEvent* /*event*/) {
   painter.drawLine(QLineF(0.0, SampleY(0.0F), width(), SampleY(0.0F)));
   PaintWave(painter);
   PaintShading(painter);
+  PaintSelection(painter);
   PaintMarks(painter);
   if (hasFocus()) {
     painter.setPen(QPen(wave_palette_.color(QPalette::Highlight), 0));
@@ -355,6 +436,30 @@ void WaveformView::PaintShading(QPainter& painter) const {
     const QRectF stretch(left, 0.0, right - left, height());
     painter.fillRect(stretch, veil);
     painter.fillRect(stretch, hatch);
+  }
+}
+
+void WaveformView::PaintSelection(QPainter& painter) const {
+  if (!selection_.has_value()) {
+    return;
+  }
+  const double left = std::max(axis_.SampleToX(selection_->begin), 0.0);
+  const double right =
+      std::min(axis_.SampleToX(selection_->end), static_cast<double>(width()));
+  if (right <= left) {
+    return;
+  }
+  // Tinted, with edges, so the waveform shows through and the ends read
+  // without colour.
+  QColor tint = wave_palette_.color(QPalette::Highlight);
+  tint.setAlpha(kSelectionAlpha);
+  painter.fillRect(QRectF(left, 0.0, right - left, height()), tint);
+  painter.setPen(QPen(wave_palette_.color(QPalette::Highlight), 0));
+  for (const double edge :
+       {axis_.SampleToX(selection_->begin), axis_.SampleToX(selection_->end)}) {
+    if (edge >= 0.0 && edge <= width()) {
+      painter.drawLine(QLineF(edge, 0.0, edge, height()));
+    }
   }
 }
 

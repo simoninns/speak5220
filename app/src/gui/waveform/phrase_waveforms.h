@@ -19,6 +19,7 @@
 #include <array>
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <vector>
 
 #include "core/dsp/output_filter.h"
@@ -34,6 +35,7 @@
 #include "gui/theme/colours.h"
 #include "gui/undo/project_edits.h"
 #include "gui/waveform/phrase_tab.h"
+#include "gui/waveform/time_axis.h"
 
 class QCheckBox;
 class QEvent;
@@ -88,6 +90,13 @@ class WaveformView;
 //   from the play start, and the encoded audio from the same sound; moving
 //   the play start while a waveform plays or is paused takes playback
 //   there too.
+// - A drag in any waveform selects the stretch dragged over, shared by the
+//   tabs like the play start but not part of the project, so not undone
+//   or saved. While there is a selection, play plays just the selection
+//   (the encoded audio the same sound) and the zoom buttons zoom into it
+//   (WaveformView::ZoomIn()). Moving the play start, Escape in a waveform,
+//   or showing another phrase clears it. A new selection takes playback
+//   there as moving the play start does.
 // - The encoded audio is shown and played at the original's level
 //   (EncodedAudio::level_gain), which its note gives in dB: the chip's
 //   output is about 15 dB quieter than a normalised recording, which would
@@ -193,10 +202,18 @@ class PhraseWaveforms : public QWidget {
   // encoded audio) from the play start, or pauses or resumes it if it is
   // already playing or paused.
   void PlayPause(PlaybackSource source);
+  // Selects source samples `begin` to `end`, rounded and limited to the
+  // audio; an empty stretch clears the selection. Unless `finished` is
+  // false (a drag still under way), playback follows it as it follows the
+  // play start (MovePlayStart()).
+  void Select(double begin, double end, bool finished = true);
+  void ClearSelection();
+  // The selection, in whole source samples, or none.
+  const std::optional<TimeExtent>& Selection() const { return selection_; }
   // Moves the play start to `source_sample`, rounded and limited to the
-  // audio, as one undoable step. Playback follows it: audio playing
-  // starts again from the new play start, and audio paused stops, so the
-  // next play starts there. It does so even when the play start is
+  // audio, as one undoable step, and clears the selection. Playback follows it:
+  // audio playing starts again from the new play start, and audio paused stops,
+  // so the next play starts there. It does so even when the play start is
   // already there.
   void MovePlayStart(double source_sample);
 
@@ -273,8 +290,11 @@ class PhraseWaveforms : public QWidget {
   void UpdateScrollBar(const Track& track);
   void OnScrolled(const Track& track, int value);
   void SetPlaying(Track& track, bool playing);
-  // Playing audio starts again from the play start; paused audio stops.
+  // Playing audio starts again from the play start, or the selection;
+  // paused audio stops.
   void FollowPlayStart();
+  // Gives every view the selection.
+  void ShowSelection();
   void OnPlayerStateChanged();
   void OnPlayerPositionChanged(int position);
 
@@ -298,6 +318,7 @@ class PhraseWaveforms : public QWidget {
   core::project::PhraseId id_;
   std::vector<float> audio_;
   int play_start_ = 0;
+  std::optional<TimeExtent> selection_;
   std::vector<core::lpc::Frame> frames_;
   // The encoded audio of frames_, once rendered.
   bool encoded_shown_ = false;

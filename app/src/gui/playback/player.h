@@ -50,7 +50,8 @@ enum class PlaybackState { kStopped, kPlaying, kPaused };
 
 // Plan §5 and Phase 6: plays one buffer of 8 kHz samples at a time, so
 // starting one waveform stops another. Play starts at a sample (the
-// play-start marker), Pause holds the position and Resume goes on from
+// play-start marker) and goes to the end, or to a given sample (the end of
+// a selection); Pause holds the position and Resume goes on from
 // it; at the end, or on Stop, the position returns to where play started.
 //
 // The playhead is the time since the device started, but never more than
@@ -85,11 +86,13 @@ class Player : public QObject {
   Player(const Player&) = delete;
   Player& operator=(const Player&) = delete;
 
-  // Plays `samples` from `start`, for `source`, stopping anything playing.
-  // A start at or past the end plays from the beginning. Fails, leaving
-  // the player stopped, for no samples or if the device cannot play.
+  // Plays `samples` from `start` up to `end` (a selection), or to the
+  // last sample for a negative end or one past it, for `source`, stopping
+  // anything playing. A start at or past the end plays from the
+  // beginning. Fails, leaving the player stopped, for no samples or if the
+  // device cannot play.
   core::Status Play(PlaybackSource source, std::vector<std::int16_t> samples,
-                    int start);
+                    int start, int end = -1);
   // Pauses at the playhead. Does nothing unless playing.
   void Pause();
   // Goes on from where Pause() stopped. Does nothing unless paused.
@@ -149,8 +152,10 @@ class Player : public QObject {
   // samples_ through the output filter, at kOutputOversampling times
   // SampleRateOf(source_), when the source is filtered; otherwise empty.
   std::vector<float> filtered_;
-  // Where play started, where the device's buffer starts, the playhead.
+  // Where play started and stops, where the device's buffer starts, the
+  // playhead.
   int start_ = 0;
+  int end_ = 0;
   int base_ = 0;
   int position_ = 0;
   // The clock when the device started.

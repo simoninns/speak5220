@@ -42,13 +42,38 @@ constexpr int kHeight = 100;
 // latency and the encoder's lead-in.
 constexpr int kOffset = 300;
 
+// A left-button event of `type` at pixel `x`.
+void SendMouse(QWidget& widget, QEvent::Type type, double x) {
+  const QPointF at(x, kHeight / 2.0);
+  const Qt::MouseButtons held =
+      type == QEvent::MouseButtonRelease ? Qt::NoButton : Qt::LeftButton;
+  const Qt::MouseButton button =
+      type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton;
+  QMouseEvent event(type, at, widget.mapToGlobal(at), button, held,
+                    Qt::NoModifier);
+  QCoreApplication::sendEvent(&widget, &event);
+}
+
 // A left click at pixel `x`.
 void Click(QWidget& widget, double x) {
-  const QPointF at(x, kHeight / 2.0);
-  QMouseEvent press(QEvent::MouseButtonPress, at, widget.mapToGlobal(at),
-                    Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-  QCoreApplication::sendEvent(&widget, &press);
+  SendMouse(widget, QEvent::MouseButtonPress, x);
+  SendMouse(widget, QEvent::MouseButtonRelease, x);
 }
+
+// A left-button drag from pixel `from` to `to`.
+void Drag(QWidget& widget, double from, double to) {
+  SendMouse(widget, QEvent::MouseButtonPress, from);
+  SendMouse(widget, QEvent::MouseMove, (from + to) / 2.0);
+  SendMouse(widget, QEvent::MouseMove, to);
+  SendMouse(widget, QEvent::MouseButtonRelease, to);
+}
+
+// A request for a selection.
+struct Requested {
+  double begin = 0.0;
+  double end = 0.0;
+  bool finished = false;
+};
 
 class WaveformViewTest : public ::testing::Test {
  protected:
@@ -147,6 +172,86 @@ TEST_F(WaveformViewTest, ClickAsksForTheMarkerAtThatSourceSample) {
   ASSERT_EQ(requested.size(), 1U);
   // Pixel 100 at 5 samples per pixel from source sample -300.
   EXPECT_DOUBLE_EQ(requested.front(), 200.0);
+}
+
+TEST_F(WaveformViewTest, ClickAsksForTheMarkerOnlyWhenReleased) {
+  int requested = 0;
+  QObject::connect(&view_, &WaveformView::MarkerRequested,
+                   [&requested] { ++requested; });
+  SendMouse(view_, QEvent::MouseButtonPress, 100.0);
+  EXPECT_EQ(requested, 0);
+  SendMouse(view_, QEvent::MouseButtonRelease, 100.0);
+  EXPECT_EQ(requested, 1);
+}
+
+TEST_F(WaveformViewTest, DragAsksForTheStretchDraggedOverToBeSelected) {
+  std::vector<Requested> requested;
+  int markers = 0;
+  QObject::connect(&view_, &WaveformView::SelectionRequested,
+                   [&requested](double begin, double end, bool finished) {
+                     requested.push_back({begin, end, finished});
+                   });
+  QObject::connect(&view_, &WaveformView::MarkerRequested,
+                   [&markers] { ++markers; });
+  // Right to left: begin is still before end. Pixels 100 and 60 are source
+  // samples 200 and 0.
+  Drag(view_, 100.0, 60.0);
+  ASSERT_EQ(requested.size(), 3U);
+  EXPECT_FALSE(requested.front().finished);
+  EXPECT_DOUBLE_EQ(requested.back().begin, 0.0);
+  EXPECT_DOUBLE_EQ(requested.back().end, 200.0);
+  EXPECT_TRUE(requested.back().finished);
+  EXPECT_EQ(markers, 0);
+}
+
+TEST_F(WaveformViewTest, EscapeAsksToClearTheSelection) {
+  int requested = 0;
+  QObject::connect(&view_, &WaveformView::SelectionClearRequested,
+                   [&requested] { ++requested; });
+  QKeyEvent press(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+  QCoreApplication::sendEvent(&view_, &press);
+  EXPECT_EQ(requested, 0);
+  view_.SetSelection(TimeExtent{.begin = 100.0, .end = 200.0});
+  QCoreApplication::sendEvent(&view_, &press);
+  EXPECT_EQ(requested, 1);
+}
+
+TEST_F(WaveformViewTest, ZoomCentresOnTheMarker) {
+  view_.SetMarker(1000);
+  view_.ZoomIn();
+  EXPECT_DOUBLE_EQ(view_.Axis().samples_per_pixel, 2.5);
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 1000.0);
+  view_.ZoomIn();
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 1000.0);
+  view_.ZoomOut();
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 1000.0);
+}
+
+TEST_F(WaveformViewTest, FirstZoomInShowsJustTheSelectionThenStepsInIt) {
+  view_.SetMarker(0);
+  // 200 samples in 400 pixels: half a sample per pixel.
+  view_.SetSelection(TimeExtent{.begin = 1000.0, .end = 1200.0});
+  view_.ZoomIn();
+  EXPECT_DOUBLE_EQ(view_.Axis().first, 1000.0);
+  EXPECT_DOUBLE_EQ(view_.Axis().samples_per_pixel, 0.5);
+  EXPECT_FALSE(view_.IsFitted());
+  view_.ZoomIn();
+  EXPECT_DOUBLE_EQ(view_.Axis().samples_per_pixel, 0.25);
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 1100.0);
+  view_.ZoomOut();
+  view_.ZoomOut();
+  EXPECT_DOUBLE_EQ(view_.Axis().samples_per_pixel, 1.0);
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 1100.0);
+}
+
+TEST_F(WaveformViewTest, SelectionWiderThanTheViewIsZoomedAbout) {
+  view_.ZoomIn();
+  view_.ZoomIn();
+  // At 1.25 samples per pixel, closer than the selection's fit of 4.
+  view_.SetSelection(TimeExtent{.begin = 0.0, .end = 1600.0});
+  view_.ZoomIn();
+  EXPECT_DOUBLE_EQ(view_.Axis().samples_per_pixel, 0.625);
+  EXPECT_DOUBLE_EQ(view_.Axis().XToSample(kWidth / 2.0), 800.0);
 }
 
 TEST_F(WaveformViewTest, SpaceAsksToPlayOrPause) {

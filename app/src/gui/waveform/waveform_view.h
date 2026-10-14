@@ -43,15 +43,20 @@ namespace speak5220::app {
 // from the PeakCache, each reaching the last sample of the pixel before so
 // the trace is unbroken; or, closer than 4 samples per pixel, the samples
 // joined), the shaded stretches (dimmed and hatched: what the noise gate
-// turns down, on the preprocessed audio), the play-start marker and the
-// playhead.
+// turns down, on the preprocessed audio), the selection, the play-start
+// marker and the playhead.
 //
-// A click asks for the marker there (MarkerRequested); Space asks to play
-// or pause; Ctrl+wheel zooms about the pointer, the wheel scrolls; hovering
-// over a frame shows its indices. With no waveform it shows a placeholder,
-// under a faint backdrop if it has one. The view stays fitted to its extent
-// until zoomed or scrolled. It is drawn dark, on black, in either scheme
-// (WaveformPalette(), ColoursFor()), unless set to follow the
+// A click asks for the marker there (MarkerRequested); a drag asks for the
+// stretch dragged over to be selected (SelectionRequested), and Escape for
+// the selection to be cleared (SelectionClearRequested); Space asks to play
+// or pause. The zoom buttons zoom about the selection, or else the marker,
+// or else the middle of the view: the first zoom in with a selection
+// narrower than the view shows just the selection, and later ones keep it
+// in the middle. Ctrl+wheel zooms about the pointer, the wheel scrolls;
+// hovering over a frame shows its indices. With no waveform it shows a
+// placeholder, under a faint backdrop if it has one. The view stays fitted to
+// its extent until zoomed or scrolled. It is drawn dark, on black, in either
+// scheme (WaveformPalette(), ColoursFor()), unless set to follow the
 // application's scheme (SetWaveformColours()). GUI thread only.
 class WaveformView : public QWidget {
   Q_OBJECT
@@ -101,6 +106,7 @@ class WaveformView : public QWidget {
   const TimeAxis& Axis() const { return axis_; }
   // Sets the axis, clamped to the extent; AxisChanged() if it changed.
   void SetAxis(const TimeAxis& axis);
+  // Zooms in or out by kZoomStep, or in to the selection (see above).
   void ZoomIn();
   void ZoomOut();
   void Fit();
@@ -113,6 +119,9 @@ class WaveformView : public QWidget {
   // The play-start marker and the playhead, in source samples.
   void SetMarker(std::optional<int> source_sample);
   std::optional<int> Marker() const { return marker_; }
+  // The selection, in source samples, or none.
+  void SetSelection(std::optional<TimeExtent> selection);
+  const std::optional<TimeExtent>& Selection() const { return selection_; }
   void SetPlayhead(std::optional<double> source_sample);
   std::optional<double> Playhead() const { return playhead_; }
 
@@ -131,6 +140,11 @@ class WaveformView : public QWidget {
   void AxisChanged();
   // A click: the marker should move to this source sample.
   void MarkerRequested(double source_sample);
+  // A drag: these source samples, begin before end, should be selected;
+  // asked again as the pointer moves, and `finished` on the release.
+  void SelectionRequested(double begin, double end, bool finished);
+  // Escape: the selection should be cleared.
+  void SelectionClearRequested();
   // Space: play or pause this pane.
   void PlayPauseRequested();
 
@@ -138,17 +152,24 @@ class WaveformView : public QWidget {
   bool event(QEvent* event) override;
   void changeEvent(QEvent* event) override;
   void keyPressEvent(QKeyEvent* event) override;
+  void mouseMoveEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
+  void mouseReleaseEvent(QMouseEvent* event) override;
   void paintEvent(QPaintEvent* event) override;
   void resizeEvent(QResizeEvent* event) override;
   void wheelEvent(QWheelEvent* event) override;
 
  private:
   void Apply(const TimeAxis& axis, bool fitted);
+  // Zooms by `factor` about the selection, the marker or the middle.
+  void ZoomBy(double factor);
+  // Asks for the stretch from the press to `x` to be selected.
+  void RequestSelectionTo(double x, bool finished);
   double SampleY(float value) const;
   void PaintFrames(QPainter& painter) const;
   void PaintWave(QPainter& painter) const;
   void PaintShading(QPainter& painter) const;
+  void PaintSelection(QPainter& painter) const;
   void PaintMarks(QPainter& painter) const;
   // The backdrop, faint and centred, and the placeholder under it.
   void PaintBackdrop(QPainter& painter) const;
@@ -165,6 +186,11 @@ class WaveformView : public QWidget {
   // Fitted views fit again when resized.
   bool fitted_ = true;
   std::optional<int> marker_;
+  std::optional<TimeExtent> selection_;
+  // The x of the left button's press, while it is held, and whether it has
+  // moved far enough since to be a drag rather than a click.
+  std::optional<double> press_x_;
+  bool dragging_ = false;
   std::optional<double> playhead_;
   // The palette the waveform is drawn with (WaveformPaletteFor()), and its
   // colours.
