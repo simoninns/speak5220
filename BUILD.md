@@ -83,11 +83,11 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Reference data
 
-`app/golden/` holds the output of the retired reference emulator and encoder, and of independent implementations of the quality measures, which the functional tests compare against. It is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile, py-webrtcvad, pystoi and pyworld, REAPER's command-line tool, and a C compiler):
+`app/golden/` holds the output of the retired reference emulator and Python encoder, and of independent implementations of the quality measures, which the functional tests compare against. The Python encoder's output is fixed. The rest is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile, py-webrtcvad, pystoi and pyworld, REAPER's command-line tool, and a C compiler):
 
 ```bash
-nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator and packaging: regenerate in a temporary directory and compare
-nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/ and packaging/
+nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator: run it into a temporary directory and compare
+nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/runs/
 nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (under a minute; needs the functional tests built)
 nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
 make -C investigation/emulator                                                # measures.py runs the built reference emulator
@@ -226,14 +226,6 @@ python investigation/tools/pico.py selftest    # upload, speak and trace, checki
 ```bash
 make -C investigation/emulator          # builds tms5220emu and libtms5220.a
 make -C investigation/emulator test     # builds and runs the self-test
-```
-
-## Encoder
-
-The encoder is pure Python and needs no build. Its self-test:
-
-```bash
-python -m unittest discover -s investigation/encoder -p 'test_*.py'
 ```
 
 ## Capture tools

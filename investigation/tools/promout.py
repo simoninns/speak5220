@@ -48,11 +48,9 @@ import numpy as np
 
 import model
 import pico as picolib
+from lpc import encodeFrames
 from process import ROOT, gitHash
 from ps3000a import DIGITAL_PORT0, INFO_SERIAL, INFO_VARIANT, Scope
-
-sys.path.insert(0, os.path.join(ROOT, "encoder"))
-from tms5220enc import pack  # noqa: E402
 
 THRESHOLD_V = 3.0
 SLOT_S = 6.25e-6           # one T period (ROMCLK) at 640 kHz
@@ -165,7 +163,7 @@ class Bench:
 
     def speak(self, frames, seconds=SPEECH_S, timebase=64):
         """Speak External the frames (and a stop code), capturing from SCOPE_TRIG."""
-        data = pack(list(frames) + [{"energy": 15}])
+        data = encodeFrames(list(frames) + [{"energy": 15}])
         data += bytes(max(0, 9 - len(data)))
         self.pico.reset()
         self.scope.setTrigger(3, 0.15)

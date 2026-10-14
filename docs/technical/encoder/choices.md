@@ -2,7 +2,7 @@
 
 What the [reference datasheet](../datasheet/index.md) leaves unclear,
 ambiguous or missing for someone writing an encoder from it alone, and what
-`tms5220enc.py` chooses. What is not known about the chip itself is listed in
+the research encoder chooses. What is not known about the chip itself is listed in
 the datasheet's [Appendix B: Known gaps](../datasheet/gaps.md). Section numbers are the datasheet's. The points the
 datasheet does settle are listed at the end, with the answer and where it is
 given.
@@ -12,7 +12,7 @@ given.
 `synthesize()` follows [§8.9](../datasheet/reference-algorithm.md) step by
 step. It gives the reference emulator's codes sample for sample on random
 speech-like frame lists and on encoded speech, through the VSM path
-(`test_tms5220enc.py`).
+(the research encoder's self-test).
 
 1. **Which noise state to use.** `synthesize()` models one VSM Speak with the
    standard procedure: register 0x00EB at slot 0 of sample 1
@@ -124,7 +124,7 @@ speech-like frame lists and on encoded speech, through the VSM path
 These statements were checked and are correct: the glide fractions of §12.2
 (0.125 … 0.906); the energy-step figures of §12.3; the chirp energy of 65,546
 and its RMS at *P* = 16, 100 and 160; the lattice sign convention of §12.3
-(`test_tms5220enc.py`, one-stage check).
+(the research encoder's self-test, one-stage check).
 
 ## Settled by the datasheet
 
@@ -195,6 +195,6 @@ Each of these is stated in the datasheet, and the encoder follows it.
     - a stop after unvoiced frames was checked and does not depend on the
       predecessor.
 
-  No test input depends on its predecessor. `evaluate.py` measures this
-  ("predecessor-dependent"), and the self-test checks the pattern and one
-  encoded input.
+  No test input depends on its predecessor. The research encoder's
+  `evaluate.py` measured this ("predecessor-dependent"), and its self-test
+  checked the pattern and one encoded input.

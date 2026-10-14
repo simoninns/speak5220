@@ -6,10 +6,10 @@
     speech, as the reference emulator speaks the encoded frames, is to the
     input it was encoded from.
 
-    Each input is encoded with encoder/tms5220enc.py (or taken from --bin),
-    spoken by emulator/tms5220emu (VSM Speak after a Reset, so independent
-    of the encoder's own synthesis), aligned with the input by its level
-    envelope, and compared with it:
+    Each input's encoding, packed frames given with --bin, is spoken by
+    emulator/tms5220emu (VSM Speak after a Reset, so independent of the
+    encoder's own synthesis), aligned with the input by its level envelope,
+    and compared with it:
 
       pesq     ITU-T P.862 narrowband, as P.862.1 MOS-LQO (1.0 bad to 4.5).
                P.862 was not validated for vocoders below 4 kbit/s, so read
@@ -61,14 +61,15 @@
     encoder's, so qci to enc is what the encoder's own choices are worth
     against it, and enc to chip is the chip's integer arithmetic.
 
-      python tools/speechqual.py IN.wav [IN2.flac ...]
-      python tools/speechqual.py IN.wav --bin OUT.bin    # score existing frames
-      python tools/speechqual.py --set tts --anchor --csv q.csv
-      python tools/speechqual.py IN.wav --wav DIR        # aligned audio to listen to
-      python tools/speechqual.py IN.wav --frames-csv f.csv
+      python tools/speechqual.py IN.wav --bin IN.bin
+      python tools/speechqual.py IN.wav IN2.flac --bin DIR    # DIR/IN.bin, DIR/IN2.bin
+      python tools/speechqual.py --set tts --bin DIR --anchor --csv q.csv
+      python tools/speechqual.py IN.wav --bin IN.bin --wav DIR    # aligned audio to listen to
+      python tools/speechqual.py IN.wav --bin IN.bin --frames-csv f.csv
 
-    --set takes the Phase 11 test inputs (tts, recordings or all), as
-    encoder/evaluate.py does; --opt name=value passes encode() options.
+    --bin is a file of packed frames for one input, or a directory holding
+    NAME.bin for each input NAME. --set takes the Phase 11 test inputs
+    (tts, recordings or all).
 
     This file is part of speak5220.
     SPDX-License-Identifier: GPL-3.0-or-later
@@ -89,8 +90,7 @@ import scipy.signal
 import soundfile
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-sys.path.insert(0, os.path.join(ROOT, "encoder"))
-import tms5220enc as enc  # noqa: E402
+import lpc  # noqa: E402  (tools/lpc.py: the frame format)
 import model  # noqa: E402  (tools/model.py: the chip's tables and timing for the ladder)
 
 EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "emulator", "tms5220emu"))
@@ -494,7 +494,7 @@ class FloatChip(model.Model):
 
 
 def floatChip(frs):
-    """Frames (encoder dicts) spoken by FloatChip from a reset."""
+    """Frames (lpc.py dicts) spoken by FloatChip from a reset."""
     m = FloatChip()
     m.speak(list(frs) + [{"energy": 15}], lead=0, tail=200)
     return np.array(m.outF)
@@ -551,23 +551,21 @@ def matchLevel(ref, deg):
 
 
 def measure(job):
-    path, binPath, opts, anchor, steps, wavDir, framesCsv = job
+    path, binPath, anchor, steps, wavDir, framesCsv = job
     x = readAudio(path)
     ref = scipy.signal.sosfiltfilt(scipy.signal.butter(2, 60, "highpass", fs=RATE, output="sos"), x)
-    if binPath:
-        with open(binPath, "rb") as f:
-            data = f.read()
-        frs, _ = enc.parse(data)
-    else:
-        frs = enc.encode(x, RATE, **opts)
-        data = enc.pack(frs)
+    if os.path.isdir(binPath):
+        binPath = os.path.join(binPath, os.path.splitext(os.path.basename(path))[0] + ".bin")
+    with open(binPath, "rb") as f:
+        data = f.read()
+    frs, _ = lpc.parseFrames(lpc.bitsLsbFirst(data))
     with tempfile.TemporaryDirectory() as tmp:
         codes = emulate(data, tmp)
     out = codes.astype(float) + 1           # idle (code -1) at 0
     lag = refine(ref, out, align(ref, out))
     deg = matchLevel(ref, placed(out, lag, len(ref)))
     m, perFrame = compare(ref, deg)
-    nbits = sum(enc.frameBits(f) for f in frs)
+    nbits = sum(len(lpc.frameBits(f)) for f in frs)
     row = {"file": os.path.basename(path), "frames": len(frs), "bitrate": nbits / max(1, len(frs)) * 40,
            "seconds": len(ref) / RATE, "lagMs": lag * 1000 / RATE,
            "peak": int(np.max(np.abs(codes))) if len(codes) else 0}
@@ -676,16 +674,6 @@ def phase11Inputs(which, match, limit):
     return out
 
 
-def parseOpt(o):
-    k, v = o.split("=", 1)
-    if v in ("None", "True", "False"):
-        return k, {"None": None, "True": True, "False": False}[v]
-    try:
-        return k, int(v)
-    except ValueError:
-        return k, float(v)
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[1].strip(),
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -693,8 +681,8 @@ def main():
     ap.add_argument("--set", choices=["tts", "recordings", "all"], help="the Phase 11 test inputs")
     ap.add_argument("--match", default="", help="with --set: only files whose name contains this")
     ap.add_argument("--limit", type=int, default=0, help="with --set: at most this many per set, evenly spread")
-    ap.add_argument("--bin", help="packed frames to score instead of encoding (one input only)")
-    ap.add_argument("--opt", action="append", default=[], help="name=value encode() option")
+    ap.add_argument("--bin", required=True,
+                    help="the packed frames to score: a file (one input), or a directory of NAME.bin")
     ap.add_argument("--anchor", action="store_true", help="also score a floating-point LPC-10 vocoder")
     ap.add_argument("--ladder", action="store_true",
                     help="also score each step from the anchor to the chip (see LADDER)")
@@ -711,12 +699,11 @@ def main():
         items += phase11Inputs(args.set, args.match, args.limit)
     if not items:
         ap.error("give input files or --set")
-    if (args.bin or args.frames_csv) and len(items) != 1:
-        ap.error("--bin and --frames-csv take one input")
+    if (os.path.isfile(args.bin) or args.frames_csv) and len(items) != 1:
+        ap.error("a --bin file and --frames-csv take one input")
     if args.wav:
         os.makedirs(args.wav, exist_ok=True)
-    opts = dict(parseOpt(o) for o in args.opt)
-    jobs = [(p, args.bin, opts, args.anchor, args.ladder, args.wav, args.frames_csv) for _, p in items]
+    jobs = [(p, args.bin, args.anchor, args.ladder, args.wav, args.frames_csv) for _, p in items]
 
     if args.ladder:
         print("%-26s" % "file PESQ:" + "".join(" %6s" % s for s, _ in LADDER))

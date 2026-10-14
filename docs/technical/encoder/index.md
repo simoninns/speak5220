@@ -2,7 +2,20 @@
 
 An encoder that turns 8 kHz speech into TMS5220 frames, and packs the frames
 into the chip's bit stream, a Speak External stream, or an Acorn PHROM or TI
-indexed VSM image. The code is in `investigation/encoder/`.
+indexed VSM image. These pages describe the project's research encoder,
+written in Python from the datasheet alone.
+
+The application's encoder re-implements it in C++ and is the one that is
+maintained ([The encoder and Optimise](../../application/user-manual/encoder.md)). It
+follows the research encoder step by step up to the level setting. It adds
+preprocessing and two options (`resonance_hold_db`, `voicing_min_run`),
+measures `target_rms` as loudness, gives pauses a quiet frame, lets the
+loudest peaks clip a little, and has five different defaults
+([Encoder options](../../application/reference/encoder-options.md)).
+
+The research encoder's Python source (`tms5220enc.py`, its self-test
+`test_tms5220enc.py`, and `evaluate.py`, which made the measurements in
+[Quality](quality.md)) is in the repository's history at commit `6abe9ed`.
 
 ## Written from the datasheet only
 
@@ -21,19 +34,10 @@ in [How it works](how-it-works.md).
 
 ## Pages
 
-- [Usage](usage.md): the command line, the Python API, the `encode()` options
-  and the self-test.
-- [How it works](how-it-works.md): the method, step by step.
+- [How it works](how-it-works.md): the method, step by step, and the
+  encoder's options.
 - [Quality](quality.md): what the encoder achieves on the test inputs.
 - [Implementation choices](choices.md): what the datasheet leaves open for an encoder
   author, and the choices made.
 - [How TI encoded speech](ti-encoder.md): TI's 1981 minicomputer program and
   the Portable Speech Lab, compared with the encoder and measured.
-
-## Files
-
-| File | Contents |
-|---|---|
-| `tms5220enc.py` | The encoder, packer, synthesis and packaging (importable as `tms5220enc`) |
-| `test_tms5220enc.py` | Self-test: `nix develop -c python3 investigation/encoder/test_tms5220enc.py` |
-| `evaluate.py` | Encodes the test inputs (`investigation/captures/phase11/inputs/`) and measures the result (the numbers in [Quality](quality.md)) |

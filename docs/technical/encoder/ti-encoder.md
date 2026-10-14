@@ -208,7 +208,7 @@ pre-emphasis to voiced frames only.
 
 ## How the encoder compares
 
-| | TI (PSL code, or 1981 program) | The encoder (`investigation/encoder/tms5220enc.py`) |
+| | TI (PSL code, or 1981 program) | The research encoder |
 |---|---|---|
 | Pre-emphasis | Voiced frames only. μ = 1.0 (PSL) or 0.9375 (1981) | Voiced frames only: the order-4 inverse of the chirp (0.9 in the baseline measured below) |
 | Unvoiced analysis | No pre-emphasis, K1–K4 | The same |
@@ -239,8 +239,9 @@ score.
 
 ## TI's settings measured
 
-These are medians over all 243 test inputs, from
-`speechqual.py --set all --opt ...`, on the baseline configuration:
+These are medians over all 243 test inputs, scored with `speechqual.py` on
+the research encoder's frames with each option changed, on the baseline
+configuration:
 
 | Setting | PESQ | MCD (dB) | Tilt below 800 Hz (dB) | Voicing disagreement (%) | bits/s |
 |---|---|---|---|---|---|

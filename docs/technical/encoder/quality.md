@@ -2,12 +2,11 @@
 
 ## The evaluation
 
-    nix develop -c python3 investigation/encoder/evaluate.py [--set tts|recordings|all] [--csv OUT]
-
-`evaluate.py` encodes every test input in `investigation/captures/phase11/inputs/` (210 TTS
+The figures on this page were measured by the research encoder's
+`evaluate.py`. It encoded every test input in `investigation/captures/phase11/inputs/` (210 TTS
 files from nine voices with median f0 87–246 Hz, and the 33 recordings),
-synthesises the frames with `synthesize()`, and compares the result with the
-input. The measures:
+synthesised the frames with the encoder's reference-algorithm synthesis
+(`synthesize()`), and compared the result with the input. The measures:
 
 - **Level error:** per frame, the output level minus the input level × gain
   (both Hann-weighted 25 ms, aligned as in

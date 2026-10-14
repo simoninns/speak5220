@@ -7,8 +7,9 @@ The application is **self-contained and written entirely in C++ with Qt**.
 No code from `investigation/` is compiled into it, linked to it or called by
 it. The project's existing tools are re-implemented as C++ classes:
 
-- the **reference encoder** (`investigation/encoder/tms5220enc.py`) becomes
-  an `Encoder` class and its helpers;
+- the **reference encoder** (`tms5220enc.py`, formerly in
+  `investigation/encoder/`; in git history at commit `6abe9ed`) becomes an
+  `Encoder` class and its helpers;
 - the **reference emulator** (`investigation/emulator/`, C) becomes
   `Tms5220` and `Tms6100` classes, used for playback;
 - the **PESQ** measurement used in `investigation/tools/speechqual.py`
@@ -212,9 +213,12 @@ they are test oracles only:
 
 **After acceptance, the originals are retired (decision D5):**
 
-- The C++ becomes the only maintained implementation. The `investigation/`
-  encoder and emulator stay in the repository for history, but are no
-  longer developed or referenced by the application's tooling.
+- The C++ becomes the only maintained implementation. The emulator stays
+  in `investigation/` for history, and is run only by the reference-data
+  scripts. The Python encoder is deleted from the repository: its
+  source stays in git history (commit `6abe9ed`, the `reference_commit` in
+  `app/golden/*/REFERENCE.tsv`), and the research tools that needed it
+  keep only the commands that do not.
 - The golden data becomes a fixed **regression baseline**:
   - **Emulator:** its golden data never changes, unless the datasheet
     itself changes.
@@ -224,8 +228,11 @@ they are test oracles only:
     from the C++ itself, in its own commit that records the change and the
     quality before and after.
 - The `app/scripts/golden/` scripts are kept alongside the data so the
-  baseline's origin can be traced, but they are not maintained after
-  retirement.
+  baseline's origin can be traced. Without the Python encoder they keep
+  its output as committed (the packaging data, the emulator's corpus
+  phrases and the stages before level setting in the encoder's
+  intermediates) and regenerate only the emulator's runs and the C++
+  encoder's output.
 
 ---
 
@@ -1803,7 +1810,7 @@ In short:
 | D2 | Phrase name rules? | **Acorn style.** Upper case, digits, space and `' ( ) , - .`; at most 16 characters; C identifiers derived automatically (§4). |
 | D3 | How does the BBC disc speak a phrase? | **A 6502 routine from the start**, writing the chip with OSBYTE &9F and refilling on Buffer Low. The MOS `SOUND` queue is not used (§6). |
 | D4 | A size budget for the project? | **64 PHROMs (64 × 16 KB = 1 MB)**, a testing limit. PHROMs are filled automatically in list order. Imports, re-encoding and the optimiser never take the project past the budget. Size is shown in KB and in PHROMs (§4.1). |
-| D5 | What happens to the Python encoder and C emulator? | **Retired once the C++ is accepted.** The golden data becomes a fixed regression baseline, and the C++ becomes the only maintained implementation (§1.4). |
+| D5 | What happens to the Python encoder and C emulator? | **Retired once the C++ is accepted.** The golden data becomes a fixed regression baseline, and the C++ becomes the only maintained implementation. The Python encoder is deleted, and kept in git history (§1.4). |
 | D6 | Where does the PESQ implementation come from? | **The project's own code**, licensed GPLv3-or-later with the rest of the project, written from the ITU-T P.862 and P.862.1 texts. The text leaves most constants and details to the ANSI-C reference implementation, which P.862 gives precedence; those are taken from it (§3.3). The ITU's texts and code are not committed. Superseded by D10: Phase 8 removes PESQ. |
 | D7 | When do the Windows and macOS CI jobs run? | **Only for a release** (a `v*` tag) or when started by hand, during development. Linux CI runs on every push (Phase 2, task 7). |
 | D8 | Which CI and distribution services are used? | **Free ones only.** GitHub's hosted runners (`ubuntu-latest` for Linux) with Nix installed by a free action and the public NixOS binary cache. No paid caches, remote builders or Nix CI services, and no paid code signing: the MSI is unsigned and the DMG is not notarised (Phase 13). |

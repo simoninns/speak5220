@@ -96,8 +96,8 @@ memory fixed the cases found. Voiced fricatives come out voiced, the choice
 - The autocorrelation (to lag 10) gets a Gaussian lag window (60 Hz) and a
   −40 dB noise floor (r₀ × 1.0001), for stable, not over-sharp resonances.
 - Levinson–Durbin gives *k*₁–*k*₁₀ (voiced) or *k*₁–*k*₄ (unvoiced), in the
-  convention of §12.3. `test_tms5220enc.py` checks that sign with a one-stage
-  lattice.
+  convention of §12.3. The research encoder's self-test checked that sign
+  with a one-stage lattice.
 - **Quantisation.** Each *k* goes to the nearest Table 8-6 entry in log-area
   ratio. A coordinate search then tries ±1 and ±2 indices of each K, and keeps
   changes that lower the prediction error `aᵀRa` of the quantised filter on
@@ -202,3 +202,28 @@ memory fixed the cases found. Voiced fricatives come out voiced, the choice
   silence frames; at the end they are added before the stop.
 - **Speak External.** `speakExternalStream()` adds silence frames before the
   stop only when the stream is shorter than 9 bytes (§12.9).
+
+## Options
+
+The options of the encoder's `encode()` function, and their defaults:
+
+| Option | Default | Meaning |
+|---|---|---|
+| `targetRms` | 20.0 | Output RMS over the sounding frames, in codes (§12.3: the originals have 19–20) |
+| `targetPeak` | None | If set, scale so that the loudest output peak is this many codes, instead of an RMS |
+| `peakLimit` | 120 | No output code beyond ±this. Frames that would exceed it are turned down |
+| `repeats` | True | Use repeat frames |
+| `repeatLambda` | 70 | Bits a run of repeats may trade per dB of extra prediction error ([Repeat and silence decisions](#repeat-and-silence-decisions)). Lower gives fewer bits |
+| `gateDb` | 45 | Frames this far below the loudest frame are silence |
+| `preEmphasis` | `"chirp"` | Pre-emphasis for voiced analysis: `"chirp"` (the chirp's inverse, see [Pre-emphasis](#pre-emphasis)), or μ for 1 − μz⁻¹ (§12.3) |
+| `window` | 240 | Analysis window, in samples (30 ms) |
+| `lagWindowHz` | 60 | Gaussian lag-window bandwidth |
+| `voicingThreshold` | 0.3 | Base CMNDF level at which voiced and unvoiced cost the same |
+| `voicingEvidence` | 4 | Weight of spectral tilt and zero crossings in the voicing threshold (0: off) |
+| `iterations` | 5 | Closed-loop level passes |
+| `fadeUnvoiced` | True | Fade a hiss before silence and before the stop |
+| `levelAgc` | 1 | Slow gain control: ratio by which a 0.75 s loudness envelope is compressed (1: off) |
+| `compression` | 1 | Ratio by which each frame's level in dB is compressed about the median (1: off) |
+
+The encoder is deterministic: it uses no random numbers, and the same input
+always gives the same frames.

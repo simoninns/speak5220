@@ -13,9 +13,8 @@ shows them:
 - **[Encoder](#encoder)**: how the preprocessed recording is encoded into
   TMS5220 frames.
 
-The encoder follows the project's reference encoder
-(`investigation/encoder/tms5220enc.py`) step by step, so its options mean
-what they mean there; the method is described in
+The encoder follows the project's Python research encoder step by step,
+so its options mean what they mean there; the method is described in
 [How the encoder works](../../technical/encoder/how-it-works.md). The
 exceptions are `resonance_hold_db` and `voicing_min_run`, and the
 preprocessing, which the reference does not have, and `target_rms`, which

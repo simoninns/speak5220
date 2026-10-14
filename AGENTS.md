@@ -11,10 +11,11 @@
     speech data and building PHROMs. This is where development happens.
     Its plan is [docs-tech/application-plan.md](docs-tech/application-plan.md).
   - **`investigation/`**: the research record (hardware, firmware, capture
-    tools, the Python encoder and the C emulator). The encoder and emulator
-    are reference implementations that are retired once the application's
-    C++ is accepted (plan §1.4). **Do not modify `investigation/`** unless
-    the user explicitly asks.
+    tools and the C emulator). The emulator, and the Python encoder that
+    the application's encoder re-implements (in git history, last changed
+    in commit `6abe9ed`), are retired reference implementations (plan
+    §1.4). **Do not modify `investigation/`** unless the user explicitly
+    asks.
 - Follow these instructions **in addition to** any `AGENTS.md` files in the
   task directory or above.
 - For pull-request workflows, see the template in `.github/PULL_REQUEST_TEMPLATE/`; issues use the templates in `.github/ISSUE_TEMPLATE/`.
@@ -151,7 +152,7 @@
   - `// Acorn Speech System User Guide Section 6: OSBYTE &9F writes to the speech processor.`
   - `// Jensen and Taal 2016, Eq. (2): the normalised segment correlation.`
 - Supported sources: the speak5220 reference datasheet, TI data manuals (TMS5220, TMS6100), US patent 4,335,277, Acorn manuals (Speech System User Guide, DFS, BBC Micro User Guide), ITU-T, IEC.
-- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared (plan §1.3).
+- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared (plan §1.3); the Python encoder's files are in git history at commit `6abe9ed`.
 
 #### 4.3.7 Commenting
 - Use inline comments **above** function declarations for purpose, parameters, and return values when non-obvious.

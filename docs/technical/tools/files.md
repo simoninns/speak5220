@@ -12,7 +12,7 @@ The files in `investigation/tools/`, with the page that describes each one.
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the synthetic vectors, the synthesis model, the table measurements and the host interface tests ([Synthetic vectors and the model](vectors-and-model.md)).
 - `regress.py`, `variance.py`: the regression harness for the reference emulator in `investigation/emulator/`, and the measured agreement between chips and the model ([Emulator regression](emulator-regression.md)).
 - `ttsgen.py`, `prompts.csv`, `recimport.py`: the encoder test speech and recordings ([Encoder test speech and quality](encoder-speech.md)).
-- `promstats.py`, `phase11.py`, `asrcheck.py`: the PROM statistics, new speech data, predictions, comparison and intelligibility check ([Encoder test speech and quality](encoder-speech.md#new-speech-data-and-its-predictions)). The encoder itself is in `investigation/encoder/`.
+- `promstats.py`, `phase11.py`, `asrcheck.py`: the PROM statistics, new speech data, predictions, comparison and intelligibility check ([Encoder test speech and quality](encoder-speech.md#new-speech-data-and-its-predictions)).
 - `speechqual.py`: the objective encoding-quality measure ([Encoding quality](encoder-speech.md#encoding-quality)).
 - `promout.py`: reads the parameter ROM through `PROM OUT` ([PROM OUT](prom-out.md)).
 - `ps3000a.py`: ctypes wrapper for the ps3000a driver, including the MSO's digital ports.

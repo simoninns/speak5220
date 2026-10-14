@@ -1,6 +1,6 @@
 # Encoder test speech and quality
 
-These tools provide the speech inputs used to test the encoder, build new speech data from them, predict the chip's output with the reference emulator, and score the encoding objectively. The encoder itself is described in [Encoder](../encoder/index.md).
+These tools provide the speech inputs used to test the encoder and the new speech data built from them, predict the chip's output with the reference emulator, and score the encoding objectively. The encoder itself is described in [Encoder](../encoder/index.md).
 
 ## Encoder test speech
 
@@ -19,10 +19,7 @@ python investigation/tools/recimport.py check  # check those files against their
 ## New speech data and its predictions
 
 ```
-nix develop -c python3 investigation/encoder/test_tms5220enc.py   # the encoder's self-test
 python investigation/tools/promstats.py          # how the original PROMs were encoded (datasheet section 12.10)
-python investigation/tools/phase11.py roundtrip  # acceptance test 3: every PROM word parsed and re-packed
-python investigation/tools/phase11.py build      # encode the inputs, write the data sets to investigation/captures/phase11/data/
 python investigation/tools/phase11.py predict    # the emulator's predictions, to investigation/captures/phase11/predictions/
 python investigation/tools/phase11.py check      # the sets and predictions against their hashes
 investigation/captures/phase11/bench.sh          # capture every set: 3 takes per path, standard procedure
@@ -30,17 +27,17 @@ python investigation/tools/phase11.py compare    # the chip against the predicti
 python investigation/tools/asrcheck.py           # word error rates of input, prediction and chip (whisper.cpp)
 ```
 
-- **`investigation/encoder/`** is the project's encoder and packager. It was written from the reference datasheet alone, by a separate agent, as the emulator was. [Encoder](../encoder/index.md) gives the method, and [Encoder choices](../encoder/choices.md) lists what the datasheet left open.
+- **The research encoder** encoded the new speech data and packed it. It was written in Python from the reference datasheet alone, by a separate agent, as the emulator was. [Encoder](../encoder/index.md) gives the method and where its source is kept, and [Encoder choices](../encoder/choices.md) lists what the datasheet left open.
 - **`promstats.py`** parses every word of the eight PROMs. It reports the frame kinds, the energy, pitch and K indices used, how words start and end, and the bit rate (`investigation/captures/phase11/promstats/`; see [datasheet §12](../datasheet/authoring.md)).
-- **`phase11.py`**:
-  - **`roundtrip`** parses each PROM word with the encoder's frame parser and packs it again. The bits must be identical up to the end of the stop code.
-  - **`build`** writes five synthetic PROMs, which `run.py` captures like any other:
-    - **`phrom`:** an Acorn-format PHROM of the single words, numbers and computer phrases;
-    - **`tts1`, `tts2`:** every TTS input;
-    - **`rec`:** the recordings;
-    - **`hand`:** frame sequences built by hand to use every frame kind and transition.
+- **The data sets** in `investigation/captures/phase11/data/` are five synthetic PROMs, which `run.py` captures like any other. They were built with the research encoder and are committed, with each word's input in `<set>_items.csv`:
+  - **`phrom`:** an Acorn-format PHROM of the single words, numbers and computer phrases;
+  - **`tts1`, `tts2`:** every TTS input;
+  - **`rec`:** the recordings;
+  - **`hand`:** frame sequences built by hand to use every frame kind and transition.
 
-    Inputs longer than 8 s are cut at a pause into several utterances, because the Pico's trace holds about 16 s of VSM speech.
+  Inputs longer than 8 s were cut at a pause into several utterances, because the Pico's trace holds about 16 s of VSM speech.
+- **The round trip** (acceptance test 3) parsed each PROM word with the research encoder's frame parser and packed it again. The bits had to be identical up to the end of the stop code. Its results are committed in `investigation/captures/phase11/roundtrip/`.
+- **`phase11.py`**:
   - **`predict`** runs the emulator on every word and path, spoken after the word `run.py` speaks before it. Where the predecessor changes the output, it also predicts the word after itself. The predictions are committed before the chip runs.
   - **`compare`** judges each set against the tolerance set in the [capture plan](../capture/index.md) and checks the VSM timing. It also compares the chip's VSM output with its Speak External output.
 - **`asrcheck.py`** transcribes each item's input, prediction and chip output with whisper.cpp (`whisper-cli`; the model is kept in `investigation/local/whisper/`), and reports the word error rate against the prompt. It is a check that words survive, not a substitute for listening.
@@ -48,15 +45,14 @@ python investigation/tools/asrcheck.py           # word error rates of input, pr
 ## Encoding quality
 
 ```
-python investigation/tools/speechqual.py IN.wav                    # encode, speak on the emulator, score against the input
-python investigation/tools/speechqual.py IN.wav --bin OUT.bin      # score frames encoded elsewhere
-python investigation/tools/speechqual.py IN.wav --wav DIR --anchor # also write input, chip and anchor audio, aligned
-python investigation/tools/speechqual.py --set all --anchor --csv q.csv        # the encoder test inputs (243 files, about 2.5 min)
-python investigation/tools/speechqual.py --set all --opt repeats=False         # an encode() option changed
-python investigation/tools/speechqual.py --set all --ladder                    # where the quality goes, step by step (about 15 min)
+python investigation/tools/speechqual.py IN.wav --bin IN.bin                 # speak the frames on the emulator, score against the input
+python investigation/tools/speechqual.py IN.wav IN2.flac --bin DIR           # DIR/IN.bin for IN.wav, DIR/IN2.bin for IN2.flac
+python investigation/tools/speechqual.py IN.wav --bin IN.bin --wav DIR --anchor  # also write input, chip and anchor audio, aligned
+python investigation/tools/speechqual.py --set all --bin DIR --anchor --csv q.csv  # the encoder test inputs (243 files)
+python investigation/tools/speechqual.py --set all --bin DIR --ladder        # where the quality goes, step by step
 ```
 
-`speechqual.py` gives the encoder an objective score. It encodes each input with `investigation/encoder/tms5220enc.py`, or takes packed frames from `--bin`. It speaks the frames with `investigation/emulator/tms5220emu` (VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
+`speechqual.py` gives an encoding an objective score. It does not encode: it takes each input's packed frames from `--bin`, which is a file for one input, or a directory holding `NAME.bin` for each input `NAME`. `--set` takes the test inputs (`tts`, `recordings` or `all`). It speaks the frames with `investigation/emulator/tms5220emu` (VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
 
 | Column | Measure |
 |---|---|
@@ -84,12 +80,12 @@ Speech frames are those within 35 dB of the input's loudest 10 ms frame. The ali
 | `q` | The chip's K, pitch and energy tables (nearest K in log-area ratio, K1–K4 if unvoiced, the period as value + 1) |
 | `qc` | The chip's excitation: the chirp, pre-emphasis for voiced frames only and not undone, and energy set from the input's RMS |
 | `qci` | Those frames through `investigation/tools/model.py`'s timing, interpolation and excitation, with a floating-point lattice |
-| `enc` | The encoder's frames through that floating-point model |
+| `enc` | The encoder's frames (from `--bin`) through that floating-point model |
 | `chip` | The encoder's frames on the emulator (the main result) |
 
 `qk`, `qp` and `qe` break `q` down: each is the anchor with only the K, pitch or energy table applied.
 
-Steps `q` to `qci` use the anchor's simple analysis, not the encoder's. So the change from `qci` to `enc` is what the encoder's own analysis is worth against it, and the change from `enc` to `chip` is the chip's integer arithmetic. The reference model runs in Python, so a ladder run takes about six times as long as a plain run (about 15 min for the 243 inputs).
+Steps `q` to `qci` use the anchor's simple analysis, not the encoder's. So the change from `qci` to `enc` is what the encoder's own analysis is worth against it, and the change from `enc` to `chip` is the chip's integer arithmetic. The reference model runs in Python, so a ladder run takes several times as long as a plain run.
 
 ### Per-frame measures and audio
 

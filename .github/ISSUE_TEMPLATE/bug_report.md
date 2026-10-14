@@ -25,7 +25,7 @@ A clear and concise description of what the bug is.
 - [ ] GUI
 - [ ] CLI (`speak5220-cli`)
 - [ ] Build / packaging (Nix, Flatpak, MSI, DMG)
-- [ ] Research tools (`investigation/`: firmware, capture tools, reference encoder or emulator)
+- [ ] Research tools (`investigation/`: firmware, capture tools, reference emulator)
 
 ## Steps to Reproduce
 

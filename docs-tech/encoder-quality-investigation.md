@@ -517,6 +517,7 @@ nix develop --command app/scripts/phoneme-check.sh --engine say   # §3.2, §4.2
 `SPEAK5220_PHROM_OPTIONS` and `SPEAK5220_PHONEME_OPTIONS` (as
 `repeat_lambda=300,voicing_threshold=0.5`) set the options of the round
 trip and the phoneme check. Options the application fixes (`peakLimit`)
-are still moved only in the Python reference:
+were moved only in the Python reference encoder (in git history, commit
+`6abe9ed`):
 `tms5220enc.encodeDetailed(x, 8000, targetRms=24, window=256,
 voicingEvidence=5, levelAgc=1.25, voicingThreshold=0.4, peakLimit=160)`.

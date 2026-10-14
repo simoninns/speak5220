@@ -117,7 +117,6 @@ nav:
           - Implementation choices: technical/emulator/choices.md
       - Encoder:
           - technical/encoder/index.md
-          - Usage: technical/encoder/usage.md
           - How it works: technical/encoder/how-it-works.md
           - Quality: technical/encoder/quality.md
           - Implementation choices: technical/encoder/choices.md

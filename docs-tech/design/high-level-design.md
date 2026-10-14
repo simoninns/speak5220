@@ -24,7 +24,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `bbc/` (the BBC BASIC II tokeniser, DFS disc images, the BBC Micro disc and its player) | Implemented (§19) |
 | `s5core`: `audio/`, `dsp/` (WAV files and in-memory WAV, resampler, FFT adapters; filters, NumPy-ordered sums, LPC analysis, the noise gate, the de-esser, the output filters) | Implemented |
 | `s5core`: `preprocess/` (the noise gate, bass cut, treble tilt and de-esser before encoding, and their presets) | Implemented (§8, plan Phase 11) |
-| `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented, matching the Python reference's frames on the whole corpus |
+| `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented: re-implements the retired Python encoder, matching its stages before level setting (§8) |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
 | `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
@@ -456,7 +456,8 @@ sink and observer mocked.
 ## 8. The encoder
 
 **Implemented** (plan §3.2, Phase 2). `core/encoder/` re-implements
-`tms5220enc.py`'s `encodeDetailed()` function by function; each C++
+the retired Python encoder `tms5220enc.py`'s `encodeDetailed()` function
+by function (its source is in git history, commit `6abe9ed`); each C++
 function's comment names its Python original, and says where the C++
 departs from it (below, and "Level setting").
 
@@ -1525,17 +1526,20 @@ The GUI's undo/redo wraps the same operations (§15).
 
 **Implemented** for the emulator, packaging, encoder and quality measures
 (plan §1.4).
-`app/golden/` holds what the retired references produced, and since
-encoder version 1.3.0 the encoder's own frames and level setting (below);
-the build and tests read only these files and never run anything in
-`investigation/`.
+`app/golden/` holds what the retired references produced, and the C++
+encoder's own frames and level setting (below); the build and tests read
+only these files and never run anything in `investigation/`. The Python
+encoder's source is in git history (commit `6abe9ed`, the
+`reference_commit` of each `REFERENCE.tsv`); its output here is fixed, and
+the scripts keep it as committed.
 
 - `app/scripts/golden/generate_golden.py`, run by hand in the default Nix
   shell, builds `tms5220emu` from `investigation/emulator/` into a temporary
-  directory and imports the Python encoder. It refuses to run if either
-  reference has local changes, and records the last commit that changed them
-  and the SHA-256 of each source in `REFERENCE.tsv`. With `--check` it
-  regenerates into a temporary directory and compares.
+  directory and runs it for every row of `golden/emulator/runs.tsv`, on the
+  committed scenarios and phrases, writing `runs/`. It refuses to run if
+  the emulator's sources differ from the SHA-256 recorded in
+  `REFERENCE.tsv`, and keeps `runs.tsv` and `REFERENCE.tsv` as committed.
+  With `--check` it runs into a temporary directory and compares.
 - `golden/emulator/`: `runs.tsv` lists each run (name, mode, input, power-up
   phase, and whether the Python synthesiser matched it); `runs/` holds each
   run's codes (one per line, from power-up) and full event log; `scenarios/`
@@ -1543,15 +1547,16 @@ the build and tests read only these files and never run anything in
   C self-tests) and their images; `phrases/` each phrase's packed bytes and
   frame list. The phrases are a subset of the synthetic vectors (up to four
   words per set, and the whole "special" set) and six corpus phrases
-  encoded with the encoder's defaults, from public-domain and CC0 voices.
+  encoded with the Python encoder's defaults, from public-domain and CC0
+  voices.
   Each is spoken through both paths at phase 0, and a few at other phases.
-- `golden/packaging/`: an Acorn PHROM and a TI indexed image of the corpus
+- `golden/packaging/`: the Python encoder's Acorn PHROM and TI indexed image of the corpus
   phrases and the "special" vectors, with their word tables and ASCII map,
   and each word's Speak External stream.
 - `golden/encoder/`, written by `app/scripts/golden/encoder.py`: the
-  stages up to the plan from the Python encoder (same rules: refuses local
-  changes, records the commit, the SHA-256 and the NumPy and SciPy
-  versions), the level setting and the frames from the C++ encoder, whose
+  stages up to the plan from the Python encoder, kept as committed with the
+  commit, SHA-256 and NumPy and SciPy versions it recorded, and the level
+  setting and the frames from the C++ encoder, whose
   level setting, onsets, fades and pitch anchor depart from the
   reference's (§8, "Level setting", "Onsets and fades" and "The pitch
   anchor"; agreed with the user, encoder-quality plan D7). The pitch track
@@ -1565,7 +1570,7 @@ the build and tests read only these files and never run anything in
   - `inputs/`: WAV copies of an eight-file corpus subset (public-domain and
     CC0 voices only, one or two per category of prompt);
   - `intermediates/`: per subset file, with the reference's default
-    options, as JSON: `encodeDetailed()`'s filtered signals (every 16th
+    options, as JSON: the Python `encodeDetailed()`'s filtered signals (every 16th
     sample), the pitch track with CMNDF rows and candidates for six hops,
     each frame's analysis and own quantisation and the plan, and in
     `encode` the C++ encoder's faint-opening trim, shaped levels, per-frame
