@@ -38,14 +38,12 @@ The Preprocess tab shows and plays the recording as the phrase's
 [preprocessing](encoder.md#preprocessing) prepares it: what the encoder
 aims at, and what the quality is measured against. The note beside the
 title names the preprocessing, for example *bass cut 200 Hz, treble tilt
-0.4, de-esser 10 dB, normalised to -20 dBFS at 3:1*, or says *no
+0.4, de-esser 10 dB*, or says *no
 preprocessing: the same as the original*.
 
 The preprocessed recording follows the settings below it as they are
 moved, before the change is encoded, keeping the zoom; a change stops it
-if it is playing. The [normaliser](encoder.md#the-normaliser) keeps the
-peaks 1 dB below full scale; without it, a treble tilt can take loud
-sounds past full scale;
+if it is playing. A treble tilt can take loud sounds past full scale;
 the preprocessed recording is then shown and played scaled down to fit,
 and the note says by how much (*scaled by −2.0 dB to fit*). Only the
 display and playback are scaled: the encoder's level comes from its own

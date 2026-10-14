@@ -2,8 +2,8 @@
  * File:        preprocess.h
  * Module:      preprocess
  * Purpose:     The preprocessing of a phrase's recording before it is
- *              encoded: the noise gate, the bass cut, the treble tilt, the
- *              de-esser and the normaliser, and their presets
+ *              encoded: the noise gate, the bass cut, the treble tilt and
+ *              the de-esser, and their presets
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -27,9 +27,6 @@ inline constexpr int kPreprocessSampleRate = 8000;
 
 // The noise gate's default speed: how long it takes to close, in ms.
 inline constexpr double kDefaultNoiseGateMs = 100.0;
-
-// The normaliser's default compression ratio.
-inline constexpr double kDefaultNormaliseRatio = 3.0;
 
 // The lower edge of the band the de-esser turns down, in Hz: where an S's
 // hiss is, of what an 8 kHz recording keeps of it.
@@ -57,13 +54,6 @@ struct PreprocessOptions {
   // If set, the band above kDeEssBandHz is turned down by up to this many
   // dB where it is most of the sound, as in an S (dsp::DeEss()).
   std::optional<double> de_ess_db = std::nullopt;
-  // If set, the speech is brought to this loudness, in dB relative to full
-  // scale, what is louder compressed, and the peaks limited
-  // (dsp::Normalise()).
-  std::optional<double> normalise_db = std::nullopt;
-  // The normaliser's compression ratio (1: none). No effect without
-  // normalise_db.
-  double normalise_ratio = kDefaultNormaliseRatio;
 
   friend bool operator==(const PreprocessOptions& a,
                          const PreprocessOptions& b) = default;
@@ -81,8 +71,7 @@ struct PreprocessPreset {
 std::span<const PreprocessPreset> PreprocessPresets();
 
 // The preset whose options have the same effect as `options`, or nullptr
-// (a custom set). The noise gate's speed and the normaliser's ratio are
-// ignored while they are off.
+// (a custom set). The noise gate's speed is ignored while the gate is off.
 const PreprocessPreset* MatchingPreset(const PreprocessOptions& options);
 
 // A recording preprocessed.
@@ -90,18 +79,17 @@ struct PreprocessedAudio {
   // The preprocessed recording: what the encoder aims at and an encoding
   // is measured against.
   std::vector<double> samples;
-  // The recording gated and normalised but not filtered or de-essed: what
-  // the encoder finds the speech's extent, pitch and voicing in, since the
-  // bass cut, the treble tilt and the de-esser would change how voiced a
-  // sound looks. The same as samples when none of them is on.
+  // The recording gated but not filtered or de-essed: what the encoder
+  // finds the speech's extent, pitch and voicing in, since the bass cut,
+  // the treble tilt and the de-esser would change how voiced a sound
+  // looks. The same as samples when none of them is on.
   std::vector<double> voicing;
 };
 
 // Preprocesses `original` (8 kHz) as `options` asks: gated, then bass cut,
-// treble tilted and de-essed, then normalised, with the normaliser's gain
-// worked out from the samples and given to the voicing recording too. With
-// everything off, both are copies of `original`. The options must be valid
-// (encoder::ValidateEncoderOptions()). Pure; O(n).
+// treble tilted and de-essed. With everything off, both are copies of
+// `original`. The options must be valid (encoder::ValidateEncoderOptions()).
+// Pure; O(n).
 PreprocessedAudio Preprocess(std::span<const double> original,
                              const PreprocessOptions& options);
 

@@ -162,8 +162,7 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
   log->debug(
       "encoding {} samples: targetRms {}, repeatLambda {}, gateDb {}, "
       "noiseGateDb {}, noiseGateMs {}, bassCutHz {}, trebleTilt {}, "
-      "deEssDb {}, normaliseDb {}, normaliseRatio {}, preEmphasis {}, "
-      "window {}, "
+      "deEssDb {}, preEmphasis {}, window {}, "
       "lagWindowHz {}, resonanceHoldDb {}, voicingThreshold {}, "
       "voicingEvidence {}, voicingMinRun {}, levelAgc {}",
       samples.size(), options.target_rms, options.repeat_lambda,
@@ -179,10 +178,6 @@ StatusOr<EncodeResult> Encoder::Encode(std::span<const double> samples,
       options.preprocess.de_ess_db.has_value()
           ? std::to_string(*options.preprocess.de_ess_db)
           : std::string("none"),
-      options.preprocess.normalise_db.has_value()
-          ? std::to_string(*options.preprocess.normalise_db)
-          : std::string("none"),
-      options.preprocess.normalise_ratio,
       options.pre_emphasis.chirp ? std::string("chirp")
                                  : std::to_string(options.pre_emphasis.mu),
       options.window, options.lag_window_hz,

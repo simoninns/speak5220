@@ -196,20 +196,6 @@ TEST_F(EncoderSettingsFormTest, GateSpeedIsUsableOnlyWithTheGate) {
   EXPECT_TRUE(speed->isEnabled());
 }
 
-TEST_F(EncoderSettingsFormTest, CompressionIsUsableOnlyWithTheNormaliser) {
-  OptionSlider* ratio = form_.Slider("normalise_ratio");
-  ASSERT_NE(ratio, nullptr);
-  EXPECT_FALSE(ratio->isEnabled());
-  form_.OnBox("normalise_db")->setChecked(true);
-  EXPECT_TRUE(ratio->isEnabled());
-  EXPECT_DOUBLE_EQ(*form_.Options().preprocess.normalise_db, -20.0);
-  ratio->MoveTo(5.0);
-  EXPECT_DOUBLE_EQ(form_.Options().preprocess.normalise_ratio, 5.0);
-  form_.OnBox("normalise_db")->setChecked(false);
-  EXPECT_FALSE(ratio->isEnabled());
-}
-
-// The de-esser is turned on at a moderate depth.
 TEST_F(EncoderSettingsFormTest, DeEsserTurnsOnAtAModerateDepth) {
   ASSERT_NE(form_.OnBox("de_ess_db"), nullptr);
   form_.OnBox("de_ess_db")->setChecked(true);

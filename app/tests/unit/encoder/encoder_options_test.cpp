@@ -81,10 +81,9 @@ TEST(EncoderOptionsTest, PreprocessingOptionsComeFirst) {
       encoder_seen = true;
     }
   }
-  EXPECT_EQ(preprocessing,
-            (std::vector<std::string_view>{
-                "noise_gate_db", "noise_gate_ms", "bass_cut_hz", "treble_tilt",
-                "de_ess_db", "normalise_db", "normalise_ratio"}));
+  EXPECT_EQ(preprocessing, (std::vector<std::string_view>{
+                               "noise_gate_db", "noise_gate_ms", "bass_cut_hz",
+                               "treble_tilt", "de_ess_db"}));
 }
 
 // Each preprocessing option sets its field of EncoderOptions::preprocess.
@@ -95,16 +94,11 @@ TEST(EncoderOptionsTest, PreprocessingOptionsSetThePreprocessing) {
   ASSERT_TRUE(SetEncoderOption(o, "bass_cut_hz", "200").IsOk());
   ASSERT_TRUE(SetEncoderOption(o, "treble_tilt", "0.4").IsOk());
   ASSERT_TRUE(SetEncoderOption(o, "de_ess_db", "9").IsOk());
-  ASSERT_TRUE(SetEncoderOption(o, "normalise_db", "-18").IsOk());
-  ASSERT_TRUE(SetEncoderOption(o, "normalise_ratio", "4.5").IsOk());
-  EXPECT_EQ(o.preprocess,
-            (preprocess::PreprocessOptions{.noise_gate_db = 30.0,
-                                           .noise_gate_ms = 250.0,
-                                           .bass_cut_hz = 200.0,
-                                           .treble_tilt = 0.4,
-                                           .de_ess_db = 9.0,
-                                           .normalise_db = -18.0,
-                                           .normalise_ratio = 4.5}));
+  EXPECT_EQ(o.preprocess, (preprocess::PreprocessOptions{.noise_gate_db = 30.0,
+                                                         .noise_gate_ms = 250.0,
+                                                         .bass_cut_hz = 200.0,
+                                                         .treble_tilt = 0.4,
+                                                         .de_ess_db = 9.0}));
   EXPECT_EQ(EncoderOptionText(o, "noise_gate_ms"), "250");
   EXPECT_EQ(EncoderOptionText(o, "bass_cut_hz"), "200");
   EXPECT_EQ(EncoderOptionText(o, "treble_tilt"), "0.4");
@@ -172,36 +166,23 @@ TEST(EncoderOptionsTest, NoiseGateIsOffByDefault) {
   EXPECT_FALSE(EncoderOptions{}.preprocess.noise_gate_db.has_value());
   EXPECT_EQ(EncoderOptions{}.preprocess.noise_gate_ms, 100.0);
   for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
-    EXPECT_EQ(info.enabled_by, info.field == "noise_gate_ms" ? "noise_gate_db"
-                               : info.field == "normalise_ratio"
-                                   ? "normalise_db"
-                                   : "")
+    EXPECT_EQ(info.enabled_by,
+              info.field == "noise_gate_ms" ? "noise_gate_db" : "")
         << info.field;
   }
 }
 
-TEST(EncoderOptionsTest, DeEsserAndNormaliserAreOffByDefault) {
-  const preprocess::PreprocessOptions defaults = EncoderOptions{}.preprocess;
-  EXPECT_FALSE(defaults.de_ess_db.has_value());
-  EXPECT_FALSE(defaults.normalise_db.has_value());
-  EXPECT_EQ(defaults.normalise_ratio, 3.0);
+TEST(EncoderOptionsTest, DeEsserIsOffByDefault) {
+  EXPECT_FALSE(EncoderOptions{}.preprocess.de_ess_db.has_value());
   EXPECT_EQ(EncoderOptionText(EncoderOptions{}, "de_ess_db"), "none");
-  EXPECT_EQ(EncoderOptionText(EncoderOptions{}, "normalise_db"), "none");
 }
 
-TEST(EncoderOptionsTest, ChecksTheDeEsserAndNormaliser) {
+TEST(EncoderOptionsTest, ChecksTheDeEsser) {
   EncoderOptions o;
   EXPECT_FALSE(SetEncoderOption(o, "de_ess_db", "0").IsOk());
   EXPECT_FALSE(SetEncoderOption(o, "de_ess_db", "31").IsOk());
-  EXPECT_FALSE(SetEncoderOption(o, "normalise_db", "-41").IsOk());
-  EXPECT_FALSE(SetEncoderOption(o, "normalise_db", "0").IsOk());
-  EXPECT_FALSE(SetEncoderOption(o, "normalise_ratio", "0.5").IsOk());
-  EXPECT_FALSE(SetEncoderOption(o, "normalise_ratio", "none").IsOk());
-  ASSERT_TRUE(SetEncoderOption(o, "normalise_db", "-6").IsOk());
-  ASSERT_TRUE(SetEncoderOption(o, "normalise_ratio", "1").IsOk());
+  ASSERT_TRUE(SetEncoderOption(o, "de_ess_db", "9").IsOk());
   ASSERT_TRUE(SetEncoderOption(o, "de_ess_db", "none").IsOk());
-  EXPECT_EQ(o.preprocess.normalise_db, -6.0);
-  EXPECT_EQ(o.preprocess.normalise_ratio, 1.0);
   EXPECT_FALSE(o.preprocess.de_ess_db.has_value());
 }
 
@@ -247,7 +228,7 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
     EXPECT_FALSE(info.help.empty()) << info.key;
     EXPECT_LE(info.minimum, info.maximum) << info.key;
   }
-  EXPECT_EQ(keys.size(), 18U);
+  EXPECT_EQ(keys.size(), 16U);
   EXPECT_EQ(EncoderOptionInfos().front().key, "noiseGateDb");
   EXPECT_EQ(EncoderOptionInfos().back().key, "levelAgc");
 }

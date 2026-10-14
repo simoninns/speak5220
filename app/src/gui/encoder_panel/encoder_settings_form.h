@@ -74,8 +74,8 @@ class EncoderSettingsForm : public QWidget {
   // The slider of `field` (the coefficient's for the pre-emphasis).
   OptionSlider* Slider(std::string_view field) const;
   // The check box that turns an optional option (noise_gate_db,
-  // bass_cut_hz, de_ess_db, normalise_db, resonance_hold_db) on; nullptr
-  // for other options.
+  // bass_cut_hz, de_ess_db, resonance_hold_db) on; nullptr for other
+  // options.
   QCheckBox* OnBox(std::string_view field) const;
   QToolButton* ResetButton(std::string_view field) const;
   // Whether the row of `field` differs from the baseline.

@@ -10,8 +10,6 @@ project:
     bass_cut_hz: null
     treble_tilt: 0
     de_ess_db: null
-    normalise_db: null
-    normalise_ratio: 3
   default_encoder:
     target_rms: 20
     repeat_lambda: 70

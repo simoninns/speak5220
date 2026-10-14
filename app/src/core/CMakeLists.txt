@@ -17,7 +17,6 @@ add_library(
     dsp/iir_filter.cpp
     dsp/lpc_analysis.cpp
     dsp/noise_gate.cpp
-    dsp/normaliser.cpp
     dsp/output_filter.cpp
     dsp/resampler.cpp
     emulator/chip_arithmetic.cpp

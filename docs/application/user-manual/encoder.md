@@ -13,7 +13,7 @@ A phrase is made in three stages:
 1. **The original**: the recording as imported, never changed.
 2. **The preprocessed recording**: the original with the
    [preprocessing](#preprocessing) applied (a noise gate, a bass cut, a
-   treble tilt, a de-esser, a normaliser), or the original itself when
+   treble tilt, a de-esser), or the original itself when
    there is none.
 3. **The encoding**: the frames the encoder makes from the preprocessed
    recording.
@@ -127,18 +127,16 @@ gives each one); a value outside it, from the project file or Optimise,
 widens the slider to include it. Click a slider and use the arrow keys
 for single steps, Page Up and Page Down for larger ones. The
 [noise gate](#the-noise-gate), the [bass cut](#bass-cut-and-treble-tilt),
-the [de-esser](#the-de-esser), the [normaliser](#the-normaliser) and the
+the [de-esser](#the-de-esser) and the
 [resonance hold](#the-resonance-hold) have a check box that turns them on
 or off, and the pre-emphasis a choice of chirp or first order, whose
 coefficient the slider beside it sets. The noise gate's **Gate speed** is
-greyed out while the gate is off, and the normaliser's **Compression**
-while the normaliser is off.
+greyed out while the gate is off.
 
 The **Preprocessing** section, on the Preprocess tab, always shows its
-seven settings: the [noise gate and its speed](#the-noise-gate), the
-[bass cut and treble tilt](#bass-cut-and-treble-tilt), the
-[de-esser](#the-de-esser), and the [normaliser and its
-compression](#the-normaliser). The **Encoder** section, on
+five settings: the [noise gate and its speed](#the-noise-gate), the
+[bass cut and treble tilt](#bass-cut-and-treble-tilt) and the
+[de-esser](#the-de-esser). The **Encoder** section, on
 the Encode tab, first shows
 its four **basic settings**, the ones that change the sound or the size
 most clearly: the target RMS (loudness), the repeat trade-off (bytes
@@ -238,21 +236,25 @@ change on the Encode tab does.
 
 **Preset** at the top of the section sets all its settings at once:
 
-| Preset | Noise gate | Bass cut | Treble tilt | De-esser | Normaliser | For |
-|---|---|---|---|---|---|---|
-| None | off | off | off | off | off | The recording as it is |
-| BBC Micro | off | 200 Hz | 0.4 | off | off | Phrases played on a BBC Micro's small speaker, balanced like Acorn's own |
+| Preset | Noise gate | Bass cut | Treble tilt | De-esser | For |
+|---|---|---|---|---|---|
+| None | off | off | off | off | The recording as it is |
+| BBC Micro | off | 200 Hz | 0.4 | off | Phrases played on a BBC Micro's small speaker, balanced like Acorn's own |
 
 Choosing a preset replaces the preprocessing settings (turning the noise
-gate, the de-esser and the normaliser off, the gate's speed back to
-100 ms and the compression back to 3:1); the encoder's settings are left
-as they are. When the settings match no preset, for example after moving
-a slider, the chooser shows **Custom**. The gate's speed does not count
-while the gate is off, nor the compression while the normaliser is off.
+gate and the de-esser off and the gate's speed back to 100 ms); the
+encoder's settings are left as they are. When the settings match no
+preset, for example after moving a slider, the chooser shows **Custom**.
+The gate's speed does not count while the gate is off.
 
 The preprocessing is applied in a fixed order, the usual one in a studio:
-the noise gate, then the bass cut and treble tilt, then the de-esser,
-then the normaliser.
+the noise gate, then the bass cut and treble tilt, then the de-esser.
+
+There is no normaliser or compressor. The encoder sets the encoding's
+loudness itself from **Target RMS** and brings quiet words up with
+**Slow gain control**, so a recording's own level makes no difference,
+and compressing it first changes the chip's coarse energy steps very
+little while making the pitch harder to follow.
 
 ### The noise gate
 
@@ -273,7 +275,7 @@ It has two settings:
   fade out naturally.
 
 Sound under the level is made silent, so a breath the gate closes on is
-silent in the encoding too, however much the normaliser lifts the rest.
+silent in the encoding too.
 The gate fades between open and closed rather than switching, so it makes
 no clicks and does not chop words. Loudness alone cannot tell a breath from a soft *h*, though:
 if a word loses its ending, lower the number or make the gate slower.
@@ -282,10 +284,7 @@ The noise gate is not the **Silence gate**, which only decides which
 frames of the encoding are silent and does not change the preprocessed
 recording. A frame of the preprocessed recording is silent if it is more
 than the Silence gate (45 dB by default) below the loudest frame, or
-under twice the background noise if that is higher. The normaliser
-narrows the gap between the speech and the quiet stretches, so without
-the noise gate it can lift room noise over the Silence gate; turn the
-noise gate on, or lower the Silence gate, if it does.
+under twice the background noise if that is higher.
 
 On the Preprocess tab's waveform, the gated stretches are turned down
 and [shaded](waveforms.md#the-noise-gate), and the shading follows both
@@ -336,41 +335,6 @@ also tames the hiss the tilt brightens.
 Like the bass cut and treble tilt, the de-esser is not used for finding
 the pitch and the voicing, since it would make an *s* look less like
 hiss.
-
-### The normaliser
-
-**Normaliser**, off by default, brings every recording's speech to the
-same loudness and evens it out, the way radio and recorded speech are
-processed. Tick its check box to turn it on (it starts at `-20 dBFS`).
-It has two settings:
-
-- **Normaliser** is the loudness, in dB relative to full scale (dBFS),
-  that the speech is brought to. Two recordings normalised to the same
-  level sound equally loud, however loud they were recorded. The
-  loudness is measured the way broadcasters measure it (ITU-R BS.1770):
-  the average power of the speech, leaving out the pauses and anything
-  more than 10 dB below the rest, so silences and breaths do not count.
-- **Compression** evens out the loud and soft syllables (`3:1` by
-  default). From 10 dB under the level up, a sound that many dB louder
-  comes out only 1 dB louder; the knee is soft, so the change is
-  gradual. At `1:1` (shown as `off`) the normaliser only sets the
-  loudness. Compression of 2:1 to 4:1 is usual for speech; much more
-  makes it sound flat and pumped.
-
-The compressor turns down ahead of a loud syllable (the whole recording
-is known, so nothing is missed) and recovers over about a tenth of a
-second after it. The recording is then brought back to the set loudness,
-and a peak limiter keeps every sample at least 1 dB below full scale. So
-the loudness comes out as set unless the limiter has had to take some
-away, which only happens when the level is set high.
-
-The encoder sets its own output level from **Target RMS**, so the
-normaliser's level mostly changes how loud the Preprocess tab plays and
-how much the limiter does. What changes the encoding is the evening out:
-soft syllables come through stronger against the chip's coarse energy
-steps, and loud ones no longer set the level for the whole phrase. With strong
-compression, turn the noise gate on too: compression brings up breaths
-and room noise along with the soft syllables.
 
 ## Voicing smoothing
 

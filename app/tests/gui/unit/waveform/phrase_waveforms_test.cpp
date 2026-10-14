@@ -273,14 +273,12 @@ TEST_F(PhraseWaveformsTest, ShadesWhatTheNoiseGateMutes) {
   EXPECT_TRUE(pane->Note().isEmpty());
 }
 
-// The note names the de-esser and the normaliser, after the filters.
-TEST_F(PhraseWaveformsTest, NoteNamesTheDeEsserAndNormaliser) {
+// The note names the de-esser, after the filters.
+TEST_F(PhraseWaveformsTest, NoteNamesTheDeEsser) {
   ShowPhrase();
-  waveforms_.SetPreprocessing(
-      {.bass_cut_hz = 200.0, .de_ess_db = 10.0, .normalise_db = -20.0});
+  waveforms_.SetPreprocessing({.bass_cut_hz = 200.0, .de_ess_db = 10.0});
   EXPECT_EQ(waveforms_.PreprocessedPane()->Note(),
-            QStringLiteral("bass cut 200 Hz, de-esser 10 dB, normalised to "
-                           "-20 dBFS at 3:1"));
+            QStringLiteral("bass cut 200 Hz, de-esser 10 dB"));
 }
 
 // The Preprocess tab shows and plays the recording preprocessed, and

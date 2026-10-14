@@ -2,8 +2,8 @@
  * File:        envelope.cpp
  * Module:      dsp
  * Purpose:     The level and gain envelopes the preprocessing's dynamics
- *              (noise gate, de-esser, normaliser) share: a centred RMS
- *              level, and gains whose changes are spread into ramps
+ *              (noise gate, de-esser) share: a centred RMS level, and
+ *              gains whose changes are spread into ramps
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns

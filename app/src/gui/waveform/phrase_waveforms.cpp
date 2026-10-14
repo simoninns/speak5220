@@ -94,8 +94,8 @@ QToolButton* MakeButton(const QString& text, const QString& tip,
 }
 
 // The preprocessing after the noise gate in words, for the preprocessed
-// waveform's note: "bass cut 200 Hz, treble tilt 0.4, de-esser 10 dB,
-// normalised to -20 dBFS at 3:1". The noise gate has a note of its own.
+// waveform's note: "bass cut 200 Hz, treble tilt 0.4, de-esser 10 dB". The
+// noise gate has a note of its own.
 QString DescribeAfterGate(const core::preprocess::PreprocessOptions& options) {
   QStringList parts;
   if (options.bass_cut_hz.has_value()) {
@@ -106,11 +106,6 @@ QString DescribeAfterGate(const core::preprocess::PreprocessOptions& options) {
   }
   if (options.de_ess_db.has_value()) {
     parts << QStringLiteral("de-esser %1 dB").arg(*options.de_ess_db);
-  }
-  if (options.normalise_db.has_value()) {
-    parts << QStringLiteral("normalised to %1 dBFS at %2:1")
-                 .arg(*options.normalise_db)
-                 .arg(options.normalise_ratio);
   }
   return parts.join(QStringLiteral(", "));
 }
