@@ -361,5 +361,49 @@ TEST(ProjectCommandsOnProjectTest, EveryOperationUndoesToTheSameProject) {
   EXPECT_EQ(project, edited);
 }
 
+TEST_F(ProjectCommandsTest, ImportSetsTheMapThenInsertsAndUndoesBoth) {
+  const std::vector<PlacedPhrase> placed = {
+      {.index = 0, .phrase = AudioPhrase(1, "ONE")}};
+  const core::project::PhromSettings settings = {.ascii_map = {{'1', "ONE"}},
+                                                 .phroms = {}};
+  const core::project::PhromSettings before = {.ascii_map = {{'Z', "ZED"}},
+                                               .phroms = {}};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(settings)))
+        .WillOnce(Return(before));
+    EXPECT_CALL(editor_, InsertPhrases(Eq(placed)))
+        .WillOnce(Return(core::OkStatus()));
+    // Undo: the phrases out, then the settings back.
+    EXPECT_CALL(editor_,
+                RemovePhrases(IdsAre(std::vector<PhraseId>{TestId(1)})))
+        .WillOnce(Return(placed));
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(before)))
+        .WillOnce(Return(settings));
+  }
+  ASSERT_TRUE(edits_.ImportPhrom(placed, settings).IsOk());
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Import Phrase"));
+  stack_.undo();
+  EXPECT_EQ(stack_.index(), 0);
+}
+
+TEST_F(ProjectCommandsTest, FailedImportPutsTheSettingsBackAndIsNotPushed) {
+  const std::vector<PlacedPhrase> placed = {
+      {.index = 0, .phrase = AudioPhrase(1, "ONE")}};
+  const core::project::PhromSettings settings = {.ascii_map = {{'1', "ONE"}},
+                                                 .phroms = {}};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(settings)))
+        .WillOnce(Return(core::project::PhromSettings{}));
+    EXPECT_CALL(editor_, InsertPhrases(_))
+        .WillOnce(Return(core::ResourceExhaustedError("too big")));
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(core::project::PhromSettings{})))
+        .WillOnce(Return(settings));
+  }
+  EXPECT_FALSE(edits_.ImportPhrom(placed, settings).IsOk());
+  EXPECT_EQ(stack_.count(), 0);
+}
+
 }  // namespace
 }  // namespace speak5220::app

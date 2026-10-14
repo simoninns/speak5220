@@ -131,6 +131,7 @@ nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-me
 nix develop .#app --command app/scripts/run-projects.sh   # encodes copies of the fixture projects and runs their export presets
 nix develop .#app --command app/scripts/output-hashes.sh  # checks those exports against the recorded hashes in app/golden/output-hashes/
 nix develop --command app/scripts/bbc-check.sh            # boots the BBC Micro discs on MAME's emulated BBC Micro and drives the player
+nix develop .#app --command app/scripts/window-check.sh   # renders every window and dialog, light and dark, at 1x and 2x, to PNGs to look at
 nix develop --command app/scripts/phrom-check.sh          # encodes Acorn PHROM A's own output and compares the encodings with its frames
 nix develop --command python3 app/scripts/option_sweep.py --input build/app/generated-corpus --phrom   # compares the option sets of app/scripts/sweeps/
 nix develop --command app/scripts/phoneme-check.sh --engine say   # renders and encodes the phoneme test set (Piper on Linux: leave out --engine)

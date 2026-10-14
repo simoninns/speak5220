@@ -22,9 +22,12 @@ namespace speak5220::core {
 void AddLoggingOptions(QCommandLineParser& parser);
 
 // Reads the logging options from a parser that has processed its
-// arguments. Fails for an unknown level, or for --no-console-log without
-// --log-file.
-StatusOr<LogSettings> LogSettingsFromParser(const QCommandLineParser& parser);
+// arguments. An option not given takes its value from `defaults`: the
+// GUI's preferences (plan §2.6), so a command-line option overrides the
+// preference for that run. Fails for an unknown level, or for
+// --no-console-log with no log file.
+StatusOr<LogSettings> LogSettingsFromParser(const QCommandLineParser& parser,
+                                            const LogSettings& defaults = {});
 
 }  // namespace speak5220::core
 

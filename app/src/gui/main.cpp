@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
   QApplication application(argc, argv);
   QApplication::setApplicationName(ToQString(core::kApplicationName));
   // Where QSettings keeps the preferences (the recent-file list, the
-  // advanced encoder settings shown or not, the theme).
+  // choices of the menus and of the Preferences dialog).
   QApplication::setOrganizationName(ToQString(core::kApplicationName));
   QApplication::setApplicationVersion(ToQString(core::Version()));
   // The icon of every window, and of the Dock on macOS. On Wayland the
@@ -72,17 +72,43 @@ int main(int argc, char* argv[]) {
       QStringLiteral("[project]"));
   parser.process(application);
 
+  // Plan §2.6: the log level and file chosen in Preferences, unless the
+  // command line gives them for this run.
+  speak5220::app::SettingsViewPreferences view_preferences;
+  const core::LogSettings preferred =
+      speak5220::app::LogSettingsFrom(view_preferences);
   const core::StatusOr<core::LogSettings> settings =
-      core::LogSettingsFromParser(parser);
+      core::LogSettingsFromParser(parser, preferred);
   if (!settings.IsOk()) {
     QTextStream(stderr) << "speak5220: "
                         << ToQString(settings.GetStatus().Message()) << '\n';
     return kUsageExitCode;
   }
+  // A log file chosen in Preferences that cannot be opened still lets the
+  // application start, logging to the console; one given on the command
+  // line is the user's mistake to fix.
+  const bool file_from_preferences =
+      !preferred.file_path.empty() && !parser.isSet(QStringLiteral("log-file"));
   if (const core::Status status = core::ConfigureLogging(*settings);
       !status.IsOk()) {
-    QTextStream(stderr) << "speak5220: " << ToQString(status.Message()) << '\n';
-    return kUsageExitCode;
+    if (!file_from_preferences) {
+      QTextStream(stderr) << "speak5220: " << ToQString(status.Message())
+                          << '\n';
+      return kUsageExitCode;
+    }
+    // The same options with no file: the level as given, and the console.
+    const core::LogSettings console_only{
+        .level = preferred.level, .console = true, .file_path = {}};
+    const core::StatusOr<core::LogSettings> fallback =
+        core::LogSettingsFromParser(parser, console_only);
+    if (!fallback.IsOk() || !core::ConfigureLogging(*fallback).IsOk()) {
+      QTextStream(stderr) << "speak5220: " << ToQString(status.Message())
+                          << '\n';
+      return kUsageExitCode;
+    }
+    core::Logger(core::kLogModuleGui)
+        ->warn("the log file chosen in Preferences cannot be used: {}",
+               status.Message());
   }
   core::Logger(core::kLogModuleGui)
       ->info("speak5220 {} started", core::Version());
@@ -95,7 +121,6 @@ int main(int argc, char* argv[]) {
 
   speak5220::app::QtDialogs dialogs;
   speak5220::app::SettingsRecentFilesStore recent_files;
-  speak5220::app::SettingsViewPreferences view_preferences;
 
   // Plan §5, "Colours": light or dark as the desktop prefers, unless the
   // user chose one (View > Theme). Applied before the window is shown.

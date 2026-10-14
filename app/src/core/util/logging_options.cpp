@@ -37,16 +37,23 @@ void AddLoggingOptions(QCommandLineParser& parser) {
       QStringLiteral("Turn console logging off (needs --log-file).")));
 }
 
-StatusOr<LogSettings> LogSettingsFromParser(const QCommandLineParser& parser) {
-  LogSettings settings;
-  StatusOr<LogLevel> level =
-      ParseLogLevel(parser.value(LevelOptionName()).toStdString());
-  if (!level.IsOk()) {
-    return level.GetStatus();
+StatusOr<LogSettings> LogSettingsFromParser(const QCommandLineParser& parser,
+                                            const LogSettings& defaults) {
+  LogSettings settings = defaults;
+  if (parser.isSet(LevelOptionName())) {
+    StatusOr<LogLevel> level =
+        ParseLogLevel(parser.value(LevelOptionName()).toStdString());
+    if (!level.IsOk()) {
+      return level.GetStatus();
+    }
+    settings.level = *level;
   }
-  settings.level = *level;
-  settings.file_path = parser.value(FileOptionName()).toStdString();
-  settings.console = !parser.isSet(NoConsoleOptionName());
+  if (parser.isSet(FileOptionName())) {
+    settings.file_path = parser.value(FileOptionName()).toStdString();
+  }
+  if (parser.isSet(NoConsoleOptionName())) {
+    settings.console = false;
+  }
   if (!settings.console && settings.file_path.empty()) {
     return InvalidArgumentError("--no-console-log needs --log-file");
   }

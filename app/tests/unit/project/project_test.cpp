@@ -485,5 +485,45 @@ TEST(ProjectTest, AllocationCostsNamesAndPointers) {
   EXPECT_EQ(allocation.phroms[0].used_bytes, 256 + 157);
 }
 
+TEST(ProjectTest, SetPhromSettingsReplacesTheMapAndHeadersAndGivesTheOld) {
+  Project project = FivePhrases();
+  const PhromSettings first = {
+      .ascii_map = {{'1', "ONE"}},
+      .phroms = {{.number = 1, .header_strings = {"(C)", "A"}, .unknown = {}}}};
+  const StatusOr<PhromSettings> previous = project.SetPhromSettings(first);
+  ASSERT_TRUE(previous.IsOk()) << previous.GetStatus().ToString();
+  EXPECT_EQ(*previous, PhromSettings{});
+  EXPECT_EQ(project.Settings().ascii_map, first.ascii_map);
+  EXPECT_EQ(project.Settings().phroms, first.phroms);
+  const StatusOr<PhromSettings> undone = project.SetPhromSettings({});
+  ASSERT_TRUE(undone.IsOk());
+  EXPECT_EQ(*undone, first);
+  EXPECT_TRUE(project.Settings().ascii_map.empty());
+}
+
+TEST(ProjectTest, SetPhromSettingsRefusesInvalidSettings) {
+  Project project = FivePhrases();
+  EXPECT_FALSE(
+      project.SetPhromSettings({.ascii_map = {{'\x01', "ONE"}}}).IsOk());
+  EXPECT_TRUE(project.Settings().ascii_map.empty());
+}
+
+TEST(ProjectTest, PhromWithEveryAsciiEntryHoldsOneByteMore) {
+  // Two phrases that need one byte more than a PHROM with a null word
+  // holds: 16129 bytes of cost.
+  Project project =
+      ProjectWith({EncodedPhrase(1, "A", 8000), EncodedPhrase(2, "B", 8129)});
+  ASSERT_EQ(project.Allocation().PhromsUsed(), 2);
+  PhromSettings every;
+  for (int code = 32; code <= 126; ++code) {
+    every.ascii_map[static_cast<char>(code)] = code % 2 == 0 ? "A" : "B";
+  }
+  ASSERT_TRUE(project.SetPhromSettings(every).IsOk());
+  EXPECT_EQ(project.Allocation().PhromsUsed(), 1);
+  // Renaming a phrase leaves the entries naming its old name.
+  ASSERT_TRUE(project.RenamePhrase(TestId(2), "C").IsOk());
+  EXPECT_EQ(project.Allocation().PhromsUsed(), 2);
+}
+
 }  // namespace
 }  // namespace speak5220::core::project

@@ -35,7 +35,9 @@
 #include "gui/main_window/view_preferences.h"
 #include "gui/phrase_list/phrase_list_model.h"
 #include "gui/playback/player.h"
+#include "gui/preferences/preferences_dialog.h"
 #include "gui/theme/colour_scheme.h"
+#include "gui/waveform/phrase_tab.h"
 
 class QAction;
 class QActionGroup;
@@ -58,9 +60,10 @@ class PhraseWaveforms;
 // (EncoderPanel::PreprocessPanel()), and Encode with the encoder panel
 // (EncoderPanel), each tab's waveform above its settings; the status bar shows
 // the project's size in KB and PHROMs. Menus: File (new, open, recent, save,
-// save as, quit), Edit (undo, redo), View (theme), Phrase (add, remove,
-// move up and down, sort A-Z, re-encode, optimise, revert to saved),
-// Export, Audio (chip output, output filter), Help.
+// save as, import PHROM image, quit), Edit (undo, redo, preferences), View
+// (theme), Phrase (add, remove, move up and down, sort A-Z, re-encode,
+// optimise, revert to saved), Export, Audio (chip output, output filter,
+// chip clock), Help (about).
 //
 // The title is the project's file name, marked while it has unsaved
 // changes, as the phrase list marks each phrase changed since the last
@@ -68,7 +71,7 @@ class PhraseWaveforms;
 // go through IDialogs, the recent-file list through IRecentFilesStore,
 // what the user chose to see and hear (the tab shown, the advanced encoder
 // settings, the theme, the output filter and chip output of the Audio
-// menu) through IViewPreferences;
+// menu) and the Preferences dialog's settings through IViewPreferences;
 // imports, encoding and the rendering of encoded audio (through the
 // ISynth) run as background jobs on the ITaskRunner, their results coming
 // back to the GUI thread queued; the waveforms play through the Player;
@@ -114,6 +117,19 @@ class MainWindow : public QMainWindow {
   void ImportFiles(const QStringList& paths, int row);
   // Imports started and not yet finished.
   int ImportsRunning() const { return imports_running_; }
+  // Plan §3.4: adds the words of the Acorn PHROM images at `paths` (each
+  // one or more 16 KB banks) before `row` (clamped to the list), as
+  // locked phrases with no source audio, in one undoable step. Images
+  // that cannot be read are reported, and the others still added.
+  void ImportPhromImages(const QStringList& paths, int row);
+
+  // Asks for preferences (IDialogs::AskPreferences()), then stores and
+  // applies them (ApplyPreferences()).
+  void EditPreferences();
+  // Stores `preferences` and applies them: the theme, the waveforms'
+  // colours and the audio device at once; the settings of new projects
+  // from the next new project; the logging at the next start.
+  void ApplyPreferences(const Preferences& preferences);
 
   // Opens the Optimise window for the phrases with `ids`.
   void Optimise(const std::vector<core::project::PhraseId>& ids);
@@ -162,6 +178,9 @@ class MainWindow : public QMainWindow {
   void SetTheme(ThemeChoice choice);
   // The View > Theme menu's item for `choice`.
   QAction* ThemeAction(ThemeChoice choice) const;
+  // The View menu's item that shows `tab` (Ctrl+1, 2, 3) and puts the
+  // keyboard focus on its waveform, so Space plays it.
+  QAction* TabAction(PhraseTab tab) const;
 
  signals:
   // An import finished, successfully or not.
@@ -186,6 +205,9 @@ class MainWindow : public QMainWindow {
   bool MaybeSave();
   void OpenFromDialog();
   void AddFromDialog();
+  void ImportPhromFromDialog();
+  // The row after the last selected phrase, or the end of the list.
+  int InsertionRow() const;
   void RemoveSelected();
   void ShowAbout();
 
@@ -254,10 +276,12 @@ class MainWindow : public QMainWindow {
   QAction* open_action_ = nullptr;
   QAction* save_action_ = nullptr;
   QAction* save_as_action_ = nullptr;
+  QAction* import_phrom_action_ = nullptr;
   QAction* clear_recent_action_ = nullptr;
   QAction* quit_action_ = nullptr;
   QAction* undo_action_ = nullptr;
   QAction* redo_action_ = nullptr;
+  QAction* preferences_action_ = nullptr;
   // One per core::dsp::OutputFilters(), in its order, in an exclusive
   // group.
   QActionGroup* output_filter_group_ = nullptr;
@@ -272,6 +296,8 @@ class MainWindow : public QMainWindow {
   // One per kThemeChoices, in its order, in an exclusive group.
   QActionGroup* theme_group_ = nullptr;
   std::vector<QAction*> theme_actions_;
+  // One per kPhraseTabs, in its order.
+  std::vector<QAction*> tab_actions_;
   QAction* add_action_ = nullptr;
   QAction* remove_action_ = nullptr;
   QAction* move_up_action_ = nullptr;

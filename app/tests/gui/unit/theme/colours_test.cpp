@@ -66,6 +66,23 @@ TEST(ColoursTest, WaveformPaletteIsDarkOnBlackInEitherScheme) {
             ColoursFor(DarkPalette()).wave);
 }
 
+TEST(ColoursTest, WaveformsFollowTheThemeWhenChosen) {
+  EXPECT_EQ(WaveformPaletteFor(LightPalette(), WaveformColours::kDark),
+            WaveformPalette(LightPalette()));
+  EXPECT_EQ(WaveformPaletteFor(LightPalette(), WaveformColours::kTheme),
+            LightPalette());
+  EXPECT_FALSE(IsDarkPalette(
+      WaveformPaletteFor(LightPalette(), WaveformColours::kTheme)));
+}
+
+TEST(ColoursTest, WaveformColourKeysRoundTrip) {
+  for (const WaveformColours choice : kWaveformColourChoices) {
+    EXPECT_EQ(WaveformColoursFromKey(WaveformColoursKey(choice)), choice);
+  }
+  EXPECT_EQ(WaveformColoursKey(WaveformColours::kTheme), "theme");
+  EXPECT_FALSE(WaveformColoursFromKey("purple").has_value());
+}
+
 class ColoursContrastTest : public ::testing::TestWithParam<QPalette> {};
 
 TEST_P(ColoursContrastTest, WarningIsReadableTextOnTheBackground) {

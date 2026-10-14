@@ -10,7 +10,9 @@
 
 #include "gui/playback/player.h"
 
+#include <QByteArray>
 #include <QObject>
+#include <QString>
 #include <QTimer>
 #include <algorithm>
 #include <cmath>
@@ -153,7 +155,13 @@ void Player::Tick() {
       elapsed * SampleRateOf(source_) / kMicrosecondsPerSecond;
   const auto end = static_cast<std::int64_t>(samples_.size());
   if (output_->IsFinished() || base_ + played >= end) {
+    const core::Status device = output_->DeviceStatus();
     Stop();
+    if (!device.IsOk()) {
+      core::Logger(core::kLogModuleGui)
+          ->warn("playback stopped: {}", device.Message());
+      emit DeviceFailed(QString::fromStdString(device.Message()));
+    }
     return;
   }
   position_ = static_cast<int>(base_ + std::max<std::int64_t>(played, 0));
@@ -179,6 +187,11 @@ void Player::SetChipClock(int clock_hz) {
   if (state_ != PlaybackState::kStopped && IsChipOutput(source_)) {
     Stop();
   }
+}
+
+void Player::SetOutputDevice(const QByteArray& id) {
+  Stop();
+  output_->SetDevice(id);
 }
 
 bool Player::IsFiltered(PlaybackSource source) const {

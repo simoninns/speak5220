@@ -1,8 +1,8 @@
 /*
  * File:        acorn_phrom.cpp
  * Module:      packaging
- * Purpose:     Builds a 16 KB Acorn PHROM image: header, pointer table,
- *              word names and word data
+ * Purpose:     Builds and reads 16 KB Acorn PHROM images: header, pointer
+ *              table, word names and word data
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -15,6 +15,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <numeric>
+#include <optional>
 #include <span>
 #include <string>
 #include <utility>
@@ -44,6 +46,10 @@ constexpr int kAsciiCount = kLastAscii - kFirstAscii + 1;  // 95
 constexpr int kPointerMask = 0x3FFF;
 constexpr std::uint8_t kTableEnd = 0xFF;
 constexpr int kAsciiLimit = 0x80;
+// §12.8: header bytes 0 and 1, as the host reads them.
+constexpr std::uint8_t kSignatureFirst = 0x00;
+constexpr std::uint8_t kSignatureSecond = 0xFF;
+constexpr std::size_t kBitsPerByte = 8;
 
 bool IsAscii(const std::string& text) {
   return std::ranges::all_of(
@@ -54,6 +60,28 @@ void PutLittleEndian16(std::array<std::uint8_t, kHeaderSize>& header,
                        std::size_t offset, int value) {
   header.at(offset) = static_cast<std::uint8_t>(value & 0xFF);
   header.at(offset + 1) = static_cast<std::uint8_t>((value >> 8) & 0xFF);
+}
+
+// The little-endian count at `offset` of the header, which is stored
+// bit-reversed (§12.8). `image` holds the whole header.
+int ReadHeaderCount(std::span<const std::uint8_t> image, std::size_t offset) {
+  return lpc::BitReverse(image[offset]) |
+         (lpc::BitReverse(image[offset + 1]) << 8);
+}
+
+// §12.8: a name character is stored shifted left by one, then
+// bit-reversed. Gives nothing for a byte that no printable character
+// (32-126) is stored as, which ends a name.
+std::optional<char> DecodeNameCharacter(std::uint8_t stored) {
+  const std::uint8_t shifted = lpc::BitReverse(stored);
+  if ((shifted & 1U) != 0) {
+    return std::nullopt;
+  }
+  const int code = shifted >> 1U;
+  if (code < kFirstAscii || code > kLastAscii) {
+    return std::nullopt;
+  }
+  return static_cast<char>(code);
 }
 
 }  // namespace
@@ -137,19 +165,6 @@ StatusOr<PhromImage> AcornPhrom::Build(std::span<const Word> words,
                             .frames = static_cast<int>(frames.size())});
   }
 
-  // A lone stop code after the last word, for ASCII entries with no word.
-  if (position + 1 > kPhromSize) {
-    return ResourceExhaustedError("words do not fit in 16 KB");
-  }
-  const std::array<lpc::Frame, 1> stop = {lpc::Frame::Stop()};
-  StatusOr<std::vector<std::uint8_t>> stop_byte = lpc::FrameCodec::Pack(stop);
-  if (!stop_byte.IsOk()) {
-    return stop_byte.GetStatus();
-  }
-  image[position] = stop_byte->front();
-  for (int c = kFirstAscii; c <= kLastAscii; ++c) {
-    pointers[c] = static_cast<int>(position);
-  }
   for (const auto& [code, name] : options.ascii_map) {
     if (code < kFirstAscii || code > kLastAscii) {
       return InvalidArgumentError("ASCII entry out of range: " +
@@ -162,6 +177,25 @@ StatusOr<PhromImage> AcornPhrom::Build(std::span<const Word> words,
     }
     pointers[code] = pointers[found->second];
   }
+  // A lone stop code after the last word, for ASCII entries with no word.
+  // When every entry names a word, as in Acorn's PHROM A, there is none,
+  // and the words may fill the bank to its last byte (§12.8).
+  if (std::cmp_less(options.ascii_map.size(), kAsciiCount)) {
+    if (position + 1 > kPhromSize) {
+      return ResourceExhaustedError("words do not fit in 16 KB");
+    }
+    const std::array<lpc::Frame, 1> stop = {lpc::Frame::Stop()};
+    StatusOr<std::vector<std::uint8_t>> stop_byte = lpc::FrameCodec::Pack(stop);
+    if (!stop_byte.IsOk()) {
+      return stop_byte.GetStatus();
+    }
+    image[position] = stop_byte->front();
+    for (int c = kFirstAscii; c <= kLastAscii; ++c) {
+      if (!options.ascii_map.contains(c)) {
+        pointers[c] = static_cast<int>(position);
+      }
+    }
+  }
   for (int number = kFirstAscii; number <= last_number; ++number) {
     const int value = pointers[number] & kPointerMask;
     const std::size_t at = 2 * static_cast<std::size_t>(number);
@@ -169,6 +203,142 @@ StatusOr<PhromImage> AcornPhrom::Build(std::span<const Word> words,
     image[at + 1] = static_cast<std::uint8_t>(value >> 8);
   }
   result.bytes = std::move(image);
+  return result;
+}
+
+StatusOr<std::vector<ReadWord>> AcornPhrom::Read(
+    std::span<const std::uint8_t> image) {
+  if (image.size() != kPhromSize) {
+    return InvalidArgumentError("an Acorn PHROM image is 16384 bytes, not " +
+                                std::to_string(image.size()));
+  }
+  // §12.8: bytes 0 and 1 of the header are 0x00, 0xFF.
+  if (lpc::BitReverse(image[0]) != kSignatureFirst ||
+      lpc::BitReverse(image[1]) != kSignatureSecond) {
+    return InvalidArgumentError(
+        "not an Acorn PHROM image: its header does not start with 0x00, "
+        "0xFF");
+  }
+  const int ascii_count = ReadHeaderCount(image, kAsciiCountOffset);
+  const int pointer_count = ReadHeaderCount(image, kPointerCountOffset);
+  if (ascii_count > pointer_count) {
+    return DataLossError(
+        "the PHROM header counts do not fit: " + std::to_string(ascii_count) +
+        " ASCII entries but " + std::to_string(pointer_count) + " pointers");
+  }
+  // §12.8: word number N's pointer is at byte 2N, from N = 32, and one
+  // byte, 0xFF, follows the last pointer; data can start after it.
+  const std::size_t table_end = 2 * (static_cast<std::size_t>(kFirstAscii) +
+                                     static_cast<std::size_t>(pointer_count));
+  if (table_end >= kPhromSize) {
+    return DataLossError("the PHROM pointer table (" +
+                         std::to_string(pointer_count) +
+                         " pointers) does not fit in 16 KB");
+  }
+  const std::size_t data_start = table_end + 1;
+  const int first_number = kFirstAscii + ascii_count;
+  const int word_count = pointer_count - ascii_count;
+
+  std::vector<ReadWord> words(static_cast<std::size_t>(word_count));
+  for (int i = 0; i < word_count; ++i) {
+    const int number = first_number + i;
+    const std::size_t at = 2 * static_cast<std::size_t>(number);
+    // §12.7: Read and Branch replaces the low 14 bits of the address, so a
+    // pointer cannot leave its bank; the bits above are not used.
+    const int offset = (image[at] | (image[at + 1] << 8)) & kPointerMask;
+    if (std::cmp_less(offset, data_start)) {
+      return DataLossError("PHROM word " + std::to_string(number) +
+                           " points into the header or the pointer table "
+                           "(offset " +
+                           std::to_string(offset) + ")");
+    }
+    ReadWord& word = words[static_cast<std::size_t>(i)];
+    word.number = number;
+    word.offset = offset;
+  }
+
+  // The words in address order, so each name can be bounded by the end of
+  // the word before it.
+  std::vector<std::size_t> order(words.size());
+  std::iota(order.begin(), order.end(), std::size_t{0});
+  std::ranges::stable_sort(order, [&words](std::size_t a, std::size_t b) {
+    return words[a].offset < words[b].offset;
+  });
+  std::size_t previous_end = data_start;
+  const ReadWord* previous = nullptr;
+  for (const std::size_t index : order) {
+    ReadWord& word = words[index];
+    const auto offset = static_cast<std::size_t>(word.offset);
+    lpc::ParsedFrames parsed = lpc::FrameCodec::Parse(image.subspan(offset));
+    if (parsed.frames.empty() ||
+        parsed.frames.back().energy != lpc::kStopEnergy) {
+      return DataLossError("PHROM word " + std::to_string(word.number) +
+                           " (offset " + std::to_string(offset) +
+                           ") has no stop code within the bank");
+    }
+    word.frames = std::move(parsed.frames);
+    if (previous != nullptr && previous->offset == word.offset) {
+      // Two pointers to the same data: the same word, with the same name.
+      word.name = previous->name;
+    } else {
+      // §12.8: the name is stored backwards, its first character next to
+      // the data, between the end of the previous word and this one.
+      for (std::size_t at = offset; at > previous_end; --at) {
+        const std::optional<char> character =
+            DecodeNameCharacter(image[at - 1]);
+        if (!character) {
+          break;
+        }
+        word.name += *character;
+      }
+    }
+    const std::size_t end =
+        offset + (parsed.bits_used + kBitsPerByte - 1) / kBitsPerByte;
+    previous_end = std::max(previous_end, end);
+    previous = &word;
+  }
+  return words;
+}
+
+StatusOr<ReadPhrom> AcornPhrom::ReadImage(std::span<const std::uint8_t> image) {
+  StatusOr<std::vector<ReadWord>> words = Read(image);
+  if (!words.IsOk()) {
+    return words.GetStatus();
+  }
+  ReadPhrom result;
+  // §12.8: the header's strings, bit-reversed, each ending in a null.
+  std::string text;
+  for (std::size_t i = kStringsStart; i < kStringsStart + kStringsCapacity;
+       ++i) {
+    const auto character = static_cast<char>(lpc::BitReverse(image[i]));
+    if (character != '\0') {
+      if (character < ' ' || character > '~') {
+        break;
+      }
+      text += character;
+      continue;
+    }
+    if (text.empty()) {
+      break;
+    }
+    result.strings.push_back(std::move(text));
+    text.clear();
+  }
+  // Read() checked that the ASCII entries lie within the pointer table.
+  std::map<int, int> number_at;  // data offset -> lowest word number
+  for (const ReadWord& word : *words) {
+    number_at.emplace(word.offset, word.number);
+  }
+  const int ascii_count = ReadHeaderCount(image, kAsciiCountOffset);
+  for (int code = kFirstAscii;
+       code < kFirstAscii + ascii_count && code <= kLastAscii; ++code) {
+    const std::size_t at = 2 * static_cast<std::size_t>(code);
+    const int pointer = (image[at] | (image[at + 1] << 8)) & kPointerMask;
+    if (const auto found = number_at.find(pointer); found != number_at.end()) {
+      result.ascii_words[code] = found->second;
+    }
+  }
+  result.words = *std::move(words);
   return result;
 }
 

@@ -51,8 +51,8 @@ namespace speak5220::app {
 // over a frame shows its indices. With no waveform it shows a placeholder,
 // under a faint backdrop if it has one. The view stays fitted to its extent
 // until zoomed or scrolled. It is drawn dark, on black, in either scheme
-// (WaveformPalette(), ColoursFor()).
-// GUI thread only.
+// (WaveformPalette(), ColoursFor()), unless set to follow the
+// application's scheme (SetWaveformColours()). GUI thread only.
 class WaveformView : public QWidget {
   Q_OBJECT
 
@@ -83,6 +83,13 @@ class WaveformView : public QWidget {
   void SetFrames(std::vector<core::lpc::Frame> frames);
   void SetFrameGridShown(bool shown);
   bool FrameGridShown() const { return frame_grid_; }
+
+  // Draws the waveform dark in either scheme (the default) or in the
+  // application's scheme (WaveformPaletteFor()).
+  void SetWaveformColours(WaveformColours choice);
+  WaveformColours Colours() const { return colour_choice_; }
+  // The palette the waveform is drawn with.
+  const QPalette& WavePalette() const { return wave_palette_; }
 
   // The source samples this view's samples cover.
   TimeExtent ContentExtent() const;
@@ -159,8 +166,9 @@ class WaveformView : public QWidget {
   bool fitted_ = true;
   std::optional<int> marker_;
   std::optional<double> playhead_;
-  // The palette the waveform is drawn with (WaveformPalette()), and its
-  // colours: dark in either scheme.
+  // The palette the waveform is drawn with (WaveformPaletteFor()), and its
+  // colours.
+  WaveformColours colour_choice_ = WaveformColours::kDark;
   QPalette wave_palette_;
   ThemeColours colours_;
 };

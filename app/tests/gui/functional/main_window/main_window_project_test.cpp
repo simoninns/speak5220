@@ -375,7 +375,7 @@ TEST_F(MainWindowProjectTest, FilesThatCannotBeImportedAreReported) {
   }
   EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Add Phrases"), _))
       .WillOnce([&broken](const QString&, const QString& message) {
-        EXPECT_TRUE(message.startsWith(broken));
+        EXPECT_TRUE(message.contains(broken));
       });
   window_.ImportFiles({Temp(QStringLiteral("fine.wav")), broken}, 0);
   WaitForImports(window_);

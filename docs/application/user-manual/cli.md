@@ -1,7 +1,8 @@
 # Command-line tool
 
 `speak5220-cli` is the application's command-line tool. It creates
-projects, imports WAV files into them, encodes them and exports them,
+projects, imports WAV files and PHROM images into them, encodes them and
+exports them,
 with the same results as the GUI gives. It can also measure a project's
 encodings and speak a frames file. Run on its own, it
 prints its name and version.
@@ -10,6 +11,7 @@ prints its name and version.
 speak5220-cli
 speak5220-cli --version
 speak5220-cli --help
+speak5220-cli --help-all   # also Qt's own options
 ```
 
 ## Commands
@@ -22,6 +24,7 @@ speak5220-cli new words.s5proj --name "My PHROM"
 speak5220-cli new loud.s5proj --option target_rms=30 --option bass_cut_hz=200
 speak5220-cli add words.s5proj hello.wav goodbye.wav
 speak5220-cli add words.s5proj seven.wav --name SEVEN --normalise
+speak5220-cli import-phrom words.s5proj phrom_a.bin
 speak5220-cli encode words.s5proj
 speak5220-cli export words.s5proj --output out --format acorn-phrom
 speak5220-cli export words.s5proj --output out --format c-header-speak-external --phrase HELLO --licence CC0-1.0
@@ -40,6 +43,13 @@ speak5220-cli synth word.frames.yaml --output word.wav
   phrase is named from its file name, or by `--name` when one file is
   given; `--description` gives that one phrase a description. `--normalise` normalises a file that clips or is very quiet; without
   it, such a file is imported unchanged with a warning.
+- **`import-phrom PROJECT IMAGE...`** adds the words of Acorn PHROM images
+  at the end of the list, as locked phrases with no source audio (see
+  [importing PHROM images](projects.md#importing-phrom-images)). A file may
+  hold one 16 KB PHROM or several concatenated; the words are added in file
+  order, then PHROM order, then word order, and each is reported with the
+  name it was given. A file that is not a whole number of 16 KB PHROMs, or
+  that cannot be read as one, adds nothing, and the project is not saved.
 - **`encode PROJECT`** encodes every phrase whose frames are out of date, in
   list order, and reports the PHROMs the project fills. `--force` encodes
   every phrase that is not locked. A phrase whose encoding would take the
@@ -72,7 +82,7 @@ speak5220-cli synth word.frames.yaml --output word.wav
   through the emulated chip, as a PHROM word is spoken, and writes the
   chip's output as an 8 kHz WAV file, before the DAC clips it.
 
-`new`, `add` and `encode` save the project in place, keeping the previous
+`new`, `add`, `import-phrom` and `encode` save the project in place, keeping the previous
 version as `PROJECT~`. With `--output DIR` they write the project into
 `DIR` instead, under the same name, and leave the original as it was:
 

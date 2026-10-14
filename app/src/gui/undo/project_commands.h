@@ -229,6 +229,27 @@ class ReplacePhrasesCommand : public ProjectCommand {
   std::vector<core::project::PlacedPhrase> replaced_;
 };
 
+// Plan §3.4: words of PHROM images with the images' ASCII entries and
+// header strings. SetPhromSettings() and then InsertPhrases(), so the
+// budget is checked with the new ASCII map; if the insertion fails, the
+// settings are put back. Reversed by RemovePhrases() and SetPhromSettings()
+// with the previous settings.
+class ImportPhromCommand : public ProjectCommand {
+ public:
+  ImportPhromCommand(core::project::IProjectEditor& editor,
+                     std::vector<core::project::PlacedPhrase> phrases,
+                     core::project::PhromSettings settings);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  std::vector<core::project::PlacedPhrase> phrases_;
+  core::project::PhromSettings settings_;
+  core::project::PhromSettings previous_;
+};
+
 // SetDefaultEncoder(); reversed by SetDefaultEncoder() with the previous
 // options.
 class SetDefaultEncoderCommand : public ProjectCommand {

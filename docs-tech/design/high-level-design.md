@@ -26,12 +26,12 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | `s5core`: `preprocess/` (the noise gate, bass cut, treble tilt and de-esser before encoding, and their presets) | Implemented (§8, plan Phase 11) |
 | `s5core`: `encoder/` (`Encoder` and its stages, `EncoderOptions`) | Implemented: re-implements the retired Python encoder, matching its stages before level setting (§8) |
 | `s5core`: `quality/` (the libfvad and SPTK adapters, the signal preparation, the spectral envelope, pitch and voicing, ESTOI, the overall score and rating, the assessor; the encoded audio for display; the anchor vocoder) | Implemented, matching independent implementations on the corpus subset; the score calibrated and confirmed by listening |
-| `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import, the exports) | Implemented |
+| `s5core`: `project/` (`Project` and its editing operations, PHROM allocation, the encoding cache, the `.s5proj` file in ZIP and directory form, import of WAV files and PHROM images, the exports) | Implemented |
 | `s5core`: `optimiser/` (`Optimiser`: the grid, the coordinate descent, the budget and byte limit) | Implemented (§17) |
 | Reference data in `app/golden/` (emulator, packaging, encoder, quality, BBC BASIC II tokenisations, output hashes) | Implemented |
 | Fixture projects in `app/projects/` (`general/`, `phrom/`, `bbc/`, `benchmark/`) | Implemented |
-| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers, drag and drop and changed-phrase marks, revert to saved, phrase names and descriptions, undo/redo, the status bar (§15); the Original, Preprocess and Encode tabs with their waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18) |
-| `speak5220-cli` | Implemented: `new`, `add`, `encode`, `export` (presets, or one format with its options), `--output`; version and logging options |
+| `speak5220` GUI | Implemented: the main window, projects (open, save, recent files, the unsaved-changes prompt), the phrase list with PHROM dividers, drag and drop and changed-phrase marks, revert to saved, phrase names and descriptions, undo/redo, the status bar (§15); the Original, Preprocess and Encode tabs with their waveforms, the play-start marker, playback, light and dark colours (§16); the encoder panel, re-encoding, Optimise and Optimise all (§17); the Export dialog (§18); Preferences, the About box, error reporting, keyboard access and accessible names, and the import of PHROM images (§20) |
+| `speak5220-cli` | Implemented: `new`, `add`, `import-phrom`, `encode`, `export` (presets, or one format with its options), `synth`, `measure`, `--output`; version and logging options |
 | Test tree and lanes (TESTING.md) | Implemented |
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
@@ -61,7 +61,7 @@ app/
                                 option_sweep.py, phoneme-check.sh,
                                 phoneme_corpus.py, phoneme_prompts.csv (§9);
                                 run-projects.sh, output-hashes.sh (§18),
-                                bbc-check.sh (§19)
+                                bbc-check.sh (§19), window-check.sh (§20)
     sweeps/                     option sets for option_sweep.py (§9)
     bbc/                        the MAME scripts of the BBC Micro check:
                                 player.lua, tokenise.lua, basic_in_mame.py,
@@ -102,10 +102,12 @@ app/
                                 player's source, speak.bas (§19)
       project/                  Project, IProjectEditor, the PHROM allocator,
                                 EncodingCache, ProjectSerializer, the project
-                                stores, PhraseImporter, the exports (§14,
-                                §18)
+                                stores, PhraseImporter, the PHROM image
+                                import, the exports (§14, §18)
       optimiser/                Optimiser (§17)
     gui/                        library "speak5220_gui" + the "speak5220" executable
+      about/                    AboutDialog, the third-party notices (§20)
+      preferences/              PreferencesDialog, Preferences (§20)
       main_window/              MainWindow, ProjectDocument, IDialogs, the
                                 recent-file list, the view preferences,
                                 the status bar's text
@@ -356,7 +358,7 @@ Plan §2.2, with the names as built.
 | `Synth` (`ISynth`) | **Implemented** (`core/synth/synth`): §7 |
 | `ReferenceSynthesizer` | **Implemented** (`core/synth/reference_synthesizer`): the encoder's reference-algorithm synthesiser (`synthesize()` in the Python), which matches the emulator's VSM path |
 | `OutputPin`, `PinSamples()`, `ClippedSamples()` | **Implemented** (`core/synth/output_pin`): the encoded audio from the SPEAKER pin, each code clipped to the DAC's −128…+127 (`emulator::kDacMin`, `kDacMax`) and converted by `DacOutput()` with the DAC's measured bit weights (datasheet §8.2, Table 8-2; the step between −1 and 0 is about six steps), or from the I/O pin's unclipped 10-bit codes, for listening and display only (§16) |
-| `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's |
+| `AcornPhrom`, `TiIndexed`, `SpeakExternalStream` | **Implemented** (`core/packaging/`): the §12.8 and §12.9 layouts, byte-identical to the Python encoder's; `AcornPhrom::Read()` reads an Acorn PHROM image's words back (§14) |
 | `CHeader` | **Implemented** (`core/packaging/c_header`): PHROM images or Speak External streams as a C header (§18) |
 | `SndfileWavReader`, `SndfileWavWriter` (`IWavReader`, `IWavWriter`) | **Implemented** (`core/audio/`): any WAV variant read and mixed to mono as floats; 16- or 24-bit PCM written, clipped |
 | `SndfileWavCodec` (`IWavCodec`) | **Implemented** (`core/audio/sndfile_wav_io`): the same, to and from bytes in memory (libsndfile's virtual I/O), with integer PCM read and 24-bit PCM written exactly (§14) |
@@ -375,6 +377,8 @@ Plan §2.2, with the names as built.
 | `PhraseWaveforms`, `WaveformPane`, `WaveformView`, `PeakCache`, `TimeAxis`, `GripSplitter` | **Implemented** (`gui/waveform/`): the Original, Preprocess and Encode tabs, their waveforms, shared time axis and controls, the play start (§16) |
 | `Player`, `QtAudioOutput` (`IAudioOutput`), `SteadyClock` (`IClock`) | **Implemented** (`gui/playback/`, `core/util/clock`): playback and the playhead (§16) |
 | `ThemeColours`, `ColourSchemeFollower`, `PortalColourScheme` (`IDesktopColourScheme`) | **Implemented** (`gui/theme/`): light and dark colours, following the desktop (§16) |
+| `PreferencesDialog`, `Preferences` | **Implemented** (`gui/preferences/`): the theme, the waveforms' colours, the audio device, the settings of new projects, logging (§20) |
+| `AboutDialog`, `ThirdPartyNotices()` | **Implemented** (`gui/about/`): the version, the licence, the third-party notices (§20) |
 | `RenderEncodedAudio()` | **Implemented** (`core/quality/encoded_audio`): the frames spoken and lined up with the source (§16) |
 | `Preprocess()`, `PreprocessOptions`, `PreprocessPresets()` | **Implemented** (`core/preprocess/`): the noise gate, bass cut, treble tilt and de-esser that make the preprocessed recording an encoding aims at and is measured against, and the presets (§8) |
 | `Encoder` (`IEncoder`) | **Implemented** (`core/encoder/`): re-implementation of `encode()`/`encodeDetailed()` with the full `EncoderOptions` set (§8) |
@@ -388,6 +392,7 @@ Plan §2.2, with the names as built.
 | `EncodingCache` | **Implemented** (`core/project/encoding_cache`): the settings hash and re-encoding within the budget, over `IEncoder` (§14) |
 | `ProjectSerializer`, `ZipProjectStore`, `DirectoryProjectStore` (`IProjectStore`) | **Implemented** (`core/project/`): the `.s5proj` file (§14) |
 | `PhraseImporter` | **Implemented** (`core/project/phrase_importer`): plan §3.1 over `IWavReader`, `IResampler` and `IFileDigest`, inline or through `ITaskRunner` (§14) |
+| `ImportPhromImage()` | **Implemented** (`core/project/phrom_import`): the words of Acorn PHROM images as locked phrases with no source audio (plan §3.4, §14) |
 | `InlineTaskRunner`, `ThreadPoolTaskRunner` (`ITaskRunner`) | **Implemented** (`core/util/task_runner`): background jobs (§14) |
 | `RunExport()`, `BuildAcornPhroms()`, `ExportFileNames()`, `CheckEncodingsCurrent()`, `WriteExportedFiles()` | **Implemented** (`core/project/project_export`): a preset's Acorn PHROM images, C headers or WAV files (§18) |
 | `ExportDialog` | **Implemented** (`gui/export/`): the Export dialog (§18) |
@@ -1518,7 +1523,9 @@ The GUI's undo/redo wraps the same operations (§15).
   sinks. `ShutdownLogging()` flushes and stops the worker at exit.
 - Options in both executables: `--log-level info|debug|trace`,
   `--log-file PATH`, `--no-console-log` (refused without `--log-file`).
-- Not yet: the GUI preferences for these options (Phase 12).
+- The GUI's Preferences set the level and the file of the next start
+  (§20); `LogSettingsFromParser()` takes them as defaults, so an option
+  given on the command line overrides them for that run.
 
 ---
 
@@ -1659,6 +1666,7 @@ everything first and changes nothing on failure, and returns its reverse:
 | `SetDescription(id, text)` | the previous text | `SetDescription(id, result)` |
 | `SetEncoding(id, {overrides, encoding})` | the previous pair | `SetEncoding(id, result)` |
 | `SetDefaultEncoder(options)` | the previous defaults | `SetDefaultEncoder(result)` |
+| `SetPhromSettings(settings)` | the previous ASCII map and per-PHROM headers | `SetPhromSettings(result)` |
 
 `SetEncoding()` takes the settings and the encoding made from them
 together, so a settings change and its re-encoding are one undoable step,
@@ -1677,7 +1685,12 @@ cost (or none, if not encoded) and fills PHROMs in list order, never
 back-filling; a phrase larger than 16 128 bytes is placed nowhere. The
 fixed overhead of 256 bytes per PHROM and the cost of packed bytes + name +
 2 match `AcornPhrom::Build()` exactly (header 64, ASCII pointers 190, the
-0xFF, the null word). PHROMs beyond the budget are still counted, so a
+0xFF, the null word). Each cost also carries the number of ASCII entries
+naming the phrase (`CostOfPhrase()` takes the settings); a PHROM whose
+phrases have all 95 has no null word, as `Build()` writes none then, so
+holds one byte more (16 129), which a PHROM filled to its last byte, as
+Acorn's PHROM A is, needs. The map names phrases, so a rename recounts the
+entries of the new name. PHROMs beyond the budget are still counted, so a
 check can say how many a change would need. The packed size is counted from
 the frame lengths (`PackedSize()`), not by packing, since every edit
 recomputes every phrase's cost.
@@ -1815,6 +1828,46 @@ quantised to the 24-bit grid; `IFileDigest` gives the source's SHA-256. A
 name is normalised from the request or made from the file name
 (`SuggestPhraseName()`). `ImportInBackground()` posts the import to an
 `ITaskRunner` and passes the result to a callback on the worker thread.
+
+**PHROM image import** (plan §3.4, Phase 12; `ImportPhromImage()`, over
+`AcornPhrom::Read()`). The input is one or more 16 KB banks, each read on
+its own; anything that is not a whole number of banks is refused, and a
+failure in one bank of several names it ("PHROM 2 of the image: ...").
+`Read()` treats the image as untrusted: it checks the size, the header's
+0x00, 0xFF start, that the two counts fit (no more ASCII entries than
+pointers; the table and its 0xFF end inside the bank), masks each pointer
+to 14 bits (datasheet §12.7, so none leaves the bank) and refuses one into
+the header or table, and parses each word with `FrameCodec::Parse()` over
+the rest of the bank only, refusing a word with no stop code there. The
+words are numbers 32 + the ASCII count (127 in every image `Build()`
+makes and in the Acorn PHROM A) to the end of the table. *Names:* the
+datasheet stores a name backwards in the bytes between the previous word's
+end and the word's data, but does not say how a reader finds its far end
+(datasheet Appendix B). `Read()` takes the words in address order and reads
+backwards from the data, bounded by the end of the previous word's stop
+byte (or the table's 0xFF), for as long as each byte, bit-reversed, has
+its low bit clear and a printable character (32–126) in the other seven.
+That gives exactly the names `Build()` writes, all 165 of the Acorn PHROM
+A's (whose names fill each gap exactly), and an empty name where an image
+has none or pads with 0x00 or 0xFF. Pointers sharing one offset share its
+name. `ImportPhromImage()` then keeps a name that `NormalisePhraseName()`
+accepts and is free, otherwise takes `SuggestPhraseName()` of it (or of
+`WORD <number>` for an empty one) against the project's names and those
+already given, and makes each word a locked phrase with a new id, no
+source or audio, and a `CachedEncoding` holding only the frames (no
+encoder version, settings hash or quality). `AcornPhrom::ReadImage()`
+also gives the header strings and the ASCII entries that point at a word,
+which the import returns (`PhromImport`) as an ASCII map naming the
+phrases and each bank's strings. `MergeImportedPhromSettings()` adds the
+entries for characters the project does not map, and, for a project with
+no phrases and the default header strings, each bank's strings as PHROM
+n's own; `IProjectEditor::SetPhromSettings()` applies them (validated, and
+budget-checked with the new map) before `InsertPhrases()`, in the CLI's
+`import-phrom` and, as one undoable `ImportPhromCommand`, in the GUI. The
+Acorn PHROM A imported so into a new project fills one PHROM and exports
+with the same pointers, names and frames; 139 bytes differ, each the last
+byte of a word, whose bits after the stop code Acorn's tools set to 1 and
+`FrameCodec::Pack()` leaves 0 (the chip never reads them).
 
 **Task runners** (`ITaskRunner`: `Post()` and `Wait()`). `InlineTaskRunner`
 runs each job inside `Post()` (unit tests, the CLI); `ThreadPoolTaskRunner`
@@ -1996,7 +2049,8 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
   the nominal clock.
   `MainWindow::SetTheme()` ticks its menu item, saves the choice and
   emits `ThemeChanged()`, which `main()` passes to the
-  `ColourSchemeFollower`.
+  `ColourSchemeFollower`. The Preferences dialog's settings are kept
+  through `IViewPreferences` too (§20).
 - **Shutdown order.** Child widgets are deleted by `QObject` after the
   window's members, so `~MainWindow()` deletes the panel and the details
   (which use the model and the document) first, then the encoder panel
@@ -2233,7 +2287,8 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   change. The waveforms are the exception: `WaveformView` draws with
   `WaveformPalette(palette())`, the palette with a black base and window
   and light text, placeholder and mid (the highlight kept, for the focus
-  frame), and so with the dark `ThemeColours`, in either scheme. The
+  frame), and so with the dark `ThemeColours`, in either scheme, unless
+  Preferences choose the application's own scheme for them (§20). The
   quality rating's bands and marks are the same full-strength colours in
   both sets.
 - **Following the desktop.** On GNOME, Qt 6.11 picks its GTK 3 platform
@@ -2866,3 +2921,136 @@ checked against its frame count instead.
   dialog); `bbc-check.sh` builds an 8-PHROM disc and has 9 refused by the
   CLI; the `bbc` suite is in the hash baseline (3 discs).
 - Task 6: the MAME result above; the hardware test is outstanding.
+
+---
+
+## 20. Preferences, About, errors and accessibility
+
+**Implemented** (plan Phase 12) in `gui/preferences/`, `gui/about/`,
+`gui/main_window/` and `gui/playback/`. The user's view is
+[`docs/application/user-manual/main-window.md`](../../docs/application/user-manual/main-window.md)
+and [`getting-started.md`](../../docs/application/getting-started.md).
+
+**Preferences.** **Edit > Preferences...** (`QAction::PreferencesRole`, so
+macOS puts it in the application menu; the platform's key, or Ctrl+, where
+the platform has none) asks through `IDialogs::AskPreferences()`, so tests
+answer it. `PreferencesDialog` shows a `Preferences` value in four tabs and
+returns the user's choice; it applies nothing itself.
+`MainWindow::ApplyPreferences()` stores it (`WritePreferences()`) and
+applies it:
+
+| Setting | Kept as (`SettingsViewPreferences`) | Applied |
+|---|---|---|
+| Theme | `theme` (`ThemeChoiceKey()`), shared with View > Theme | At once: `SetTheme()` |
+| Waveform colours | `waveformColours` (`WaveformColoursKey()`: `dark`, `theme`) | At once: `PhraseWaveforms::SetWaveformColours()` gives each `WaveformView` `WaveformPaletteFor()`, `WaveformPalette()` for dark or the application's palette |
+| Output device | `audioDevice`, `QAudioDevice::id()`; empty for the system's default | At once: `Player::SetOutputDevice()` stops playback and calls `IAudioOutput::SetDevice()`. `QtAudioOutput` looks the id up at each `Start()`, and plays on the default when the device has gone |
+| Settings of new projects | group `defaultEncoder`: the options that differ from `EncoderOptions{}`, by field, as `EncoderOptionText()` (`OverridesFor()`) | At the next new project, and at start-up: `ProjectDocument::New(defaults)` sets `ProjectSettings::default_encoder`. Projects list every option, so open and saved projects are unchanged. An option saved with a value this version refuses keeps its default |
+| Log level, log file | `logLevel` (`LogLevelName()`), `logFile` | At the next start: `main()` passes `LogSettingsFrom()` to `LogSettingsFromParser()` as defaults (§12). A file from the preferences that cannot be opened leaves the console only, with a warning; one from the command line is refused as before |
+
+Logging is configured once, before the worker threads start (§12), so it
+is not changed while running; the status bar says so.
+
+**About.** `AboutDialog` has three tabs: the logo, version, copyright, the
+GPL's notice and the Qt version built with and run on; the GPL v3 text,
+`:/speak5220/licences/GPL-3.0.txt` (the repository's `LICENSE`, through
+the `.qrc`; a link when absent, as in the test binaries); and the
+third-party notices. `ThirdPartyNotices()` lists each library of plan §2.4
+(Qt, libsndfile, libsamplerate, pocketfft, libzip, yaml-cpp, libfvad,
+SPTK 4 and its REAPER and WORLD, spdlog and {fmt}, GoogleTest marked as
+not part of the application) and the code ported from pystoi and NumPy,
+each with its use, SPDX licence, copyright holders and home page;
+`ThirdPartyNoticesHtml()` adds the full text of the short licences
+(BSD-2-Clause, BSD-3-Clause, MIT) and links the others to spdx.org.
+
+**Errors.**
+
+- *WAV files.* `SndfileWavReader::Read()` says `PATH does not exist or is
+  not a file` for a missing path, and `cannot read PATH as a WAV file:
+  REASON` with libsndfile's reason otherwise. The main window names each
+  failed file once (it no longer prefixes a message that already names
+  it).
+- *Projects.* The stores and serializer already name the file and the
+  reason (`not a usable project archive`, `is not valid YAML`, a key of
+  the wrong type, a damaged phrase WAV or `frames.yaml`, a missing phrase
+  file); the window shows `cannot open PATH: ...` and keeps the project
+  that was open.
+- *Audio devices.* A device that cannot start fails `Player::Play()`, as
+  before, with a message that says what to do. A device that fails while
+  playing: `IAudioOutput::DeviceStatus()` reports it once the buffer
+  stops early (`QAudio::IOError` or `FatalError`; an underrun, which
+  Qt before 6.11 reports at the normal end of a pull-mode buffer, is
+  not a failure), and `Player::Tick()` stops and emits `DeviceFailed()`,
+  which the window shows under **Play**.
+
+**Import of PHROM images.** **File > Import PHROM Image...** (Ctrl+I)
+asks through `IDialogs::ImportPhromPaths()`; `MainWindow::ImportPhromImages()`
+reads each file (refusing one larger than the 64-PHROM budget before
+reading it), calls `ImportPhromImage()` (§14) with the names taken so far,
+and inserts every word as one `InsertPhrases()` command after the
+selection, reporting the files it could not read.
+
+**Keyboard and accessible names.**
+
+- Every command is in a menu, and the walkthrough's commands have
+  shortcuts. **View > Original, Preprocess, Encode** (Ctrl+1, 2, 3) show
+  the tab and focus its waveform, where Space plays (§16).
+- Each control has an accessible name: its own text, a buddy label, or
+  `setAccessibleName()` for the phrase list ("Phrases"), the list's
+  symbol buttons (their action's tooltip), the Export dialog's folder, and
+  the Optimise window's limits; the Export dialog's labels added as
+  widgets get their buddies explicitly, since `QFormLayout` sets one only
+  for a label it makes from text.
+
+**Deviations from the plan.**
+
+- The plan lists "default encoder settings" among the preferences without
+  saying what they apply to; they are the settings new projects start
+  from, as the GUI has no editor for a project's defaults.
+- "Waveform colours" is a choice between the dark waveform of §16 and the
+  application's own scheme, not a colour picker.
+- View > Original, Preprocess and Encode, and Ctrl+I for Import PHROM
+  Image, are not in the plan.
+
+**Acceptance** (plan Phase 12):
+
+- Task 1: GUI unit tests check that the dialog shows and returns each
+  setting, lists a device that is not connected, and restores defaults;
+  that the window stores and applies them (theme signal, waveform
+  palette, the device passed to the output, new projects' settings, the
+  logging message) and changes nothing when cancelled; that the window
+  starts with them; and unit tests check the logging defaults the
+  command line overrides.
+- Task 2: unit tests check that every library of plan §2.4 is listed with
+  a licence, copyright and home page, that the short licences are given
+  in full, and that the dialog shows the version and the notices.
+- Task 3: GUI functional tests import an empty file, a header-only WAV, a
+  WAV with a malformed format chunk, text named `.wav`, a missing file and
+  a truncated WAV; open a non-ZIP `.s5proj`, a truncated one, a
+  `project.yaml` that is not YAML or has a wrong type, and projects with a
+  damaged phrase WAV, damaged frames and a missing phrase directory; and
+  play on a device that will not start and one that fails while playing.
+  Each gives one message naming the file or device and the reason, the
+  window keeps working, and nothing crashes.
+- Task 4: a GUI unit test walks every control of the main window (each
+  tab, with the advanced settings), the Optimise window, and the Export,
+  Preferences and About dialogs, and checks that each has an accessible
+  name and takes the focus from Tab; others check that the walkthrough's
+  commands have shortcuts, that Ctrl+1–3 show a tab and focus its
+  waveform, that Space there plays, and that Tab from the phrase list
+  reaches the tabs, the name field, the waveform and its buttons.
+  `getting-started.md` gives the keys for each step.
+  *High-DPI and light and dark* (2026-10-14, `window-check.sh`, offscreen
+  Qt 6.11 on macOS): each window and dialog rendered in light and dark at
+  1x and 2x and looked at. Text, icons, sliders and the waveforms are
+  sharp at 2x, nothing is clipped, every label is readable in both
+  schemes, and the waveforms stay dark in both. Still to be checked by
+  hand on real screens: a 200 % display on Windows and on Linux (Wayland),
+  and a screen reader (Orca, NVDA, VoiceOver) reading the names.
+- Task 5: unit and functional tests in §14; GUI functional tests export a
+  fixture's PHROMs, import them into a new project with the same frames
+  as locked phrases that cannot be re-encoded, in one undoable step, make
+  taken names unique, and report unreadable images while adding the rest.
+- Task 6: `docs/application/` describes every feature; the functional
+  docs-coverage test checks that every YAML key, encoder option, CLI
+  option and export format is in the reference, and
+  `mkdocs build --strict` passes.

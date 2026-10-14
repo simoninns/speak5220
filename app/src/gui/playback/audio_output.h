@@ -10,6 +10,8 @@
 #ifndef SPEAK5220_GUI_PLAYBACK_AUDIO_OUTPUT_H_
 #define SPEAK5220_GUI_PLAYBACK_AUDIO_OUTPUT_H_
 
+#include <QByteArray>
+#include <QString>
 #include <cstdint>
 #include <vector>
 
@@ -38,6 +40,22 @@ class IAudioOutput {
   // True once the whole buffer has been played, after Stop(), or after a
   // device error.
   virtual bool IsFinished() = 0;
+  // Why the buffer stopped early: OK unless the device failed while
+  // playing it (it was unplugged, or the sound server went away).
+  virtual core::Status DeviceStatus() = 0;
+
+  // Plays on the output device with `id` (AudioDeviceInfo::id), or on the
+  // system's default for an empty id or one no device has now. Takes
+  // effect from the next Start().
+  virtual void SetDevice(const QByteArray& id) = 0;
+};
+
+// An output device, as Preferences lists it. A plain value type.
+struct AudioDeviceInfo {
+  // The system's id for the device (QAudioDevice::id()).
+  QByteArray id;
+  // Its name, as the system gives it.
+  QString description;
 };
 
 }  // namespace speak5220::app

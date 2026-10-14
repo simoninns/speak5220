@@ -27,7 +27,8 @@ pointer for each word number from 32, 0xFF after the last pointer, then
 each word's name (backwards, each character shifted left and bit-reversed)
 before its packed frames. Word numbers 32 to 126 are the ASCII entries:
 an entry of the project's ASCII map points to its phrase if the phrase is
-in that PHROM, and every other entry to a one-byte null word. Phrases are
+in that PHROM, and every other entry to a one-byte null word after the
+last phrase (there is none when every entry points to a phrase). Phrases are
 words from 127, filling PHROM 1 in list order, then PHROM 2, as the
 [project budget](../user-manual/projects.md#phroms-and-the-project-budget)
 places them. Each PHROM has the project's header strings with its number

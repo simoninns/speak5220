@@ -31,6 +31,7 @@
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gui/playback/player.h"
+#include "gui/theme/colours.h"
 #include "gui/undo/project_edits.h"
 #include "gui/waveform/phrase_tab.h"
 
@@ -142,6 +143,9 @@ class PhraseWaveforms : public QWidget {
   // Changing it redraws the encoded audio, keeping the zoom.
   void SetOutputPin(core::synth::OutputPin pin);
   core::synth::OutputPin Pin() const { return pin_; }
+  // How every tab's waveform is coloured (WaveformView::SetWaveformColours());
+  // dark at first.
+  void SetWaveformColours(WaveformColours choice);
 
   // Puts `controls` in `tab`'s settings area, which scrolls when they do
   // not fit, and takes ownership. A tab's area says it has no settings

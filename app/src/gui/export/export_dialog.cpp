@@ -119,6 +119,13 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
   form->addRow(audio_label_, audio_box_);
   form->addRow(QStringLiteral("Name:"), name_edit_);
   form->addRow(QStringLiteral("Folder:"), directory_row);
+  // QFormLayout names a field by its label only when it makes the label
+  // itself from text.
+  layout_label_->setBuddy(layout_box_);
+  licence_label_->setBuddy(licence_edit_);
+  audio_label_->setBuddy(audio_box_);
+  directory_edit_->setAccessibleName(QStringLiteral("Folder"));
+  browse->setToolTip(QStringLiteral("Choose the folder"));
   auto* layout = new QVBoxLayout(this);
   layout->addLayout(form);
   layout->addWidget(summary_label_);

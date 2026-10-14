@@ -10,6 +10,9 @@
 
 #include "gui/playback/player.h"
 
+#include <QByteArray>
+#include <QObject>
+#include <QString>
 #include <cstdint>
 #include <numeric>
 #include <vector>
@@ -105,6 +108,37 @@ TEST_F(PlayerTest, EndStopsAndReturnsToTheStart) {
   player_.Tick();
   EXPECT_EQ(player_.State(), PlaybackState::kStopped);
   EXPECT_EQ(player_.Position(), 400);
+}
+
+TEST_F(PlayerTest, DeviceFailingWhilePlayingStopsAndSaysWhy) {
+  std::vector<QString> messages;
+  QObject::connect(
+      &player_, &Player::DeviceFailed,
+      [&messages](const QString& message) { messages.push_back(message); });
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+  EXPECT_CALL(output_, IsFinished()).WillOnce(Return(true));
+  EXPECT_CALL(output_, DeviceStatus())
+      .WillOnce(Return(core::UnavailableError("the device went away")));
+  player_.Tick();
+  EXPECT_EQ(player_.State(), PlaybackState::kStopped);
+  EXPECT_THAT(messages, ElementsAre(QStringLiteral("the device went away")));
+}
+
+TEST_F(PlayerTest, NormalEndIsNotADeviceFailure) {
+  int failures = 0;
+  QObject::connect(&player_, &Player::DeviceFailed,
+                   [&failures](const QString&) { ++failures; });
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+  EXPECT_CALL(output_, IsFinished()).WillOnce(Return(true));
+  player_.Tick();
+  EXPECT_EQ(failures, 0);
+}
+
+TEST_F(PlayerTest, ChoosingADeviceStopsAndPassesItOn) {
+  ASSERT_TRUE(player_.Play(PlaybackSource::kOriginal, Numbered(), 0).IsOk());
+  EXPECT_CALL(output_, SetDevice(QByteArray("usb-headset")));
+  player_.SetOutputDevice(QByteArray("usb-headset"));
+  EXPECT_EQ(player_.State(), PlaybackState::kStopped);
 }
 
 TEST_F(PlayerTest, PlayheadPastTheLastSampleStops) {

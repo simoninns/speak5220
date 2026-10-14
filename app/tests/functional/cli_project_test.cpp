@@ -2,7 +2,7 @@
  * File:        cli_project_test.cpp
  * Module:      cli tests
  * Purpose:     Runs speak5220-cli's project commands end to end: new, add,
- *              encode, export, synth and measure
+ *              import-phrom, encode, export, synth and measure
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -420,7 +420,81 @@ TEST_F(CliProjectTest, FailuresExitWithCode1) {
   EXPECT_EQ(run.exit_code, 1);
 }
 
+TEST_F(CliProjectTest, ImportPhromAddsEachImagesWordsAsLockedPhrases) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  ASSERT_EQ(RunCli({QStringLiteral("encode"), Q(path)}).exit_code, 0);
+  CliRun run =
+      RunCli({QStringLiteral("export"), Q(path), QStringLiteral("--output"),
+              Q(Path("export")), QStringLiteral("--format"),
+              QStringLiteral("acorn-phrom")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  const fs::path image = Path("export") / "test_1.bin";
+
+  // Into --output: the project itself is left as it was.
+  const std::vector<char> before = ReadAll(path);
+  run = RunCli({QStringLiteral("import-phrom"), Q(path), Q(image), Q(image),
+                QStringLiteral("--output"), Q(Path("out"))});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  EXPECT_THAT(run.out, HasSubstr("added HELLO 2 from test_1.bin"));
+  EXPECT_THAT(run.out, HasSubstr("added HELLO 3 from test_1.bin"));
+  EXPECT_THAT(run.out, HasSubstr("imported 2 word(s) as locked phrases"));
+  EXPECT_EQ(ReadAll(path), before);
+
+  const core::StatusOr<project::Project> loaded =
+      Load(Path("out") / "test.s5proj");
+  ASSERT_TRUE(loaded.IsOk()) << loaded.GetStatus().ToString();
+  ASSERT_EQ(loaded->Phrases().size(), 3U);
+  const project::Phrase& original = loaded->Phrases()[0];
+  for (std::size_t i = 1; i < 3; ++i) {
+    const project::Phrase& imported = loaded->Phrases()[i];
+    EXPECT_TRUE(imported.locked);
+    EXPECT_FALSE(imported.source.has_value());
+    EXPECT_TRUE(imported.audio.empty());
+    ASSERT_TRUE(imported.encoding.has_value());
+    EXPECT_EQ(imported.encoding->frames, original.encoding->frames);
+  }
+
+  // In place, and the encode command leaves the imported words alone.
+  run = RunCli({QStringLiteral("import-phrom"), Q(path), Q(image)});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  run = RunCli({QStringLiteral("encode"), Q(path), QStringLiteral("--force")});
+  ASSERT_EQ(run.exit_code, 0) << run.err;
+  EXPECT_THAT(run.out, HasSubstr("encoded 1 phrase(s)"));
+  const core::StatusOr<project::Project> in_place = Load(path);
+  ASSERT_TRUE(in_place.IsOk()) << in_place.GetStatus().ToString();
+  ASSERT_EQ(in_place->Phrases().size(), 2U);
+  EXPECT_EQ(in_place->Phrases()[1].name, "HELLO 2");
+  EXPECT_TRUE(in_place->Phrases()[1].locked);
+}
+
+TEST_F(CliProjectTest, ImportPhromRefusesFilesThatAreNotPhromImages) {
+  const fs::path path = Path("test.s5proj");
+  CreateWithPhrase(path);
+  const std::vector<char> before = ReadAll(path);
+  {
+    std::ofstream(Path("short.bin"), std::ios::binary) << "not a PHROM";
+    std::ofstream zeros(Path("zeros.bin"), std::ios::binary);
+    const std::string bank(16384, '\0');
+    zeros << bank;
+  }
+  CliRun run =
+      RunCli({QStringLiteral("import-phrom"), Q(path), Q(Path("short.bin"))});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("multiple of 16384"));
+  run = RunCli({QStringLiteral("import-phrom"), Q(path), Q(Path("zeros.bin"))});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("not an Acorn PHROM image"));
+  run =
+      RunCli({QStringLiteral("import-phrom"), Q(path), Q(Path("missing.bin"))});
+  EXPECT_EQ(run.exit_code, 1);
+  EXPECT_THAT(run.err, HasSubstr("cannot open"));
+  EXPECT_EQ(ReadAll(path), before);
+}
+
 TEST_F(CliProjectTest, UnusableCommandLinesExitWithCode2) {
+  EXPECT_EQ(RunCli({QStringLiteral("import-phrom"), Q(Path("p"))}).exit_code,
+            2);
   EXPECT_EQ(RunCli({QStringLiteral("frobnicate")}).exit_code, 2);
   EXPECT_EQ(RunCli({QStringLiteral("new")}).exit_code, 2);
   EXPECT_EQ(RunCli({QStringLiteral("add"), Q(Path("p"))}).exit_code, 2);

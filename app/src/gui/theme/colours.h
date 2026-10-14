@@ -15,6 +15,8 @@
 #include <QPalette>
 #include <array>
 #include <cstddef>
+#include <optional>
+#include <string_view>
 
 namespace speak5220::app {
 
@@ -61,6 +63,23 @@ ThemeColours ColoursFor(const QPalette& palette);
 // scheme the application is in. Other roles, such as the highlight, are
 // kept. Pure.
 QPalette WaveformPalette(const QPalette& palette);
+
+// How the waveforms are coloured (Preferences): dark whichever scheme the
+// application is in, or in the application's scheme.
+enum class WaveformColours { kDark, kTheme };
+
+// Every choice, in the Preferences dialog's order.
+inline constexpr std::array<WaveformColours, 2> kWaveformColourChoices = {
+    WaveformColours::kDark, WaveformColours::kTheme};
+
+// The choice's key for storing it ("dark", "theme"). Pure.
+std::string_view WaveformColoursKey(WaveformColours choice);
+// The choice with `key`, or none for a key no choice has. Pure.
+std::optional<WaveformColours> WaveformColoursFromKey(std::string_view key);
+
+// The palette a waveform is drawn with for `choice`: WaveformPalette() for
+// kDark, `palette` itself for kTheme. Pure.
+QPalette WaveformPaletteFor(const QPalette& palette, WaveformColours choice);
 
 // WCAG 2.1 contrast ratio of two colours, from 1 to 21. Pure.
 double ContrastRatio(const QColor& a, const QColor& b);

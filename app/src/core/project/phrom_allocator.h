@@ -26,13 +26,18 @@ inline constexpr int kPhromBudget = 64;
 // speak5220 datasheet §12.8: what every Acorn PHROM image spends before
 // its words. The 64-byte header, the 95 ASCII pointers (word numbers
 // 32-126, bytes 64-253), the 0xFF after the last pointer, and the one-byte
-// null word the unused ASCII entries point to.
+// null word the unused ASCII entries point to. A PHROM whose every ASCII
+// entry names one of its words, as Acorn's PHROM A does, has no null word
+// (kPhromNullWordBytes), so one byte more for words.
 inline constexpr int kPhromHeaderBytes = 64;
-inline constexpr int kPhromAsciiPointerBytes = 95 * 2;
-inline constexpr int kPhromFixedOverhead =
-    kPhromHeaderBytes + kPhromAsciiPointerBytes + 1 + 1;  // 256
+inline constexpr int kPhromAsciiEntries = 95;
+inline constexpr int kPhromAsciiPointerBytes = kPhromAsciiEntries * 2;
+inline constexpr int kPhromNullWordBytes = 1;
+inline constexpr int kPhromFixedOverhead = kPhromHeaderBytes +
+                                           kPhromAsciiPointerBytes + 1 +
+                                           kPhromNullWordBytes;  // 256
 
-// The bytes left for words in one PHROM.
+// The bytes left for words in one PHROM with a null word; one more without.
 inline constexpr int kPhromWordCapacity =
     static_cast<int>(packaging::kPhromSize) - kPhromFixedOverhead;  // 16128
 
@@ -46,9 +51,11 @@ constexpr int PhraseCost(int packed_bytes, int name_length) {
 }
 
 // One phrase, as the allocator sees it: its cost, or nothing when it has
-// not been encoded yet (it then takes no space).
+// not been encoded yet (it then takes no space), and how many of the
+// project's ASCII entries name it.
 struct PhraseCostInput {
   std::optional<int> cost;
+  int ascii_entries = 0;
 };
 
 // What happened to a phrase.
@@ -75,8 +82,11 @@ struct PhraseSlot {
 struct PhromFill {
   // The indices of its phrases, in list order.
   std::vector<int> phrases;
-  // The bytes its words use, the fixed overhead included.
+  // The bytes its words use, the fixed overhead included (less the null
+  // word once its phrases have every ASCII entry).
   int used_bytes = kPhromFixedOverhead;
+  // The ASCII entries its phrases have.
+  int ascii_entries = 0;
 
   int FreeBytes() const {
     return static_cast<int>(packaging::kPhromSize) - used_bytes;
@@ -103,10 +113,11 @@ struct PhromAllocation {
 
 // Plan §4.1: fills PHROM 1 in list order and starts the next PHROM when the
 // next phrase does not fit; earlier PHROMs are never back-filled, so the
-// result is predictable. A phrase bigger than kPhromWordCapacity is placed
-// nowhere and flagged; one not yet encoded is skipped. PHROMs past the
-// budget are still counted, so a caller can see by how much a change would
-// exceed it. Pure; O(phrases).
+// result is predictable. A PHROM whose phrases have all 95 ASCII entries
+// needs no null word, so takes one byte more (AcornPhrom::Build() leaves it
+// out). A phrase too big for an empty PHROM is placed nowhere and flagged; one
+// not yet encoded is skipped. PHROMs past the budget are still counted, so a
+// caller can see by how much a change would exceed it. Pure; O(phrases).
 PhromAllocation AllocatePhroms(std::span<const PhraseCostInput> phrases);
 
 }  // namespace speak5220::core::project

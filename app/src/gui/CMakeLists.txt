@@ -6,6 +6,8 @@
 add_library(
     speak5220_gui
     STATIC
+    about/about_dialog.cpp
+    about/third_party_notices.cpp
     encoder_panel/encoder_panel.cpp
     encoder_panel/encoder_settings_form.cpp
     encoder_panel/encoding_summary.cpp
@@ -25,6 +27,7 @@ add_library(
     phrase_list/phrase_list_delegate.cpp
     phrase_list/phrase_list_model.cpp
     phrase_list/phrase_list_panel.cpp
+    preferences/preferences_dialog.cpp
     playback/playback_icon.cpp
     playback/player.cpp
     playback/qt_audio_output.cpp

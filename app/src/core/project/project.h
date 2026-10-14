@@ -29,16 +29,6 @@
 
 namespace speak5220::core::project {
 
-// Header strings that replace the project's in one PHROM (plan §4.1).
-struct PhromHeader {
-  // The PHROM, from 1.
-  int number = 0;
-  std::vector<std::string> header_strings = {};
-  UnknownKeys unknown = {};
-
-  friend bool operator==(const PhromHeader& a, const PhromHeader& b) = default;
-};
-
 // An export the CLI can run (plan §4).
 struct ExportPreset {
   std::string name = {};
@@ -189,6 +179,7 @@ class Project : public IProjectEditor {
                                        EncodingChange change) override;
   StatusOr<encoder::EncoderOptions> SetDefaultEncoder(
       encoder::EncoderOptions options) override;
+  StatusOr<PhromSettings> SetPhromSettings(PhromSettings settings) override;
 
   friend bool operator==(const Project& a, const Project& b) {
     return a.contents_ == b.contents_;
@@ -213,8 +204,13 @@ class Project : public IProjectEditor {
 };
 
 // The cost of a phrase in its PHROM (PhraseCost()), or nothing if it has no
-// encoding. Fails for an invalid frame.
-StatusOr<PhraseCostInput> CostOfPhrase(const Phrase& phrase);
+// encoding, and the number of `settings`' ASCII entries that name it. Fails
+// for an invalid frame.
+StatusOr<PhraseCostInput> CostOfPhrase(const Phrase& phrase,
+                                       const ProjectSettings& settings);
+
+// The number of `settings`' ASCII entries that name `name`. Pure.
+int AsciiEntriesFor(const ProjectSettings& settings, std::string_view name);
 
 }  // namespace speak5220::core::project
 

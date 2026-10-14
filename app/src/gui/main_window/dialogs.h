@@ -16,6 +16,7 @@
 #include <optional>
 
 #include "gui/export/export_dialog.h"
+#include "gui/preferences/preferences_dialog.h"
 
 class QWidget;
 
@@ -39,6 +40,8 @@ class IDialogs {
   virtual std::optional<QString> SaveProjectPath(const QString& suggested) = 0;
   // WAV files to import; empty if cancelled.
   virtual QStringList ImportFilePaths() = 0;
+  // Acorn PHROM images to import; empty if cancelled.
+  virtual QStringList ImportPhromPaths() = 0;
 
   // The project `name` has unsaved changes: save them?
   virtual SaveChoice AskSaveChanges(const QString& name) = 0;
@@ -51,6 +54,11 @@ class IDialogs {
   // `start`, which asks before replacing files that already exist.
   // Nothing if cancelled.
   virtual std::optional<ExportRequest> AskExport(const ExportStart& start) = 0;
+
+  // The preferences chosen in the Preferences dialog (PreferencesDialog),
+  // starting from `current`. Nothing if cancelled.
+  virtual std::optional<Preferences> AskPreferences(
+      const Preferences& current) = 0;
 
   // Something the user asked for failed.
   virtual void ShowError(const QString& title, const QString& message) = 0;
@@ -67,10 +75,13 @@ class QtDialogs : public IDialogs {
   std::optional<QString> OpenProjectPath() override;
   std::optional<QString> SaveProjectPath(const QString& suggested) override;
   QStringList ImportFilePaths() override;
+  QStringList ImportPhromPaths() override;
   SaveChoice AskSaveChanges(const QString& name) override;
   bool ConfirmRemove(const QStringList& names) override;
   bool AskNormalise(const QStringList& files) override;
   std::optional<ExportRequest> AskExport(const ExportStart& start) override;
+  std::optional<Preferences> AskPreferences(
+      const Preferences& current) override;
   void ShowError(const QString& title, const QString& message) override;
 
  private:

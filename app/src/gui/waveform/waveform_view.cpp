@@ -87,6 +87,13 @@ WaveformView::WaveformView(QWidget* parent)
   setAutoFillBackground(false);
 }
 
+void WaveformView::SetWaveformColours(WaveformColours choice) {
+  colour_choice_ = choice;
+  wave_palette_ = WaveformPaletteFor(palette(), colour_choice_);
+  colours_ = ColoursFor(wave_palette_);
+  update();
+}
+
 void WaveformView::SetSamples(std::vector<float> samples, int source_offset) {
   peaks_ = PeakCache(std::move(samples));
   source_offset_ = source_offset;
@@ -222,10 +229,10 @@ bool WaveformView::event(QEvent* event) {
 
 void WaveformView::changeEvent(QEvent* event) {
   // Plan §5, "Colours": a change of scheme reaches every widget as a
-  // palette change. The waveform stays dark, keeping only the new
+  // palette change. A dark waveform stays dark, keeping only the new
   // palette's other roles.
   if (event->type() == QEvent::PaletteChange) {
-    wave_palette_ = WaveformPalette(palette());
+    wave_palette_ = WaveformPaletteFor(palette(), colour_choice_);
     colours_ = ColoursFor(wave_palette_);
     update();
   }

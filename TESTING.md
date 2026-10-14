@@ -401,6 +401,13 @@ The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`,
 hand, and only to create or, by agreement, regenerate the reference data
 (AGENTS.md §3.1).
 
+The functional lane also checks the reference pages against the code
+(`app/tests/functional/docs_coverage_test.cpp`, reading
+`docs/application/` through `SPEAK5220_DOCS_DIR`): every encoder option,
+`speak5220-cli` option and command, project-file key, and export format
+and preset value must be documented in `docs/application/reference/`, so a
+change that adds one without its entry fails.
+
 - `app/scripts/run-projects.sh [general|phrom|bbc|all]` runs a fixture suite end to
   end through `speak5220-cli`. It encodes each fixture into a copy (the
   fixtures are never written) and runs the copy's export presets
@@ -415,6 +422,12 @@ hand, and only to create or, by agreement, regenerate the reference data
   baseline, for an intended change to an exporter or to the fixtures'
   presets, by agreement. This is how a change is shown to leave the output
   byte-identical.
+- `app/scripts/window-check.sh` renders the main window's tabs, the
+  Optimise window and the Export, Preferences and About dialogs in light
+  and dark, at 1x and 2x pixel density, to PNG files in
+  `build/app/project-output/window-check/`, to be looked at for unreadable
+  text, colours of the wrong scheme, and blurred or clipped drawing (the
+  `DISABLED_` test `WindowCheck`).
 - `app/scripts/bbc-check.sh` exports the `bbc` suite, then boots each disc
   on MAME's emulated BBC Micro Model B (speech system, Acorn DFS) with
   Shift+Break and drives the player through a Lua script
@@ -517,6 +530,7 @@ hand, and only to create or, by agreement, regenerate the reference data
 | Windows and macOS | Both lanes on Windows and macOS | Only for a release (a `v*` tag) or when started by hand |
 | Sanitisers | Both lanes under ASan and UBSan (Debug) | Every push in CI, on Linux |
 | By hand | `corpus-check.sh`, `output-hashes.sh`, `benchmark.sh`, `bbc-check.sh`; the BBC Micro hardware check ([BBC Micro disc](docs/application/user-manual/bbc-disc.md)) | Before a release, and for any change to the encoder, packaging or BBC export |
+| By hand | `window-check.sh` | Before a release, and for any change to a window's layout or colours |
 | By hand | `phrom-check.sh`, `option_sweep.py`, `phoneme-check.sh` | For a change meant to improve the encoder's output (the encoder-quality plan) |
 
 The default CI unit lane must stay fast and mocked. Do **not** add

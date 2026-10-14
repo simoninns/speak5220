@@ -68,13 +68,33 @@ What the [disc's player](bbc-disc.md) says on the BBC Micro:
 |---|---|
 | `warning: hello.wav clips; --normalise would bring its peak to -1 dBFS` | The file reaches full scale. It was imported unchanged; add it again with `--normalise` to scale it down |
 | `warning: hello.wav is very quiet; ...` | The file's peak is below −30 dBFS. It was imported unchanged; the encoder sets its own level, but `--normalise` brings it up first |
-| `cannot open hello.wav: ...` / `hello.wav is not a WAV file` | The file is missing, or not a WAV file. Only WAV is read |
+| `hello.wav does not exist or is not a file` | Check the path: the file may have been moved, or the path names a folder |
+| `cannot read hello.wav as a WAV file: Format not recognised.` | The file is not a WAV file (only WAV is read), or is empty. The reason after the colon comes from libsndfile, the library that reads WAV files |
+| `cannot read hello.wav as a WAV file: Error in WAV file. No 'data' chunk marker.` (or `Malformed 'fmt ' chunk.`, and others) | The file starts as a WAV file but is damaged or cut short, or uses an encoding libsndfile does not know. Export it again from the program that made it, as 16-bit or 24-bit PCM |
+| `hello.wav is not a WAV file` / `hello.wav: unsupported WAV sample format` | libsndfile read the file, but it is another format, or its samples are of a kind Speak5220 does not take |
+| `hello.wav holds no samples` / `hello.wav is truncated: ...` | The file has a header but no audio, or less than its header says. A file cut short is imported as far as its samples go when they can be read |
+
+## Importing PHROM images
+
+| Message | Meaning |
+|---|---|
+| `the PHROM image is empty` | The file holds nothing |
+| `a PHROM image is a multiple of 16384 bytes (16 KB per PHROM), not N` | An Acorn PHROM image is 16 KB, and a file of several holds them one after another. The file is something else, or was cut short |
+| `not an Acorn PHROM image: its header does not start with 0x00, 0xFF` | The file is 16 KB but not an Acorn PHROM (datasheet §12.8); a TI-layout image, for example, is not read |
+| `the PHROM header counts do not fit: ...` / `the PHROM pointer table (P pointers) does not fit in 16 KB` | The header's counts of entries are impossible: the image is damaged |
+| `PHROM word N points into the header or the pointer table (offset X)` / `PHROM word N (offset X) has no stop code within the bank` | A word's pointer, or its data, is damaged. No word of that image is imported |
+| `PHROM B of the image: ...` | In a file of several images, the one numbered B (from 1) is unreadable, for the reason after the colon |
+| `PATH: cannot be read: ...` / `PATH: too large for PHROM images (N bytes)` (Import PHROM Images) | The main window could not read the file, or the file is larger than a project's 64 PHROMs |
 
 ## Opening and saving projects
 
 | Message | Meaning |
 |---|---|
 | `not a Speak5220 project: there is no project.yaml` | The file or directory is not a project |
+| `PATH is not a usable project archive: Not a zip archive` / `...: Possibly truncated or corrupted zip archive` | A `.s5proj` file is a ZIP archive, and this one is not, or was cut short (for example by a full disk or an interrupted copy). The previous version, `NAME.s5proj~`, may still open |
+| `project.yaml is not valid YAML: yaml-cpp: error at line 2, column 1: ...` | The project file was edited by hand and its syntax broken at the place given. Fix it there (an unpacked project), or use the previous version |
+| `phrases/<id>/source.wav: not a usable WAV file: ...` | A phrase's stored audio is damaged |
+| `phrases/<id>/frames.yaml: frames[0] must be a mapping` | A phrase's stored frames are damaged; the message names the file and the entry |
 | `project.yaml: phrases[2].play_start must be a whole number` | A value in the project file has the wrong type; the message names the file and the key. See the [project file](../reference/project-file.md) reference |
 | `the project was saved by a newer version of Speak5220 (format version 2; this version reads up to 1)` | Open it with the newer version |
 | `project.yaml: project.default_encoder does not list ...: ... cannot be opened` | The project was saved by a development version of Speak5220 that did not list every encoder option, or before an option existed. A project lists every option, so it is not opened. Adding the missing options to `default_encoder` in `project.yaml` (in an unpacked project) with the values it was made with makes it open: `resonance_hold_db: null` (no hold, as before it existed). See the [project file](../reference/project-file.md) and [encoder options](../reference/encoder-options.md) references |
@@ -89,8 +109,11 @@ What the [disc's player](bbc-disc.md) says on the BBC Micro:
 
 | Message | Meaning |
 |---|---|
-| `PATH: ...` (Add Phrases) | A file could not be imported; the message after the path says why (as under [importing audio](#importing-audio)). The other files were added |
+| A message titled **Add Phrases** | A file could not be imported; each line names the file and says why (as under [importing audio](#importing-audio)). The other files were added |
+| A message titled **Import PHROM Images** | An image could not be read; each line names the file and says why (as under [importing PHROM images](#importing-phrom-images)). The words of the other images were added |
 | `cannot sort the phrases: the project would need 65 PHROMs, ...` (Edit Phrases) | A sort, or a move (`cannot move the phrases: ...`), would take the project past its budget, so it was not made |
-| `there is no audio output device` (Play) | The system has no output device to play on. Connect or enable one |
-| `cannot play on DEVICE` (Play) | The output device would not start. Another program may hold it, or it may not take 16-bit audio |
+| `there is no audio output device: connect one, or check the system's sound settings` (Play) | The system has no output device to play on. Connect or enable one |
+| `cannot play on DEVICE: it may be in use or disconnected; choose another in Preferences` (Play) | The output device would not start. Another program may hold it, or it may not take 16-bit audio. Choose another under **Edit > Preferences > Audio** |
+| `the audio device DEVICE stopped while playing: check that it is still connected, or choose another in Preferences` (Play) | The device failed during playback, for example because it was unplugged. Playback stops; playing again tries the device again, or the system's default if it has gone |
+| `the log file chosen in Preferences cannot be used: ...` (in the console log) | The log file under **Edit > Preferences > Logging** cannot be written (its folder may be gone, or read-only). Speak5220 started, logging to the console only. Choose another file |
 | `Cannot speak the frames: ...` (on the Encode tab's waveform) | The emulator could not speak the phrase's frames, for the reason given; the frames may have been edited outside Speak5220. Encoding the phrase again replaces them |

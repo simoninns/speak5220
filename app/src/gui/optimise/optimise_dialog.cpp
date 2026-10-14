@@ -153,6 +153,7 @@ OptimiseDialog::OptimiseDialog(OptimiseSession& session, Player& player,
   limit_->setRange(1, kMaxLimit);
   limit_->setSuffix(QStringLiteral(" bytes"));
   limit_->setEnabled(false);
+  limit_->setAccessibleName(QStringLiteral("Byte limit per phrase"));
   limit_box_->setToolTip(QStringLiteral(
       "Only settings whose frames fit in this many bytes are chosen"));
   weight_->setRange(0.0, kMaxWeight);
@@ -161,6 +162,7 @@ OptimiseDialog::OptimiseDialog(OptimiseSession& session, Player& player,
   weight_->setValue(kDefaultWeight);
   weight_->setSuffix(QStringLiteral(" score per kbit/s"));
   weight_->setEnabled(false);
+  weight_->setAccessibleName(QStringLiteral("Size weight"));
   weight_box_->setToolTip(QStringLiteral(
       "Choose the settings with the best quality score less this much for "
       "each kbit/s, so a smaller encoding can win"));

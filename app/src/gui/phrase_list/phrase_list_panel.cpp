@@ -42,10 +42,14 @@ PhraseListPanel::PhraseListPanel(PhraseListModel& model,
     auto* button = new QToolButton(this);
     button->setDefaultAction(action);
     button->setAutoRaise(true);
+    // The button shows a symbol (+, an arrow); a screen reader reads what
+    // it does.
+    button->setAccessibleName(action->toolTip());
     buttons->addWidget(button);
   }
   buttons->addStretch();
 
+  view_->setAccessibleName(QStringLiteral("Phrases"));
   view_->setModel(model_);
   view_->setItemDelegate(new PhraseListDelegate(view_));
   view_->setSelectionMode(QAbstractItemView::ExtendedSelection);

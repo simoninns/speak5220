@@ -50,6 +50,52 @@ If no name is given, one is made from the file name: `good_morning.wav`
 becomes `GOOD MORNING`, cut to 16 characters, with ` 2`, ` 3`, ...
 added if the name is already taken.
 
+## Importing PHROM images
+
+The words of an existing Acorn PHROM image, such as Acorn's own PHROM A or
+an image exported from another project, can be added to a project with the
+command-line tool's [`import-phrom`](cli.md#commands) command, or in the
+main window with **File > Import PHROM Image...**. A file may hold one
+16 KB PHROM or several concatenated, as the `concatenated` export layout
+writes them.
+
+Each word becomes a **locked** phrase at the end of the list, in PHROM then
+word order. It has no source audio: its frames, read from the image up to
+and including the stop code, are its content, and it is never re-encoded.
+It is exported, measured and spoken like any other phrase, so a project
+can mix imported words with new ones.
+
+Each phrase takes the word's name from the image (datasheet §12.8): the
+bytes stored between the end of the word before it and its data, read for
+as long as they hold printable characters, so a name ends at padding or
+other data. The name is then made valid as for an imported file: lower
+case turned into upper case, other characters turned into spaces, cut to
+16 characters, and ` 2`, ` 3`, ... added if it is already taken. A word
+whose image holds no name is called `WORD 127`, `WORD 128`, ... after its
+word number. Two pointers to the same data give two phrases with the same
+frames.
+
+The words are imported from word 127 (after the 95 "ASCII associated"
+entries) to the end of the pointer table. With them come:
+
+- **the image's ASCII entries** that point at a word, as entries of the
+  project's [ASCII map](#phroms-and-the-project-budget) naming the phrase
+  that word became, for each character the project does not already map;
+- **the image's header strings**, as each PHROM's own, but only when the
+  words go into a project with no phrases that still has the default
+  header strings, so a project's own strings are never replaced.
+
+So Acorn's PHROM A, imported into a new project, fills one PHROM and
+exports as the same image: the same pointers, names and frames. Only the
+unused bits after each word's stop code can differ: Acorn's tools set
+them to 1 and Speak5220 leaves them 0, and the chip never reads them.
+In the main window, the words and these settings are one step to undo.
+
+An image that is not a whole number of 16 KB PHROMs, does not start with
+an Acorn PHROM header, has a pointer into its header or pointer table, or
+has a word with no stop code before the end of its PHROM, is refused, and
+nothing is added.
+
 ## Encoding
 
 A phrase is encoded with the project's default
@@ -75,14 +121,16 @@ fills as many as it needs:
   of its name, plus a 2-byte pointer. Each PHROM also spends 256 bytes on
   its header, its 95 ASCII pointers, the end of its pointer table and a
   one-byte null word (datasheet §12.8), which leaves 16 128 bytes for
-  words.
+  words. A PHROM whose phrases have all 95 ASCII entries, as Acorn's
+  PHROM A does, needs no null word, and holds 16 129.
 - **A phrase too large for an empty PHROM** goes in no PHROM until it is
   shortened or re-encoded, and cannot be exported.
 - **A phrase not yet encoded** takes no space.
 - **Word numbers** start at 127 in every PHROM.
 - **The ASCII map** is held once for the project. Each PHROM includes only
   the entries whose phrase it holds; its other ASCII entries point to its
-  null word.
+  null word. The map names phrases, so renaming a phrase leaves its
+  entries naming the old name, and they no longer apply.
 - **Header strings** are the project's, with the PHROM's number appended to
   the second string (`My PHROM 2`), unless a PHROM has its own.
 

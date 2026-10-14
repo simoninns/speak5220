@@ -73,7 +73,7 @@
   - Regenerate the encoder's reference data only for an intended improvement, in its own commit that records the quality before and after; the quality data in `app/golden/quality/` is regenerated with it.
   - Ask the user before changing any reference data (§12).
 - Output: tests and scripts must write through a caller-chosen output directory (the CLI's `--output`, or a `QTemporaryDir` in tests), never into `app/projects/`, `app/golden/` or `app/tests/`. The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`, `encoder.py`, `measures.py`, `basic_programs.py`), run by hand to create the reference data, and `app/scripts/output-hashes.sh --record`, which records the export baseline in `app/golden/output-hashes/` (TESTING.md).
-- By-hand checks (the full-corpus check, the benchmark) are functional tests with the `DISABLED_` prefix, run only by their scripts (`corpus-check.sh`, `benchmark.sh`) with `--gtest_also_run_disabled_tests`; CTest never runs them.
+- By-hand checks (the full-corpus check, the benchmark, the window check) are functional tests with the `DISABLED_` prefix, run only by their scripts (`corpus-check.sh`, `benchmark.sh`, `window-check.sh`) with `--gtest_also_run_disabled_tests`; CTest never runs them.
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
 ### 3.2 Logging

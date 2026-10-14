@@ -8,5 +8,7 @@
     <file>speak5220-icon.png</file>
     <file>speak5220-logo.png</file>
     <file>speak5220-logo@2x.png</file>
+    <!-- The About box's Licence tab -->
+    <file alias="licences/GPL-3.0.txt">../../LICENSE</file>
   </qresource>
 </RCC>

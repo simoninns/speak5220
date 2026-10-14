@@ -53,6 +53,10 @@ class ProjectEdits {
   core::Status SetEncodings(SetEncodingsCommand::Changes changes,
                             const QString& text);
   core::Status SetDefaultEncoder(core::encoder::EncoderOptions options);
+  // Adds words of PHROM images with the ASCII map and header strings
+  // `settings`, as one step (ImportPhromCommand).
+  core::Status ImportPhrom(std::vector<core::project::PlacedPhrase> phrases,
+                           core::project::PhromSettings settings);
   // Replaces phrases with other versions of themselves, in place, as one
   // step named `text`; all or none (ReplacePhrasesCommand).
   core::Status ReplacePhrases(std::vector<core::project::Phrase> phrases,

@@ -10,8 +10,10 @@
 #ifndef SPEAK5220_GUI_PLAYBACK_QT_AUDIO_OUTPUT_H_
 #define SPEAK5220_GUI_PLAYBACK_QT_AUDIO_OUTPUT_H_
 
+#include <QAudioDevice>
 #include <QBuffer>
 #include <QByteArray>
+#include <QString>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -23,7 +25,8 @@ class QAudioSink;
 
 namespace speak5220::app {
 
-// Plan §2.4: IAudioOutput on the default output device through QAudioSink
+// Plan §2.4: IAudioOutput on the chosen output device (the system's default
+// unless SetDevice() chose another that is still there) through QAudioSink
 // in pull mode, from a QBuffer, so the device's progress is known. Mono
 // 16-bit at the rate asked for if the device takes it; otherwise its
 // preferred rate, and its preferred channel count with the samples
@@ -41,11 +44,22 @@ class QtAudioOutput : public IAudioOutput {
   void Stop() override;
   std::int64_t ProcessedMicroseconds() override;
   bool IsFinished() override;
+  core::Status DeviceStatus() override;
+  void SetDevice(const QByteArray& id) override;
+
+  // The output devices there are now, the system's default first.
+  static std::vector<AudioDeviceInfo> Devices();
 
  private:
   // Stop(), callable from the destructor.
   void Close();
+  // The device chosen, or the default if it is not there; null if there
+  // is no output device at all.
+  QAudioDevice Device() const;
 
+  QByteArray device_id_;
+  // The description of the device playing, for messages.
+  QString device_name_;
   std::unique_ptr<QAudioSink> sink_;
   QByteArray bytes_;
   QBuffer buffer_;

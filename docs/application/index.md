@@ -4,6 +4,9 @@ Speak5220 is a desktop application for creating TMS5220 speech data and
 building PHROMs. It is in development: the pages here describe only what is
 built so far.
 
+To try it, start with [getting started](getting-started.md), a
+walkthrough from a recording to a PHROM image.
+
 So far the application has:
 
 - a GUI, `speak5220`, whose [main window](user-manual/main-window.md) opens
@@ -13,7 +16,10 @@ So far the application has:
   [waveforms](user-manual/waveforms.md) on tabs and plays them, in light or dark
   as the desktop is set; it encodes phrases, shows their quality, and
   [optimises](user-manual/encoder.md) their settings within the budget;
-  and it [exports](user-manual/export.md) them;
+  it [exports](user-manual/export.md) them, and imports the words of
+  existing Acorn PHROM images; its [preferences](user-manual/main-window.md#preferences)
+  set the theme, the audio device, the settings of new projects and
+  logging; and it can be used with the keyboard alone;
 - a command-line tool, `speak5220-cli`, that creates
   [projects](user-manual/projects.md), imports WAV files into them as
   phrases, encodes them and exports them, described in the

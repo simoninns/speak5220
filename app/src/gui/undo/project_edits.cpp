@@ -88,6 +88,13 @@ core::Status ProjectEdits::SetDefaultEncoder(
   return Push(std::make_unique<SetDefaultEncoderCommand>(*editor_, options));
 }
 
+core::Status ProjectEdits::ImportPhrom(
+    std::vector<project::PlacedPhrase> phrases,
+    project::PhromSettings settings) {
+  return Push(std::make_unique<ImportPhromCommand>(*editor_, std::move(phrases),
+                                                   std::move(settings)));
+}
+
 core::Status ProjectEdits::ReplacePhrases(std::vector<project::Phrase> phrases,
                                           const QString& text) {
   return Push(std::make_unique<ReplacePhrasesCommand>(

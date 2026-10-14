@@ -50,6 +50,7 @@ add_library(
     project/phrase_importer.cpp
     project/phrase_name.cpp
     project/phrom_allocator.cpp
+    project/phrom_import.cpp
     project/project.cpp
     project/project_export.cpp
     project/project_migration.cpp

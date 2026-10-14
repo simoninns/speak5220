@@ -244,7 +244,9 @@ audio starts from the same sound as the recordings, at the play start. A
 green line follows the sound; at the end, playback stops and the line
 goes back to the play start.
 
-Audio plays on the system's default output device. If the device does not
+Audio plays on the system's default output device, or the one chosen in
+[Preferences](main-window.md#preferences). If the device fails while
+playing, playback stops and a message says why. If the device does not
 take 8 kHz audio, the audio is resampled to the device's own rate first.
 With an [output filter](#output-filter), the encoded audio plays at
 48 kHz, or is resampled from 48 kHz to the device's own rate. At another
@@ -254,9 +256,10 @@ at 720 kHz, for example.
 ## Light and dark
 
 The window follows the desktop's light or dark setting, when it starts and
-when the setting changes. The waveforms themselves are always drawn the
-dark way, in colour on black, so they look the same in either setting,
-and the quality rating's bands keep their full red, amber and green. To always show one or the other, choose **View > Theme > Light** or
+when the setting changes. The waveforms themselves are drawn the dark
+way, in colour on black, so they look the same in either setting, unless
+**Waveforms** in [Preferences](main-window.md#preferences) is set to
+**As the theme**; the quality rating's bands keep their full red, amber and green. To always show one or the other, choose **View > Theme > Light** or
 **Dark**; **Auto** (the default) goes back to following the desktop. The
 choice is remembered for next time. On Linux the setting is read from the desktop portal, as GNOME and
 KDE Plasma provide it; on Windows and macOS Qt follows the system itself.

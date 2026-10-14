@@ -1,8 +1,8 @@
 /*
  * File:        cli_commands.h
  * Module:      cli
- * Purpose:     The speak5220-cli commands: new, add, encode, export, synth
- *              and measure
+ * Purpose:     The speak5220-cli commands: new, add, import-phrom, encode,
+ *              export, synth and measure
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns

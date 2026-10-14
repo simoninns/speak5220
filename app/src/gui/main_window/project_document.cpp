@@ -19,6 +19,7 @@
 #include <utility>
 
 #include "core/audio/sndfile_wav_io.h"
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/project/project_serializer.h"
@@ -67,7 +68,20 @@ bool ProjectDocument::IsPhraseModified(const project::PhraseId& id) const {
   return phrase != nullptr && (saved == nullptr || *phrase != *saved);
 }
 
-void ProjectDocument::New() { Replace(project::Project(), QString()); }
+void ProjectDocument::New(const core::encoder::EncoderOptions& defaults) {
+  project::Project empty;
+  project::ProjectSettings settings = empty.Settings();
+  settings.default_encoder = defaults;
+  if (const core::Status status = empty.SetSettings(std::move(settings));
+      !status.IsOk()) {
+    core::Logger(core::kLogModuleGui)
+        ->warn(
+            "the default settings for new projects are invalid, so the "
+            "encoder's are used: {}",
+            status.Message());
+  }
+  Replace(std::move(empty), QString());
+}
 
 core::Status ProjectDocument::Open(const QString& path) {
   QString project_path = QFileInfo(path).absoluteFilePath();

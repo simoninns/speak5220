@@ -14,6 +14,8 @@
 #include <QPalette>
 #include <algorithm>
 #include <cmath>
+#include <optional>
+#include <string_view>
 
 namespace speak5220::app {
 
@@ -110,6 +112,29 @@ QPalette WaveformPalette(const QPalette& palette) {
     waveform.setColor(group, QPalette::Mid, kWaveformMid);
   }
   return waveform;
+}
+
+std::string_view WaveformColoursKey(WaveformColours choice) {
+  switch (choice) {
+    case WaveformColours::kDark:
+      return "dark";
+    case WaveformColours::kTheme:
+      return "theme";
+  }
+  return "dark";
+}
+
+std::optional<WaveformColours> WaveformColoursFromKey(std::string_view key) {
+  for (const WaveformColours choice : kWaveformColourChoices) {
+    if (WaveformColoursKey(choice) == key) {
+      return choice;
+    }
+  }
+  return std::nullopt;
+}
+
+QPalette WaveformPaletteFor(const QPalette& palette, WaveformColours choice) {
+  return choice == WaveformColours::kDark ? WaveformPalette(palette) : palette;
 }
 
 double ContrastRatio(const QColor& a, const QColor& b) {

@@ -10,6 +10,7 @@
 
 #include "gui/main_window/view_preferences.h"
 
+#include <QByteArray>
 #include <QSettings>
 #include <QString>
 #include <QVariant>
@@ -18,9 +19,14 @@
 #include <string_view>
 
 #include "core/dsp/output_filter.h"
+#include "core/encoder/encoder_options.h"
+#include "core/project/phrase.h"
 #include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
+#include "core/util/logging.h"
+#include "core/util/status.h"
 #include "gui/theme/colour_scheme.h"
+#include "gui/theme/colours.h"
 #include "gui/waveform/phrase_tab.h"
 
 namespace speak5220::app {
@@ -100,6 +106,89 @@ void SettingsViewPreferences::SetTheme(ThemeChoice choice) {
   settings_.setValue(
       QString::fromLatin1(kThemeKey),
       QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
+}
+
+WaveformColours SettingsViewPreferences::ChosenWaveformColours() {
+  const std::string key =
+      settings_.value(QString::fromLatin1(kWaveformColoursKey))
+          .toString()
+          .toStdString();
+  return WaveformColoursFromKey(key).value_or(WaveformColours::kDark);
+}
+
+void SettingsViewPreferences::SetWaveformColours(WaveformColours choice) {
+  const std::string_view key = WaveformColoursKey(choice);
+  settings_.setValue(
+      QString::fromLatin1(kWaveformColoursKey),
+      QString::fromLatin1(key.data(), static_cast<qsizetype>(key.size())));
+}
+
+QByteArray SettingsViewPreferences::ChosenAudioDevice() {
+  return settings_.value(QString::fromLatin1(kAudioDeviceKey)).toByteArray();
+}
+
+void SettingsViewPreferences::SetAudioDevice(const QByteArray& id) {
+  settings_.setValue(QString::fromLatin1(kAudioDeviceKey), id);
+}
+
+core::encoder::EncoderOptions SettingsViewPreferences::ChosenDefaultEncoder() {
+  core::encoder::EncoderOptions options;
+  settings_.beginGroup(QString::fromLatin1(kDefaultEncoderGroup));
+  for (const QString& field : settings_.childKeys()) {
+    const std::string text = settings_.value(field).toString().toStdString();
+    // A value another version saved, which this one does not accept,
+    // leaves that option at its default.
+    if (const core::Status status =
+            core::encoder::SetEncoderOption(options, field.toStdString(), text);
+        !status.IsOk()) {
+      core::Logger(core::kLogModuleGui)
+          ->warn("default encoder setting {} ignored: {}", field.toStdString(),
+                 status.Message());
+    }
+  }
+  settings_.endGroup();
+  return options;
+}
+
+void SettingsViewPreferences::SetDefaultEncoder(
+    const core::encoder::EncoderOptions& options) {
+  settings_.beginGroup(QString::fromLatin1(kDefaultEncoderGroup));
+  settings_.remove(QString());
+  for (const auto& [field, text] :
+       core::project::OverridesFor(core::encoder::EncoderOptions{}, options)) {
+    settings_.setValue(QString::fromStdString(field),
+                       QString::fromStdString(text));
+  }
+  settings_.endGroup();
+}
+
+core::LogLevel SettingsViewPreferences::ChosenLogLevel() {
+  const core::StatusOr<core::LogLevel> level =
+      core::ParseLogLevel(settings_.value(QString::fromLatin1(kLogLevelKey))
+                              .toString()
+                              .toStdString());
+  return level.IsOk() ? *level : core::LogLevel::kInfo;
+}
+
+void SettingsViewPreferences::SetLogLevel(core::LogLevel level) {
+  const std::string_view name = core::LogLevelName(level);
+  settings_.setValue(
+      QString::fromLatin1(kLogLevelKey),
+      QString::fromLatin1(name.data(), static_cast<qsizetype>(name.size())));
+}
+
+QString SettingsViewPreferences::ChosenLogFile() {
+  return settings_.value(QString::fromLatin1(kLogFileKey)).toString();
+}
+
+void SettingsViewPreferences::SetLogFile(const QString& path) {
+  settings_.setValue(QString::fromLatin1(kLogFileKey), path);
+}
+
+core::LogSettings LogSettingsFrom(IViewPreferences& preferences) {
+  return {.level = preferences.ChosenLogLevel(),
+          .console = true,
+          .file_path = preferences.ChosenLogFile().toStdString()};
 }
 
 }  // namespace speak5220::app

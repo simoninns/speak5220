@@ -31,7 +31,11 @@ The **File** menu works on the project as a whole:
 | Open Recent | | The last eight projects opened or saved. A project that no longer exists is removed when chosen. Clear Menu empties the list |
 | Save | Ctrl+S | Saves the project where it came from, in the same form (file or directory). A new project asks where to save it |
 | Save As... | Ctrl+Shift+S | Saves the project as a new `.s5proj` file (the extension is added if missing). A project with no name takes the file's name |
+| Import PHROM Image... | Ctrl+I | Adds the words of Acorn PHROM images as locked phrases (see [importing PHROM images](projects.md#importing-phrom-images)) |
 | Quit | Ctrl+Q | Closes the window |
+
+A new project starts from the settings chosen under **New Projects** in
+[Preferences](#preferences).
 
 The title bar shows the project's file name, marked (`*`, or as the
 platform shows it) while there are unsaved changes. Starting a new
@@ -126,12 +130,67 @@ If the name is already taken (or a longer name would need a 65th PHROM),
 the message says so and the name goes back to what it was. The
 description is free text, kept only in the project.
 
+## Importing PHROM images
+
+**File > Import PHROM Image...** (Ctrl+I) adds every word of one or more
+Acorn PHROM images to the project, after the last selected phrase or at
+the end. A file may hold several 16 KB images one after another, as the
+**All PHROMs in one file** export writes them. The words become
+[locked](projects.md#importing-phrom-images) phrases: their frames are
+kept exactly as in the image and never re-encoded, so they have no
+recording, and the Encode tab shows their statistics only. A name already
+in the project gets a number added. All the words added at once are one
+step to undo; images that cannot be read are listed in a message, and the
+others are still added.
+
 ## The View menu
+
+**View > Original**, **Preprocess** and **Encode** (Ctrl+1, Ctrl+2 and
+Ctrl+3) show that tab and put the keyboard focus on its waveform, so
+Space plays it.
 
 **View > Theme** chooses how the window looks: **Auto** (the default)
 follows the desktop's light or dark setting, **Light** and **Dark** always
 show that one. The change is immediate, and the window remembers it for
 next time. See [light and dark](waveforms.md#light-and-dark).
+
+## Preferences
+
+**Edit > Preferences...** (Ctrl+, ; on macOS, **Speak5220 > Settings...**,
+Cmd+,) sets what belongs to you rather than to a project. Nothing changes
+until you press **OK**; **Restore Defaults** puts every tab back as it
+was when Speak5220 was first run. The choices are kept for next time.
+
+| Tab | Setting | What it does |
+|---|---|---|
+| Appearance | Theme | **Follow the desktop** (the default), **Light** or **Dark**, as **View > Theme** |
+| Appearance | Waveforms | **Dark, in either theme** (the default): the waveforms are drawn on black, as in [light and dark](waveforms.md#light-and-dark). **As the theme**: drawn in the window's own colours |
+| Audio | Output device | Where phrases are played: **System default** (the default), or one of the devices connected now. If the chosen device is later disconnected, phrases play on the system's default, and the list shows it as *not connected* until another is chosen |
+| New Projects | (the settings form) | The [preprocessing and encoder settings](encoder.md) a new project starts from, in the same form as the Encode tab, with each setting that differs from the encoder's default in bold. A project keeps the settings it was made with: changing these does not change open or saved projects |
+| Logging | Log level | **Info** (the default), **Debug** or **Trace**, as `--log-level` (see [logging](cli.md#logging)) |
+| Logging | Log file | A file the log is also written to, replaced at each start; empty for none, as `--log-file` |
+
+The logging settings take effect the next time Speak5220 starts. A
+`--log-level` or `--log-file` given on the command line overrides them
+for that run. If the log file cannot be written, Speak5220 still starts,
+logging to the console, and says why in the log.
+
+## The Help menu
+
+**Help > About Speak5220** shows the version, the licence (the GNU
+General Public License, version 3 or later), and every library and other
+project whose code Speak5220 uses, each with its licence and copyright.
+
+## Using the keyboard
+
+Every command is in a menu, and the main ones have shortcuts (above).
+Tab and Shift+Tab move between the phrase list, the name and description,
+the tabs, the waveform and its buttons, and the settings; the arrow keys
+move within the list, the tabs and a slider; Space presses the focused
+button, or plays and pauses the focused waveform. Each control has a name
+that a screen reader reads, including the buttons that show only a
+symbol (+, −, the arrows, play). The [getting started](../getting-started.md)
+walkthrough lists the keys for each step.
 
 ## The Export menu
 

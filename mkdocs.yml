@@ -64,6 +64,7 @@ nav:
   - Home: index.md
   - Application:
       - application/index.md
+      - Getting started: application/getting-started.md
       - User manual:
           - Projects and phrases: application/user-manual/projects.md
           - The main window: application/user-manual/main-window.md

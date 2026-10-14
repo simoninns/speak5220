@@ -179,16 +179,26 @@ Status ValidateProjectSettings(const ProjectSettings& settings) {
   return OkStatus();
 }
 
-StatusOr<PhraseCostInput> CostOfPhrase(const Phrase& phrase) {
+int AsciiEntriesFor(const ProjectSettings& settings, std::string_view name) {
+  return static_cast<int>(std::ranges::count_if(
+      settings.ascii_map,
+      [name](const auto& entry) { return entry.second == name; }));
+}
+
+StatusOr<PhraseCostInput> CostOfPhrase(const Phrase& phrase,
+                                       const ProjectSettings& settings) {
+  const int ascii_entries = AsciiEntriesFor(settings, phrase.name);
   if (!phrase.encoding.has_value()) {
-    return PhraseCostInput{};
+    return PhraseCostInput{.cost = std::nullopt,
+                           .ascii_entries = ascii_entries};
   }
   StatusOr<int> bytes = PackedSize(phrase.encoding->frames);
   if (!bytes.IsOk()) {
     return bytes.GetStatus();
   }
   return PhraseCostInput{
-      .cost = PhraseCost(*bytes, static_cast<int>(phrase.name.size()))};
+      .cost = PhraseCost(*bytes, static_cast<int>(phrase.name.size())),
+      .ascii_entries = ascii_entries};
 }
 
 StatusOr<Project> Project::FromContents(ProjectContents contents) {
@@ -287,7 +297,7 @@ std::vector<PhraseCostInput> Project::Costs() const {
   for (const Phrase& phrase : contents_.phrases) {
     // Frames are validated whenever they enter the project, so packing
     // cannot fail here.
-    StatusOr<PhraseCostInput> cost = CostOfPhrase(phrase);
+    StatusOr<PhraseCostInput> cost = CostOfPhrase(phrase, contents_.settings);
     costs.push_back(cost.IsOk() ? *cost : PhraseCostInput{});
   }
   return costs;
@@ -385,7 +395,8 @@ Status Project::InsertPhrases(std::vector<PlacedPhrase> phrases) {
       return InvalidArgumentError(fmt::format(
           "there is already a phrase called {}", placed.phrase.name));
     }
-    StatusOr<PhraseCostInput> cost = CostOfPhrase(placed.phrase);
+    StatusOr<PhraseCostInput> cost =
+        CostOfPhrase(placed.phrase, contents_.settings);
     if (!cost.IsOk()) {
       return cost.GetStatus();
     }
@@ -567,6 +578,9 @@ StatusOr<std::string> Project::RenamePhrase(const PhraseId& id,
     *cost.cost +=
         static_cast<int>(normal->size()) - static_cast<int>(phrase.name.size());
   }
+  // The ASCII map names phrases: the renamed phrase has the entries that
+  // name its new name.
+  cost.ascii_entries = AsciiEntriesFor(contents_.settings, *normal);
   if (Status status = CheckBudget(costs, "rename " + phrase.name);
       !status.IsOk()) {
     return status;
@@ -622,7 +636,7 @@ StatusOr<EncodingChange> Project::SetEncoding(const PhraseId& id,
     return status;
   }
   std::vector<PhraseCostInput> costs = Costs();
-  StatusOr<PhraseCostInput> cost = CostOfPhrase(updated);
+  StatusOr<PhraseCostInput> cost = CostOfPhrase(updated, contents_.settings);
   if (!cost.IsOk()) {
     return cost.GetStatus();
   }
@@ -647,6 +661,32 @@ StatusOr<encoder::EncoderOptions> Project::SetDefaultEncoder(
     return status;
   }
   Logger(kLogModuleProject)->debug("changed the default encoder options");
+  return previous;
+}
+
+StatusOr<PhromSettings> Project::SetPhromSettings(PhromSettings settings) {
+  ProjectSettings changed = contents_.settings;
+  PhromSettings previous{.ascii_map = changed.ascii_map,
+                         .phroms = changed.phroms};
+  changed.ascii_map = std::move(settings.ascii_map);
+  changed.phroms = std::move(settings.phroms);
+  if (Status status = ValidateProjectSettings(changed); !status.IsOk()) {
+    return status;
+  }
+  std::vector<PhraseCostInput> costs = Costs();
+  for (std::size_t i = 0; i < costs.size(); ++i) {
+    costs[i].ascii_entries =
+        AsciiEntriesFor(changed, contents_.phrases[i].name);
+  }
+  if (Status status = CheckBudget(costs, "change the ASCII map");
+      !status.IsOk()) {
+    return status;
+  }
+  contents_.settings = std::move(changed);
+  Logger(kLogModuleProject)
+      ->debug("changed the ASCII map ({} entries) and PHROM headers ({})",
+              contents_.settings.ascii_map.size(),
+              contents_.settings.phroms.size());
   return previous;
 }
 

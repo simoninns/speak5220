@@ -327,6 +327,38 @@ core::Status ReplacePhrasesCommand::Revert() {
   return Editor().InsertPhrases(replaced_);
 }
 
+ImportPhromCommand::ImportPhromCommand(
+    project::IProjectEditor& editor, std::vector<project::PlacedPhrase> phrases,
+    project::PhromSettings settings)
+    : ProjectCommand(editor,
+                     CountText(QStringLiteral("Import"), phrases.size())),
+      phrases_(std::move(phrases)),
+      settings_(std::move(settings)) {}
+
+core::Status ImportPhromCommand::Apply() {
+  core::StatusOr<project::PhromSettings> previous =
+      Editor().SetPhromSettings(settings_);
+  if (!previous.IsOk()) {
+    return previous.GetStatus();
+  }
+  if (core::Status status = Editor().InsertPhrases(phrases_); !status.IsOk()) {
+    // Put back as it was; the insertion's failure is what is reported.
+    static_cast<void>(Editor().SetPhromSettings(*previous));
+    return status;
+  }
+  previous_ = *std::move(previous);
+  return core::OkStatus();
+}
+
+core::Status ImportPhromCommand::Revert() {
+  const std::vector<project::PhraseId> ids = IdsOf(phrases_);
+  if (core::Status status = Editor().RemovePhrases(ids).GetStatus();
+      !status.IsOk()) {
+    return status;
+  }
+  return Editor().SetPhromSettings(previous_).GetStatus();
+}
+
 SetDefaultEncoderCommand::SetDefaultEncoderCommand(
     project::IProjectEditor& editor, core::encoder::EncoderOptions options)
     : ProjectCommand(editor, QStringLiteral("Change Project Defaults")),

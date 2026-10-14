@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_CORE_PROJECT_PROJECT_EDITOR_H_
 #define SPEAK5220_CORE_PROJECT_PROJECT_EDITOR_H_
 
+#include <map>
 #include <optional>
 #include <span>
 #include <string>
@@ -22,6 +23,27 @@
 #include "core/util/status.h"
 
 namespace speak5220::core::project {
+
+// Header strings that replace the project's in one PHROM (plan §4.1).
+struct PhromHeader {
+  // The PHROM, from 1.
+  int number = 0;
+  std::vector<std::string> header_strings = {};
+  UnknownKeys unknown = {};
+
+  friend bool operator==(const PhromHeader& a, const PhromHeader& b) = default;
+};
+
+// The project settings that shape its PHROMs beyond their words: the
+// "ASCII associated" entries and the per-PHROM header strings
+// (ProjectSettings::ascii_map, phroms). A plain value type.
+struct PhromSettings {
+  std::map<char, std::string> ascii_map = {};
+  std::vector<PhromHeader> phroms = {};
+
+  friend bool operator==(const PhromSettings& a,
+                         const PhromSettings& b) = default;
+};
 
 // A phrase and its index in the phrase list.
 struct PlacedPhrase {
@@ -121,6 +143,13 @@ class IProjectEditor {
   // result.
   virtual StatusOr<encoder::EncoderOptions> SetDefaultEncoder(
       encoder::EncoderOptions options) = 0;
+
+  // Replaces the ASCII map and the per-PHROM header strings. Fails,
+  // changing nothing, if they are invalid (ValidateProjectSettings()), or
+  // if the new map would take the project past its budget (a PHROM whose
+  // phrases have every ASCII entry holds one byte more). Returns the
+  // previous ones. Reverse: SetPhromSettings() with the result.
+  virtual StatusOr<PhromSettings> SetPhromSettings(PhromSettings settings) = 0;
 };
 
 }  // namespace speak5220::core::project

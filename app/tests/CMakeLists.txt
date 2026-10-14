@@ -77,6 +77,9 @@ target_compile_definitions(
         SPEAK5220_CLI_PATH="$<TARGET_FILE:speak5220-cli>"
         SPEAK5220_GOLDEN_DIR="${PROJECT_SOURCE_DIR}/golden"
         SPEAK5220_PROJECTS_DIR="${PROJECT_SOURCE_DIR}/projects"
+        # The user documentation, which docs_coverage_test.cpp checks
+        # against the options, keys and formats the code has.
+        SPEAK5220_DOCS_DIR="${PROJECT_SOURCE_DIR}/../docs/application"
         # The C headers the export writes are compiled with the compiler
         # that builds the tests, as C and as C++.
         SPEAK5220_CXX_COMPILER="${CMAKE_CXX_COMPILER}"

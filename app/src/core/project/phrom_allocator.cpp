@@ -29,6 +29,20 @@ int PhromAllocation::FreeInLastPhrom() const {
   return phroms.empty() ? 0 : phroms.back().FreeBytes();
 }
 
+namespace {
+
+// The bytes `phrom` would use with a phrase of `cost` and `ascii_entries`
+// added.
+int UsedWith(const PhromFill& phrom, int cost, int ascii_entries) {
+  const bool had_all = phrom.ascii_entries >= kPhromAsciiEntries;
+  const bool has_all =
+      phrom.ascii_entries + ascii_entries >= kPhromAsciiEntries;
+  return phrom.used_bytes + cost -
+         (has_all && !had_all ? kPhromNullWordBytes : 0);
+}
+
+}  // namespace
+
 PhromAllocation AllocatePhroms(std::span<const PhraseCostInput> phrases) {
   PhromAllocation allocation;
   allocation.phrases.resize(phrases.size());
@@ -39,16 +53,19 @@ PhromAllocation AllocatePhroms(std::span<const PhraseCostInput> phrases) {
       continue;  // kNotEncoded
     }
     slot.cost = *cost;
-    if (slot.cost > kPhromWordCapacity) {
+    const int ascii_entries = phrases[i].ascii_entries;
+    constexpr int kSize = static_cast<int>(packaging::kPhromSize);
+    if (UsedWith(PhromFill{}, slot.cost, ascii_entries) > kSize) {
       slot.placement = Placement::kTooLarge;
       continue;
     }
     if (allocation.phroms.empty() ||
-        allocation.phroms.back().used_bytes + slot.cost >
-            static_cast<int>(packaging::kPhromSize)) {
+        UsedWith(allocation.phroms.back(), slot.cost, ascii_entries) > kSize) {
       allocation.phroms.emplace_back();
     }
     PhromFill& phrom = allocation.phroms.back();
+    phrom.used_bytes = UsedWith(phrom, slot.cost, ascii_entries) - slot.cost;
+    phrom.ascii_entries += ascii_entries;
     slot.placement = Placement::kPlaced;
     slot.phrom = allocation.PhromsUsed();
     slot.word_number = packaging::AcornPhrom::kFirstWordNumber +

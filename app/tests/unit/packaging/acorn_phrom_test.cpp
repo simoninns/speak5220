@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <map>
 #include <random>
 #include <span>
 #include <string>
@@ -177,6 +178,51 @@ TEST(AcornPhromOptionsTest, AddsStopToOpenWord) {
   const StatusOr<PhromImage> built = AcornPhrom::Build(words, {});
   ASSERT_TRUE(built.IsOk());
   EXPECT_EQ(built->table[0].frames, 2);
+}
+
+// Every ASCII entry (32-126) naming `name`.
+std::map<int, std::string> EveryAsciiEntry(const std::string& name) {
+  std::map<int, std::string> map;
+  for (int code = 32; code <= 126; ++code) {
+    map[code] = name;
+  }
+  return map;
+}
+
+// One word, "X", whose data fills a bank to its last byte when there is no
+// null word: 257 bytes of header and table (96 pointers and the end
+// marker), one byte of name, 16126 of data: 32251 silence frames and the
+// stop, 4 bits each.
+std::vector<Word> WordFillingTheBank() {
+  constexpr int kSilenceFrames = 32251;
+  std::vector<Frame> frames(kSilenceFrames, Frame::Silence());
+  frames.push_back(Frame::Stop());
+  return {{"X", std::move(frames)}};
+}
+
+TEST(AcornPhromNullWordTest, LeftOutWhenEveryAsciiEntryNamesAWord) {
+  // speak5220 datasheet §12.8: the null word is only for entries with no
+  // word, as in Acorn's PHROM A, which fills the bank to its last byte.
+  const std::vector<Word> words = WordFillingTheBank();
+  const StatusOr<PhromImage> full = AcornPhrom::Build(
+      words, {.strings = {"(C)", "FULL"}, .ascii_map = EveryAsciiEntry("X")});
+  ASSERT_TRUE(full.IsOk()) << full.GetStatus().ToString();
+  ASSERT_EQ(full->bytes.size(), kPhromSize);
+  EXPECT_EQ(full->table[0].offset + full->table[0].bytes,
+            static_cast<int>(kPhromSize));
+  for (int code = 32; code <= 126; ++code) {
+    const int pointer =
+        full->bytes[2 * static_cast<std::size_t>(code)] |
+        (full->bytes[2 * static_cast<std::size_t>(code) + 1] << 8);
+    EXPECT_EQ(pointer, full->table[0].offset) << code;
+  }
+
+  // With one entry unmapped, the null word is needed and there is no room.
+  std::map<int, std::string> one_short = EveryAsciiEntry("X");
+  one_short.erase('Z');
+  const StatusOr<PhromImage> short_map = AcornPhrom::Build(
+      words, {.strings = {"(C)", "FULL"}, .ascii_map = one_short});
+  EXPECT_FALSE(short_map.IsOk());
 }
 
 }  // namespace

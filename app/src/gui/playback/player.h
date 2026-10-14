@@ -11,7 +11,9 @@
 #ifndef SPEAK5220_GUI_PLAYBACK_PLAYER_H_
 #define SPEAK5220_GUI_PLAYBACK_PLAYER_H_
 
+#include <QByteArray>
 #include <QObject>
+#include <QString>
 #include <QTimer>
 #include <cstdint>
 #include <span>
@@ -104,6 +106,9 @@ class Player : public QObject {
   // output if it is playing or paused.
   void SetChipClock(int clock_hz);
   int ChipClock() const { return clock_hz_; }
+  // Plays on the output device with `id`, or the system's default for
+  // an empty id (IAudioOutput::SetDevice()). Stops anything playing.
+  void SetOutputDevice(const QByteArray& id);
 
   PlaybackState State() const { return state_; }
   // The source of what is playing or paused; meaningless when stopped.
@@ -118,6 +123,9 @@ class Player : public QObject {
  signals:
   void StateChanged();
   void PositionChanged(int position);
+  // The device failed while playing (IAudioOutput::DeviceStatus()); the
+  // player has stopped. `message` says why.
+  void DeviceFailed(const QString& message);
 
  private:
   core::Status StartOutput(int from);

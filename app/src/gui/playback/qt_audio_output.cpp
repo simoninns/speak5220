@@ -46,8 +46,45 @@ QtAudioOutput::QtAudioOutput() = default;
 
 QtAudioOutput::~QtAudioOutput() { Close(); }
 
+std::vector<AudioDeviceInfo> QtAudioOutput::Devices() {
+  std::vector<AudioDeviceInfo> devices;
+  const QAudioDevice preferred = QMediaDevices::defaultAudioOutput();
+  if (!preferred.isNull()) {
+    devices.push_back(
+        {.id = preferred.id(), .description = preferred.description()});
+  }
+  for (const QAudioDevice& device : QMediaDevices::audioOutputs()) {
+    if (device.id() != preferred.id()) {
+      devices.push_back(
+          {.id = device.id(), .description = device.description()});
+    }
+  }
+  return devices;
+}
+
+void QtAudioOutput::SetDevice(const QByteArray& id) {
+  device_id_ = id;
+  if (!id.isEmpty() && Device().id() != id) {
+    core::Logger(core::kLogModuleGui)
+        ->warn(
+            "the chosen audio device is not there; playing on the "
+            "system's default");
+  }
+}
+
+QAudioDevice QtAudioOutput::Device() const {
+  if (!device_id_.isEmpty()) {
+    for (const QAudioDevice& device : QMediaDevices::audioOutputs()) {
+      if (device.id() == device_id_) {
+        return device;
+      }
+    }
+  }
+  return QMediaDevices::defaultAudioOutput();
+}
+
 int QtAudioOutput::PlaybackRate(int rate) {
-  const QAudioDevice device = QMediaDevices::defaultAudioOutput();
+  const QAudioDevice device = Device();
   if (device.isNull() || device.isFormatSupported(MonoFormat(rate))) {
     return rate;
   }
@@ -57,9 +94,12 @@ int QtAudioOutput::PlaybackRate(int rate) {
 
 core::Status QtAudioOutput::Start(std::vector<std::int16_t> samples, int rate) {
   Stop();
-  const QAudioDevice device = QMediaDevices::defaultAudioOutput();
+  const QAudioDevice device = Device();
+  device_name_ = device.description();
   if (device.isNull()) {
-    return core::UnavailableError("there is no audio output device");
+    return core::UnavailableError(
+        "there is no audio output device: connect one, or check the "
+        "system's sound settings");
   }
   QAudioFormat format = MonoFormat(rate);
   if (!device.isFormatSupported(format)) {
@@ -87,8 +127,10 @@ core::Status QtAudioOutput::Start(std::vector<std::int16_t> samples, int rate) {
   sink_->start(&buffer_);
   if (sink_->error() != QAudio::NoError) {
     Stop();
-    return core::UnavailableError("cannot play on " +
-                                  device.description().toStdString());
+    return core::UnavailableError(
+        "cannot play on " + device.description().toStdString() +
+        ": it may be in use or disconnected; choose another in "
+        "Preferences");
   }
   core::Logger(core::kLogModuleGui)
       ->debug("playing {} samples at {} Hz, {} channel(s), on {}",
@@ -117,6 +159,26 @@ bool QtAudioOutput::IsFinished() {
   }
   const QAudio::State state = sink_->state();
   return state == QAudio::IdleState || state == QAudio::StoppedState;
+}
+
+core::Status QtAudioOutput::DeviceStatus() {
+  if (sink_ == nullptr) {
+    return core::OkStatus();
+  }
+  // Only these are failures. Before Qt 6.11 the sink also reported an
+  // underrun when a pull-mode buffer ran out, which is the normal end.
+  const QAudio::Error error = sink_->error();
+  if (error == QAudio::OpenError) {
+    return core::UnavailableError("cannot open the audio device " +
+                                  device_name_.toStdString());
+  }
+  if (error != QAudio::IOError && error != QAudio::FatalError) {
+    return core::OkStatus();
+  }
+  return core::UnavailableError(
+      "the audio device " + device_name_.toStdString() +
+      " stopped while playing: check that it is still connected, or "
+      "choose another in Preferences");
 }
 
 }  // namespace speak5220::app

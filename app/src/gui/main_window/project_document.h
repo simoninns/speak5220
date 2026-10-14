@@ -14,6 +14,7 @@
 #include <QString>
 #include <QUndoStack>
 
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/util/status.h"
@@ -61,8 +62,10 @@ class ProjectDocument : public QObject {
   // none. Its place in the list is not part of it.
   bool IsPhraseModified(const core::project::PhraseId& id) const;
 
-  // Replaces the project with an empty one, not yet saved.
-  void New();
+  // Replaces the project with an empty one, not yet saved, whose phrases
+  // start from `defaults` (ProjectSettings::default_encoder; the
+  // encoder's own if they are invalid).
+  void New(const core::encoder::EncoderOptions& defaults = {});
   // Opens a .s5proj file or a project directory; the project.yaml of a
   // project directory opens that directory. On failure the current
   // project stays open.

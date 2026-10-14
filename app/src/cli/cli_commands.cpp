@@ -1,8 +1,8 @@
 /*
  * File:        cli_commands.cpp
  * Module:      cli
- * Purpose:     The speak5220-cli commands: new, add, encode, export, synth
- *              and measure
+ * Purpose:     The speak5220-cli commands: new, add, import-phrom, encode,
+ *              export, synth and measure
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -39,6 +39,7 @@
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/project/phrom_import.h"
 #include "core/project/project.h"
 #include "core/project/project_export.h"
 #include "core/project/project_serializer.h"
@@ -100,7 +101,8 @@ const QCommandLineOption& ForceOption() {
 const QCommandLineOption& OutputOption() {
   static const QCommandLineOption kOption(
       QStringLiteral("output"),
-      QStringLiteral("Write the project (new, add, encode), the exported "
+      QStringLiteral("Write the project (new, add, import-phrom, encode), the "
+                     "exported "
                      "files (export) or the measures (measure) into this "
                      "directory; synth: the WAV file to write."),
       QStringLiteral("dir"));
@@ -495,6 +497,72 @@ core::StatusOr<std::vector<std::uint8_t>> ReadFileBytes(const fs::path& path) {
   return bytes;
 }
 
+int RunImportPhrom(const QCommandLineParser& parser,
+                   const QStringList& arguments) {
+  if (arguments.size() < 2) {
+    return Usage("usage: speak5220-cli import-phrom PROJECT IMAGE...");
+  }
+  const fs::path input = Normalised(ToPath(arguments.front()));
+  core::StatusOr<project::Project> loaded = LoadProject(input);
+  if (!loaded.IsOk()) {
+    return Fail(loaded.GetStatus());
+  }
+  project::Project& edited = *loaded;
+
+  std::set<std::string> taken = edited.PhraseNames();
+  // Every image's words, ASCII entries and header strings, in order.
+  project::PhromImport all;
+  for (qsizetype i = 1; i < arguments.size(); ++i) {
+    const fs::path path = ToPath(arguments[i]);
+    core::StatusOr<std::vector<std::uint8_t>> bytes = ReadFileBytes(path);
+    if (!bytes.IsOk()) {
+      return Fail(bytes.GetStatus());
+    }
+    core::StatusOr<project::PhromImport> imported =
+        project::ImportPhromImage(*bytes, taken);
+    if (!imported.IsOk()) {
+      return Fail(PathText(path) + ": " + imported.GetStatus().Message());
+    }
+    for (project::Phrase& phrase : imported->phrases) {
+      Out() << "added " << ToQString(phrase.name) << " from "
+            << ToQString(PathText(path.filename())) << Qt::endl;
+      taken.insert(phrase.name);
+      all.phrases.push_back(std::move(phrase));
+    }
+    all.ascii_map.merge(imported->ascii_map);
+    for (std::vector<std::string>& strings : imported->header_strings) {
+      all.header_strings.push_back(std::move(strings));
+    }
+  }
+  // The images' ASCII entries and header strings first, so the budget is
+  // checked with them (plan §3.4).
+  if (core::StatusOr<project::PhromSettings> previous =
+          edited.SetPhromSettings(project::MergeImportedPhromSettings(
+              edited.Settings(), edited.Phrases().empty(), all));
+      !previous.IsOk()) {
+    return Fail(previous.GetStatus());
+  }
+  std::vector<project::PlacedPhrase> added;
+  added.reserve(all.phrases.size());
+  for (project::Phrase& phrase : all.phrases) {
+    added.push_back(
+        {.index = static_cast<int>(edited.Phrases().size() + added.size()),
+         .phrase = std::move(phrase)});
+  }
+  const std::size_t count = added.size();
+  if (core::Status status = edited.InsertPhrases(std::move(added));
+      !status.IsOk()) {
+    return Fail(status);
+  }
+  if (core::Status status =
+          SaveProject(edited, OutputProjectPath(parser, input));
+      !status.IsOk()) {
+    return Fail(status);
+  }
+  Out() << "imported " << count << " word(s) as locked phrases" << Qt::endl;
+  return kExitSuccess;
+}
+
 int RunSynth(const QCommandLineParser& parser, const QStringList& arguments) {
   if (arguments.size() != 1 || !parser.isSet(OutputOption())) {
     return Usage("usage: speak5220-cli synth FRAMES.yaml --output FILE.wav");
@@ -667,14 +735,15 @@ int RunMeasure(const QCommandLineParser& parser, const QStringList& arguments) {
 void AddCommandOptions(QCommandLineParser& parser) {
   parser.addPositionalArgument(
       QStringLiteral("command"),
-      QStringLiteral("new, add, encode, export, synth or measure. With none, "
-                     "prints the version."),
+      QStringLiteral("new, add, import-phrom, encode, export, synth or "
+                     "measure. With none, prints the version."),
       QStringLiteral("[command]"));
   parser.addPositionalArgument(
       QStringLiteral("arguments"),
       QStringLiteral("The project (a .s5proj file, or a directory for the "
-                     "unpacked form), then for add the WAV files; for synth, "
-                     "a frames.yaml file."),
+                     "unpacked form), then for add the WAV files, for "
+                     "import-phrom the PHROM images; for synth, a frames.yaml "
+                     "file."),
       QStringLiteral("[arguments...]"));
   parser.addOption(NameOption());
   parser.addOption(EncoderOptionOption());
@@ -702,6 +771,9 @@ int RunCommand(const QCommandLineParser& parser, const QStringList& arguments) {
   if (command == QStringLiteral("add")) {
     return RunAdd(parser, rest);
   }
+  if (command == QStringLiteral("import-phrom")) {
+    return RunImportPhrom(parser, rest);
+  }
   if (command == QStringLiteral("encode")) {
     return RunEncode(parser, rest);
   }
@@ -715,7 +787,8 @@ int RunCommand(const QCommandLineParser& parser, const QStringList& arguments) {
     return RunMeasure(parser, rest);
   }
   return Usage("unknown command \"" + command.toStdString() +
-               "\": use new, add, encode, export, synth or measure");
+               "\": use new, add, import-phrom, encode, export, synth or "
+               "measure");
 }
 
 }  // namespace speak5220::cli

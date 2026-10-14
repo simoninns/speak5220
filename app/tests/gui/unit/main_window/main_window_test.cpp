@@ -11,6 +11,7 @@
 #include "gui/main_window/main_window.h"
 
 #include <QAction>
+#include <QByteArray>
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
@@ -19,6 +20,7 @@
 #include <QObject>
 #include <QPushButton>
 #include <QScrollArea>
+#include <QStatusBar>
 #include <QString>
 #include <QStringList>
 #include <QTabBar>
@@ -31,11 +33,13 @@
 #include <vector>
 
 #include "core/dsp/output_filter.h"
+#include "core/encoder/encoder_options.h"
 #include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
 #include "core/project/project.h"
 #include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
+#include "core/util/logging.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -47,8 +51,10 @@
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_editor/phrase_details.h"
 #include "gui/phrase_list/phrase_list_panel.h"
+#include "gui/preferences/preferences_dialog.h"
 #include "gui/support/gui_mocks.h"
 #include "gui/theme/colour_scheme.h"
+#include "gui/theme/colours.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
 #include "gui/waveform/waveform_pane.h"
@@ -438,6 +444,79 @@ TEST_F(MainWindowTest, FailedListEditIsShown) {
   AddPhrases({AudioPhrase(1, "ONE")});
   EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Edit Phrases"), _));
   emit window_.Model().EditFailed(QStringLiteral("cannot move"));
+}
+
+TEST_F(MainWindowTest, PreferencesAreAppliedAndStored) {
+  Preferences chosen;
+  chosen.theme = ThemeChoice::kDark;
+  chosen.waveform_colours = WaveformColours::kTheme;
+  chosen.audio_device = QByteArray("usb");
+  chosen.default_encoder.target_rms = 24.0;
+  EXPECT_CALL(dialogs_, AskPreferences(Preferences{})).WillOnce(Return(chosen));
+  EXPECT_CALL(playback_.output, SetDevice(QByteArray("usb")));
+  std::vector<ThemeChoice> themes;
+  QObject::connect(&window_, &MainWindow::ThemeChanged,
+                   [&themes](ThemeChoice choice) { themes.push_back(choice); });
+  window_.EditPreferences();
+  EXPECT_EQ(themes, std::vector<ThemeChoice>{ThemeChoice::kDark});
+  EXPECT_TRUE(window_.ThemeAction(ThemeChoice::kDark)->isChecked());
+  EXPECT_EQ(window_.Waveforms()->OriginalPane()->View()->Colours(),
+            WaveformColours::kTheme);
+  EXPECT_EQ(preferences_.default_encoder.target_rms, 24.0);
+  EXPECT_EQ(preferences_.audio_device, QByteArray("usb"));
+  // The open project keeps its settings; the next new one takes them.
+  EXPECT_EQ(window_.Document().Project().Settings().default_encoder.target_rms,
+            core::encoder::EncoderOptions{}.target_rms);
+  ASSERT_TRUE(window_.NewProject());
+  EXPECT_EQ(window_.Document().Project().Settings().default_encoder.target_rms,
+            24.0);
+}
+
+TEST_F(MainWindowTest, CancelledPreferencesChangeNothing) {
+  EXPECT_CALL(dialogs_, AskPreferences(_)).WillOnce(Return(std::nullopt));
+  EXPECT_CALL(playback_.output, SetDevice(_)).Times(0);
+  window_.EditPreferences();
+  EXPECT_EQ(ReadPreferences(preferences_), Preferences{});
+}
+
+TEST_F(MainWindowTest, ChangingTheLoggingSaysWhenItTakesEffect) {
+  Preferences chosen;
+  chosen.log_level = core::LogLevel::kTrace;
+  window_.ApplyPreferences(chosen);
+  EXPECT_EQ(preferences_.log_level, core::LogLevel::kTrace);
+  EXPECT_TRUE(window_.statusBar()->currentMessage().contains(
+      QStringLiteral("next time")));
+}
+
+TEST_F(MainWindowTest, StartsWithThePreferences) {
+  FakeViewPreferences saved;
+  saved.waveform_colours = WaveformColours::kTheme;
+  saved.audio_device = QByteArray("usb");
+  saved.default_encoder.target_rms = 24.0;
+  EXPECT_CALL(playback_.output, SetDevice(QByteArray("usb")));
+  MainWindow window(dialogs_, recent_, saved, runner_, playback_.synth,
+                    playback_.player, encoding_.Tools());
+  EXPECT_EQ(window.Waveforms()->EncodedPane()->View()->Colours(),
+            WaveformColours::kTheme);
+  EXPECT_EQ(window.Document().Project().Settings().default_encoder.target_rms,
+            24.0);
+}
+
+TEST_F(MainWindowTest, AudioDeviceFailureIsReported) {
+  EXPECT_CALL(dialogs_, ShowError(QStringLiteral("Play"),
+                                  QStringLiteral("the device went away")));
+  emit playback_.player.DeviceFailed(QStringLiteral("the device went away"));
+}
+
+TEST_F(MainWindowTest, PreferencesAreInTheEditMenu) {
+  bool found = false;
+  for (const QAction* action : window_.findChildren<QAction*>()) {
+    if (action->text() == QStringLiteral("&Preferences...")) {
+      found = true;
+      EXPECT_EQ(action->menuRole(), QAction::PreferencesRole);
+    }
+  }
+  EXPECT_TRUE(found);
 }
 
 }  // namespace

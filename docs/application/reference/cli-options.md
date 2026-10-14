@@ -9,6 +9,7 @@ general and logging options; the commands and their options are
 | Option | Executables | Meaning |
 |---|---|---|
 | `--help`, `-h` | both | Lists the options and exits |
+| `--help-all` | both | Lists the options together with Qt's generic options (such as `-platform` for the GUI) and exits |
 | `--version`, `-v` | both | Prints the version and exits |
 
 ## The GUI's argument
@@ -28,6 +29,7 @@ prints its name and version.
 |---|---|---|---|
 | `new` | `PROJECT` | `--name`, `--option`, `--output` | Creates an empty project. Fails if `PROJECT` exists |
 | `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
+| `import-phrom` | `PROJECT IMAGE...` | `--output` | Adds the words of each Acorn PHROM image (16 KB, or several 16 KB PHROMs concatenated) to the end of the list as locked phrases with no source audio, in image then word order, and saves ([Importing PHROM images](../user-manual/projects.md#importing-phrom-images)) |
 | `encode` | `PROJECT` | `--force`, `--output` | Encodes the phrases whose frames are out of date, and saves |
 | `export` | `PROJECT` | `--output` (required), `--preset`, or `--format` with `--phrase`, `--layout`, `--licence`, `--audio` | Writes exported files into the `--output` directory. Every phrase exported must be encoded with its current settings, except for the original or preprocessed audio |
 | `measure` | `PROJECT` | `--output` (required) | Measures every phrase's encoding and writes `measures.tsv` into the `--output` directory ([below](#measures)). Every phrase must be encoded |
@@ -42,7 +44,7 @@ prints its name and version.
 | `--normalise` | none | `add` | Scales a file that clips or is very quiet (peak below −30 dBFS) to a peak of −1 dBFS. Other files are never changed |
 | `--force` | none | `encode` | Encodes every phrase that is not locked, even if its frames are current |
 | `--description` | text | `add` | The phrase's description, a note kept in the project only (default: none) |
-| `--output` | a directory, or for `synth` a file | all | `new`, `add`, `encode`: saves the project into this directory, under its own name, instead of in place. `export`, `measure`: the directory for the files written. Created if missing. `synth`: the WAV file to write |
+| `--output` | a directory, or for `synth` a file | all | `new`, `add`, `import-phrom`, `encode`: saves the project into this directory, under its own name, instead of in place. `export`, `measure`: the directory for the files written. Created if missing. `synth`: the WAV file to write |
 | `--preset` | a preset name | `export` | Runs this export preset of the project; may be given more than once. Without `--preset` or `--format`, every preset runs |
 | `--format` | `acorn-phrom`, `c-header-phrom`, `c-header-speak-external`, `wav` or `bbc-dsd` | `export` | Exports in this format instead of running presets; the files are named after the project file ([Export formats](export-formats.md)) |
 | `--phrase` | a phrase name | `export --format` | Exports only this phrase; may be given more than once. Default: every phrase |
@@ -102,5 +104,5 @@ Line formats:
 | Code | Meaning |
 |---|---|
 | 0 | Success |
-| 1 | The command failed: a project or file that cannot be read or written, an invalid or taken name, an unknown option or value for `--option`, a phrase that cannot be encoded or would exceed the budget, an export that cannot run, a phrase `measure` finds unencoded, or a frames file `synth` cannot read. The message is on stderr |
+| 1 | The command failed: a project or file that cannot be read or written, an invalid or taken name, an unknown option or value for `--option`, a phrase that cannot be encoded or would exceed the budget, an export that cannot run, a phrase `measure` finds unencoded, a frames file `synth` cannot read, or a file `import-phrom` cannot read as Acorn PHROM images. The message is on stderr |
 | 2 | The command line cannot be used: an unknown command or level, missing arguments, `--name` or `--description` with more than one file, `export`, `measure` or `synth` without `--output`, `--option` without `=`, `--preset` with `--format`, `--phrase`, `--layout`, `--licence` or `--audio` without `--format`, `--no-console-log` without `--log-file`, or a log file that cannot be opened |

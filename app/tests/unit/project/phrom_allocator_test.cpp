@@ -123,5 +123,32 @@ TEST(PhromAllocatorTest, AdditionNeedingA65thPhromExceedsTheBudget) {
   EXPECT_EQ(allocation.phrases.back().phrom, 65);
 }
 
+TEST(PhromAllocatorTest, PhromWithEveryAsciiEntryHasNoNullWord) {
+  // speak5220 datasheet §12.8: one byte more when the PHROM's phrases have
+  // all 95 ASCII entries, as Acorn's PHROM A does.
+  const std::vector<PhraseCostInput> full = {
+      {.cost = 8000, .ascii_entries = 50}, {.cost = 8129, .ascii_entries = 45}};
+  const PhromAllocation allocation = AllocatePhroms(full);
+  ASSERT_EQ(allocation.PhromsUsed(), 1);
+  EXPECT_EQ(allocation.phroms[0].used_bytes, 16384);
+  EXPECT_EQ(allocation.phroms[0].ascii_entries, 95);
+
+  // One entry short, the second phrase starts a PHROM of its own.
+  const std::vector<PhraseCostInput> short_map = {
+      {.cost = 8000, .ascii_entries = 50}, {.cost = 8129, .ascii_entries = 44}};
+  EXPECT_EQ(AllocatePhroms(short_map).PhromsUsed(), 2);
+}
+
+TEST(PhromAllocatorTest, PhraseWithEveryAsciiEntryCanFillAnEmptyPhrom) {
+  const PhromAllocation allocation =
+      AllocatePhroms(std::vector<PhraseCostInput>{
+          {.cost = kPhromWordCapacity + 1, .ascii_entries = 95}});
+  EXPECT_EQ(allocation.phrases[0].placement, Placement::kPlaced);
+  EXPECT_EQ(allocation.FreeInLastPhrom(), 0);
+  EXPECT_EQ(
+      AllocatePhroms(Costs({kPhromWordCapacity + 1})).phrases[0].placement,
+      Placement::kTooLarge);
+}
+
 }  // namespace
 }  // namespace speak5220::core::project

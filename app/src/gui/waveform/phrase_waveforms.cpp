@@ -739,6 +739,12 @@ void PhraseWaveforms::SetOutputPin(core::synth::OutputPin pin) {
   }
 }
 
+void PhraseWaveforms::SetWaveformColours(WaveformColours choice) {
+  for (const Track& track : tracks_) {
+    track.pane->View()->SetWaveformColours(choice);
+  }
+}
+
 void PhraseWaveforms::RedrawEncoded() {
   const auto found = rendered_.find(id_);
   if (encoded_shown_ && found != rendered_.end()) {

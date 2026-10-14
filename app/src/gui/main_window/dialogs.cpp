@@ -17,6 +17,9 @@
 #include <QStringList>
 #include <optional>
 
+#include "gui/playback/qt_audio_output.h"
+#include "gui/preferences/preferences_dialog.h"
+
 namespace speak5220::app {
 
 namespace {
@@ -59,6 +62,13 @@ QStringList QtDialogs::ImportFilePaths() {
   return QFileDialog::getOpenFileNames(
       parent_, QStringLiteral("Add Phrases"), QString(),
       QStringLiteral("WAV files (*.wav *.WAV);;All files (*)"));
+}
+
+QStringList QtDialogs::ImportPhromPaths() {
+  return QFileDialog::getOpenFileNames(
+      parent_, QStringLiteral("Import PHROM Images"), QString(),
+      QStringLiteral("PHROM images (*.bin *.BIN *.rom *.ROM);;"
+                     "All files (*)"));
 }
 
 SaveChoice QtDialogs::AskSaveChanges(const QString& name) {
@@ -115,6 +125,15 @@ std::optional<ExportRequest> QtDialogs::AskExport(const ExportStart& start) {
     return std::nullopt;
   }
   return dialog.Request();
+}
+
+std::optional<Preferences> QtDialogs::AskPreferences(
+    const Preferences& current) {
+  PreferencesDialog dialog(current, QtAudioOutput::Devices(), parent_);
+  if (dialog.exec() != QDialog::Accepted) {
+    return std::nullopt;
+  }
+  return dialog.Chosen();
 }
 
 bool QtDialogs::ConfirmOverwrite(QWidget* parent, const QString& directory,

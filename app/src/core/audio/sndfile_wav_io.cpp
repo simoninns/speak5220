@@ -215,8 +215,13 @@ StatusOr<DecodedWav> SndfileWavReader::Read(const std::filesystem::path& path) {
   SF_INFO info = {};
   SndfileHandle file(sf_open(path.string().c_str(), SFM_READ, &info));
   if (!file) {
-    return NotFoundError("cannot open " + path.string() + ": " +
-                         sf_strerror(nullptr));
+    std::error_code error;
+    if (!std::filesystem::is_regular_file(path, error)) {
+      return NotFoundError(path.string() + " does not exist or is not a file");
+    }
+    // libsndfile's reason, such as "Format not recognised.".
+    return InvalidArgumentError("cannot read " + path.string() +
+                                " as a WAV file: " + sf_strerror(nullptr));
   }
   const StatusOr<WavSampleFormat> format = CheckInput(info, path.string());
   if (!format.IsOk()) {

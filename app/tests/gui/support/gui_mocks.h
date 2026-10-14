@@ -12,6 +12,7 @@
 #ifndef SPEAK5220_TESTS_GUI_SUPPORT_GUI_MOCKS_H_
 #define SPEAK5220_TESTS_GUI_SUPPORT_GUI_MOCKS_H_
 
+#include <QByteArray>
 #include <QString>
 #include <QStringList>
 #include <cstdint>
@@ -22,11 +23,13 @@
 
 #include "core/dsp/output_filter.h"
 #include "core/encoder/encoder.h"
+#include "core/encoder/encoder_options.h"
 #include "core/project/phrase.h"
 #include "core/quality/quality_assessor.h"
 #include "core/synth/chip_clock.h"
 #include "core/synth/output_pin.h"
 #include "core/util/clock.h"
+#include "core/util/logging.h"
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
@@ -37,6 +40,7 @@
 #include "gui/playback/audio_output.h"
 #include "gui/playback/player.h"
 #include "gui/theme/colour_scheme.h"
+#include "gui/theme/colours.h"
 #include "gui/waveform/phrase_tab.h"
 #include "support/project_builder.h"
 #include "support/project_mocks.h"
@@ -51,12 +55,15 @@ class MockDialogs : public app::IDialogs {
   MOCK_METHOD(std::optional<QString>, SaveProjectPath,
               (const QString& suggested), (override));
   MOCK_METHOD(QStringList, ImportFilePaths, (), (override));
+  MOCK_METHOD(QStringList, ImportPhromPaths, (), (override));
   MOCK_METHOD(app::SaveChoice, AskSaveChanges, (const QString& name),
               (override));
   MOCK_METHOD(bool, ConfirmRemove, (const QStringList& names), (override));
   MOCK_METHOD(bool, AskNormalise, (const QStringList& files), (override));
   MOCK_METHOD(std::optional<app::ExportRequest>, AskExport,
               (const app::ExportStart& start), (override));
+  MOCK_METHOD(std::optional<app::Preferences>, AskPreferences,
+              (const app::Preferences& current), (override));
   MOCK_METHOD(void, ShowError, (const QString& title, const QString& message),
               (override));
 };
@@ -86,6 +93,25 @@ class FakeViewPreferences : public app::IViewPreferences {
   void SetChipClock(int chosen) override { clock_hz = chosen; }
   app::ThemeChoice ChosenTheme() override { return theme; }
   void SetTheme(app::ThemeChoice chosen) override { theme = chosen; }
+  app::WaveformColours ChosenWaveformColours() override {
+    return waveform_colours;
+  }
+  void SetWaveformColours(app::WaveformColours chosen) override {
+    waveform_colours = chosen;
+  }
+  QByteArray ChosenAudioDevice() override { return audio_device; }
+  void SetAudioDevice(const QByteArray& id) override { audio_device = id; }
+  core::encoder::EncoderOptions ChosenDefaultEncoder() override {
+    return default_encoder;
+  }
+  void SetDefaultEncoder(
+      const core::encoder::EncoderOptions& options) override {
+    default_encoder = options;
+  }
+  core::LogLevel ChosenLogLevel() override { return log_level; }
+  void SetLogLevel(core::LogLevel level) override { log_level = level; }
+  QString ChosenLogFile() override { return log_file; }
+  void SetLogFile(const QString& path) override { log_file = path; }
 
   bool advanced_shown = false;
   app::PhraseTab phrase_tab = app::PhraseTab::kOriginal;
@@ -93,6 +119,11 @@ class FakeViewPreferences : public app::IViewPreferences {
   core::synth::OutputPin pin = core::synth::OutputPin::kSpeaker;
   int clock_hz = core::synth::kNominalClockHz;
   app::ThemeChoice theme = app::ThemeChoice::kAuto;
+  app::WaveformColours waveform_colours = app::WaveformColours::kDark;
+  QByteArray audio_device;
+  core::encoder::EncoderOptions default_encoder;
+  core::LogLevel log_level = core::LogLevel::kInfo;
+  QString log_file;
 };
 
 class MockAudioOutput : public app::IAudioOutput {
@@ -103,6 +134,8 @@ class MockAudioOutput : public app::IAudioOutput {
   MOCK_METHOD(void, Stop, (), (override));
   MOCK_METHOD(std::int64_t, ProcessedMicroseconds, (), (override));
   MOCK_METHOD(bool, IsFinished, (), (override));
+  MOCK_METHOD(core::Status, DeviceStatus, (), (override));
+  MOCK_METHOD(void, SetDevice, (const QByteArray& id), (override));
 };
 
 // A clock that moves only when told to.

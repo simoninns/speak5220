@@ -1,8 +1,8 @@
 /*
  * File:        acorn_phrom.h
  * Module:      packaging
- * Purpose:     Builds a 16 KB Acorn PHROM image: header, pointer table,
- *              word names and word data
+ * Purpose:     Builds and reads 16 KB Acorn PHROM images: header, pointer
+ *              table, word names and word data
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -11,6 +11,7 @@
 #ifndef SPEAK5220_CORE_PACKAGING_ACORN_PHROM_H_
 #define SPEAK5220_CORE_PACKAGING_ACORN_PHROM_H_
 
+#include <cstdint>
 #include <map>
 #include <span>
 #include <string>
@@ -48,6 +49,26 @@ class AcornPhrom {
   // not fit. Re-implements tms5220enc.py acornPhrom(). O(total bytes).
   static StatusOr<PhromImage> Build(std::span<const Word> words,
                                     const AcornPhromOptions& options);
+
+  // Reads the words proper of one bank (`image` must be kPhromSize bytes),
+  // in word-number order: the numbers after the ASCII entries (from
+  // kFirstWordNumber when, as in every image Build() makes and in the
+  // Acorn PHROM A, there are 95) to the end of the pointer table. A word's
+  // name is read from the bytes between the end of the word before it in
+  // the bank (or the pointer table's end marker) and its data, nearest the
+  // data first, for as long as they decode to printable ASCII; so a name
+  // is empty when the image holds none. Fails, as untrusted input, for a
+  // wrong size, a header that is not an Acorn PHROM's, counts that do not
+  // fit the bank, a pointer into the header or the pointer table, or a
+  // word with no stop code within the bank. O(bytes + words log words).
+  static StatusOr<std::vector<ReadWord>> Read(
+      std::span<const std::uint8_t> image);
+
+  // Read(), with the header's strings (the null-terminated printable ASCII
+  // strings of bytes 2-55, up to the first empty one) and the ASCII
+  // entries that point at a word. Entries that point elsewhere, such as
+  // the shared stop code Build() writes, are left out. Fails as Read().
+  static StatusOr<ReadPhrom> ReadImage(std::span<const std::uint8_t> image);
 };
 
 }  // namespace speak5220::core::packaging

@@ -12,9 +12,11 @@
 
 #include <QAction>
 #include <QActionGroup>
+#include <QByteArray>
 #include <QCloseEvent>
 #include <QDir>
 #include <QDockWidget>
+#include <QFile>
 #include <QFileInfo>
 #include <QKeySequence>
 #include <QLabel>
@@ -22,7 +24,6 @@
 #include <QMainWindow>
 #include <QMenu>
 #include <QMenuBar>
-#include <QMessageBox>
 #include <QMetaObject>
 #include <QStatusBar>
 #include <QString>
@@ -31,7 +32,9 @@
 #include <QVBoxLayout>
 #include <QWidget>
 #include <algorithm>
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -43,9 +46,12 @@
 #include <vector>
 
 #include "core/dsp/output_filter.h"
+#include "core/packaging/phrom_image.h"
 #include "core/project/encoding_cache.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_importer.h"
+#include "core/project/phrom_allocator.h"
+#include "core/project/phrom_import.h"
 #include "core/project/project_export.h"
 #include "core/project/project_store.h"
 #include "core/synth/chip_clock.h"
@@ -55,6 +61,7 @@
 #include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "core/util/version.h"
+#include "gui/about/about_dialog.h"
 #include "gui/encoder_panel/encoder_panel.h"
 #include "gui/encoder_panel/encoder_settings_form.h"
 #include "gui/encoder_panel/phrase_encoder.h"
@@ -74,6 +81,8 @@
 #include "gui/undo/project_commands.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
+#include "gui/waveform/waveform_pane.h"
+#include "gui/waveform/waveform_view.h"
 
 namespace speak5220::app {
 
@@ -86,6 +95,11 @@ constexpr int kInitialWidth = 1100;
 constexpr int kInitialHeight = 820;
 // How long a progress message stays in the status bar, in milliseconds.
 constexpr int kStatusMessageMs = 5000;
+// The largest file read as PHROM images: a project's whole budget of
+// 16 KB banks.
+constexpr qint64 kMaxPhromImageBytes =
+    static_cast<qint64>(project::kPhromBudget) *
+    static_cast<qint64>(core::packaging::kPhromSize);
 
 QString ToQString(std::string_view text) {
   return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
@@ -150,10 +164,17 @@ MainWindow::MainWindow(IDialogs& dialogs, IRecentFilesStore& recent_store,
             view_preferences_->SetAdvancedSettingsShown(shown);
           });
 
+  connect(player_, &Player::DeviceFailed, this, [this](const QString& message) {
+    ShowError(QStringLiteral("Play"), message);
+  });
+
   SetOutputFilter(view_preferences_->ChosenOutputFilter());
   SetOutputPin(view_preferences_->ChosenOutputPin());
   SetChipClock(view_preferences_->ChosenChipClock());
   SetTheme(view_preferences_->ChosenTheme());
+  waveforms_->SetWaveformColours(view_preferences_->ChosenWaveformColours());
+  player_->SetOutputDevice(view_preferences_->ChosenAudioDevice());
+  document_.New(view_preferences_->ChosenDefaultEncoder());
 
   OnProjectChanged();
   UpdateTitle();
@@ -261,6 +282,40 @@ QAction* MainWindow::ThemeAction(ThemeChoice choice) const {
   return nullptr;
 }
 
+void MainWindow::EditPreferences() {
+  const std::optional<Preferences> chosen =
+      dialogs_->AskPreferences(ReadPreferences(*view_preferences_));
+  if (chosen.has_value()) {
+    ApplyPreferences(*chosen);
+  }
+}
+
+void MainWindow::ApplyPreferences(const Preferences& preferences) {
+  const Preferences before = ReadPreferences(*view_preferences_);
+  WritePreferences(preferences, *view_preferences_);
+  SetTheme(preferences.theme);
+  waveforms_->SetWaveformColours(preferences.waveform_colours);
+  if (preferences.audio_device != before.audio_device) {
+    player_->SetOutputDevice(preferences.audio_device);
+  }
+  if (preferences.log_level != before.log_level ||
+      preferences.log_file != before.log_file) {
+    statusBar()->showMessage(
+        QStringLiteral("The logging changes take effect the next time "
+                       "Speak5220 starts"),
+        kStatusMessageMs);
+  }
+}
+
+QAction* MainWindow::TabAction(PhraseTab tab) const {
+  for (std::size_t i = 0; i < kPhraseTabs.size(); ++i) {
+    if (kPhraseTabs[i] == tab && i < tab_actions_.size()) {
+      return tab_actions_[i];
+    }
+  }
+  return nullptr;
+}
+
 QString MainWindow::StatusText() const { return status_label_->text(); }
 
 void MainWindow::CreateActions() {
@@ -280,6 +335,14 @@ void MainWindow::CreateActions() {
   save_as_action_->setShortcut(QKeySequence::SaveAs);
   connect(save_as_action_, &QAction::triggered, this, [this] { SaveAs(); });
 
+  import_phrom_action_ =
+      new QAction(QStringLiteral("&Import PHROM Image..."), this);
+  import_phrom_action_->setToolTip(
+      QStringLiteral("Add the words of Acorn PHROM images as locked phrases"));
+  import_phrom_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+  connect(import_phrom_action_, &QAction::triggered, this,
+          &MainWindow::ImportPhromFromDialog);
+
   clear_recent_action_ = new QAction(QStringLiteral("&Clear Menu"), this);
   connect(clear_recent_action_, &QAction::triggered, this, [this] {
     recent_.Clear();
@@ -298,6 +361,17 @@ void MainWindow::CreateActions() {
   redo_action_ =
       document_.UndoStack().createRedoAction(this, QStringLiteral("&Redo"));
   redo_action_->setShortcut(QKeySequence::Redo);
+
+  preferences_action_ = new QAction(QStringLiteral("&Preferences..."), this);
+  // The platform's key where it has one (Cmd+, on macOS); otherwise
+  // Ctrl+, as many Linux applications use.
+  const QKeySequence preferences_key(QKeySequence::Preferences);
+  preferences_action_->setShortcut(preferences_key.isEmpty()
+                                       ? QKeySequence(Qt::CTRL | Qt::Key_Comma)
+                                       : preferences_key);
+  preferences_action_->setMenuRole(QAction::PreferencesRole);
+  connect(preferences_action_, &QAction::triggered, this,
+          &MainWindow::EditPreferences);
 
   theme_group_ = new QActionGroup(this);
   for (const ThemeChoice choice : kThemeChoices) {
@@ -323,6 +397,33 @@ void MainWindow::CreateActions() {
     connect(action, &QAction::triggered, this,
             [this, choice] { SetTheme(choice); });
     theme_actions_.push_back(action);
+  }
+
+  // Ctrl+1, 2 and 3 show the phrase's tabs, for the keyboard.
+  constexpr std::array<Qt::Key, 3> kTabKeys = {Qt::Key_1, Qt::Key_2, Qt::Key_3};
+  for (std::size_t i = 0; i < kPhraseTabs.size(); ++i) {
+    const PhraseTab tab = kPhraseTabs[i];
+    QString label;
+    switch (tab) {
+      case PhraseTab::kOriginal:
+        label = QStringLiteral("&Original");
+        break;
+      case PhraseTab::kPreprocess:
+        label = QStringLiteral("&Preprocess");
+        break;
+      case PhraseTab::kEncode:
+        label = QStringLiteral("&Encode");
+        break;
+    }
+    auto* action = new QAction(label, this);
+    action->setShortcut(QKeySequence(Qt::CTRL | kTabKeys.at(i)));
+    action->setStatusTip(QStringLiteral("Show the phrase's %1 tab")
+                             .arg(QString(label).remove(QLatin1Char('&'))));
+    connect(action, &QAction::triggered, this, [this, tab] {
+      waveforms_->SetCurrentTab(tab);
+      waveforms_->Pane(tab)->View()->setFocus(Qt::ShortcutFocusReason);
+    });
+    tab_actions_.push_back(action);
   }
 
   output_filter_group_ = new QActionGroup(this);
@@ -446,13 +547,21 @@ void MainWindow::CreateMenus() {
   file->addAction(save_action_);
   file->addAction(save_as_action_);
   file->addSeparator();
+  file->addAction(import_phrom_action_);
+  file->addSeparator();
   file->addAction(quit_action_);
 
   QMenu* edit = menuBar()->addMenu(QStringLiteral("&Edit"));
   edit->addAction(undo_action_);
   edit->addAction(redo_action_);
+  edit->addSeparator();
+  edit->addAction(preferences_action_);
 
   QMenu* view = menuBar()->addMenu(QStringLiteral("&View"));
+  for (QAction* action : tab_actions_) {
+    view->addAction(action);
+  }
+  view->addSeparator();
   QMenu* theme = view->addMenu(QStringLiteral("&Theme"));
   for (QAction* action : theme_actions_) {
     theme->addAction(action);
@@ -549,7 +658,7 @@ bool MainWindow::NewProject() {
     return false;
   }
   ++generation_;
-  document_.New();
+  document_.New(view_preferences_->ChosenDefaultEncoder());
   return true;
 }
 
@@ -628,9 +737,94 @@ void MainWindow::AddFromDialog() {
   if (paths.isEmpty()) {
     return;
   }
-  // After the last selected phrase, or at the end.
+  ImportFiles(paths, InsertionRow());
+}
+
+int MainWindow::InsertionRow() const {
   const QList<int> rows = panel_->SelectedRows();
-  ImportFiles(paths, rows.isEmpty() ? model_.PhraseCount() : rows.back() + 1);
+  return rows.isEmpty() ? model_.PhraseCount() : rows.back() + 1;
+}
+
+void MainWindow::ImportPhromFromDialog() {
+  const QStringList paths = dialogs_->ImportPhromPaths();
+  if (!paths.isEmpty()) {
+    ImportPhromImages(paths, InsertionRow());
+  }
+}
+
+void MainWindow::ImportPhromImages(const QStringList& paths, int row) {
+  QStringList failures;
+  std::set<std::string> taken = document_.Project().PhraseNames();
+  std::vector<project::PlacedPhrase> placed;
+  // Every image's ASCII entries and header strings, in order.
+  project::PhromImport all;
+  const int start = std::clamp(
+      row, 0, static_cast<int>(document_.Project().Phrases().size()));
+  for (const QString& path : paths) {
+    const QString shown = QDir::toNativeSeparators(path);
+    QFile file(path);
+    // Refused before reading: no project holds more than its PHROM budget.
+    if (file.size() > kMaxPhromImageBytes) {
+      failures << QStringLiteral("%1: too large for PHROM images (%2 bytes)")
+                      .arg(shown)
+                      .arg(file.size());
+      continue;
+    }
+    if (!file.open(QIODevice::ReadOnly)) {
+      failures << QStringLiteral("%1: cannot be read: %2")
+                      .arg(shown, file.errorString());
+      continue;
+    }
+    const QByteArray read = file.readAll();
+    const std::vector<std::uint8_t> bytes(read.begin(), read.end());
+    core::StatusOr<project::PhromImport> imported =
+        project::ImportPhromImage(bytes, taken);
+    if (!imported.IsOk()) {
+      failures << QStringLiteral("%1: %2").arg(
+          shown, ToQString(imported.GetStatus().Message()));
+      continue;
+    }
+    core::Logger(core::kLogModuleGui)
+        ->info("read {} words from {}", imported->phrases.size(),
+               path.toStdString());
+    for (project::Phrase& phrase : imported->phrases) {
+      taken.insert(phrase.name);
+      placed.push_back({.index = start + static_cast<int>(placed.size()),
+                        .phrase = std::move(phrase)});
+    }
+    all.ascii_map.merge(imported->ascii_map);
+    for (std::vector<std::string>& strings : imported->header_strings) {
+      all.header_strings.push_back(std::move(strings));
+    }
+  }
+  std::vector<project::PhraseId> added;
+  added.reserve(placed.size());
+  for (const project::PlacedPhrase& phrase : placed) {
+    added.push_back(phrase.phrase.id);
+  }
+  if (!placed.empty()) {
+    // With the images' ASCII entries and header strings, so exporting the
+    // words gives back the images (MergeImportedPhromSettings()).
+    const project::Project& now = document_.Project();
+    if (const core::Status status = document_.Edits().ImportPhrom(
+            std::move(placed), project::MergeImportedPhromSettings(
+                                   now.Settings(), now.Phrases().empty(), all));
+        !status.IsOk()) {
+      failures << ToQString(status.Message());
+      added.clear();
+    }
+  }
+  if (!added.empty()) {
+    panel_->Select(added);
+    statusBar()->showMessage(
+        QStringLiteral("Imported %1 word(s) as locked phrases")
+            .arg(added.size()),
+        kStatusMessageMs);
+  }
+  if (!failures.isEmpty()) {
+    ShowError(QStringLiteral("Import PHROM Images"),
+              failures.join(QLatin1Char('\n')));
+  }
 }
 
 void MainWindow::RemoveSelected() {
@@ -648,22 +842,8 @@ void MainWindow::RemoveSelected() {
 }
 
 void MainWindow::ShowAbout() {
-  // The logo heads the text, at its width in device-independent pixels; Qt
-  // picks the @2x image on a high-density screen. The logo carries the
-  // icon, so the box shows no icon of its own.
-  QMessageBox box(this);
-  box.setWindowTitle(QStringLiteral("About Speak5220"));
-  box.setIcon(QMessageBox::NoIcon);
-  box.setTextFormat(Qt::RichText);
-  box.setText(
-      QStringLiteral("<p><img src=\":/speak5220/speak5220-logo.png\"></p>"
-                     "<p><b>Speak5220</b> %1</p>"
-                     "<p>Creates TMS5220 speech data and builds PHROMs.</p>"
-                     "<p>Licensed under the GNU General Public License, "
-                     "version 3 or later.</p>")
-          .arg(ToQString(core::Version()).toHtmlEscaped()));
-  box.setStandardButtons(QMessageBox::Ok);
-  box.exec();
+  AboutDialog dialog(this);
+  dialog.exec();
 }
 
 void MainWindow::OnProjectChanged() {
@@ -1034,9 +1214,13 @@ void MainWindow::FinishImport(
   for (std::size_t i = 0; i < results.size(); ++i) {
     core::StatusOr<project::ImportResult>& result = results[i];
     if (!result.IsOk()) {
-      failures << QStringLiteral("%1: %2").arg(
-          QString::fromStdU16String(requests[i].path.u16string()),
-          ToQString(result.GetStatus().Message()));
+      // Each failure names its file, once.
+      const QString file =
+          QString::fromStdU16String(requests[i].path.u16string());
+      const QString message = ToQString(result.GetStatus().Message());
+      failures << (message.contains(file)
+                       ? message
+                       : QStringLiteral("%1: %2").arg(file, message));
       continue;
     }
     placed.push_back({.index = start + static_cast<int>(placed.size()),

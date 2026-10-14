@@ -455,7 +455,7 @@ StatusOr<std::vector<packaging::PhromImage>> BuildAcornPhroms(
   costs.reserve(phrases.size());
   for (const Phrase* phrase : phrases) {
     // Frames are validated whenever they enter the project.
-    StatusOr<PhraseCostInput> cost = CostOfPhrase(*phrase);
+    StatusOr<PhraseCostInput> cost = CostOfPhrase(*phrase, settings);
     if (!cost.IsOk()) {
       return cost.GetStatus();
     }
