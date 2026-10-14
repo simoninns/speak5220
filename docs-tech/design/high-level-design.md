@@ -1946,7 +1946,7 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
  │    └── Encode: EncoderPanel (§17; settings and encodings through
  │         ProjectEdits) under the waveform
  ├── OptimiseSession + OptimiseDialog (§17)
- └── status bar: ProjectSizeText(Project::Allocation())
+ └── status bar: WaveformView::HoverTextAt() (left), ProjectSizeText(Project::Allocation()) (right)
 ```
 
 - **`ProjectDocument`** owns the core `Project`, the `QUndoStack` and the
@@ -2060,7 +2060,10 @@ MainWindow ── IDialogs, IRecentFilesStore, IViewPreferences, ITaskRunner,
 - **Status bar.** `ProjectSizeText()` formats
   `37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3` (KB of 1024 bytes,
   one decimal, C locale), "No PHROMs in use" for none, and appends "over
-  budget" and the counts of phrases too large or not encoded.
+  budget" and the counts of phrases too large or not encoded; it is a
+  permanent widget, on the right. On the left, a normal widget (so a
+  temporary message hides it) shows the waveform hover readout that
+  `PhraseWaveforms::HoverTextChanged` relays (§16).
 
 **Deviations from the plan.**
 
@@ -2152,6 +2155,15 @@ ColourSchemeFollower ── IDesktopColourScheme (PortalColourScheme: D-Bus)
   `encoder::kReachedSample`: half-way reached to half-way to the next), is
   filled by its kind, with an optional grid line where it starts; the
   hover text (`DescribeFrame()`) gives the frame's kind and indices.
+- **Hover readout.** `WaveformView::HoverTextAt(x)` gives the source
+  sample under the pointer, its time (8 kHz), the amplitude there (the
+  `PeakCache` range of the pixel's samples, or the one sample when a
+  pixel is narrower than a sample), and the frame (`DescribeFrame()`) or
+  "gated"; empty beyond the extent. The view emits `HoverTextChanged` as
+  the pointer moves or leaves, and when the axis, samples, frames or
+  shading change under it; `PhraseWaveforms` relays it to the main
+  window's status bar. The plan has no status-bar readout; it was added
+  so the original and preprocessed audio have hover information too.
 - **Levels.** The chip's codes x 64 (`synth::kSampleScale`) take a
   quarter of 16-bit full scale, and the encoder aims at an RMS of 20
   codes, so the encoded audio is about 15 dB below a normalised

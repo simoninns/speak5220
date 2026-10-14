@@ -270,6 +270,8 @@ void PhraseWaveforms::BuildTrack(Track& track, const QString& tab_title,
           &PhraseWaveforms::Select);
   connect(view, &WaveformView::SelectionClearRequested, this,
           &PhraseWaveforms::ClearSelection);
+  connect(view, &WaveformView::HoverTextChanged, this,
+          &PhraseWaveforms::HoverTextChanged);
   connect(view, &WaveformView::PlayPauseRequested, this,
           [this, source] { PlayPause(source); });
   connect(track.play, &QToolButton::clicked, this,

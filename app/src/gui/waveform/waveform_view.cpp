@@ -16,6 +16,7 @@
 #include <QEvent>
 #include <QHelpEvent>
 #include <QKeyEvent>
+#include <QLatin1Char>
 #include <QLineF>
 #include <QMouseEvent>
 #include <QPaintEvent>
@@ -82,6 +83,8 @@ constexpr double kBackdropOpacity = 0.15;
 constexpr double kBackdropShare = 0.6;
 // The gap between the backdrop and the placeholder under it, in pixels.
 constexpr int kBackdropGap = 8;
+// The rate of the samples (SetSamples()), for the hover text's time.
+constexpr double kSamplesPerSecond = 8000.0;
 
 }  // namespace
 
@@ -109,6 +112,7 @@ void WaveformView::SetSamples(std::vector<float> samples, int source_offset) {
   extent_ = ContentExtent();
   Fit();
   update();
+  UpdateHover(hover_x_);
 }
 
 void WaveformView::Clear(const QString& placeholder, QPixmap backdrop) {
@@ -120,18 +124,21 @@ void WaveformView::Clear(const QString& placeholder, QPixmap backdrop) {
   backdrop_ = std::move(backdrop);
   playhead_.reset();
   update();
+  UpdateHover(hover_x_);
 }
 
 void WaveformView::SetShading(std::vector<TimeExtent> spans) {
   if (spans != shading_) {
     shading_ = std::move(spans);
     update();
+    UpdateHover(hover_x_);
   }
 }
 
 void WaveformView::SetFrames(std::vector<lpc::Frame> frames) {
   frames_ = std::move(frames);
   update();
+  UpdateHover(hover_x_);
 }
 
 void WaveformView::SetFrameGridShown(bool shown) {
@@ -236,6 +243,58 @@ QString WaveformView::ToolTipAt(double x) const {
   return {};
 }
 
+QString WaveformView::HoverTextAt(double x) const {
+  if (!HasSamples()) {
+    return {};
+  }
+  const auto source = static_cast<std::int64_t>(std::floor(axis_.XToSample(x)));
+  if (static_cast<double>(source) < extent_.begin ||
+      static_cast<double>(source) >= extent_.end) {
+    return {};
+  }
+  QString text =
+      QStringLiteral("%1 s, sample %2")
+          .arg(static_cast<double>(source) / kSamplesPerSecond, 0, 'f', 3)
+          .arg(source);
+  // The samples under the pixel, at least the one at its left edge.
+  const std::int64_t first = source + source_offset_;
+  const std::int64_t last =
+      std::max(first + 1,
+               static_cast<std::int64_t>(std::floor(axis_.XToSample(x + 1.0))) +
+                   source_offset_);
+  if (first >= 0 && std::cmp_less(first, peaks_.Size())) {
+    const Peak peak = peaks_.Range(first, last);
+    const auto amplitude = [](float value) {
+      return QStringLiteral("%1%2")
+          .arg(value < 0.0F ? QLatin1Char('-') : QLatin1Char('+'))
+          .arg(std::abs(static_cast<double>(value)), 0, 'f', 3);
+    };
+    text += peak.low == peak.high
+                ? QStringLiteral(", amplitude %1").arg(amplitude(peak.low))
+                : QStringLiteral(", amplitude %1 to %2")
+                      .arg(amplitude(peak.low), amplitude(peak.high));
+  }
+  if (const std::optional<int> frame = FrameAtX(x); frame.has_value()) {
+    text += QStringLiteral(" · ") +
+            DescribeFrame(*frame, frames_[static_cast<std::size_t>(*frame)]);
+  } else if (const double sample = axis_.XToSample(x);
+             std::ranges::any_of(shading_, [sample](const TimeExtent& span) {
+               return sample >= span.begin && sample < span.end;
+             })) {
+    text += QStringLiteral(" · gated");
+  }
+  return text;
+}
+
+void WaveformView::UpdateHover(std::optional<double> x) {
+  hover_x_ = x;
+  QString text = x.has_value() ? HoverTextAt(*x) : QString();
+  if (text != hover_text_) {
+    hover_text_ = std::move(text);
+    emit HoverTextChanged(hover_text_);
+  }
+}
+
 QSize WaveformView::sizeHint() const {
   return {kPreferredWidth, kPreferredHeight};
 }
@@ -285,6 +344,11 @@ void WaveformView::keyPressEvent(QKeyEvent* event) {
   QWidget::keyPressEvent(event);
 }
 
+void WaveformView::leaveEvent(QEvent* event) {
+  UpdateHover(std::nullopt);
+  QWidget::leaveEvent(event);
+}
+
 void WaveformView::mousePressEvent(QMouseEvent* event) {
   if (event->button() == Qt::LeftButton && HasSamples()) {
     // A click or a drag: which, the release or a move will tell.
@@ -298,6 +362,7 @@ void WaveformView::mousePressEvent(QMouseEvent* event) {
 }
 
 void WaveformView::mouseMoveEvent(QMouseEvent* event) {
+  UpdateHover(event->position().x());
   if (press_x_.has_value() && (event->buttons() & Qt::LeftButton) != 0) {
     const double x = event->position().x();
     if (!dragging_ &&
@@ -417,6 +482,7 @@ void WaveformView::Apply(const TimeAxis& axis, bool fitted) {
   if (clamped != axis_) {
     axis_ = clamped;
     update();
+    UpdateHover(hover_x_);
     emit AxisChanged();
   }
 }

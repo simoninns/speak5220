@@ -2,7 +2,8 @@
 
 `speak5220` opens a window with the project's phrases on the left, the
 selected phrase's name and description on the right with its three tabs
-below them, and the project's size in the status bar. The tabs follow
+below them, and the project's size in the status bar (with, on its left,
+what is under the pointer in a waveform). The tabs follow
 the stages of making a phrase, each with its [waveform](waveforms.md)
 and controls in the waveform area, and that stage's settings in the
 scrolling settings area below it:
@@ -230,7 +231,15 @@ clears the history.
 
 ## The status bar
 
-The status bar shows the project's size, for example:
+On its left, while the pointer is over a waveform, the status bar shows
+what is under it (see [Waveforms](waveforms.md#reading-the-waveform)), for
+example:
+
+`0.512 s, sample 4096, amplitude -0.310 to +0.420 · Frame 20: voiced, energy 9, ...`
+
+A message, such as one about an export, takes its place for a while.
+
+On its right it shows the project's size, for example:
 
 `37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3`
 

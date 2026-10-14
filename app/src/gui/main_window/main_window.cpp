@@ -318,6 +318,8 @@ QAction* MainWindow::TabAction(PhraseTab tab) const {
 
 QString MainWindow::StatusText() const { return status_label_->text(); }
 
+QString MainWindow::HoverText() const { return hover_label_->text(); }
+
 void MainWindow::CreateActions() {
   new_action_ = new QAction(QStringLiteral("&New"), this);
   new_action_->setShortcut(QKeySequence::New);
@@ -634,6 +636,11 @@ void MainWindow::CreateWidgets() {
   optimise_dialog_ =
       new OptimiseDialog(*optimise_session_, *player_, *synth_, *runner_, this);
 
+  // On the left, hidden while a message is shown.
+  hover_label_ = new QLabel(this);
+  statusBar()->addWidget(hover_label_, 1);
+  connect(waveforms_, &PhraseWaveforms::HoverTextChanged, hover_label_,
+          &QLabel::setText);
   status_label_ = new QLabel(this);
   statusBar()->addPermanentWidget(status_label_);
 }

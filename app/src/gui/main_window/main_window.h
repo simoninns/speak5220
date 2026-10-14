@@ -59,11 +59,12 @@ class PhraseWaveforms;
 // (PhraseWaveforms): Original, Preprocess with the preprocessing settings
 // (EncoderPanel::PreprocessPanel()), and Encode with the encoder panel
 // (EncoderPanel), each tab's waveform above its settings; the status bar shows
-// the project's size in KB and PHROMs. Menus: File (new, open, recent, save,
-// save as, import PHROM image, quit), Edit (undo, redo, preferences), View
-// (theme), Phrase (add, remove, move up and down, sort A-Z, re-encode,
-// optimise, revert to saved), Export, Audio (chip output, output filter,
-// chip clock), Help (about).
+// what is under the pointer in a waveform on the left (time, sample,
+// amplitude, frame) and the project's size in KB and PHROMs on the right.
+// Menus: File (new, open, recent, save, save as, import PHROM image, quit),
+// Edit (undo, redo, preferences), View (theme), Phrase (add, remove, move
+// up and down, sort A-Z, re-encode, optimise, revert to saved), Export,
+// Audio (chip output, output filter, chip clock), Help (about).
 //
 // The title is the project's file name, marked while it has unsaved
 // changes, as the phrase list marks each phrase changed since the last
@@ -100,6 +101,8 @@ class MainWindow : public QMainWindow {
   OptimiseDialog* OptimiseWindow() const { return optimise_dialog_; }
   // The status bar's project summary (ProjectSizeText()).
   QString StatusText() const;
+  // The status bar's readout of what is under the pointer in a waveform.
+  QString HoverText() const;
   QStringList RecentPaths() const { return recent_.Paths(); }
 
   // The File menu's commands. Each asks to save a modified project before
@@ -270,6 +273,7 @@ class MainWindow : public QMainWindow {
   OptimiseSession* optimise_session_ = nullptr;
   OptimiseDialog* optimise_dialog_ = nullptr;
   QLabel* status_label_ = nullptr;
+  QLabel* hover_label_ = nullptr;
   QMenu* recent_menu_ = nullptr;
 
   QAction* new_action_ = nullptr;

@@ -53,7 +53,9 @@ namespace speak5220::app {
 // or else the middle of the view: the first zoom in with a selection
 // narrower than the view shows just the selection, and later ones keep it
 // in the middle. Ctrl+wheel zooms about the pointer, the wheel scrolls;
-// hovering over a frame shows its indices. With no waveform it shows a
+// hovering over a frame shows its indices, and the pointer's time,
+// sample and amplitude (and frame, or that it is gated) are offered for a
+// status bar (HoverTextChanged()). With no waveform it shows a
 // placeholder, under a faint backdrop if it has one. The view stays fitted to
 // its extent until zoomed or scrolled. It is drawn dark, on black, in either
 // scheme (WaveformPalette(), ColoursFor()), unless set to follow the
@@ -132,6 +134,13 @@ class WaveformView : public QWidget {
   // The hover text at pixel `x`: the frame's description, that the
   // stretch is gated, or empty.
   QString ToolTipAt(double x) const;
+  // What is under pixel `x`, for a status bar: its time and source
+  // sample, the amplitude there (the lowest and highest, when the pixel
+  // covers several samples), and its frame or that it is gated; empty
+  // beyond the extent or with no waveform.
+  QString HoverTextAt(double x) const;
+  // The hover text where the pointer last was over the view, or empty.
+  const QString& HoverText() const { return hover_text_; }
 
   QSize sizeHint() const override;
   QSize minimumSizeHint() const override;
@@ -147,11 +156,15 @@ class WaveformView : public QWidget {
   void SelectionClearRequested();
   // Space: play or pause this pane.
   void PlayPauseRequested();
+  // The hover text changed: the pointer moved, left, or what is under it
+  // changed.
+  void HoverTextChanged(const QString& text);
 
  protected:
   bool event(QEvent* event) override;
   void changeEvent(QEvent* event) override;
   void keyPressEvent(QKeyEvent* event) override;
+  void leaveEvent(QEvent* event) override;
   void mouseMoveEvent(QMouseEvent* event) override;
   void mousePressEvent(QMouseEvent* event) override;
   void mouseReleaseEvent(QMouseEvent* event) override;
@@ -163,6 +176,8 @@ class WaveformView : public QWidget {
   void Apply(const TimeAxis& axis, bool fitted);
   // Zooms by `factor` about the selection, the marker or the middle.
   void ZoomBy(double factor);
+  // Sets the hover text for the pointer at `x`, or none.
+  void UpdateHover(std::optional<double> x);
   // Asks for the stretch from the press to `x` to be selected.
   void RequestSelectionTo(double x, bool finished);
   double SampleY(float value) const;
@@ -191,6 +206,9 @@ class WaveformView : public QWidget {
   // moved far enough since to be a drag rather than a click.
   std::optional<double> press_x_;
   bool dragging_ = false;
+  // The pointer's x while it is over the view, and the hover text there.
+  std::optional<double> hover_x_;
+  QString hover_text_;
   std::optional<double> playhead_;
   // The palette the waveform is drawn with (WaveformPaletteFor()), and its
   // colours.

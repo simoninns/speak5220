@@ -2,7 +2,8 @@
  * File:        waveform_view_test.cpp
  * Module:      waveform tests
  * Purpose:     Unit tests of the waveform view: placing samples by their
- *              offset, the frame under the pointer, zoom, clicks and keys
+ *              offset, the frame and hover text under the pointer, zoom,
+ *              clicks and keys
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -21,6 +22,7 @@
 #include <QPointF>
 #include <QString>
 #include <QWidget>
+#include <cstddef>
 #include <optional>
 #include <vector>
 
@@ -135,6 +137,70 @@ TEST_F(WaveformViewTest, ShadingDimsTheWaveform) {
   QImage shaded(view_.size(), QImage::Format_ARGB32);
   view_.render(&shaded);
   EXPECT_NE(plain, shaded);
+}
+
+// Just right of source sample `sample`'s left edge, so it is under the
+// pointer whatever the rounding.
+double JustRightOf(const WaveformView& view, double sample) {
+  return view.Axis().SampleToX(sample) + 0.1;
+}
+
+TEST_F(WaveformViewTest, HoverTextGivesTheTimeSampleAndAmplitude) {
+  EXPECT_EQ(view_.HoverTextAt(JustRightOf(view_, 800.0)),
+            QStringLiteral("0.100 s, sample 800, amplitude +0.250"));
+  // Beyond the extent there is nothing to say.
+  EXPECT_TRUE(view_.HoverTextAt(view_.Axis().SampleToX(1800.0)).isEmpty());
+  view_.Clear(QStringLiteral("None"));
+  EXPECT_TRUE(view_.HoverTextAt(200.0).isEmpty());
+}
+
+TEST_F(WaveformViewTest, HoverTextGivesTheRangeOfAPixelsSamples) {
+  std::vector<float> samples(2000, 0.5F);
+  for (std::size_t i = 1; i < samples.size(); i += 2) {
+    samples[i] = -0.5F;
+  }
+  view_.SetSamples(samples, kOffset);
+  // Fitted, each pixel covers 5 samples.
+  EXPECT_EQ(view_.HoverTextAt(JustRightOf(view_, 800.0)),
+            QStringLiteral("0.100 s, sample 800, amplitude -0.500 to +0.500"));
+  // Zoomed in to a sample's width or more, it gives just that one.
+  view_.SetAxis({.first = 800.0, .samples_per_pixel = 0.5});
+  EXPECT_EQ(view_.HoverTextAt(JustRightOf(view_, 801.0)),
+            QStringLiteral("0.100 s, sample 801, amplitude -0.500"));
+}
+
+TEST_F(WaveformViewTest, HoverTextAddsTheFrameOrThatItIsGated) {
+  view_.SetFrames({Frame::Voiced(9, 31, {}), Frame::Unvoiced(5, {1, 2, 3, 4}),
+                   Frame::Stop()});
+  // Encoded sample 420 is source sample 120, in frame 1.
+  EXPECT_EQ(view_.HoverTextAt(JustRightOf(view_, 120.0)),
+            QStringLiteral("0.015 s, sample 120, amplitude +0.250 · Frame 1: "
+                           "unvoiced, energy 5, K 1 2 3 4"));
+  view_.SetFrames({});
+  view_.SetShading({{.begin = 500.0, .end = 900.0}});
+  EXPECT_EQ(view_.HoverTextAt(JustRightOf(view_, 800.0)),
+            QStringLiteral("0.100 s, sample 800, amplitude +0.250 · gated"));
+}
+
+TEST_F(WaveformViewTest, HoverTextFollowsThePointerUntilItLeaves) {
+  std::vector<QString> texts;
+  QObject::connect(&view_, &WaveformView::HoverTextChanged,
+                   [&texts](const QString& text) { texts.push_back(text); });
+  SendMouse(view_, QEvent::MouseMove, JustRightOf(view_, 800.0));
+  ASSERT_EQ(texts.size(), 1U);
+  EXPECT_EQ(texts.back(), view_.HoverText());
+  EXPECT_THAT(texts.back().toStdString(),
+              ::testing::StartsWith("0.100 s, sample 800"));
+  // What is under the pointer changes as the view zooms.
+  view_.ZoomIn();
+  ASSERT_EQ(texts.size(), 2U);
+  EXPECT_THAT(texts.back().toStdString(),
+              ::testing::Not(::testing::StartsWith("0.100 s, sample 800")));
+  QEvent leave(QEvent::Leave);
+  QCoreApplication::sendEvent(&view_, &leave);
+  ASSERT_EQ(texts.size(), 3U);
+  EXPECT_TRUE(texts.back().isEmpty());
+  EXPECT_TRUE(view_.HoverText().isEmpty());
 }
 
 TEST_F(WaveformViewTest, ZoomInAndFitAgain) {

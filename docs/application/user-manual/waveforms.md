@@ -203,6 +203,23 @@ The numbers are the frame's coded indices (datasheet §8.1): a silence or
 stop frame has none, a repeat frame its energy and pitch, an unvoiced frame
 its energy and K1 to K4, and a voiced frame all of them.
 
+## Reading the waveform
+
+While the pointer is over any tab's waveform, the left of the
+[status bar](main-window.md#the-status-bar) says what is under it:
+
+`0.512 s, sample 4096, amplitude -0.310 to +0.420 · gated`
+
+- the time from the start of the original recording, and the sample
+  there (8000 a second; the same in every tab, as their times line up);
+- the amplitude there, from -1 to +1 full scale: the lowest and highest
+  of the samples under the pointer when it covers several, or the one
+  sample when zoomed in close;
+- on the encoded audio, the frame there, as in its hover text above; on
+  the preprocessed audio, **gated** where the noise gate turns it down.
+
+Beyond the end of the audio it is blank.
+
 ## Zoom and scroll
 
 | Control | What it does |

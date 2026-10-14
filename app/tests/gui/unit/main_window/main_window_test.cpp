@@ -119,6 +119,15 @@ TEST_F(MainWindowTest, EditMarksTheProjectModifiedAndUndoClearsIt) {
   EXPECT_EQ(window_.Model().PhraseCount(), 0);
 }
 
+TEST_F(MainWindowTest, StatusBarShowsWhatIsUnderTheWaveformPointer) {
+  EXPECT_TRUE(window_.HoverText().isEmpty());
+  WaveformView* view = window_.Waveforms()->Pane(PhraseTab::kEncode)->View();
+  emit view->HoverTextChanged(QStringLiteral("0.100 s, sample 800"));
+  EXPECT_EQ(window_.HoverText(), QStringLiteral("0.100 s, sample 800"));
+  emit view->HoverTextChanged(QString());
+  EXPECT_TRUE(window_.HoverText().isEmpty());
+}
+
 TEST_F(MainWindowTest, SelectingOnePhraseShowsItsDetails) {
   AddPhrases({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});
   window_.Panel()->Select({TestId(2)});

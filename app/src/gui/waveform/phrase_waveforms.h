@@ -224,6 +224,9 @@ class PhraseWaveforms : public QWidget {
   void Failed(const QString& title, const QString& message);
   // Another tab is shown.
   void CurrentTabChanged(PhraseTab tab);
+  // What is under the pointer in a tab's waveform changed, for a status
+  // bar (WaveformView::HoverTextAt()); empty when it is over none.
+  void HoverTextChanged(const QString& text);
 
  protected:
   // Redraws the play/pause icons in the new palette's colours.
