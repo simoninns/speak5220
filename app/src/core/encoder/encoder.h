@@ -37,7 +37,8 @@ namespace speak5220::core::encoder {
 // 1.3.0: the level aims at loudness, and the limiter has a clip budget.
 // 1.4.0: onsets voiced from the hops the chip plays; fades only after
 // loud unvoiced sound.
-inline constexpr std::string_view kEncoderVersion = "1.4.0";
+// 1.5.0: the pitch track held near RAPT's, off harmonics.
+inline constexpr std::string_view kEncoderVersion = "1.5.0";
 
 // The analysis behind an encoding, for tests and the waveform view.
 // Output sample kReachedSample + 200 j of the reference synthesis

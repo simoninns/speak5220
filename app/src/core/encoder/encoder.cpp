@@ -28,6 +28,7 @@
 #include "core/encoder/voicing_classifier.h"
 #include "core/lpc/frame.h"
 #include "core/preprocess/preprocess.h"
+#include "core/quality/pitch_estimator.h"
 #include "core/util/logging.h"
 #include "core/util/status.h"
 
@@ -50,11 +51,15 @@ int StreamBits(std::span<const lpc::Frame> frames) {
   return bits;
 }
 
-// The stages MakeEncoder() owns.
+// The stages MakeEncoder() owns. The pitch tracker's anchor is RAPT: at
+// 8 kHz REAPER, which the quality measures use, loses the voicing of whole
+// words and drops an octave on low and high voices, and Harvest, as right
+// as RAPT on the octave, takes five times as long as the rest of the
+// encoder (docs-tech/design/high-level-design.md §8, "The pitch anchor").
 class StandardEncoder : public IEncoder {
  public:
   StandardEncoder()
-      : pitch_tracker_(fft_),
+      : pitch_tracker_(fft_, rapt_),
         level_setter_(fft_),
         encoder_(analyser_, pitch_tracker_, voicing_classifier_, repeat_search_,
                  level_setter_) {}
@@ -67,6 +72,7 @@ class StandardEncoder : public IEncoder {
 
  private:
   dsp::PocketFft fft_;
+  quality::SptkPitchEstimator rapt_{quality::PitchAlgorithm::kRapt};
   FrameAnalyser analyser_;
   YinPitchTracker pitch_tracker_;
   VoicingClassifier voicing_classifier_;

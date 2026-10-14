@@ -227,7 +227,7 @@ way its callers can be unit tested.
 | `IQualityAssessor` | `QualityAssessor` | The GUI's encoder panel and Optimise |
 | `IVoiceActivity` | `FvadVoiceActivity` (libfvad) | The quality measures' voice activity mask |
 | `ILpcAnalysis` | `SptkLpcAnalysis` (SPTK 4) | The spectral envelope measure |
-| `IPitchEstimator` | `SptkPitchEstimator` (SPTK 4's REAPER or Harvest) | The pitch and voicing measures |
+| `IPitchEstimator` | `SptkPitchEstimator` (SPTK 4's REAPER, Harvest or RAPT) | The pitch and voicing measures; `YinPitchTracker`'s anchor |
 | `IProjectStore` | `ZipProjectStore` (libzip), `DirectoryProjectStore` | `ProjectSerializer` |
 | `IProjectEditor` | `Project` (the core editing operations) | The GUI's undo commands (`ProjectEdits`), `PhraseListModel`, `PhraseDetails`, `PhraseWaveforms` |
 | `IDialogs` | `QtDialogs` (`QFileDialog`, `QMessageBox`, `ExportDialog`) | `MainWindow`: file choices, the save prompt, confirmations, the export to run, errors |
@@ -376,8 +376,8 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
     the frames and the level-setting intermediates are the C++ encoder's
     (`app/scripts/golden/encoder.py` runs `EncoderReferenceWriter`), and
     the stages before them are still checked against the Python's values
-    (the voicing without the C++ encoder's onset rule, which the unit tests
-    check).
+    (the pitch track without the C++ encoder's pitch anchor, and the
+    voicing without its onset rule, which the unit tests check).
     A change behind an option that is off in those sets leaves the
     reference data as it is, and is tested by unit tests of its own.
 

@@ -500,7 +500,7 @@ stages over `PocketFft`.
 | Stage (interface → class) | Python | Does |
 |---|---|---|
 | `IFrameAnalyser` → `FrameAnalyser` | `analyse()` | `Segment()`: the 60 Hz high-pass, the level envelope, the gate, the onset and offset, the frame centres from c0. `Features()`: each frame's level, its loudness (the level after the loudness high-pass, not in the reference) and the lag-windowed autocorrelations (pre-emphasised for voiced, plain for unvoiced) |
-| `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path |
+| `IPitchTracker` → `YinPitchTracker` | `trackPitch()`, `_yin()`, `_candidates()`, `_tiltAndCrossings()` | The voicing and period every 5 ms: YIN on the 1 kHz low-pass, up to five candidates per hop, and a Viterbi path, its period held near RAPT's where RAPT finds voicing (the anchor, which the reference does not have, below) |
 | `IVoicingClassifier` → `VoicingClassifier` | the voicing part of `analyse()` | Each frame's voicing by majority of its three nearest hops (`CentredVoicing()`); onsets voiced from the hops the chip plays (`VoiceOnsets()`, which the reference does not have, below); then the octave fix (`CorrectOctaves()`). `SmoothVoicingRuns()`, which the reference does not have either, then removes islands shorter than `voicing_min_run` frames (below) |
 | `IRepeatSearch` → `RepeatSearch` | `_kindsAndK()`, `_segment()`, `_repeatRun()` | K quantised per frame; silence, full frames and repeats by dynamic programming over bits plus `repeatLambda` × distortion |
 | `ILevelSetter` → `LevelSetter` | `_shapeLevels()`, `_setLevels()`, `_gainOf()`, `_effectiveK()`, `_outLevels()` | Slow gain control; open-loop energies, five closed-loop passes through `ReferenceSynthesizer`, the too-loud check, the limiter (a ceiling of 160 and a clip budget, where the reference holds every code within 120) and the safety net, all on loudness ("Level setting", below) |
@@ -582,6 +582,45 @@ and fades, from the PHROM round trip":
   more, which would stop audibly (datasheet §12.2), and then by one frame
   at a third of its energy (`kFadeFromEnergy`, `kFadeStep`). The K5-K10
   guard follows as before.
+
+**The pitch anchor** (encoder-quality plan, Phase 5; 2026-10-13). A
+departure from `trackPitch()`, measured in §9, "The pitch anchor". YIN
+works on the 1 kHz low-passed signal, which can repeat more strongly at a
+harmonic than at the period: a first formant on the 4th harmonic, with a
+period that wanders from cycle to cycle, put `six` (Daniel) at 471 Hz for
+a voice of about 107 Hz, and the prior towards the utterance's median
+period, itself taken from the same dips, then held the whole word there
+(encoder-quality investigation §4.3).
+
+- `YinPitchTracker` takes an `IPitchEstimator` as its anchor;
+  `MakeEncoder()` gives it SPTK's RAPT (`SptkPitchEstimator`,
+  `PitchAlgorithm::kRapt`: 50 to 400 Hz every 10 ms) on `BandLimit()` of
+  the high-passed signal. `AnchorPeriods()` puts RAPT's F0 on the hops:
+  an even hop takes its value, an odd hop the geometric mean of the two
+  either side, or the voiced one of them.
+- Where the anchor finds a hop voiced, the prior holds the period within
+  0.2 octave of the anchor's and costs 20 per octave beyond
+  (`kAnchorFree`, `kAnchorPrior`), more than a harmonic's deeper dip
+  gains; elsewhere it is the reference's, towards the median period. The
+  anchor never decides the voicing, which stays with YIN's Viterbi path
+  and `voicing_threshold` and `voicing_evidence`; if it fails, the track
+  is the reference's.
+- REAPER, which the plan proposed and the quality measures use, does not
+  serve at 8 kHz: it rates whole words unvoiced (3 of the 64 TTS words
+  on the encoder's signal, and which ones changes with the level), and
+  drops an octave on low and high voices (`church` and `match` (Eddy)
+  and `book` (Fred) at 65 to 71 Hz, where the odd harmonics of that F0
+  are 20 to 30 dB below the even and the voice is about 130 Hz; `cat`
+  and `kiss` (Flo) at 58 Hz, against about 250). As the voicing source it
+  whispers whole words; as the anchor it moves five words of the phoneme
+  set an octave down to fix two. Harvest and RAPT agree with the spectra
+  on those words, but Harvest takes 0.044 s per second of speech, more
+  than five times the rest of the encoder, and RAPT 0.0003.
+  SPTK's RAPT keeps its state per call and seeds its dither the same way
+  each time, so an encoding is the same on any thread.
+
+Without an anchor, `YinPitchTracker` is the reference's tracker, and the
+reference data checks it so (§13).
 
 The plan names four stage interfaces. `IFrameAnalyser` is a fifth, so the
 orchestration can be unit tested with every stage mocked.
@@ -801,8 +840,9 @@ encoder version 1.3.0 the reference frames are the C++ encoder's own, §13):
 
 **Performance.** `ReferenceSynthesizer` runs the closed loop and the
 limiter, about ten times per phrase. The pitch tracker does two
-1024-point forward FFTs and one inverse per 5 ms hop. Neither has been
-optimised: neither needs it.
+1024-point forward FFTs and one inverse per 5 ms hop, and RAPT tracks the
+whole signal once (0.0003 s per second of speech). None of it has been
+optimised: none needs it.
 
 ---
 
@@ -1292,6 +1332,55 @@ voices only in its second half. The reference data was regenerated from
 the C++ encoder (§13), and the corpus check's 972 encodings match it;
 Optimise from the new defaults raises the score of 242 of the 243 files.
 
+**The pitch anchor** (2026-10-13; §8, "The pitch anchor"; encoder-quality
+plan, Phase 5). The gross pitch error (GPE) and F0 RMSE compare REAPER's
+tracks of the source and of the chip's output, and at 8 kHz REAPER is
+often wrong itself (§8): it puts `church` (Eddy) at 71 Hz, so an
+encoding at the voice's 131 Hz scores 100 % GPE, and it reads Flo's
+`seven`, coded at 296 to 157 Hz against a source REAPER puts at 276 to
+182 Hz, at 55 to 90 Hz in the chip's output. So the candidates were also
+judged by the coded GPE: each voiced frame's coded period against the
+source's F0 at the frame's centre, from REAPER and from Harvest, which
+avoids reading the chip's output. Measured with `option_sweep.py` (the
+investigation's 64 TTS files, ARCTIC's 33, the corpus of 243), the phoneme
+set (150 files) encoded by the CLI, and `phrom-check.sh`, at the
+defaults; GPE and F0 RMSE are medians over the files, encoding time from
+`benchmark.sh` (one core):
+
+| Tracker | TTS: files over 20 % GPE; F0 RMSE; score median, mean | Phoneme set: files over 20 % coded GPE, against REAPER / Harvest | ARCTIC: GPE; F0 RMSE; score median | Corpus: GPE; files over 20 %; score median, mean | Round trip: agreement; pitch, mean difference | Encoding, s per s of speech |
+|---|---|---|---|---|---|---|
+| YIN (Phase 4) | 8; 43 cents; 0.735, 0.742 | 16 / 7 | 5.6 %; 63 cents; 0.709 | 4.7 %; 13; 0.738, 0.741 | 97.9 %; 0.43 semitones | 0.0081 |
+| REAPER's voicing and F0, YIN's period | 6; 50; 0.719, 0.689 | | 7.3 %; 72; 0.674 | 4.8 %; 10; 0.740, 0.730 | 97.4 %; 0.44 | 0.0089 |
+| YIN with a two-pass prior and a harmonic test | 10; 43; 0.737, 0.729 | | 5.6 %; 66; 0.707 | 4.5 %; 12; 0.744, 0.742 | 97.7 %; 0.42 | 0.0091 |
+| YIN, REAPER as the anchor | 7; 44; 0.749, 0.745 | 13 / 18 | 3.8 %; 68; 0.706 | 3.7 %; 6; 0.741, 0.739 | 97.9 %; 0.42 | 0.0108 |
+| YIN, Harvest as the anchor | 7; 44; 0.745, 0.754 | 12 / 4 | 5.6 %; 65; 0.708 | 4.8 %; 28; 0.735, 0.736 | 97.7 %; 0.42 | 0.052 |
+| YIN, RAPT as the anchor (the encoder) | 7; 43; 0.749, 0.755 | 13 / 6 | 5.6 %; 63; 0.709 | 4.4 %; 12; 0.736, 0.741 | 98.1 %; 0.43 | 0.0084 |
+
+REAPER's voicing whispers whole words and costs ARCTIC 0.035 of its
+median score. The two-pass prior and harmonic test (a full-band
+normalised autocorrelation at 2, 3 and 4 times the lag) cannot move
+`six` (Daniel): its period wanders, so even the full band repeats best at
+the harmonic. REAPER as the anchor scores best against REAPER and worst
+against Harvest, having taken on REAPER's own octave drops; Harvest as
+the anchor scores best against Harvest but is slow. RAPT as the anchor
+fixes `six` (471 Hz to 107 Hz) and `sixty six` (182 to 116 Hz) (Daniel)
+and changes no other listening word (`cat`, `church`, `science`,
+`seven`, each voice), for no measurable time: Optimise takes 7.97 s per
+second of speech on one thread (7.83).
+
+On the round trip it voices 26 of the PHROM's hiss frames (27), with 4
+offsets voiced too short (6), and 76 offsets a frame late (72); 80
+onsets on time. The phoneme set's files over 20 % GPE fall from 20 to 19
+of 152, its loud unvoiced frames before voicing from 10 to 8, and its
+mean score rises from 0.718 to 0.724. The plan's bounds on GPE are not
+met as written, because they count REAPER's errors: 7 TTS files stay
+over 20 %, none of them over 20 % by the coded GPE against Harvest (two
+others are, `kick` and `chess` (Eddy), at 33 % and 29 %); ARCTIC's
+median is 5.6 % (5 % asked); and the round trip's pitch difference is
+0.43 semitones (0.4). The reference data was regenerated from the C++
+encoder (§13), and the corpus check's 972 encodings match it; Optimise
+from the new defaults raises the score of 242 of the 243 files.
+
 **The anchor vocoder** is order 10, 25 ms frames, K and gain
 interpolated over 8 steps, a pulse per pitch period or Gaussian noise, pre-
 and de-emphasis 0.9375, nothing quantised: what unquantised LPC reaches,
@@ -1376,7 +1465,7 @@ the emulator's: the encoder is sensitive to the length of the idle tail
 | Project metadata | yaml-cpp | MIT | Linked by `s5core` (public: the migration interface takes a `YAML::Node`) |
 | ESTOI | The project's own code (`core/quality/estoi`), a port of pystoi's (MIT), checked against it (§9) | GPLv3-or-later | Implemented |
 | Voice activity | libfvad (the WebRTC detector as a C library) | BSD-3 | Linked by `s5core` (`FvadVoiceActivity`); built by `flake.nix` and a vcpkg overlay port, since neither nixpkgs nor vcpkg has it |
-| LPC analysis, pitch and voicing | SPTK 4, with its own copies of REAPER (Apache-2.0) and WORLD's Harvest (Modified BSD) | Apache-2.0 | Linked by `s5core` (`SptkLpcAnalysis`, `SptkPitchEstimator`); from nixpkgs, and a vcpkg overlay port. SPTK's REAPER and Harvest are the originals with warning fixes, in SPTK's namespace, with the same defaults, so they need no packages of their own; the reference data takes its tracks from the originals (§13) |
+| LPC analysis, pitch and voicing | SPTK 4, with its own copies of REAPER (Apache-2.0), WORLD's Harvest (Modified BSD) and Snack's RAPT (Tcl/Tk licence) | Apache-2.0 | Linked by `s5core` (`SptkLpcAnalysis`, `SptkPitchEstimator`); from nixpkgs, and a vcpkg overlay port. SPTK's REAPER and Harvest are the originals with warning fixes, in SPTK's namespace, with the same defaults, so they need no packages of their own; the reference data takes its tracks from the originals (§13). Its RAPT, the encoder's pitch anchor (§8), is Snack's `get_f0` made reentrant |
 | Overall perceptual score | ViSQOL v3 | Apache-2.0 | Left out (plan §3.3, R1): Bazel-only upstream, with Abseil, protobuf, Armadillo and a machine-learned model in its speech mode |
 | Logging | spdlog | MIT | Linked by `s5core` |
 | Tests | Google Test with Google Mock | BSD-3 | Linked by the test binaries |
@@ -1481,12 +1570,14 @@ the build and tests read only these files and never run anything in
   stages up to the plan from the Python encoder (same rules: refuses local
   changes, records the commit, the SHA-256 and the NumPy and SciPy
   versions), the level setting and the frames from the C++ encoder, whose
-  level setting, onsets and fades depart from the reference's (§8, "Level
-  setting" and "Onsets and fades"; agreed with the user, encoder-quality
-  plan D7). Each frame's voicing in the analysis is the Python's, without
-  `VoiceOnsets()`, and is checked against the stages the two share
-  (`CentredVoicing()` and `CorrectOctaves()`); the stages after it take it
-  as their input. The script runs the by-hand
+  level setting, onsets, fades and pitch anchor depart from the
+  reference's (§8, "Level setting", "Onsets and fades" and "The pitch
+  anchor"; agreed with the user, encoder-quality plan D7). The pitch track
+  is the Python's, without the anchor, and is checked against
+  `YinPitchTracker` without one. Each frame's voicing in the analysis is
+  the Python's, without `VoiceOnsets()`, and is checked against the
+  stages the two share (`CentredVoicing()` and `CorrectOctaves()`); the
+  stages after it take it as their input. The script runs the by-hand
   functional test `EncoderReferenceWriter` on the corpus's WAV copies and
   records `kEncoderVersion`; `--check` compares:
   - `inputs/`: WAV copies of an eight-file corpus subset (public-domain and
@@ -1637,7 +1728,8 @@ clip budget (§8, "Level setting"): the test projects with recordings were
 encoded again, their exports' hashes recorded again, and the reference
 data regenerated from the C++ encoder (§13). `1.4.0` voices onsets from
 the hops the chip plays and fades only loud hiss (§8, "Onsets and
-fades"), with the same regeneration.
+fades"), and `1.5.0` holds the pitch track near RAPT's (§8, "The pitch
+anchor"), each with the same regeneration.
 
 **Audio on the 24-bit grid.** A project stores audio as 24-bit PCM, so the
 importer rounds the 8 kHz samples to codes / 2^23 (`QuantiseToPcm24()`),

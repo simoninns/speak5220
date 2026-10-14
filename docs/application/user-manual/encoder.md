@@ -71,7 +71,9 @@ voice activity detector. Three things are measured:
 - **Pitch**: the share of frames whose pitch is wrong by more than 20%
   (gross errors, such as an octave out), how far it is out otherwise, in
   cents, and the share of frames where voiced and unvoiced sounds are
-  swapped.
+  swapped. The pitch tracker the rating uses can itself be an octave out
+  on some very low or very high voices, so a phrase whose pitch sounds
+  right can still be marked down here.
 - **Intelligibility**: ESTOI, from 0 to 1, which compares the loudness of
   the speech in each band over time. It needs about 0.4 s of speech; a
   shorter phrase is rated on the other two.
@@ -411,6 +413,17 @@ start and end as Acorn's own do:
   of it. Acorn's phrases, re-encoded, now end in a fade 4 times in 157
   words, against 23 before (the phrases themselves: 3); each of those
   fades lengthened the word by 25 to 75 ms of hiss.
+
+## The voice's pitch
+
+The encoder finds the pitch of each voiced frame from how the sound
+repeats. A vowel whose lowest resonance sits on a multiple of the voice's
+pitch (the *i* of *six*, for example) can repeat more strongly at that
+multiple than at the pitch itself, and would come out as a high, thin
+buzz. So the encoder checks its pitch against a second pitch tracker,
+which listens differently, and keeps to it wherever that tracker hears a
+voice; which frames are voiced is still the encoder's own decision, set
+by the voicing settings. There is no setting for this.
 
 ## Quiet pauses
 

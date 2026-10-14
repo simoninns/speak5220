@@ -53,6 +53,7 @@ target_compile_definitions(
 
 # The quality measures (plan §3.3): libfvad's voice activity detector, and
 # SPTK 4's LPC analysis and pitch estimators (its own copies of REAPER and
-# WORLD's Harvest)
+# WORLD's Harvest); and the encoder's pitch anchor, SPTK's copy of Snack's
+# RAPT
 speak5220_import_library(fvad fvad.h fvad)
 find_package(SPTK 4 CONFIG REQUIRED)

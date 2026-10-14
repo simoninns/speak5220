@@ -3,7 +3,7 @@
  * Module:      quality tests
  * Purpose:     Functional tests of the adapters over the quality measures'
  *              libraries: libfvad's voice activity, SPTK's LPC envelopes
- *              and its REAPER and Harvest pitch estimators
+ *              and its REAPER, Harvest and RAPT pitch estimators
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -129,7 +129,7 @@ TEST(QualityLibrariesTest, SptkRefusesASilentFrame) {
   EXPECT_FALSE(SptkLpcAnalysis().Analyse(silence, 10).IsOk());
 }
 
-// Both estimators find the vowel's 160 Hz in its middle, within 1%, and nothing
+// Each estimator finds the vowel's 160 Hz in its middle, within 1%, and nothing
 // in the silence around it.
 void ExpectTracksTheVowel(PitchAlgorithm algorithm) {
   const std::vector<double> x = SilenceVowelSilence(0.5);
@@ -146,7 +146,7 @@ void ExpectTracksTheVowel(PitchAlgorithm algorithm) {
   }
 }
 
-// Plan Phase 8, task 9: on pulse trains at 8 kHz both estimators find F0
+// Plan Phase 8, task 9: on pulse trains at 8 kHz each estimator finds F0
 // within 1 %, at each F0 with a whole period in samples.
 void ExpectFindsPulseTrainF0(PitchAlgorithm algorithm) {
   SptkPitchEstimator estimator(algorithm);
@@ -175,12 +175,20 @@ TEST(QualityLibrariesTest, HarvestFindsPulseTrainF0WithinOnePercent) {
   ExpectFindsPulseTrainF0(PitchAlgorithm::kHarvest);
 }
 
+TEST(QualityLibrariesTest, RaptFindsPulseTrainF0WithinOnePercent) {
+  ExpectFindsPulseTrainF0(PitchAlgorithm::kRapt);
+}
+
 TEST(QualityLibrariesTest, ReaperTracksTheVowel) {
   ExpectTracksTheVowel(PitchAlgorithm::kReaper);
 }
 
 TEST(QualityLibrariesTest, HarvestTracksTheVowel) {
   ExpectTracksTheVowel(PitchAlgorithm::kHarvest);
+}
+
+TEST(QualityLibrariesTest, RaptTracksTheVowel) {
+  ExpectTracksTheVowel(PitchAlgorithm::kRapt);
 }
 
 }  // namespace

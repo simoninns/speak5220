@@ -14,8 +14,8 @@ vcpkg_from_github(
 )
 
 # Compiled as the application is, without fused multiply-add contraction
-# (app/cmake/CompilerWarnings.cmake), so its REAPER and Harvest give the same
-# pitch tracks on every platform. MSVC does not contract by default.
+# (app/cmake/CompilerWarnings.cmake), so its REAPER, Harvest and RAPT give
+# the same pitch tracks on every platform. MSVC does not contract by default.
 if(NOT VCPKG_TARGET_IS_WINDOWS)
     string(APPEND VCPKG_C_FLAGS " -ffp-contract=off")
     string(APPEND VCPKG_CXX_FLAGS " -ffp-contract=off")

@@ -48,7 +48,9 @@ version 1.3.0; docs-tech/design/high-level-design.md §8, "Level setting"),
 so since then the frames and the level-setting intermediates are its own,
 regenerated with each intended change to it, and the Python provides the
 stages before (HLD §13). Its onsets and fades depart too (HLD §8, "Onsets
-and fades"): each frame's voicing in the intermediates is the
+and fades"), and so does its pitch anchor (HLD §8, "The pitch anchor"):
+the pitch track in the intermediates is the Python's, which the C++
+tracker gives without its anchor, and each frame's voicing is the
 Python's, without the C++ encoder's onset rule, which only the unit tests
 check. A near-tie frame is one whose coding changes when
 the input is disturbed at the level of floating-point noise; the C++

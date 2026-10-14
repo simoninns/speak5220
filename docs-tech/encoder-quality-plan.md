@@ -254,20 +254,20 @@ the reference data. Done 2026-10-13; the sweeps and the reasons are in HLD
      0.0085). The listening check of five loud and five quiet files is
      the user's.
 
-**Baseline for the later phases.** The defaults after Phases 3 and 4, by
+**Baseline for the later phases.** The defaults after Phases 3 to 5, by
 the same commands:
 
-| Measure | Phase 2 defaults | Phase 3 defaults | Phase 4 defaults |
-|---|---|---|---|
-| ARCTIC (33): score median / mean | 0.698 / 0.695 | 0.708 / 0.701 | 0.709 / 0.706 |
-| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 2.97 dB, 5.5 %, 18.4 %, 0.764 | 2.88 dB, 5.7 %, 18.9 %, 0.765 | 2.87 dB, 5.6 %, 20.4 %, 0.771 |
-| ARCTIC: bytes; sounding RMS, peak, clipped (mean), BBC Micro RMS, A-weighted RMS | 20,298; 19.6, 118, 0, 11.6, 8.5 | 20,452; 24.7, 146, 0.082 %, 14.5, 10.6 | 20,771; 24.9, 147, 0.084 %, 14.5, 10.6 |
-| Corpus (243): score median / mean; bytes | 0.730 / 0.732; 122,016 | 0.742 / 0.742; 122,687 | 0.738 / 0.742; 124,477 |
-| TTS (64): score median / mean | 0.747 / 0.726 | 0.730 / 0.741 | 0.735 / 0.742 |
-| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 97.2 %; 17 / 28 / 7 / 26 | 97.2 %; 16 / 28 / 7 / 26 | 97.9 %; 10 / 14 / 6 / 27 |
-| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 395; 25; 1.98 dB; +0.36 / +0.78 | 393; 23; 1.99 dB; +0.58 / +0.80 | 358; 4; 1.99 dB; +0.58 / +0.79 |
-| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 | 21.8 / 21.5, 124 / 126, 14.5 / 14.6 | 21.8 / 21.6, 124 / 126, 14.5 / 14.5 |
-| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 13; 23 of 152; 81 of 553 | 17; 22 of 152; 81 of 553 | 10; 20 of 152; 99 of 553 |
+| Measure | Phase 2 defaults | Phase 3 defaults | Phase 4 defaults | Phase 5 defaults |
+|---|---|---|---|---|
+| ARCTIC (33): score median / mean | 0.698 / 0.695 | 0.708 / 0.701 | 0.709 / 0.706 | 0.709 / 0.708 |
+| ARCTIC: envelope distortion, GPE, VDE, ESTOI | 2.97 dB, 5.5 %, 18.4 %, 0.764 | 2.88 dB, 5.7 %, 18.9 %, 0.765 | 2.87 dB, 5.6 %, 20.4 %, 0.771 | 2.87 dB, 5.6 %, 19.6 %, 0.771 |
+| ARCTIC: bytes; sounding RMS, peak, clipped (mean), BBC Micro RMS, A-weighted RMS | 20,298; 19.6, 118, 0, 11.6, 8.5 | 20,452; 24.7, 146, 0.082 %, 14.5, 10.6 | 20,771; 24.9, 147, 0.084 %, 14.5, 10.6 | 20,756; 24.9, 147, 0.084 %, 14.5, 10.6 |
+| Corpus (243): score median / mean; bytes | 0.730 / 0.732; 122,016 | 0.742 / 0.742; 122,687 | 0.738 / 0.742; 124,477 | 0.736 / 0.741; 124,387 |
+| TTS (64): score median / mean | 0.747 / 0.726 | 0.730 / 0.741 | 0.735 / 0.742 | 0.749 / 0.755 |
+| Round trip: agreement; inside / onset / offset / unvoiced-made-voiced | 97.2 %; 17 / 28 / 7 / 26 | 97.2 %; 16 / 28 / 7 / 26 | 97.9 %; 10 / 14 / 6 / 27 | 98.1 %; 10 / 14 / 4 / 26 |
+| Round trip: repeats; fade-outs; voiced shape error; energy bias voiced / unvoiced | 395; 25; 1.98 dB; +0.36 / +0.78 | 393; 23; 1.99 dB; +0.58 / +0.80 | 358; 4; 1.99 dB; +0.58 / +0.79 | 358; 4; 1.99 dB; +0.58 / +0.78 |
+| Round trip: sounding RMS, peak, A-weighted (PHROM / ours) | 21.8 / 20.2, 124 / 109, 14.5 / 13.4 | 21.8 / 21.5, 124 / 126, 14.5 / 14.6 | 21.8 / 21.6, 124 / 126, 14.5 / 14.5 | 21.8 / 21.6, 124 / 126, 14.5 / 14.5 |
+| Phoneme set (`say`): loud onset frames; files over 20 % GPE; consonant frames voiced | 13; 23 of 152; 81 of 553 | 17; 22 of 152; 81 of 553 | 10; 20 of 152; 99 of 553 | 8; 19 of 152; 99 of 553 |
 
 ## Phase 4: Voicing onsets and fades
 
@@ -323,38 +323,64 @@ the PHROM round trip", and the design in HLD §8, "Onsets and fades".
 ## Phase 5: A pitch tracker that cannot lock on a harmonic
 
 Depends on: Phase 4. Change C5. One regeneration of the reference data.
+Done 2026-10-13; the design is in HLD §8, "The pitch anchor", and the
+figures in HLD §9, "The pitch anchor".
 
-1. **Prototype and decide.** Two candidates, built behind the
-   `IPitchTracker` interface so each is measured by the Phase 1 harness
-   on the TTS set, the phoneme set, ARCTIC and the round trip:
-   (a) REAPER (`quality::SptkPitchEstimator`, `PitchAlgorithm::kReaper`,
-   50–400 Hz every 10 ms) gives voicing and F0, and the present YIN
-   refines the period at 5 ms inside REAPER's voiced stretches;
-   (b) the present tracker with a two-pass prior (the median period of a
-   first Viterbi path without the prior, weighted by level), a harmonic
-   test on the full-band normalised autocorrelation at 2×, 3× and 4× the
-   candidate lag, and the subharmonic rule reconsidered. REAPER is taken
-   unless it slows Optimise by more than about a third (D4); encoding time
-   from `benchmark.sh` (AGENTS.md §5).
-   - **Acceptance:** a comparison table: GPE and F0 RMSE per set, round-
-     trip pitch agreement, voicing agreement, encoding time per second of
-     speech.
-2. **Implement the chosen tracker.** As the `IPitchTracker` the encoder
-   uses, deterministic whatever the thread count, with unit tests on
-   synthetic pulse trains (16 to 160 samples), a pulse train with a
-   boosted 4th harmonic (the `six` case), and a glide of an octave over
-   100 ms.
-   - **Acceptance:** REAPER GPE of the default encoding against the source
-     under 20 % on every TTS file (10 of 64 fail today) and ≤ 5 % median
-     on ARCTIC; round-trip pitch mean |difference| ≤ 0.4 semitones;
-     encoding time ≤ 0.02 s per second of speech on one core (0.011
-     today).
-3. **Reference data, version and documentation** as Phase 3 task 4; HLD
-   §8's pitch stage rewritten; `pitch_tracker` names what it re-implements
-   or replaces (AGENTS.md §4.3.6).
-   - **Acceptance:** as Phase 3 task 4, with a listening check of the
-     words that failed before (`six`, `cat`, `church`, `science`, `seven`,
-     `sixty six`).
+1. **Prototype and decide.** Five candidates were built behind
+   `IPitchTracker` and measured on the TTS set, the phoneme set, ARCTIC,
+   the corpus and the round trip: (a) REAPER's voicing and F0 with YIN
+   refining the period; (b) the present tracker with a two-pass prior, a
+   full-band harmonic test at 2×, 3× and 4× the lag and the subharmonic
+   rule kept only where the full band agrees; and the present tracker
+   with its prior held near an anchor's F0 where the anchor finds voicing,
+   with REAPER, Harvest or RAPT as the anchor. At 8 kHz REAPER rates whole
+   words unvoiced and drops an octave on low and high voices, and the GPE
+   measure, which compares REAPER's tracks, inherits both; so each
+   candidate was also judged by its coded GPE (each voiced frame's coded
+   period against the source's F0 from REAPER and from Harvest) and by
+   the voices' harmonics. (a) whispers whole words; (b) cannot move `six`
+   (Daniel); REAPER as the anchor takes on REAPER's octave drops; Harvest
+   as the anchor encodes at 0.052 s per second of speech, over the
+   application's 0.05. RAPT as the anchor was chosen with the user (D9).
+   - **Acceptance:** the comparison table, with GPE and F0 RMSE per set,
+     round-trip pitch and voicing agreement and encoding time, is in HLD
+     §9, "The pitch anchor". Met.
+2. **Implement the chosen tracker.** `YinPitchTracker` with an
+   `IPitchEstimator` anchor (`AnchorPeriods()`, `kAnchorPrior`,
+   `kAnchorFree`); `MakeEncoder()` gives it `SptkPitchEstimator` with the
+   new `PitchAlgorithm::kRapt`. Without an anchor the tracker is the
+   reference's. Unit tests, with the anchor mocked: pulse trains of 16 to
+   160 samples; a pulse train whose narrow first formant sits on its 4th
+   harmonic, with its period wandering by 3 % (`six`), locked on the
+   harmonic without the anchor and on the period with it; a glide of an
+   octave over 100 ms; an anchor that fails or finds no voicing changes
+   nothing; an anchor does not voice noise; `AnchorPeriods()`.
+   Functional tests: RAPT on pulse trains and a vowel, the encoder coding
+   the `six` signal at its period, and encodings on eight threads at once
+   matching one.
+   - **Acceptance:** REAPER GPE of the default encoding under 20 % on
+     every TTS file: **not met**, 7 of 64 over (8 in Phase 4), none of
+     them over 20 % by the coded GPE against Harvest. ARCTIC median GPE
+     ≤ 5 %: **not met**, 5.6 % (5.6 %). Round-trip pitch mean |difference|
+     ≤ 0.4 semitones: **not met**, 0.43 (0.43). These bounds count
+     REAPER's own errors (HLD §9); whether to accept them is the user's.
+     Encoding time ≤ 0.02 s per second of speech: met, 0.0084 (0.0081).
+     Round trip 98.1 % agreement, unvoiced-made-voiced 26 (27).
+3. **Reference data, version and documentation** as Phase 3 task 4:
+   `app/golden/encoder/` (the frames and the "encode" sections from the
+   C++ encoder; the pitch tracks in the intermediates are the Python's,
+   without the anchor, and are checked against `YinPitchTracker` without
+   one) and `app/golden/quality/` regenerated; `kEncoderVersion` 1.5.0;
+   the fixture projects with recordings re-encoded and their export
+   hashes recorded again. HLD §8 (the stage table, "The pitch anchor",
+   "Performance"), §9 and §13, TESTING.md, `app/golden/README.md` and
+   `encoder.py` updated.
+   - **Acceptance:** `corpus-check.sh` passes against the new reference
+     (972 of 972 identical; Optimise raises 242 of 243 files, mean gain
+     0.058): met. The listening check of the words
+     that failed before (`six`, `cat`, `church`, `science`, `seven`,
+     `sixty six`) is the user's: `six` and `sixty six` (Daniel) now code
+     at 107 and 116 Hz (471 and 182), and the others are unchanged.
 
 ## Decisions
 
@@ -370,6 +396,7 @@ Agreed with the user on the investigation's figures.
 | D6. Voicing threshold (Phase 2 task 1; 2026-10-13) | 0.5 (expected), 0.55 (the least meeting the round-trip bounds) or 0.6 | 0.6: the best corpus mean and fewest Poor files, 97.2 % round-trip agreement; ARCTIC's median VDE (18.4 %) over the 16 % bound accepted, as VDE is against a tracker's voicing of the source |
 | D7. Reference data after an algorithm change (Phase 3 task 4; 2026-10-13) | Advanced options whose old values reproduce the Python reference, leaving the data unchanged; changing the Python reference in `investigation/`; or the C++ encoder's own output as the reference | The C++ encoder's own frames and level-setting intermediates; the Python still checks the stages before the level setting. Phases 4 and 5 regenerate the same way |
 | D8. `target_rms` (Phase 3 task 3; 2026-10-13) | 16 (closest energy indices on the round trip, but the PHROM's words 1 dB quieter than the PHROM), 18, 20 (the PHROM's loudness on its own words), 24 | 20. The ARCTIC A-weighted bounds of task 2 relaxed: they need 24 to 30, which lowers the ARCTIC score and leaves the consonants louder still |
+| D9. Pitch tracker (Phase 5 task 1; 2026-10-13) | REAPER as the encoder's voicing and F0 (D4); the present tracker with a two-pass prior and a harmonic test; the present tracker held near an anchor's F0, the anchor REAPER, Harvest or RAPT | The present tracker held near RAPT's F0 where RAPT finds voicing, YIN keeping the voicing. REAPER loses whole words' voicing and drops an octave on low and high voices at 8 kHz; Harvest, first chosen, encodes at 0.052 s per second of speech, over the application's 0.05; RAPT is as right on the octave for no measurable time |
 
 ## Risks
 

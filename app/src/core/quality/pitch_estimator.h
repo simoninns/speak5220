@@ -1,8 +1,9 @@
 /*
  * File:        pitch_estimator.h
  * Module:      quality
- * Purpose:     Pitch and voicing estimation for the quality measures: the
- *              interface and its SPTK implementation (REAPER or Harvest)
+ * Purpose:     Pitch and voicing estimation for the quality measures and
+ *              the encoder's pitch anchor: the interface and its SPTK
+ *              implementation (REAPER, Harvest or RAPT)
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -43,6 +44,10 @@ enum class PitchAlgorithm {
   // WORLD's Harvest, with the allowed range the original fixes (0.18,
   // in its FixStep3()), which SPTK takes as its voicing threshold.
   kHarvest,
+  // Talkin's RAPT (Snack's get_f0, made reentrant by SPTK), with SPTK's
+  // default voicing threshold of 0. SPTK adds Gaussian noise of standard
+  // deviation 50 on the 16-bit scale, from a fixed seed, before tracking.
+  kRapt,
 };
 
 // The algorithm's name, as the GUI and logs show it.

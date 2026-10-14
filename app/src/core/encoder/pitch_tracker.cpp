@@ -2,7 +2,7 @@
  * File:        pitch_tracker.cpp
  * Module:      encoder
  * Purpose:     Voicing and pitch period every 5 ms: YIN candidates joined by
- *              a Viterbi search
+ *              a Viterbi search, held near an F0 estimator's track
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -25,7 +25,10 @@
 #include "core/encoder/encoder_filters.h"
 #include "core/encoder/encoder_options.h"
 #include "core/encoder/encoder_types.h"
+#include "core/quality/pitch_estimator.h"
+#include "core/quality/signal_preparation.h"
 #include "core/util/logging.h"
+#include "core/util/status.h"
 
 namespace speak5220::core::encoder {
 namespace {
@@ -93,6 +96,13 @@ constexpr double kEvidenceScale = 66.7;
 // A short unvoiced gap (under kGapHops hops) cannot be used to change
 // octave for less than a jump costs.
 constexpr int kGapHops = 8;
+// The anchor: where it finds a hop voiced, the prior allows kAnchorFree
+// octave either side of its period and costs kAnchorPrior per octave
+// beyond, which outweighs a harmonic's deeper CMNDF dip.
+constexpr double kAnchorPrior = 20.0;
+constexpr double kAnchorFree = 0.2;
+static_assert(quality::kPitchHop == 2 * kPitchHop,
+              "an anchor value falls on every other hop");
 
 double Clamp01(double v) { return std::min(1.0, std::max(0.0, v)); }
 
@@ -252,7 +262,29 @@ VoicingEvidence MeasureVoicingEvidence(std::span<const double> x,
   return out;
 }
 
+std::vector<double> AnchorPeriods(std::span<const double> f0,
+                                  std::size_t hops) {
+  const auto value = [&](std::size_t k) { return k < f0.size() ? f0[k] : 0.0; };
+  std::vector<double> periods(hops, 0.0);
+  for (std::size_t h = 0; h < hops; ++h) {
+    const double a = value(h / 2);
+    double f = a;
+    if (h % 2 != 0) {
+      const double b = value((h / 2) + 1);
+      f = a > 0.0 && b > 0.0 ? std::sqrt(a * b) : std::max(a, b);
+    }
+    if (f > 0.0) {
+      periods[h] = kEncoderSampleRate / f;
+    }
+  }
+  return periods;
+}
+
 YinPitchTracker::YinPitchTracker(dsp::IFft& fft) : fft_(&fft) {}
+
+YinPitchTracker::YinPitchTracker(dsp::IFft& fft,
+                                 quality::IPitchEstimator& anchor)
+    : fft_(&fft), anchor_(&anchor) {}
 
 PitchTrack YinPitchTracker::Track(std::span<const double> x,
                                   const EncoderOptions& options) {
@@ -296,6 +328,19 @@ PitchTrack YinPitchTracker::Track(std::span<const double> x,
   const double med = firsts.empty() ? kDefaultMedian : dsp::Median(firsts);
   log->debug("pitch: {} hops, loud {:.6g}, median period {:.4g}", nh, loud,
              med);
+  std::vector<double> anchor;
+  if (anchor_ != nullptr) {
+    if (StatusOr<std::vector<double>> f0 =
+            anchor_->Track(quality::BandLimit(x));
+        f0.IsOk()) {
+      anchor = AnchorPeriods(*f0, nh);
+      log->debug(
+          "pitch: the anchor voices {} of {} hops",
+          std::ranges::count_if(anchor, [](double p) { return p > 0.0; }), nh);
+    } else {
+      log->debug("pitch: no anchor: {}", f0.GetStatus().Message());
+    }
+  }
 
   const VoicingEvidence evidence = MeasureVoicingEvidence(x, centres);
   std::vector<HopStates> states(nh);
@@ -312,11 +357,19 @@ PitchTrack YinPitchTracker::Track(std::span<const double> x,
            ((evidence.crossings[h] - kCrossingsCentre) / kCrossingsScale)) /
           kEvidenceScale;
     HopStates& st = states[h];
+    double prior = med;
+    double prior_weight = kPrior;
+    double prior_free = kPriorFree;
+    if (!anchor.empty() && anchor[h] > 0.0) {
+      prior = anchor[h];
+      prior_weight = kAnchorPrior;
+      prior_free = kAnchorFree;
+    }
     for (const PitchCandidate& cand : cands[h]) {
       st.lags.push_back(cand.lag);
       double c = kAlpha * cand.value;
-      const double dev = std::abs(std::log2(cand.lag / med));
-      c += kPrior * std::max(0.0, dev - kPriorFree);
+      const double dev = std::abs(std::log2(cand.lag / prior));
+      c += prior_weight * std::max(0.0, dev - prior_free);
       for (const PitchCandidate& other : cands[h]) {
         if (other.lag >= kCandidateMinLag && other.value < kConfidentDip &&
             other.value <= cand.value + kSubharmonicSlack) {
