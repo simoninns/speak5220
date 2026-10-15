@@ -1,4 +1,4 @@
-reference_commit	d83bc4683f67ea5c439b02195175a2bac4790328
+reference_commit	9bab5ef361d5ef675eb5247f1061312c9cd60ddf
 sha256	7e0f4ec3cd54d2073360317059903e3a141f76afa4023670feed8b14c20cb2a8	investigation/tools/speechqual.py
 numpy	2.4.4
 scipy	1.17.1
