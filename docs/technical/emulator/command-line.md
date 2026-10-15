@@ -2,7 +2,14 @@
 
 `tms5220emu` runs the emulator from a scenario script, or in a bulk mode that
 speaks one phrase from a binary image. It writes the output codes and an event
-log.
+log. It is the command line of the retired C emulator, on the application's
+emulator, with the same options and output; the reference-data scripts
+(`app/scripts/golden/generate_golden.py`, `measures.py`) and the research
+tools (`regress.py`, `replay.py`, `phase11.py`, `speechqual.py`) run it.
+
+It is built with the application's tests, into
+`build/app/tests/support/tms5220emu`, and is never installed. The scripts
+look for it there; `TMS5220EMU` names another copy.
 
 ## Usage
 
@@ -12,20 +19,22 @@ log.
                [--prior SCRIPT] [--phase SAMPLE] [--margin SLOTS]
 
 - `-s FILE` samples output, `-e FILE` event log. Each defaults to stdout;
-  `-` is stdout, `none` turns it off.
+  `-` is stdout, `none` turns it off. Both are written when the run ends,
+  the samples first if both go to stdout.
 - `-q` leaves the VSM `READ` functions out of the event log (they are one
   line per frame bit).
 
 ## Scenario scripts
 
 One operation per line; `#` starts a comment. Numbers are decimal except
-bytes and addresses, which are hex.
+bytes and addresses, which are hex. A `load` path is relative to the
+script's directory.
 
 | Operation | Meaning |
 |---|---|
 | `load <file> <hexaddr>` | Load a binary image into VSM memory |
 | `phase <sample>` | Frame-clock position (0–199) of the sample period at power-up; 0 = the period in which a frame would be read. Only before anything runs |
-| `set <param> <value>` | Change a gap choice (a `tms5220_config` field, e.g. `se_shift 0`). Only before anything runs |
+| `set <param> <value>` | Change a gap choice (a `Tms5220Config` field, e.g. `se_shift 0`). Only before anything runs |
 | `slot <n>` | Advance to absolute slot n |
 | `at <n>` | As `slot`, but a slot already passed is not an error (for replays of recorded host cycles) |
 | `wait <slots>` | Advance n slots |
@@ -106,9 +115,12 @@ Lines are written in the order events happen. A `HOST` line is written when
 the cycle completes, so its first field (the strobe slot) is earlier than the
 lines just before it; sort on the first field if strict slot order is needed.
 
-## Self-test
+## Tests
 
-`make test` checks, against statements in the datasheet (not captures):
+The C emulator's self-test is re-implemented as the unit tests
+`Tms5220Test` and `ChipArithmeticTest` (`app/tests/unit/emulator/`), run
+with the other unit tests (`ctest -L unit`). They check, against
+statements in the datasheet (not captures):
 
 - the [§8.8](../datasheet/lattice-filter.md) multiplier worked examples, and
   the noise register's period;
@@ -132,3 +144,8 @@ lines just before it; sort on the first field if strict slot order is needed.
 - READY after Read and Branch at slot 15, 60–79 slots after the Branch (79
   and 63 for a Branch in slots 16 and 12), for each `branch_ready` from 60
   to 63.
+
+The functional test `EmulatorGoldenTest` runs the self-test's scenarios
+(`app/golden/emulator/scenarios/`), the synthetic vectors and encoder output
+as `tms5220emu` does, and compares every code and event with the C
+emulator's runs.

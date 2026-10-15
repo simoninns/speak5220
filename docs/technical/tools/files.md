@@ -10,7 +10,7 @@ The files in `investigation/tools/`, with the page that describes each one.
 - `frameclock.py`: the chip's frame clock on the Pico's timer, and the calibration of timed starts. `python investigation/tools/frameclock.py` locates the clock and calibrates both paths.
 - `lpc.py`: the LPC frame parser and encoder: frame boundaries, the coded parameters of each frame, and frames back to bytes.
 - `vectors.py`, `model.py`, `vecfit.py`, `protocol.py`: the synthetic vectors, the synthesis model, the table measurements and the host interface tests ([Synthetic vectors and the model](vectors-and-model.md)).
-- `regress.py`, `variance.py`: the regression harness for the reference emulator in `investigation/emulator/`, and the measured agreement between chips and the model ([Emulator regression](emulator-regression.md)).
+- `regress.py`, `variance.py`: the regression harness for the emulator (run as `tms5220emu`, [Command line](../emulator/command-line.md)), and the measured agreement between chips and the model ([Emulator regression](emulator-regression.md)).
 - `ttsgen.py`, `prompts.csv`, `recimport.py`: the encoder test speech and recordings ([Encoder test speech and quality](encoder-speech.md)).
 - `promstats.py`, `phase11.py`, `asrcheck.py`: the PROM statistics, new speech data, predictions, comparison and intelligibility check ([Encoder test speech and quality](encoder-speech.md#new-speech-data-and-its-predictions)).
 - `speechqual.py`: the objective encoding-quality measure ([Encoding quality](encoder-speech.md#encoding-quality)).

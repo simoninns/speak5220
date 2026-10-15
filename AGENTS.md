@@ -9,10 +9,10 @@
 - The repository has two parts:
   - **`app/`**: the Speak5220 application, a Qt/C++ tool for creating LPC
     speech data and building PHROMs. This is where development happens.
-  - **`investigation/`**: the research record (hardware, firmware, capture
-    tools and the C emulator). The emulator, and the Python encoder that
-    the application's encoder re-implements (in git history, last changed
-    in commit `6abe9ed`), are retired reference implementations. **Do not modify `investigation/`** unless the user explicitly
+  - **`investigation/`**: the research record (hardware, firmware and
+    capture tools). The C emulator and the Python encoder that the
+    application's emulator and encoder re-implement (in git history, last
+    changed in commit `6abe9ed`) are retired reference implementations. **Do not modify `investigation/`** unless the user explicitly
     asks.
 - Follow these instructions **in addition to** any `AGENTS.md` files in the
   task directory or above.
@@ -153,7 +153,7 @@
   - `// Acorn Speech System User Guide Section 6: OSBYTE &9F writes to the speech processor.`
   - `// Jensen and Taal 2016, Eq. (2): the normalised segment correlation.`
 - Supported sources: the speak5220 reference datasheet, TI data manuals (TMS5220, TMS6100), US patent 4,335,277, Acorn manuals (Speech System User Guide, DFS, BBC Micro User Guide), IEC.
-- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared; the Python encoder's files are in git history at commit `6abe9ed`.
+- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared; the C emulator's and the Python encoder's files are in git history at commit `6abe9ed`.
 
 #### 4.3.7 Commenting
 - Use inline comments **above** function declarations for purpose, parameters, and return values when non-obvious.
@@ -221,7 +221,7 @@ the affected documents (§9.3) have been updated in the **same task**.
 | `docs/` | MkDocs source for the published site (<https://simoninns.github.io/speak5220/>) | End users |
 | `docs/technical/datasheet/` | The reference datasheet: the authoritative description of the TMS5220 (§9.4) | Everyone |
 | `docs/technical/sources/` | Transcriptions of TI's data manuals and US patent 4,335,277 — **read-only**, never edit | Reference |
-| `docs/technical/` (other pages) | The research record: capture, die analysis, the retired encoder and emulator, hardware, tools | Developers, researchers |
+| `docs/technical/` (other pages) | The research record: capture, die analysis, how the encoder and emulator work, hardware, tools | Developers, researchers |
 | `docs/application/` | The application's user documentation (§9.2) | End users |
 | `README.md` | Repository overview and directory map | Everyone |
 | `BUILD.md` | Development environment and build instructions for every part of the repository | Developers |

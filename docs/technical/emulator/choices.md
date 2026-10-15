@@ -2,13 +2,15 @@
 
 The emulator was written only from the [reference datasheet](../datasheet/index.md)
 (and the original manual where the reference defers to it), with the exact
-reference algorithm of [§8.9](../datasheet/reference-algorithm.md). This page
+reference algorithm of [§8.9](../datasheet/reference-algorithm.md). The
+choices were made in the C emulator it was first written as, and the C++
+emulator keeps every one ([Emulator](index.md)). This page
 lists the points where that text left the emulator a choice, and the choice
 made. What is not known about the chip itself is listed in the datasheet's
 [Appendix B: Known gaps](../datasheet/gaps.md); this page gives only the
 emulator's side. In the code, open points are marked `DATASHEET GAP:` and the unmeasured
 host-interface items `UNMEASURED (§3)`. Timing choices are fields of
-`tms5220_config` (script operation `set`, see
+`Tms5220Config` (script operation `set`, see
 [Command line](command-line.md#scenario-scripts)).
 
 ## Ambiguities in the text
@@ -106,8 +108,8 @@ External release the noise hold (§7).
 These points are stated in the datasheet and implemented as written:
 
 - the Booth recoding, the exact stages 1–4 and no wrap inside the multiplier
-  ([§8.8](../datasheet/lattice-filter.md); the worked examples are in
-  `make test`);
+  ([§8.8](../datasheet/lattice-filter.md); the worked examples are checked by
+  `ChipArithmeticTest`);
 - energy 0 through the multiplier, u₁₁ = +1, idle u₁ = −9;
 - the noise held state (0x1FFF), the latch as reference, the release delays
   and the slot-0 sampling (§7). This gives 0x00EB / 0x00AF at slot 0 of

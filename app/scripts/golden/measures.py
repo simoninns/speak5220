@@ -5,7 +5,7 @@
 
 Measures the reference encodings of the encoder's corpus subset (the WAV
 files in app/golden/encoder/inputs/, encoded as app/golden/encoder/frames/
-SET.tsv records, spoken by the reference emulator) with independent
+SET.tsv records, spoken by the application's emulator) with independent
 implementations of the quality measures, for the C++ to be checked
 against:
 
@@ -41,7 +41,8 @@ It writes:
   10 ms, from REAPER and Harvest, of the original and of the output.
 
 Run by hand, in the project's default Nix shell, from the repository root,
-after building the reference emulator (make -C investigation/emulator):
+with the tests built (the frames are spoken by tms5220emu, the emulator's
+command line, in build/app/tests/support/; TMS5220EMU names another):
 
     nix develop --command python3 app/scripts/golden/measures.py
     nix develop --command python3 app/scripts/golden/measures.py --check
@@ -73,7 +74,6 @@ import numpy as np  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 TOOLS = ROOT / "investigation" / "tools"
-EMULATOR = ROOT / "investigation" / "emulator"
 INPUTS = ROOT / "app" / "golden" / "encoder" / "inputs"
 FRAMES = ROOT / "app" / "golden" / "encoder" / "frames"
 GOLDEN = ROOT / "app" / "golden" / "quality" / "measures"
@@ -81,12 +81,11 @@ GOLDEN = ROOT / "app" / "golden" / "quality" / "measures"
 sys.path.insert(0, str(TOOLS))
 import speechqual as sq  # noqa: E402
 
-# The reference sources the data depends on.
+# The reference sources the data depends on. The emulator that speaks the
+# frames is the application's, which its own reference data holds to the
+# same codes (app/golden/emulator/).
 SOURCES = [
     TOOLS / "speechqual.py",
-    EMULATOR / "tms5220.c",
-    EMULATOR / "tms6100.c",
-    EMULATOR / "tms5220emu.c",
 ]
 
 RATE = 8000
@@ -403,8 +402,8 @@ def measure_job(job):
 
 def generate(out, processes):
     commit = reference_commit()
-    if not (EMULATOR / "tms5220emu").exists():
-        sys.exit("build the reference emulator first: make -C investigation/emulator")
+    if not Path(sq.EMU).exists():
+        sys.exit("build the tests first: tms5220emu is not at " + sq.EMU)
     if shutil.which("reaper") is None:
         sys.exit(
             "REAPER's command-line tool is not on PATH (use the default Nix shell)"

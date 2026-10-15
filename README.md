@@ -24,7 +24,7 @@ It has a GUI, `speak5220`, and a command-line tool, `speak5220-cli`. Each releas
 |---|---|
 | [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), fixture projects for the tests (`projects/`), reference data from the retired encoder, emulator and quality tools, and the recorded hashes of the fixtures' exports (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`, with overlay ports in `vcpkg-ports/`), the installers' build files (`packaging/`: the Flatpak manifest and the macOS vcpkg triplet), the icon set, About-box logo, Linux `.desktop` file and AppStream metainfo (`resources/`), and check, corpus, benchmark, export, BBC Micro emulator golden-data, icon and encoder-quality diagnostic scripts (`scripts/`, with the diagnostics' option sets in `scripts/sweeps/`) |
 | [`docs/`](docs/index.md) | The published documentation site: the application's user documentation, the reference datasheet and the research record |
-| [`investigation/`](investigation/README.md) | The research: the capture board (`kicad/`), its firmware (`firmware/`), the host tools (`tools/`), the captures (`captures/`), the speech PROM manifests (`proms/`), and the reference emulator (`emulator/`) |
+| [`investigation/`](investigation/README.md) | The research: the capture board (`kicad/`), its firmware (`firmware/`), the host tools (`tools/`), the captures (`captures/`), and the speech PROM manifests (`proms/`) |
 | [`assets/`](assets/README.md) | Artwork: the logo and the application icon |
 | `flake.nix` | The Nix development shells, the application's package and its pre-commit hooks |
 | [`BUILD.md`](BUILD.md) | Development environment and build instructions |

@@ -121,14 +121,13 @@ The testing rules are in [`TESTING.md`](TESTING.md).
 
 ### Reference data
 
-`app/golden/` holds the output of the retired reference emulator and Python encoder, and of independent implementations of the quality measures, which the functional tests compare against. The Python encoder's output is fixed. The rest is written by three scripts run by hand in the default dev shell (they need Python with NumPy, SciPy, soundfile, py-webrtcvad, pystoi and pyworld, REAPER's command-line tool, and a C compiler):
+`app/golden/` holds the output of the retired C emulator and Python encoder, and of independent implementations of the quality measures, which the functional tests compare against. The Python encoder's output is fixed. The rest is written by three scripts run by hand in the default dev shell, with the application's tests built (they need Python with NumPy, SciPy, soundfile, py-webrtcvad, pystoi and pyworld, and REAPER's command-line tool). The emulator's runs and the quality measures are spoken by `tms5220emu`, the application's emulator behind the C emulator's command line, which the test build writes to `build/app/tests/support/`:
 
 ```bash
-nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator: run it into a temporary directory and compare
+nix develop --command python3 app/scripts/golden/generate_golden.py --check   # emulator: run tms5220emu into a temporary directory and compare
 nix develop --command python3 app/scripts/golden/generate_golden.py           # rewrite app/golden/emulator/runs/
 nix develop --command python3 app/scripts/golden/encoder.py --check           # encoder: regenerate and compare (under a minute; needs the functional tests built)
 nix develop --command python3 app/scripts/golden/encoder.py                   # rewrite app/golden/encoder/
-make -C investigation/emulator                                                # measures.py runs the built reference emulator
 nix develop --command python3 app/scripts/golden/measures.py --check          # quality measures: regenerate and compare (under a minute, on every core)
 nix develop --command python3 app/scripts/golden/measures.py                  # rewrite app/golden/quality/measures/
 ```
@@ -262,12 +261,9 @@ The `picotool reboot -f` is needed: after an OpenOCD reset, core 1 (which runs t
 python investigation/tools/pico.py selftest    # upload, speak and trace, checking every result
 ```
 
-## Reference emulator
+## Emulator command line
 
-```bash
-make -C investigation/emulator          # builds tms5220emu and libtms5220.a
-make -C investigation/emulator test     # builds and runs the self-test
-```
+The research tools that run the emulator (`regress.py`, `replay.py`, `phase11.py`, `speechqual.py`) use `tms5220emu`, the application's emulator behind the retired C emulator's command line. It is built with the application's tests (above), into `build/app/tests/support/tms5220emu`; `TMS5220EMU` names another copy.
 
 ## Capture tools
 

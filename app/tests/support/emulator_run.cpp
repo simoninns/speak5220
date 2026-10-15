@@ -1,8 +1,8 @@
 /*
  * File:        emulator_run.cpp
  * Module:      test support
- * Purpose:     Runs the C++ emulator as the reference tms5220emu program
- *              does, producing the same codes and event log
+ * Purpose:     Runs the emulator as the retired tms5220emu program did,
+ *              producing the same codes and event log
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -10,7 +10,6 @@
 
 #include "support/emulator_run.h"
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -19,6 +18,7 @@
 #include <iomanip>
 #include <memory>
 #include <optional>
+#include <span>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -88,12 +88,10 @@ std::optional<std::int64_t> ParseNumber(const std::string& text, int base) {
 }
 
 // The bytes from the start of `memory` up to and including the last bit of
-// the first stop frame (§8.1), reading zeros past its end within the
-// VSM's 1 MB; nothing if there is no stop code. Re-implements tms5220emu.c
-// phrase_bytes().
-std::optional<std::size_t> PhraseBytes(
-    const std::vector<std::uint8_t>& memory) {
-  const std::uint64_t max_bits = std::uint64_t{Tms6100::kMemorySize} * 8;
+// the first stop frame (§8.1); nothing if there is no stop code before the
+// end of `memory`. Re-implements tms5220emu.c phrase_bytes().
+std::optional<std::size_t> PhraseBytes(std::span<const std::uint8_t> memory) {
+  const std::uint64_t max_bits = std::uint64_t{memory.size()} * 8;
   std::uint64_t bit = 0;
   auto read = [&](int width) -> std::optional<int> {
     int value = 0;
@@ -101,8 +99,7 @@ std::optional<std::size_t> PhraseBytes(
       if (bit >= max_bits) {
         return std::nullopt;
       }
-      const std::size_t byte = bit / 8;
-      const int b = byte < memory.size() ? (memory[byte] >> (bit % 8)) & 1 : 0;
+      const int b = (memory[bit / 8] >> (bit % 8)) & 1;
       value = (value << 1) | b;
       ++bit;
     }
@@ -289,6 +286,24 @@ Status RunLine(Runner& runner, std::string line,
   return InvalidArgumentError("unknown operation " + op);
 }
 
+// Runs every line of `script`, `load` paths relative to its directory.
+// Re-implements tms5220emu.c run_script().
+Status RunScript(Runner& runner, const std::filesystem::path& script) {
+  StatusOr<std::vector<std::string>> lines = ReadLines(script);
+  if (!lines.IsOk()) {
+    return lines.GetStatus();
+  }
+  for (std::size_t n = 0; n < lines->size(); ++n) {
+    Status status = RunLine(runner, (*lines)[n], script.parent_path());
+    if (!status.IsOk()) {
+      return InvalidArgumentError(script.string() + ":" +
+                                  std::to_string(n + 1) + ": " +
+                                  status.Message());
+    }
+  }
+  return OkStatus();
+}
+
 }  // namespace
 
 std::string FormatEvent(const Tms5220Event& event) {
@@ -328,49 +343,62 @@ std::string FormatEvent(const Tms5220Event& event) {
 }
 
 StatusOr<EmulatorRun> RunScenarioScript(const std::filesystem::path& script) {
-  StatusOr<std::vector<std::string>> lines = ReadLines(script);
-  if (!lines.IsOk()) {
-    return lines.GetStatus();
+  Runner runner;
+  if (Status status = RunScript(runner, script); !status.IsOk()) {
+    return status;
+  }
+  return runner.TakeRun();
+}
+
+StatusOr<EmulatorRun> RunBulk(const BulkRun& run) {
+  StatusOr<std::vector<std::uint8_t>> data = ReadBytes(run.image);
+  if (!data.IsOk()) {
+    return data.GetStatus();
   }
   Runner runner;
-  for (std::size_t n = 0; n < lines->size(); ++n) {
-    Status status = RunLine(runner, (*lines)[n], script.parent_path());
-    if (!status.IsOk()) {
-      return InvalidArgumentError(script.string() + ":" +
-                                  std::to_string(n + 1) + ": " +
-                                  status.Message());
+  if (Status status = runner.SetPhase(run.phase); !status.IsOk()) {
+    return status;
+  }
+  runner.Vsm().LoadMemory(*data, run.load_at);
+  if (run.prior) {
+    if (Status status = RunScript(runner, *run.prior); !status.IsOk()) {
+      return status;
     }
+  }
+  ChipDriver& driver = runner.Driver();
+  Status status;
+  if (run.external) {
+    // The VSM's memory as loaded: the stream is read from it.
+    std::vector<std::uint8_t> memory(Tms6100::kMemorySize, 0);
+    for (std::size_t i = 0; i < data->size(); ++i) {
+      memory[(run.load_at + i) % memory.size()] = (*data)[i];
+    }
+    const std::uint32_t address = run.address % memory.size();
+    // tms5220emu sends 256 bytes when it finds no stop code.
+    constexpr std::size_t kNoStopBytes = 256;
+    const std::size_t length =
+        PhraseBytes(std::span(memory).subspan(address)).value_or(kNoStopBytes);
+    std::vector<std::uint8_t> stream(length);
+    for (std::size_t i = 0; i < length; ++i) {
+      stream[i] = memory[(address + i) % memory.size()];
+    }
+    status = driver.SpeakExternal(stream, run.speak);
+  } else {
+    status = driver.SpeakFromVsm(run.address, run.speak);
+  }
+  if (!status.IsOk()) {
+    return status;
   }
   return runner.TakeRun();
 }
 
 StatusOr<EmulatorRun> RunBulk(const std::filesystem::path& image, bool external,
                               int phase) {
-  StatusOr<std::vector<std::uint8_t>> data = ReadBytes(image);
-  if (!data.IsOk()) {
-    return data.GetStatus();
-  }
-  Runner runner;
-  if (Status status = runner.SetPhase(phase); !status.IsOk()) {
-    return status;
-  }
-  runner.Vsm().LoadMemory(*data, 0);
-  ChipDriver& driver = runner.Driver();
-  Status status;
-  if (external) {
-    // tms5220emu sends 256 bytes when it finds no stop code.
-    constexpr std::size_t kNoStopBytes = 256;
-    const std::size_t length = PhraseBytes(*data).value_or(kNoStopBytes);
-    std::vector<std::uint8_t> stream(length, 0);
-    std::copy_n(data->begin(), std::min(length, data->size()), stream.begin());
-    status = driver.SpeakExternal(stream, {});
-  } else {
-    status = driver.SpeakFromVsm(0, {});
-  }
-  if (!status.IsOk()) {
-    return status;
-  }
-  return runner.TakeRun();
+  BulkRun run;
+  run.image = image;
+  run.phase = phase;
+  run.external = external;
+  return RunBulk(run);
 }
 
 }  // namespace speak5220::testing

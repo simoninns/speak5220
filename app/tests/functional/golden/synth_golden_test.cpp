@@ -1,8 +1,8 @@
 /*
  * File:        synth_golden_test.cpp
  * Module:      synth tests
- * Purpose:     Compares Synth and the reference synthesiser with the C
- *              reference emulator's runs in app/golden/
+ * Purpose:     Compares Synth and the reference synthesiser with the
+ *              emulator's reference runs in app/golden/
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -48,8 +48,8 @@ std::vector<std::map<std::string, std::string>> PhraseRuns() {
   return out;
 }
 
-// Synth renders a phrase exactly as the reference emulator's bulk mode
-// does: its codes are the reference run's from the first frame read.
+// Synth renders a phrase exactly as tms5220emu's bulk mode does: its codes
+// are the reference run's from the first frame read.
 TEST(SynthGoldenTest, MatchesReferenceEmulatorThroughBothPaths) {
   const auto runs = PhraseRuns();
   ASSERT_FALSE(runs.empty());

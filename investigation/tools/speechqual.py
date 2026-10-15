@@ -3,13 +3,14 @@
     speechqual.py
 
     An objective measure of encoding quality: how close the TMS5220's
-    speech, as the reference emulator speaks the encoded frames, is to the
-    input it was encoded from.
+    speech, as the application's emulator speaks the encoded frames, is to
+    the input it was encoded from.
 
     Each input's encoding, packed frames given with --bin, is spoken by
-    emulator/tms5220emu (VSM Speak after a Reset, so independent of the
-    encoder's own synthesis), aligned with the input by its level envelope,
-    and compared with it:
+    tms5220emu, the emulator's command line built with the application's
+    tests (VSM Speak after a Reset, so independent of the encoder's own
+    synthesis), aligned with the input by its level envelope, and compared
+    with it:
 
       mcd      mel-cepstral distortion, dB: the spectral envelope, ignoring
                level and phase (coefficients 1-24 of 40 mel bands,
@@ -90,7 +91,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 import lpc  # noqa: E402  (tools/lpc.py: the frame format)
 import model  # noqa: E402  (tools/model.py: the chip's tables and timing for the ladder)
 
-EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "emulator", "tms5220emu"))
+EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "..", "build", "app", "tests", "support", "tms5220emu"))
 INPUTS = os.path.join(ROOT, "captures", "phase11", "inputs")
 
 RATE = 8000
@@ -685,7 +686,7 @@ def main():
     args = ap.parse_args()
 
     if not os.path.exists(EMU):
-        sys.exit(f"{EMU} not found: build it with nix develop -c make -C emulator")
+        sys.exit(f"{EMU} not found: build the application's tests (BUILD.md), or set TMS5220EMU")
     items = [("", p) for p in args.inputs]
     if args.set:
         items += phase11Inputs(args.set, args.match, args.limit)

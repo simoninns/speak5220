@@ -1,6 +1,6 @@
 # Encoder test speech and quality
 
-These tools provide the speech inputs used to test the encoder and the new speech data built from them, predict the chip's output with the reference emulator, and score the encoding objectively. The encoder itself is described in [Encoder](../encoder/index.md).
+These tools provide the speech inputs used to test the encoder and the new speech data built from them, predict the chip's output with the emulator, and score the encoding objectively. The encoder itself is described in [Encoder](../encoder/index.md).
 
 ## Encoder test speech
 
@@ -52,7 +52,7 @@ python investigation/tools/speechqual.py --set all --bin DIR --anchor --csv q.cs
 python investigation/tools/speechqual.py --set all --bin DIR --ladder        # where the quality goes, step by step
 ```
 
-`speechqual.py` gives an encoding an objective score. It does not encode: it takes each input's packed frames from `--bin`, which is a file for one input, or a directory holding `NAME.bin` for each input `NAME`. `--set` takes the test inputs (`tts`, `recordings` or `all`). It speaks the frames with `investigation/emulator/tms5220emu` (VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
+`speechqual.py` gives an encoding an objective score. It does not encode: it takes each input's packed frames from `--bin`, which is a file for one input, or a directory holding `NAME.bin` for each input `NAME`. `--set` takes the test inputs (`tts`, `recordings` or `all`). It speaks the frames with the emulator's command line, `tms5220emu` ([Command line](../emulator/command-line.md); VSM Speak after a Reset), not with the encoder's own synthesis. It then lines the output up with the input, matches their levels, and compares them:
 
 | Column | Measure |
 |---|---|

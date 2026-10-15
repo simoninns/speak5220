@@ -3,7 +3,8 @@
     replay.py
 
     Replays the Phase 8 host-interface and VSM command tests (protocol.py,
-    p8-19 to p8-25) through the reference emulator, and compares what the
+    p8-19 to p8-25) through the emulator (tms5220emu, the command line of
+    the application's emulator, built with its tests), and compares what the
     emulator does with what the chip did (plan section 12, Phase 9).
 
       python tools/replay.py                    # every test
@@ -43,7 +44,7 @@ import prom as promlib
 import protocol
 
 ROOT = promlib.ROOT
-EMULATOR = os.environ.get("TMS5220EMU", os.path.join(ROOT, "emulator", "tms5220emu"))
+EMULATOR = os.environ.get("TMS5220EMU", os.path.join(ROOT, "..", "build", "app", "tests", "support", "tms5220emu"))
 OUT_DIR = os.path.join(ROOT, "captures", "phase9", "replay")
 SLOT_US = 6.25
 ORIGIN = 8000                   # emulator slot of the step's time 0, before the frame shift

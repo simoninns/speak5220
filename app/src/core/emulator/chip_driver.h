@@ -38,8 +38,8 @@ struct SpeakOptions {
 };
 
 // A host for one Tms5220: it runs host cycles to completion and steps the
-// chip between them. Re-implements the operations of
-// investigation/emulator/tms5220emu.c. The VSM bus, sink and observer are
+// chip between them. Re-implements the operations of the retired C
+// emulator's tms5220emu.c. The VSM bus, sink and observer are
 // borrowed, may be null, and must outlive the driver. Not thread-safe.
 class ChipDriver : private ISampleSink {
  public:

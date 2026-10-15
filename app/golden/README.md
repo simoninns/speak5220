@@ -1,19 +1,21 @@
 # Reference data
 
-What the retired reference emulator (`investigation/emulator/`) and
-Python encoder (`tms5220enc.py`, in the repository's history at commit
-`6abe9ed`) produced, the C++ encoder's own level setting and frames where
+What the retired C emulator and Python encoder (`tms5220.c` and
+`tms5220enc.py`, in the repository's history at commit `6abe9ed`)
+produced, the C++ encoder's own level setting and frames where
 it departs from the Python encoder, and what independent implementations
 of the quality measures give, for the application's functional tests to
 compare against. The build and tests read only
 these files.
 
-`app/scripts/golden/generate_golden.py` (`emulator/runs/`),
+`app/scripts/golden/generate_golden.py` (`emulator/runs/`, which the
+application's emulator reproduces exactly, run as `tms5220emu`),
 `app/scripts/golden/encoder.py` (`encoder/`) and
 `app/scripts/golden/measures.py` (`quality/measures/`) write them, run by
 hand in the default Nix shell. `REFERENCE.tsv` in each directory records
 the last commit that changed the references and the SHA-256 of each
-reference source. The Python encoder's own output (`packaging/`, the
+reference source; `emulator/REFERENCE.tsv` records the C emulator's, as
+committed. The Python encoder's own output (`packaging/`, the
 emulator's corpus phrases, and the stages before level setting in the
 encoder's intermediates) is fixed: the scripts keep it as committed.
 
@@ -59,8 +61,8 @@ floating-point noise. The C++ encoder, which gives the same
 frames on every platform, marks none.
 
 The quality measures' data is written by `app/scripts/golden/measures.py`,
-which runs the built reference emulator (`make -C investigation/emulator`
-first), REAPER's command-line tool (built, like the SPTK the application
+which speaks the frames with `tms5220emu` (the application's emulator,
+built with the tests into `build/app/tests/support/`), REAPER's command-line tool (built, like the SPTK the application
 uses, without fused multiply-add contraction, so its tracks are the same
 on every platform) and the Python packages of the default Nix shell
 (py-webrtcvad, pystoi, pyworld):

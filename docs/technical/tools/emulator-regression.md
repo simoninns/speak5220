@@ -1,9 +1,9 @@
 # Emulator regression
 
-These tools run the reference emulator against the captured data, measure how far apart outputs of the same utterance are, and search for the corrections behind the chip's departures from the model.
+These tools run the emulator against the captured data, measure how far apart outputs of the same utterance are, and search for the corrections behind the chip's departures from the model.
 
 ```
-nix develop -c make -C investigation/emulator test               # build the emulator and run its self-test
+nix develop --command bash -c "cmake --build build/app"         # build the application and its tests, tms5220emu included
 python investigation/tools/vectors.py build ring                 # the ring vector set (filter arithmetic)
 python investigation/tools/regress.py vectors corpus             # every vector set and the Acorn PHROM A words
 python investigation/tools/regress.py corpus --sweep             # ... and its address sweep
@@ -18,7 +18,7 @@ python investigation/tools/replay.py                             # the host inte
 python investigation/tools/replay.py --detail vsm_commands read_byte_repeat   # one step, chip and emulator side by side
 ```
 
-`investigation/emulator/` is the reference emulator: C99, written from the reference datasheet alone ([Emulator](../emulator/index.md) and [Emulator choices](../emulator/choices.md)). It is stepped one slot at a time and covers the host interface, the VSM interface and the synthesis path.
+The emulator is the application's (`app/src/core/emulator/`), written from the reference datasheet alone ([Emulator](../emulator/index.md) and [Emulator choices](../emulator/choices.md)). It is stepped one slot at a time and covers the host interface, the VSM interface and the synthesis path. The tools run it as `tms5220emu`, its command line ([Command line](../emulator/command-line.md)), from `build/app/tests/support/`.
 
 ## replay.py
 
@@ -38,7 +38,7 @@ A step is compared only up to the end of its recording, or up to a host cycle th
 - **Layer 2:** the `I/O` codes, from 5 samples before the first frame read to the end of the capture.
 - **Layer 1, VSM path:** the number of bits read, the sample period of each frame read, and when Talk Status cleared.
 - **`--model`:** also runs `model.py` on the same take, and counts the samples where the emulator and the model differ. Zero means the datasheet text reproduces the model exactly.
-- **Output:** one CSV per set and `summary.json` in `investigation/captures/phase9/regress/`. `TMS5220EMU` selects another emulator binary.
+- **Output:** one CSV per set and `summary.json` in `investigation/captures/phase9/regress/`. `TMS5220EMU` selects another `tms5220emu`.
 
 ## variance.py
 

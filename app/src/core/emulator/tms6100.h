@@ -22,7 +22,7 @@ namespace speak5220::core::emulator {
 
 // A VSM with a 20-bit address space (speak5220 datasheet §4 and the
 // original manual's VSM description). Bytes never loaded read 0x00.
-// Re-implements investigation/emulator/tms6100.c. Not thread-safe; it is
+// Re-implements the retired C emulator's tms6100.c. Not thread-safe; it is
 // driven by one chip.
 class Tms6100 : public IVsmBus {
  public:

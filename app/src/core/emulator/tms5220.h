@@ -26,11 +26,11 @@ namespace speak5220::core::emulator {
 // (6.25 us at 640 kHz); a sample period is 20 slots (speak5220 datasheet
 // §2, §8.4). Absolute slot 0 is power-up and is slot 0 of a sample period.
 //
-// Re-implements the reference emulator investigation/emulator/tms5220.c
-// as a class. The structure changes, not the arithmetic or the order of
-// evaluation: the codes and events are the reference's, sample for sample
-// and slot for slot. Every "DATASHEET GAP" is a field of
-// Tms5220Config or a comment here.
+// Re-implements the retired C emulator's tms5220.c (in git history, last
+// changed in commit 6abe9ed) as a class. The structure changes, not the
+// arithmetic or the order of evaluation: the codes and events are the C
+// emulator's, sample for sample and slot for slot (app/golden/emulator/).
+// Every "DATASHEET GAP" is a field of Tms5220Config or a comment here.
 //
 // The VSM bus, sample sink and observer are borrowed, may be null, and
 // must outlive the chip. Not thread-safe: use one chip from one thread.

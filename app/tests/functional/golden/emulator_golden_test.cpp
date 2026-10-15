@@ -35,10 +35,10 @@ std::size_t FirstDifference(const std::vector<T>& a, const std::vector<T>& b) {
   return i;
 }
 
-// The C++ emulator gives identical codes sample
-// for sample, and identical events slot for slot, on every run of the
-// reference emulator: its self-test scenarios, the synthetic vectors and
-// encoder output, through both paths.
+// The emulator gives identical codes sample for sample, and identical
+// events slot for slot, on every reference run of the retired C emulator:
+// its self-test scenarios, the synthetic vectors and encoder output,
+// through both paths.
 TEST(EmulatorGoldenTest, MatchesReferenceSampleForSampleAndEventForEvent) {
   const core::StatusOr<std::vector<std::map<std::string, std::string>>> runs =
       ReadTable(kEmulatorGolden / "runs.tsv");

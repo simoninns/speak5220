@@ -2,8 +2,9 @@
 """
     regress.py
 
-    The Phase 9 regression harness (plan section 12): runs the reference
-    emulator (emulator/tms5220emu, written from the datasheet alone) on
+    The Phase 9 regression harness (plan section 12): runs the emulator
+    (tms5220emu, the command line of the application's emulator, written
+    from the datasheet alone, built with the application's tests) on
     every standard-procedure take of the data set and compares it with the
     chip, sample for sample (layer 2) and in its VSM timing (layer 1).
 
@@ -45,7 +46,7 @@ import model as modellib
 import prom as promlib
 
 ROOT = promlib.ROOT
-EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "emulator", "tms5220emu"))
+EMU = os.environ.get("TMS5220EMU", os.path.join(ROOT, "..", "build", "app", "tests", "support", "tms5220emu"))
 SLOT_US = 6.25
 # Speak External leaves no read in the trace: the chip sample in which the
 # first frame would have been read, for the standard procedure (as for VSM)

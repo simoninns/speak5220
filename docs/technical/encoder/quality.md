@@ -8,7 +8,7 @@ from nine voices with median f0 87–246 Hz, and 33 recorded sentences
 (`arctic_*_si`). `app/scripts/option_sweep.py` encodes them as a project
 (from the WAV copies `app/scripts/generate_corpus.py` writes) and measures
 them, and `investigation/tools/speechqual.py` speaks the same frames on the
-reference emulator. Two sets of measures:
+application's emulator. Two sets of measures:
 
 - **The application's quality rating** (`speak5220-cli measure`; the
   [user manual](../../application/user-manual/encoder.md#the-quality-rating)

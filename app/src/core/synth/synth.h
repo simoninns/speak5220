@@ -78,13 +78,12 @@ enum class SynthCache {
 };
 
 // Runs Tms5220 and Tms6100 on a phrase, from power-up, with the procedure
-// of the reference emulator's bulk mode (emulator::ChipDriver), so the
-// codes match the reference emulator sample for sample. Results are cached
-// per phrase (unless made with SynthCache::kOff), keyed by a hash of the
-// packed bytes and the path; a cache hit is checked against the full
-// bytes. Thread-safe: renders run in parallel, the cache is guarded by a
-// mutex. Not on the GUI thread: a phrase takes milliseconds per second of
-// speech.
+// of tms5220emu's bulk mode (emulator::ChipDriver), so the codes are the
+// emulator's reference runs, sample for sample (app/golden/emulator/). Results
+// are cached per phrase (unless made with SynthCache::kOff), keyed by a hash of
+// the packed bytes and the path; a cache hit is checked against the full bytes.
+// Thread-safe: renders run in parallel, the cache is guarded by a mutex. Not on
+// the GUI thread: a phrase takes milliseconds per second of speech.
 class Synth : public ISynth {
  public:
   explicit Synth(const emulator::Tms5220Config& config = {},

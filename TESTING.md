@@ -3,8 +3,8 @@
 This document covers the Speak5220 application in `app/`, and sets the
 testing rules it is built to.
 
-The research code in `investigation/` (the C emulator and the capture
-tools) has its own self-tests and is not covered here.
+The research code in `investigation/` (the capture firmware and tools)
+is not covered here.
 
 ## Common
 
@@ -289,7 +289,7 @@ app/tests/
 ├── CMakeLists.txt        Owns every test target
 ├── .clang-tidy           The app's clang-tidy settings, plus one test exception
 ├── support/              Shared helpers: golden-file readers, frame builders,
-│                         the reference emulator's run modes, gMock mocks;
+│                         tms5220emu and its run modes, gMock mocks;
 │                         dfs_catalogue.py, an independent DFS disc reader
 │                         the functional tests run with Python 3 (skipped
 │                         without it)
@@ -352,7 +352,8 @@ fast, mocked, hermetic one, and it is the only lane the packaged Nix build
   emulator; the C++ is now the only maintained implementation. The Python
   encoder's output (the packaging data, the emulator's corpus phrases and the stages before level
   setting in the encoder's intermediates) is fixed. The rest is written by
-  `app/scripts/golden/generate_golden.py` (the emulator's runs),
+  `app/scripts/golden/generate_golden.py` (the emulator's runs, through
+  `tms5220emu`, the emulator's command line built with the tests),
   `app/scripts/golden/encoder.py` (encoder) and
   `app/scripts/golden/measures.py` (the quality measures,
   from py-webrtcvad, pystoi, REAPER, pyworld and NumPy), run by hand in the default Nix shell

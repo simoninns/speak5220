@@ -591,8 +591,7 @@ int RunSynth(const QCommandLineParser& parser, const QStringList& arguments) {
   if (!spoken.IsOk()) {
     return Fail(spoken.GetStatus());
   }
-  // The I/O codes x 64 (synth::kSampleScale), before the DAC clips them:
-  // the reference emulator's --wav convention.
+  // The I/O codes x 64 (synth::kSampleScale), before the DAC clips them.
   constexpr float kInt16Scale = 32768.0F;
   std::vector<float> samples(spoken->samples.size());
   for (std::size_t i = 0; i < samples.size(); ++i) {
