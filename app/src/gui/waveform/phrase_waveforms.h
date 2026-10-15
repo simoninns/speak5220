@@ -240,6 +240,8 @@ class PhraseWaveforms : public QWidget {
     QScrollArea* settings = nullptr;
     WaveformPane* pane = nullptr;
     QScrollBar* scroll_bar = nullptr;
+    // The row of controls under the scroll bar.
+    QWidget* controls = nullptr;
     QToolButton* play = nullptr;
     QToolButton* reset = nullptr;
     QToolButton* zoom_out = nullptr;

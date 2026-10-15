@@ -168,6 +168,17 @@ PhraseWaveforms::PhraseWaveforms(ProjectEdits& edits, Player& player,
              QStringLiteral("preprocessed recording"));
   BuildTrack(TrackOf(PhraseTab::kEncode), QStringLiteral("Encode"),
              QStringLiteral("Encoded"), QStringLiteral("encoded audio"));
+  // Every tab's controls row is as tall as the tallest (the Encode tab's
+  // Frame grid check box is taller than a tool button in some styles), so
+  // the waveforms are the same height in every tab.
+  int controls_height = 0;
+  for (const Track& track : tracks_) {
+    controls_height =
+        std::max(controls_height, track.controls->sizeHint().height());
+  }
+  for (const Track& track : tracks_) {
+    track.controls->setFixedHeight(controls_height);
+  }
   // GripSplitter, so its handle can be seen in every style.
   splitter_->addWidget(waveform_stack_);
   splitter_->addWidget(settings_stack_);
@@ -223,7 +234,9 @@ void PhraseWaveforms::BuildTrack(Track& track, const QString& tab_title,
   track.fit = MakeButton(QStringLiteral("Fit"),
                          QStringLiteral("Show the whole phrase"), top);
 
-  auto* controls = new QHBoxLayout;
+  track.controls = new QWidget(top);
+  auto* controls = new QHBoxLayout(track.controls);
+  controls->setContentsMargins(0, 0, 0, 0);
   controls->addWidget(track.play);
   controls->addWidget(track.reset);
   controls->addStretch();
@@ -242,7 +255,7 @@ void PhraseWaveforms::BuildTrack(Track& track, const QString& tab_title,
   layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(track.pane, 1);
   layout->addWidget(track.scroll_bar);
-  layout->addLayout(controls);
+  layout->addWidget(track.controls);
   waveform_stack_->addWidget(top);
 
   // The settings area's page, which scrolls rather than growing.
