@@ -11,6 +11,14 @@ site/
 # Application build directories (BUILD.md: cmake -S app -B build/app)
 build/
 
+# The backup the application keeps of a project when it saves one
+# (app/src/core/project/project_store.h: kBackupSuffix)
+*~
+
+# The hardware investigation, removed from the repository; older clones
+# still hold its local-only captures, PROM images and builds
+/investigation/
+
 # The commit the Flatpak reports, written by the release workflow
 # (app/packaging/flatpak/io.github.simoninns.speak5220.yml)
 app/packaging/flatpak/version

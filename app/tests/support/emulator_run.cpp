@@ -373,7 +373,8 @@ StatusOr<EmulatorRun> RunBulk(const BulkRun& run) {
     for (std::size_t i = 0; i < data->size(); ++i) {
       memory[(run.load_at + i) % memory.size()] = (*data)[i];
     }
-    const std::uint32_t address = run.address % memory.size();
+    const auto address =
+        static_cast<std::uint32_t>(run.address % memory.size());
     // tms5220emu sends 256 bytes when it finds no stop code.
     constexpr std::size_t kNoStopBytes = 256;
     const std::size_t length =
