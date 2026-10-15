@@ -82,7 +82,7 @@ class ReferencePage {
 
   // True if `word` is one of the words of an inline code span of at most
   // kMaxMentionWords words: the span split at spaces and commas, with
-  // quotes and brackets stripped, so `"chirp"`, `--help`, `-h` and
+  // quotes and brackets stripped, so `"none"`, `--help`, `-h` and
   // `export --format wav` all count.
   bool Mentions(std::string_view word) const {
     return code_words_.contains(std::string(word));
@@ -252,24 +252,17 @@ TEST(DocsCoverageTest, EveryEncoderOptionHasARowWithItsTypeDefaultAndRange) {
       case encoder::EncoderOptionType::kOptionalReal:
         type = "Number, or `null`";
         break;
-      case encoder::EncoderOptionType::kPreEmphasis:
-        type = "`\"chirp\"` or a number";
-        break;
     }
     if (!row[type_column].starts_with(type)) {
       wrong.insert(std::format(R"({}: type "{}", expected "{}")", info.field,
                                row[type_column], type));
     }
     // An optional option whose default is unset has no default text.
-    std::string default_text =
+    const std::string default_text =
         info.default_text.empty() ||
                 info.default_text == encoder::kUnsetOptionText
             ? std::string("Unset")
             : std::string(info.default_text);
-    if (info.type == encoder::EncoderOptionType::kPreEmphasis &&
-        info.default_text == "chirp") {
-      default_text = "`\"chirp\"`";
-    }
     const std::string& documented = row[default_column];
     if (!documented.starts_with(default_text) ||
         (documented.size() > default_text.size() &&

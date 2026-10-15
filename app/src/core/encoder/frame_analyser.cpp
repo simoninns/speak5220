@@ -171,8 +171,7 @@ std::vector<FrameFeatures> FrameAnalyser::Features(
   const auto uwin = static_cast<std::size_t>(win);
   const std::vector<double> ham = dsp::HammingWindow(win);
   const std::vector<double> lagw = LagWindow(options.lag_window_hz);
-  const std::vector<double> xp =
-      dsp::FirFilter(PreEmphasisFilter(options.pre_emphasis), x);
+  const std::vector<double> xp = dsp::FirFilter(ChirpInverse(), x);
   const std::vector<double> xl = LoudnessHighPass(x);
   // Sample i is at i + win of the padded signals.
   std::vector<double> pad(x.size() + (2 * uwin) + kFrameSamples, 0.0);

@@ -52,7 +52,6 @@ enum class Axis {
   kTargetRms,
   kRepeatLambda,
   kGateDb,
-  kPreEmphasis,
   kWindow,
   kLagWindowHz,
   kVoicingThreshold,
@@ -60,8 +59,7 @@ enum class Axis {
   kLevelAgc,
 };
 
-// How the descent steps along an axis. The kind of pre-emphasis has no
-// step: each round tries the other kind.
+// How the descent steps along an axis.
 struct AxisSteps {
   Axis axis;
   // The first step, and the smallest; values are rounded to `decimals`
@@ -74,11 +72,10 @@ struct AxisSteps {
 // The descent's axes, in the order their moves are tried (and so their
 // indices, which break ties). Steps of about a tenth of each option's
 // useful range, refined to a few percent.
-constexpr std::array<AxisSteps, 9> kDescentAxes = {{
+constexpr std::array<AxisSteps, 8> kDescentAxes = {{
     {.axis = Axis::kTargetRms, .step = 2.0, .min_step = 0.5, .decimals = 2},
     {.axis = Axis::kRepeatLambda, .step = 20.0, .min_step = 5.0, .decimals = 1},
     {.axis = Axis::kGateDb, .step = 5.0, .min_step = 1.25, .decimals = 2},
-    {.axis = Axis::kPreEmphasis, .step = 0.04, .min_step = 0.01, .decimals = 3},
     {.axis = Axis::kWindow, .step = 40.0, .min_step = 10.0, .decimals = 0},
     {.axis = Axis::kLagWindowHz, .step = 20.0, .min_step = 5.0, .decimals = 1},
     {.axis = Axis::kVoicingThreshold,
@@ -97,10 +94,6 @@ constexpr double kGridVoicingThreshold = 0.05;
 constexpr double kGridVoicingEvidence = 2.0;
 constexpr double kGridRepeatLambdaFactor = 2.0;
 constexpr double kGridTargetRms = 4.0;
-// The first-order coefficient the grid and the descent try in place of the
-// chirp pre-emphasis: the "lean" option set's (TESTING.md's reference
-// data).
-constexpr double kFirstOrderMu = 0.9;
 
 std::string_view FieldOf(Axis axis) {
   switch (axis) {
@@ -110,8 +103,6 @@ std::string_view FieldOf(Axis axis) {
       return "repeat_lambda";
     case Axis::kGateDb:
       return "gate_db";
-    case Axis::kPreEmphasis:
-      return "pre_emphasis";
     case Axis::kWindow:
       return "window";
     case Axis::kLagWindowHz:
@@ -126,8 +117,7 @@ std::string_view FieldOf(Axis axis) {
   return {};
 }
 
-// The numeric value of an axis: the real or whole-number option, or the
-// pre-emphasis coefficient.
+// The numeric value of an axis: the real or whole-number option.
 double ValueOf(const EncoderOptions& options, Axis axis) {
   switch (axis) {
     case Axis::kTargetRms:
@@ -136,8 +126,6 @@ double ValueOf(const EncoderOptions& options, Axis axis) {
       return options.repeat_lambda;
     case Axis::kGateDb:
       return options.gate_db;
-    case Axis::kPreEmphasis:
-      return options.pre_emphasis.mu;
     case Axis::kWindow:
       return options.window;
     case Axis::kLagWindowHz:
@@ -171,9 +159,6 @@ EncoderOptions WithValue(EncoderOptions options, Axis axis, double value,
     case Axis::kGateDb:
       options.gate_db = value;
       break;
-    case Axis::kPreEmphasis:
-      options.pre_emphasis = encoder::PreEmphasis::FirstOrder(value);
-      break;
     case Axis::kWindow:
       options.window = static_cast<int>(value);
       break;
@@ -193,15 +178,6 @@ EncoderOptions WithValue(EncoderOptions options, Axis axis, double value,
   return options;
 }
 
-// The options with the other pre-emphasis kind: the first-order filter in
-// place of the chirp's, or the chirp's in place of the first-order.
-EncoderOptions OtherPreEmphasis(EncoderOptions options) {
-  options.pre_emphasis = options.pre_emphasis.chirp
-                             ? encoder::PreEmphasis::FirstOrder(kFirstOrderMu)
-                             : encoder::PreEmphasis::Chirp();
-  return options;
-}
-
 // Identifies a set of options: every option's text, in EncoderOptionInfos()
 // order.
 std::string KeyOf(const EncoderOptions& options) {
@@ -217,9 +193,6 @@ std::string KeyOf(const EncoderOptions& options) {
 std::vector<EncoderOptions> GridAround(const EncoderOptions& start) {
   using Variants = std::vector<EncoderOptions>;
   std::vector<Variants (*)(const EncoderOptions&)> dimensions = {
-      [](const EncoderOptions& o) -> Variants {
-        return {o, OtherPreEmphasis(o)};
-      },
       [](const EncoderOptions& o) -> Variants {
         constexpr int kDecimals = 4;
         return {
@@ -270,20 +243,9 @@ std::vector<EncoderOptions> GridAround(const EncoderOptions& start) {
   return points;
 }
 
-// One step down and one up along an axis from `options`; for the
-// pre-emphasis, also the other kind.
+// One step down and one up along an axis from `options`.
 std::vector<EncoderOptions> MovesAlong(const EncoderOptions& options,
                                        const AxisSteps& steps, double step) {
-  if (steps.axis == Axis::kPreEmphasis) {
-    if (options.pre_emphasis.chirp) {
-      return {OtherPreEmphasis(options)};
-    }
-    return {WithValue(options, steps.axis, options.pre_emphasis.mu - step,
-                      steps.decimals),
-            WithValue(options, steps.axis, options.pre_emphasis.mu + step,
-                      steps.decimals),
-            OtherPreEmphasis(options)};
-  }
   const double value = ValueOf(options, steps.axis);
   return {WithValue(options, steps.axis, value - step, steps.decimals),
           WithValue(options, steps.axis, value + step, steps.decimals)};

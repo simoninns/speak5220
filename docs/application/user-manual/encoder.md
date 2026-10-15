@@ -129,19 +129,18 @@ for single steps, Page Up and Page Down for larger ones. The
 [noise gate](#the-noise-gate), the [bass cut](#bass-cut-and-treble-tilt),
 the [de-esser](#the-de-esser) and the
 [resonance hold](#the-resonance-hold) have a check box that turns them on
-or off, and the pre-emphasis a choice of chirp or first order, whose
-coefficient the slider beside it sets. The noise gate's **Gate speed** is
-greyed out while the gate is off.
+or off. The noise gate's **Gate speed** is greyed out while the gate is
+off.
 
 The **Preprocessing** section, on the Preprocess tab, always shows its
 five settings: the [noise gate and its speed](#the-noise-gate), the
 [bass cut and treble tilt](#bass-cut-and-treble-tilt) and the
 [de-esser](#the-de-esser). The **Encoder** section, on
 the Encode tab, first shows
-its four **basic settings**, the ones that change the sound or the size
+its three **basic settings**, the ones that change the sound or the size
 most clearly: the target RMS (loudness), the repeat trade-off (bytes
-against quality), the pre-emphasis (brighter or more muffled) and the
-voicing threshold (buzz against hiss on sounds between the two). Click
+against quality) and the voicing threshold (buzz against hiss on sounds
+between the two). Click
 **Advanced settings** below them for the other seven, which fine-tune the
 encoding; click it again to hide them. Speak5220 remembers
 the choice. Hidden settings still apply: when any of them differ from the
@@ -504,16 +503,14 @@ edited.
 Each phrase's search starts from its current settings, then tries:
 
 1. **A coarse grid** around them over the options with the most effect:
-   the other kind of pre-emphasis, the voicing threshold ±0.05, the
-   voicing evidence ±2, the repeat trade-off halved and doubled, and the
-   target RMS ±4 (or the target peak ±16, if the phrase sets one): 162
-   combinations, or 54 with repeat frames off.
+   the voicing threshold ±0.05, the voicing evidence ±2, the repeat
+   trade-off halved and doubled, and the target RMS ±4: 81 combinations.
 2. **Steps along each option** from the best so far: one step down and
-   one up along every option but the peak limit (and the target it does
-   not use: the RMS when a target peak is set, the peak otherwise), all
-   tried together; on/off options are switched. It moves to the best of
-   them if that is better, and otherwise halves the steps, until they are
-   as small as they go.
+   one up along the target RMS, the repeat trade-off, the silence gate,
+   the analysis window, the lag window, the voicing threshold and
+   evidence, and the slow gain control, all tried together. It moves to
+   the best of them if that is better, and otherwise halves the steps,
+   until they are as small as they go.
 
 It tries at most 400 settings per phrase, never the same settings twice.
 Candidates run in parallel on every core, and the result is the same

@@ -16,8 +16,6 @@
 #include <span>
 #include <vector>
 
-#include "core/encoder/encoder_options.h"
-
 namespace speak5220::core::encoder {
 
 // Zero-phase order-2 Butterworth high-pass at 60 Hz, which removes rumble
@@ -30,14 +28,11 @@ std::vector<double> HighPass60Hz(std::span<const double> x);
 // Re-implements tms5220enc.py _sosfiltfilt(_butter("lowpass", 1000.0)).
 std::vector<double> LowPass1kHz(std::span<const double> x);
 
-// The FIR that whitens the chirp: the order-4 LPC inverse of the chirp
-// ROM's 21 non-zero samples (speak5220 datasheet §8.1, Table 8-7).
+// The FIR that whitens the chirp, the voiced analysis's pre-emphasis: the
+// order-4 LPC inverse of the chirp ROM's 21 non-zero samples (speak5220
+// datasheet §8.1, Table 8-7).
 // Re-implements tms5220enc.py chirpInverse().
 std::vector<double> ChirpInverse();
-
-// The pre-emphasis FIR for `pre_emphasis`: ChirpInverse(), or 1 - mu z^-1.
-// Re-implements tms5220enc.py preEmphasisFilter().
-std::vector<double> PreEmphasisFilter(const PreEmphasis& pre_emphasis);
 
 // The corner of the first-order high-pass of the BBC Micro's speech path
 // (C21/R31; docs/technical/hardware/audio-output-stage.md), through which

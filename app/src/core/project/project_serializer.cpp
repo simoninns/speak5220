@@ -144,13 +144,6 @@ void EmitOptionValue(YAML::Emitter& out, const EncoderOptionInfo& info,
       }
       out << text;
       return;
-    case EncoderOptionType::kPreEmphasis:
-      if (text == "chirp") {
-        EmitQuoted(out, text);
-        return;
-      }
-      out << text;
-      return;
     case EncoderOptionType::kReal:
     case EncoderOptionType::kInteger:
       out << text;
@@ -572,9 +565,7 @@ StatusOr<std::string> ReadOptionText(const YAML::Node& node,
   if (!node.IsScalar()) {
     return where.Error("must be a single value");
   }
-  const bool quoted_chirp =
-      info.type == EncoderOptionType::kPreEmphasis && node.Scalar() == "chirp";
-  if (!IsPlain(node) && !quoted_chirp) {
+  if (!IsPlain(node)) {
     return where.Error("must not be quoted: it is a number or true/false");
   }
   return node.Scalar();

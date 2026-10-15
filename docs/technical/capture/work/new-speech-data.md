@@ -13,14 +13,14 @@ The encoder's test speech was fixed before the encoder was written.
 ## The authoring guide and the encoder
 
 - **The authoring guide** is [datasheet §12](../../datasheet/authoring.md). It covers the bit budget; when a frame is heard; levels, the excitation's spectrum and the sign convention of the K; pitch, and the choice of frame kinds; an encoding method; VSM images, word tables and Speak External streams; and how the original PROMs were encoded (`investigation/tools/promstats.py`, `investigation/captures/phase11/promstats/`).
-- **The encoder** (the project's Python research [encoder](../../encoder/index.md)). It was written by a separate agent that read only the datasheet, the [PROM inventory](../prom-inventory.md) for the word-table formats, the emulator's command line, and the test inputs. Its [list of choices](../../encoder/choices.md) gives 31 points the datasheet left open. Those that concern the chip are fixed in the text: §8.9's wording in four places, and in §12 the frame-to-output mapping, the level targets, two numerical errors and the Acorn header. It covers:
+- **The encoder**: the first version of the project's [encoder](../../encoder/index.md). It was written by a separate agent that read only the datasheet, the [PROM inventory](../prom-inventory.md) for the word-table formats, the emulator's command line, and the test inputs. Its list of choices gave 31 points the datasheet left open (the encoder's current list is in [Implementation choices](../../encoder/choices.md)). Those that concern the chip are fixed in the text: §8.9's wording in four places, and in §12 the frame-to-output mapping, the level targets, two numerical errors and the Acorn header. It covers:
     - LPC analysis, quantisation and level setting by closed-loop synthesis;
     - its own copy of the [§8.9 algorithm](../../datasheet/reference-algorithm.md), which matches the emulator sample for sample;
     - the packers for Acorn PHROMs, TI indexed images and Speak External streams.
 
   It produces about 1300 bit/s, against 1372 for the original PROMs. On the 243 inputs: a median level error of 1.2 dB per frame, output peaks of at most 120 codes, and nothing clipped or wrapped.
 
-The data, predictions and captures on this page were made with the encoder at commit 01b7fff and stay as they are. The research encoder's final version (commit `6abe9ed`) adds a repeat search, pre-emphasis and voicing evidence ([encoder](../../encoder/index.md)).
+The data, predictions and captures on this page were made with the encoder at commit 01b7fff and stay as they are. The encoder has since gained a repeat search, the chirp's inverse as pre-emphasis, voicing evidence and a loudness target, among others ([How it works](../../encoder/how-it-works.md)).
 
 ## The round trip
 

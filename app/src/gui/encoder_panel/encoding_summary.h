@@ -48,7 +48,7 @@ QString FiguresText(const core::quality::QualityMeasurement& m);
 QString QualityToolTip();
 
 // The options that differ between `from` and `to`, by label with their
-// new values ("Target RMS 22, Pre-emphasis 0.9"), or "no change". Pure.
+// new values ("Target RMS 22, Silence gate 40"), or "no change". Pure.
 QString ChangesText(const core::encoder::EncoderOptions& from,
                     const core::encoder::EncoderOptions& to);
 

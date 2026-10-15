@@ -108,7 +108,7 @@ Project SampleProject() {
   // The project stores audio on the 24-bit grid.
   audio::QuantiseToPcm24(phrase.audio);
   phrase.source->duration = 1.25;
-  phrase.encoder = {{"voicing_threshold", "0.35"}, {"pre_emphasis", "0.9375"}};
+  phrase.encoder = {{"voicing_threshold", "0.35"}, {"gate_db", "40.5"}};
   Project project = ProjectWith({phrase, LockedPhrase(2, "O'CLOCK", 30)});
   ProjectSettings settings = project.Settings();
   settings.name = "Sample, \xc3\xa9t\xc3\xa9";

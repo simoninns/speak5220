@@ -40,7 +40,7 @@ prints its name and version.
 | Option | Value | Commands | Meaning |
 |---|---|---|---|
 | `--name` | text | `new`, `add` | `new`: the project's name (default: the file name without its extension). `add`: the phrase's name, normalised to upper case (default: made from the file name) |
-| `--option` | `KEY=VALUE` | `new` | Sets one of the project's default options, of either stage, as the project file writes it: `repeat_lambda=300`, `pre_emphasis=chirp`, `noise_gate_db=none` ([Encoder options](encoder-options.md)). May be given more than once |
+| `--option` | `KEY=VALUE` | `new` | Sets one of the project's default options, of either stage, as the project file writes it: `repeat_lambda=300`, `noise_gate_db=none` ([Encoder options](encoder-options.md)). May be given more than once |
 | `--normalise` | none | `add` | Scales a file that clips or is very quiet (peak below −30 dBFS) to a peak of −1 dBFS. Other files are never changed |
 | `--force` | none | `encode` | Encodes every phrase that is not locked, even if its frames are current |
 | `--description` | text | `add` | The phrase's description, a note kept in the project only (default: none) |

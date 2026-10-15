@@ -1,5 +1,5 @@
 encoder_version: "1.5.0"
-settings_hash: "0d9524b871c86c3839b1ac9019e0a75462beacac4fc5de4151a200069a63a8f1"
+settings_hash: "8e58576400593930d91634bf44857c3807916e45abaaca1f7d9022f81bd1b67a"
 frames:
   - {energy: 5, repeat: 0, pitch: 0, k: [31, 17, 9, 7]}
   - {energy: 10, repeat: 1, pitch: 0}

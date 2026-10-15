@@ -27,16 +27,16 @@ python investigation/tools/phase11.py compare    # the chip against the predicti
 python investigation/tools/asrcheck.py           # word error rates of input, prediction and chip (whisper.cpp)
 ```
 
-- **The research encoder** encoded the new speech data and packed it. It was written in Python from the reference datasheet alone, by a separate agent, as the emulator was. [Encoder](../encoder/index.md) gives the method and where its source is kept, and [Encoder choices](../encoder/choices.md) lists what the datasheet left open.
+- **The encoder**, in its first version (commit 01b7fff), encoded the new speech data and packed it. It was written from the reference datasheet alone, by a separate agent, as the emulator was. [Encoder](../encoder/index.md) gives the current encoder's method, and [Encoder choices](../encoder/choices.md) lists what the datasheet left open.
 - **`promstats.py`** parses every word of the eight PROMs. It reports the frame kinds, the energy, pitch and K indices used, how words start and end, and the bit rate (`investigation/captures/phase11/promstats/`; see [datasheet §12](../datasheet/authoring.md)).
-- **The data sets** in `investigation/captures/phase11/data/` are five synthetic PROMs, which `run.py` captures like any other. They were built with the research encoder and are committed, with each word's input in `<set>_items.csv`:
+- **The data sets** in `investigation/captures/phase11/data/` are five synthetic PROMs, which `run.py` captures like any other. They were built with that encoder and are committed, with each word's input in `<set>_items.csv`:
   - **`phrom`:** an Acorn-format PHROM of the single words, numbers and computer phrases;
   - **`tts1`, `tts2`:** every TTS input;
   - **`rec`:** the recordings;
   - **`hand`:** frame sequences built by hand to use every frame kind and transition.
 
   Inputs longer than 8 s were cut at a pause into several utterances, because the Pico's trace holds about 16 s of VSM speech.
-- **The round trip** (acceptance test 3) parsed each PROM word with the research encoder's frame parser and packed it again. The bits had to be identical up to the end of the stop code. Its results are committed in `investigation/captures/phase11/roundtrip/`.
+- **The round trip** (acceptance test 3) parsed each PROM word with the encoder's frame parser and packed it again. The bits had to be identical up to the end of the stop code. Its results are committed in `investigation/captures/phase11/roundtrip/`.
 - **`phase11.py`**:
   - **`predict`** runs the emulator on every word and path, spoken after the word `run.py` speaks before it. Where the predecessor changes the output, it also predicts the word after itself. The predictions are committed before the chip runs.
   - **`compare`** judges each set against the tolerance set in the [capture plan](../capture/index.md) and checks the VSM timing. It also compares the chip's VSM output with its Speak External output.

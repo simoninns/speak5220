@@ -169,7 +169,7 @@ TEST_F(ProjectSerializerTest, SavedProjectLoadsUnchanged) {
   Phrase encoded = EncodedPhrase(1, "HELLO", 40);
   encoded.description = "Greeting, recorded 2026-10-10 \xc2\xb7 caf\xc3\xa9";
   encoded.encoder = {{"target_rms", "18"},
-                     {"pre_emphasis", "0.9375"},
+                     {"gate_db", "40.5"},
                      {"noise_gate_db", "none"},
                      {"resonance_hold_db", "20"}};
   encoded.encoding->quality =
@@ -303,19 +303,15 @@ TEST_F(ProjectSerializerTest, StringsAreAlwaysQuoted) {
 
 TEST_F(ProjectSerializerTest, OptionsAreWrittenWithTheirTypes) {
   Project project = ProjectWith({AudioPhrase(1, "A")});
-  ASSERT_TRUE(
-      project
-          .SetEncoding(TestId(1), {.overrides = {{"target_rms", "18"},
-                                                 {"window", "200"},
-                                                 {"pre_emphasis", "chirp"}}})
-          .IsOk());
+  ASSERT_TRUE(project
+                  .SetEncoding(TestId(1), {.overrides = {{"target_rms", "18"},
+                                                         {"window", "200"}}})
+                  .IsOk());
   const std::string yaml = ProjectYamlOf(project);
   EXPECT_THAT(yaml, HasSubstr("    target_rms: 20\n    repeat_lambda: 300\n"));
   EXPECT_THAT(yaml, HasSubstr("    window: 256\n"));
-  EXPECT_THAT(yaml, HasSubstr("    pre_emphasis: \"chirp\"\n"));
   EXPECT_THAT(yaml, HasSubstr("    voicing_threshold: 0.6\n"));
   EXPECT_THAT(yaml, HasSubstr("    encoder:\n      target_rms: 18\n"
-                              "      pre_emphasis: \"chirp\"\n"
                               "      window: 200\n"));
 }
 

@@ -66,8 +66,9 @@ double FrameRms(std::span<const double> x, int centre, int half = 100);
 // - each frame's level is its FrameRms(), and its loudness the same after
 //   LoudnessHighPass() (not in the reference);
 // - each frame's spectrum is the lag-windowed autocorrelation of a Hamming
-//   window, of the pre-emphasised signal for voiced frames and the plain
-//   one for unvoiced; the first frame's window starts at the onset.
+//   window, of the signal pre-emphasised by ChirpInverse() for voiced
+//   frames and the plain one for unvoiced; the first frame's window starts
+//   at the onset.
 // Stateless; thread-safe.
 class FrameAnalyser : public IFrameAnalyser {
  public:

@@ -50,24 +50,19 @@ using encoder::OptionStage;
 constexpr int kOptionColumns = 2;
 // Grid columns per option: label, editor, reset.
 constexpr int kColumnsPerOption = 3;
-// The pre-emphasis kinds in their chooser.
-constexpr int kChirpIndex = 0;
-constexpr int kFirstOrderIndex = 1;
 // The unit of a ratio, which its minimum turns off.
 constexpr std::string_view kRatioUnit = ":1";
 // The unit of the analysis window, shown in milliseconds (a step of 8
 // samples is 1 ms).
 constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
-// What the optional options' and the coefficient's sliders show before
-// one is set: a noise gate under most breaths, a bass cut like Acorn's own
-// phrases, a moderate de-esser, the default resonance hold, and
-// the coefficient Optimise tries.
+// What the optional options' sliders show before one is set: a noise gate
+// under most breaths, a bass cut like Acorn's own phrases, a moderate
+// de-esser and the default resonance hold.
 constexpr double kUnsetNoiseGate = 30.0;
 constexpr double kUnsetBassCut = 200.0;
 constexpr double kUnsetDeEss = 10.0;
 constexpr double kUnsetResonanceHold = 14.0;
-constexpr double kUnsetMu = 0.9;
 
 // The slider's value for an optional option that is unset.
 double UnsetValue(std::string_view field) {
@@ -274,20 +269,6 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
         focus = row.check;
         break;
       }
-      case EncoderOptionType::kPreEmphasis: {
-        auto* box = new QWidget(section);
-        auto* box_layout = new QHBoxLayout(box);
-        box_layout->setContentsMargins(0, 0, 0, 0);
-        row.kind = new QComboBox(box);
-        row.kind->addItem(QStringLiteral("Chirp"));
-        row.kind->addItem(QStringLiteral("First order"));
-        row.slider = make_slider(box);
-        box_layout->addWidget(row.kind);
-        box_layout->addWidget(row.slider, 1);
-        editor = box;
-        focus = row.kind;
-        break;
-      }
     }
     for (QWidget* widget : {editor, focus}) {
       widget->setToolTip(help);
@@ -295,10 +276,7 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     }
     if (row.slider != nullptr) {
       row.slider->Slider()->setAccessibleName(ToQString(info.label));
-      row.slider->setToolTip(
-          info.type == EncoderOptionType::kPreEmphasis
-              ? help + QStringLiteral("\nThe slider sets the coefficient mu.")
-              : help);
+      row.slider->setToolTip(help);
     }
     row.label->setBuddy(focus);
     row.editor = editor;
@@ -344,9 +322,6 @@ EncoderSettingsForm::EncoderSettingsForm(QWidget* parent)
     if (row.check != nullptr) {
       connect(row.check, &QCheckBox::toggled, this, edited);
     }
-    if (row.kind != nullptr) {
-      connect(row.kind, &QComboBox::currentIndexChanged, this, edited);
-    }
     connect(row.reset, &QToolButton::clicked, this, [this, at] {
       const std::string_view field = at->info->field;
       // The baseline's text is valid, so this cannot fail.
@@ -382,9 +357,6 @@ QWidget* EncoderSettingsForm::Editor(std::string_view field) const {
   const Row* row = FindRow(field);
   if (row == nullptr) {
     return nullptr;
-  }
-  if (row->kind != nullptr) {
-    return row->kind;
   }
   return row->slider;
 }
@@ -464,21 +436,6 @@ void EncoderSettingsForm::ShowValue(const Row& row) {
       row.slider->SetValue(value.value_or(base.value_or(UnsetValue(field))));
       break;
     }
-    case EncoderOptionType::kPreEmphasis: {
-      const bool chirp = options_.pre_emphasis.chirp;
-      const bool base_chirp = baseline_.pre_emphasis.chirp;
-      row.kind->setCurrentIndex(chirp ? kChirpIndex : kFirstOrderIndex);
-      row.slider->setEnabled(!chirp);
-      row.slider->SetDefault(
-          base_chirp ? std::nullopt
-                     : std::optional<double>(baseline_.pre_emphasis.mu));
-      if (!chirp) {
-        row.slider->SetValue(options_.pre_emphasis.mu);
-      } else {
-        row.slider->SetValue(base_chirp ? kUnsetMu : baseline_.pre_emphasis.mu);
-      }
-      break;
-    }
   }
   loading_ = false;
 }
@@ -500,12 +457,6 @@ void EncoderSettingsForm::OnEdited(const Row& row) {
       row.slider->setEnabled(row.check->isChecked());
       text = row.check->isChecked() ? core::FormatNumber(row.slider->Value())
                                     : std::string(encoder::kUnsetOptionText);
-      break;
-    case EncoderOptionType::kPreEmphasis:
-      row.slider->setEnabled(row.kind->currentIndex() == kFirstOrderIndex);
-      text = row.kind->currentIndex() == kChirpIndex
-                 ? std::string("chirp")
-                 : core::FormatNumber(row.slider->Value());
       break;
   }
   // The sliders keep within the option's range, so this cannot fail.

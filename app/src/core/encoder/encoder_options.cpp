@@ -32,7 +32,7 @@ using enum OptionStage;
 
 // speak5220 datasheet §12.6 and the encoder's documentation
 // (docs/application/reference/encoder-options.md).
-constexpr std::array<EncoderOptionInfo, 16> kInfos = {{
+constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
     {.key = "noiseGateDb",
      .field = "noise_gate_db",
      .label = "Noise gate",
@@ -149,19 +149,6 @@ constexpr std::array<EncoderOptionInfo, 16> kInfos = {{
      .typical_maximum = 70.0,
      .step = 0.5,
      .advanced = true},
-    {.key = "preEmphasis",
-     .field = "pre_emphasis",
-     .label = "Pre-emphasis",
-     .help = "Pre-emphasis for the voiced analysis: \"chirp\" whitens the "
-             "chip's excitation pulse; a number mu uses 1 - mu z^-1.",
-     .type = kPreEmphasis,
-     .minimum = 0.0,
-     .maximum = 0.99,
-     .default_text = "chirp",
-     .unit = "",
-     .typical_minimum = 0.5,
-     .typical_maximum = 0.99,
-     .step = 0.01},
     {.key = "window",
      .field = "window",
      .label = "Analysis window",
@@ -266,8 +253,7 @@ constexpr std::array<EncoderOptionInfo, 16> kInfos = {{
 }};
 
 // The fields of each type, by name, for SetEncoderOption() and
-// EncoderOptionText(), with where each is kept. pre_emphasis has a type of
-// its own.
+// EncoderOptionText(), with where each is kept.
 template <typename T>
 struct Field {
   std::string_view field;
@@ -405,12 +391,6 @@ Status ValidateEncoderOptions(const EncoderOptions& options) {
       }
     }
   }
-  if (!options.pre_emphasis.chirp) {
-    if (Status status = CheckRange("pre_emphasis", options.pre_emphasis.mu);
-        !status.IsOk()) {
-      return status;
-    }
-  }
   return OkStatus();
 }
 
@@ -451,15 +431,6 @@ Status SetEncoderOption(EncoderOptions& options, std::string_view field,
         return WrongType(field, "a number or none", text);
       }
       break;
-    case kPreEmphasis:
-      if (text == "chirp") {
-        updated.pre_emphasis = PreEmphasis::Chirp();
-      } else if (const std::optional<double> value = ParseNumber(text)) {
-        updated.pre_emphasis = PreEmphasis::FirstOrder(*value);
-      } else {
-        return WrongType(field, "chirp or a number", text);
-      }
-      break;
   }
   if (Status status = ValidateEncoderOptions(updated); !status.IsOk()) {
     return status;
@@ -485,9 +456,6 @@ std::string EncoderOptionText(const EncoderOptions& options,
       return value.has_value() ? FormatNumber(*value)
                                : std::string(kUnsetOptionText);
     }
-    case kPreEmphasis:
-      return options.pre_emphasis.chirp ? std::string("chirp")
-                                        : FormatNumber(options.pre_emphasis.mu);
   }
   return {};
 }

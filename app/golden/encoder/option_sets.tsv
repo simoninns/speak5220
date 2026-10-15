@@ -1,5 +1,5 @@
 name	options
 default	{}
-lean	{"preEmphasis": 0.9, "repeatLambda": 30.0, "targetRms": 16.0, "voicingEvidence": 0.0}
+lean	{"repeatLambda": 30.0, "targetRms": 16.0, "voicingEvidence": 0.0}
 loud	{"levelAgc": 4.0, "targetRms": 40.0}
 plain	{"gateDb": 35.0, "lagWindowHz": 80.0, "voicingThreshold": 0.45, "window": 200}

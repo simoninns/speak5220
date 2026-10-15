@@ -52,11 +52,6 @@ core::Status SetOption(EncoderOptions& options, const QString& key,
     options.repeat_lambda = value.toDouble();
   } else if (key == "gateDb") {
     options.gate_db = value.toDouble();
-  } else if (key == "preEmphasis") {
-    options.pre_emphasis =
-        value.isString()
-            ? core::encoder::PreEmphasis::Chirp()
-            : core::encoder::PreEmphasis::FirstOrder(value.toDouble());
   } else if (key == "window") {
     options.window = value.toInt();
   } else if (key == "lagWindowHz") {

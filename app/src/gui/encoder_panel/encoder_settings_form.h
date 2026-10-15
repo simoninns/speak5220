@@ -48,11 +48,9 @@ class OptionSlider;
 // and step for real and whole numbers, with the value and unit beside it
 // and a tick at the baseline's value; for an option that can be off (the
 // noise gate, the resonance hold), a check box that turns it on and a
-// slider; for the pre-emphasis, a choice of chirp or first order, and a
-// slider for the coefficient. An option with no effect while another is
-// off (the gate's speed) is disabled while it is. Values the sliders
-// cannot show exactly (off their steps) are kept until that option is
-// edited. GUI thread only.
+// slider. An option with no effect while another is off (the gate's speed)
+// is disabled while it is. Values the sliders cannot show exactly (off
+// their steps) are kept until that option is edited. GUI thread only.
 class EncoderSettingsForm : public QWidget {
   Q_OBJECT
 
@@ -68,10 +66,9 @@ class EncoderSettingsForm : public QWidget {
   // The options shown.
   const core::encoder::EncoderOptions& Options() const { return options_; }
 
-  // The editor of `field`: its slider, or for the pre-emphasis its kind
-  // chooser.
+  // The editor of `field`: its slider.
   QWidget* Editor(std::string_view field) const;
-  // The slider of `field` (the coefficient's for the pre-emphasis).
+  // The slider of `field`.
   OptionSlider* Slider(std::string_view field) const;
   // The check box that turns an optional option (noise_gate_db,
   // bass_cut_hz, de_ess_db, resonance_hold_db) on; nullptr for other
@@ -112,13 +109,12 @@ class EncoderSettingsForm : public QWidget {
   struct Row {
     const core::encoder::EncoderOptionInfo* info = nullptr;
     QLabel* label = nullptr;
-    // The editor's cell: the slider, or the box holding a check box or
-    // chooser and a slider.
+    // The editor's cell: the slider, or the box holding a check box and a
+    // slider.
     QWidget* editor = nullptr;
     OptionSlider* slider = nullptr;
     // The check box that turns an optional option on.
     QCheckBox* check = nullptr;
-    QComboBox* kind = nullptr;
     QToolButton* reset = nullptr;
   };
 

@@ -66,13 +66,6 @@ std::vector<double> ChirpInverse() {
   return dsp::StepUp(dsp::Levinson(r, kChirpInverseOrder));
 }
 
-std::vector<double> PreEmphasisFilter(const PreEmphasis& pre_emphasis) {
-  if (pre_emphasis.chirp) {
-    return ChirpInverse();
-  }
-  return {1.0, -pre_emphasis.mu};
-}
-
 std::vector<double> LoudnessHighPass(std::span<const double> x) {
   // H(z) = (1 - z^-1) / ((1 + k) + (k - 1) z^-1).
   const double k = LoudnessK();

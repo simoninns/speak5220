@@ -32,7 +32,6 @@ TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
   EXPECT_EQ(o.target_rms, 20.0);
   EXPECT_EQ(o.repeat_lambda, 300.0);
   EXPECT_EQ(o.gate_db, 45.0);
-  EXPECT_EQ(o.pre_emphasis, PreEmphasis::Chirp());
   EXPECT_EQ(o.window, 256);
   EXPECT_EQ(o.lag_window_hz, 60.0);
   EXPECT_EQ(o.voicing_threshold, 0.6);
@@ -227,7 +226,7 @@ TEST(EncoderOptionsTest, InfoListsEveryOptionOnceWithItsDefaultInRange) {
     EXPECT_FALSE(info.help.empty()) << info.key;
     EXPECT_LE(info.minimum, info.maximum) << info.key;
   }
-  EXPECT_EQ(keys.size(), 16U);
+  EXPECT_EQ(keys.size(), 15U);
   EXPECT_EQ(EncoderOptionInfos().front().key, "noiseGateDb");
   EXPECT_EQ(EncoderOptionInfos().back().key, "levelAgc");
 }
@@ -240,7 +239,6 @@ TEST(EncoderOptionsTest, BasicOptionsAreTheOnesWithTheClearestEffect) {
     }
   }
   EXPECT_EQ(basic, (std::vector<std::string_view>{"target_rms", "repeat_lambda",
-                                                  "pre_emphasis",
                                                   "voicing_threshold"}));
 }
 
@@ -288,14 +286,6 @@ TEST(EncoderOptionsTest, SetsAndReadsTheNoiseGateAsText) {
   EXPECT_FALSE(o.preprocess.noise_gate_db.has_value());
 }
 
-TEST(EncoderOptionsTest, ChecksPreEmphasisCoefficientOnlyWhenNotChirp) {
-  EncoderOptions o;
-  o.pre_emphasis = PreEmphasis::FirstOrder(0.9);
-  EXPECT_TRUE(ValidateEncoderOptions(o).IsOk());
-  o.pre_emphasis = PreEmphasis::FirstOrder(1.5);
-  EXPECT_FALSE(ValidateEncoderOptions(o).IsOk());
-}
-
 TEST(EncoderOptionsTest, ErrorNamesTheOption) {
   EncoderOptions o;
   o.repeat_lambda = -1.0;
@@ -319,7 +309,7 @@ TEST(EncoderOptionsTest, TextOfEveryDefaultReadsBackToTheDefaults) {
   const EncoderOptions defaults;
   EncoderOptions options;
   options.target_rms = 1.0;
-  options.pre_emphasis = PreEmphasis::FirstOrder(0.5);
+  options.window = 200;
   options.resonance_hold_db.reset();
   for (const EncoderOptionInfo& info : EncoderOptionInfos()) {
     const std::string text = EncoderOptionText(defaults, info.field);
@@ -335,11 +325,8 @@ TEST(EncoderOptionsTest, TextOfEachTypeIsWhatAUserTypes) {
   EXPECT_EQ(EncoderOptionText(options, "voicing_threshold"), "0.6");
   EXPECT_EQ(EncoderOptionText(options, "window"), "256");
   EXPECT_EQ(EncoderOptionText(options, "noise_gate_db"), "none");
-  EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "chirp");
   options.preprocess.noise_gate_db = 30.0;
-  options.pre_emphasis = PreEmphasis::FirstOrder(0.9375);
   EXPECT_EQ(EncoderOptionText(options, "noise_gate_db"), "30");
-  EXPECT_EQ(EncoderOptionText(options, "pre_emphasis"), "0.9375");
   EXPECT_EQ(EncoderOptionText(options, "no_such_option"), "");
 }
 
@@ -353,22 +340,15 @@ TEST(EncoderOptionsTest, SetsEachTypeFromText) {
   EXPECT_EQ(options.preprocess.noise_gate_db, 40.0);
   ASSERT_TRUE(SetEncoderOption(options, "noise_gate_db", "none").IsOk());
   EXPECT_FALSE(options.preprocess.noise_gate_db.has_value());
-  ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "0.9").IsOk());
-  EXPECT_EQ(options.pre_emphasis, PreEmphasis::FirstOrder(0.9));
-  ASSERT_TRUE(SetEncoderOption(options, "pre_emphasis", "chirp").IsOk());
-  EXPECT_EQ(options.pre_emphasis, PreEmphasis::Chirp());
 }
 
 TEST(EncoderOptionsTest, RefusingTextLeavesTheOptionsUnchanged) {
   const EncoderOptions defaults;
   EncoderOptions options;
   const std::vector<std::pair<std::string, std::string>> bad = {
-      {"target_rms", "loud"},    {"target_rms", "1,5"},
-      {"target_rms", "500"},     {"window", "240.5"},
-      {"window", "10"},          {"noise_gate_db", "x"},
-      {"noise_gate_db", "true"}, {"pre_emphasis", "1.5"},
-      {"pre_emphasis", "fir"},   {"targetRms", "20"},
-      {"no_such_option", "1"},
+      {"target_rms", "loud"},    {"target_rms", "1,5"}, {"target_rms", "500"},
+      {"window", "240.5"},       {"window", "10"},      {"noise_gate_db", "x"},
+      {"noise_gate_db", "true"}, {"targetRms", "20"},   {"no_such_option", "1"},
   };
   for (const auto& [field, text] : bad) {
     EXPECT_FALSE(SetEncoderOption(options, field, text).IsOk())

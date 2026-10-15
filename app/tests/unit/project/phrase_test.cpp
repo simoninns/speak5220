@@ -26,12 +26,12 @@ TEST(PhraseTest, OverridesForNameOnlyTheOptionsThatDiffer) {
   const encoder::EncoderOptions defaults;
   encoder::EncoderOptions options = defaults;
   options.target_rms = 18.5;
-  options.pre_emphasis = encoder::PreEmphasis::FirstOrder(0.9);
+  options.window = 200;
   options.preprocess.noise_gate_db = 30.0;
   const EncoderOverrides overrides = OverridesFor(defaults, options);
-  EXPECT_EQ(overrides, (EncoderOverrides{{"pre_emphasis", "0.9"},
-                                         {"noise_gate_db", "30"},
-                                         {"target_rms", "18.5"}}));
+  EXPECT_EQ(overrides, (EncoderOverrides{{"noise_gate_db", "30"},
+                                         {"target_rms", "18.5"},
+                                         {"window", "200"}}));
 }
 
 TEST(PhraseTest, OverridesForApplyBackToTheSameOptions) {

@@ -419,10 +419,12 @@
             p.matplotlib
             p.pyserial
             p.soundfile
-            # The quality reference data (app/scripts/golden/quality.py): the
-            # original WebRTC voice activity detector, ESTOI and WORLD's
-            # Harvest
+            # The quality reference data (app/scripts/golden/measures.py):
+            # the original WebRTC voice activity detector, ESTOI and WORLD's
+            # Harvest. webrtcvad imports pkg_resources, from setuptools,
+            # which its package does not bring
             p.webrtcvad
+            p.setuptools
             (p.buildPythonPackage rec {
               pname = "pystoi";
               version = "0.4.1";

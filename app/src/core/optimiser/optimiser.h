@@ -142,13 +142,12 @@ using ProgressCallback = std::function<void(const OptimiseResult& so_far,
 // within the project budget and a per-phrase byte limit.
 //
 //  1. The start, then a coarse grid around it over the options with the
-//     most effect: pre-emphasis (the start's and the other kind),
-//     voicing threshold (+-0.05), voicing evidence (+-2), repeat
-//     trade-off (x0.5, x2) and the target RMS (+-4).
+//     most effect: voicing threshold (+-0.05), voicing evidence (+-2),
+//     repeat trade-off (x0.5, x2) and the target RMS (+-4).
 //  2. Coordinate descent from the best so far: each round tries one step
 //     down and one up along every searched option (target RMS, repeat
-//     trade-off, silence gate, pre-emphasis, window, lag window, voicing
-//     threshold and evidence, slow gain control), and moves to the best
+//     trade-off, silence gate, window, lag window, voicing threshold and
+//     evidence, slow gain control), and moves to the best
 //     if it improves on the current options; otherwise the steps are
 //     halved, and the search ends when they reach their smallest.
 //

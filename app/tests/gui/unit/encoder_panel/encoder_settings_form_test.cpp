@@ -53,10 +53,6 @@ TEST_F(EncoderSettingsFormTest, HasAnEditorOfTheRightKindForEveryOption) {
         EXPECT_NE(form_.Slider(info.field), nullptr) << info.field;
         EXPECT_NE(form_.OnBox(info.field), nullptr) << info.field;
         break;
-      case EncoderOptionType::kPreEmphasis:
-        EXPECT_NE(qobject_cast<QComboBox*>(editor), nullptr) << info.field;
-        EXPECT_NE(form_.Slider(info.field), nullptr) << info.field;
-        break;
     }
     EXPECT_TRUE(editor->toolTip().contains(QString::fromUtf8(
         info.help.data(), static_cast<qsizetype>(info.help.size()))))
@@ -200,19 +196,6 @@ TEST_F(EncoderSettingsFormTest, DeEsserTurnsOnAtAModerateDepth) {
   ASSERT_NE(form_.OnBox("de_ess_db"), nullptr);
   form_.OnBox("de_ess_db")->setChecked(true);
   EXPECT_DOUBLE_EQ(*form_.Options().preprocess.de_ess_db, 10.0);
-}
-
-TEST_F(EncoderSettingsFormTest, PreEmphasisIsChirpOrAFirstOrderCoefficient) {
-  auto* kind = qobject_cast<QComboBox*>(form_.Editor("pre_emphasis"));
-  OptionSlider* mu = form_.Slider("pre_emphasis");
-  EXPECT_FALSE(mu->isEnabled());
-  kind->setCurrentIndex(1);
-  EXPECT_TRUE(mu->isEnabled());
-  mu->MoveTo(0.9);
-  EXPECT_EQ(form_.Options().pre_emphasis,
-            core::encoder::PreEmphasis::FirstOrder(0.9));
-  kind->setCurrentIndex(0);
-  EXPECT_TRUE(form_.Options().pre_emphasis.chirp);
 }
 
 TEST_F(EncoderSettingsFormTest, KeepsValuesOffTheStepsUntilEdited) {

@@ -2,19 +2,19 @@
 
 What the [reference datasheet](../datasheet/index.md) leaves unclear,
 ambiguous or missing for someone writing an encoder from it alone, and what
-the research encoder chooses. What is not known about the chip itself is listed in
+the encoder chooses. What is not known about the chip itself is listed in
 the datasheet's [Appendix B: Known gaps](../datasheet/gaps.md). Section numbers are the datasheet's. The points the
 datasheet does settle are listed at the end, with the answer and where it is
 given.
 
 ## Synthesis (§8.5–§8.9)
 
-`synthesize()` follows [§8.9](../datasheet/reference-algorithm.md) step by
-step. It gives the reference emulator's codes sample for sample on random
-speech-like frame lists and on encoded speech, through the VSM path
-(the research encoder's self-test).
+The encoder's own synthesiser runs [§8.9](../datasheet/reference-algorithm.md)
+step by step, without the application's slot-level emulator, for its closed
+loop. Its codes match the emulator's VSM path sample for sample from the
+first frame read (`ReferenceSynthesizerTest.MatchesEmulatorVsmPath`).
 
-1. **Which noise state to use.** `synthesize()` models one VSM Speak with the
+1. **Which noise state to use.** The synthesiser models one VSM Speak with the
    standard procedure: register 0x00EB at slot 0 of sample 1
    ([§7](../datasheet/power-up.md)), from power-up state. It does not model
    the Speak External path, which runs 2 samples earlier with other noise
@@ -42,79 +42,92 @@ speech-like frame lists and on encoded speech, through the VSM path
 4. **Wrapping inside the lattice.** [§8.8](../datasheet/lattice-filter.md)
    says every sum wraps at 14 bits, while §12.3 discusses only the output
    (±512 codes). It does not say whether internal *u*ᵢ and *b*ᵢ can wrap while
-   *u*₁ stays small. *Chose:* the synthesis checks every sum. The encoder
-   lowers energies until none wraps. No encoded input wrapped at a 120-code
-   peak limit.
-5. **Margin for the chip.** The chip differs from the reference algorithm by
-   about one code, more in resonant frames, and has upsets (§7, §8.8). The
-   datasheet does not say how much margin an author should leave below ±127.
-   *Chose:* a 120-code peak limit.
+   *u*₁ stays small. *Chose:* the synthesis checks every sum, and the
+   limiter lowers energies until none wraps. No test input's encoding wraps
+   ([Quality](quality.md)).
+5. **Margin for the chip, and clipping.** The chip differs from the reference
+   algorithm by about one code, more in resonant frames, and has upsets (§7,
+   §8.8). The datasheet does not say how much margin an author should leave
+   below ±127, and §12.3 says the peaks should stay within it. *Chose:* no
+   code beyond ±160, and at most 1 sample in 1000 beyond ±127, which the DAC
+   clips. Acorn's own PHROM clips on the peaks of half its words, 0.21 % of
+   its samples; a limit at ±127 or below lets the peaks rather than the
+   loudness set the level, and the phrases come out quieter than Acorn's.
 
 ## Frame kinds (§12.2, §12.5)
 
 6. **"Close" K indices for a repeat (§12.5).** This is not quantified.
    *Chose:* repeats are chosen by a rate-distortion search within each run of
-   one voicing: bits + `repeatLambda` (70) × the rise in each frame's
+   one voicing: bits + `repeat_lambda` (300) × the rise in each frame's
    prediction error, in dB, under the repeated K. This is a likelihood-ratio
    (Itakura) measure. Repeats only follow a full frame of the same voicing
    ([Repeat and silence decisions](how-it-works.md#repeat-and-silence-decisions)).
+   300 brings the encoder's repeats near those of Acorn's own phrases.
 7. **Unvoiced repeat after a voiced frame.** §12.5 says this is allowed (K1–K4
    kept, K5–K10 zeroed), but it never says when it is useful. *Chose:* never,
-   apart from the fades below.
+   apart from the fades and the guard below.
 8. **How to fade a hiss (§12.2).** "Step its energy down over a few unvoiced
-   repeat frames first" leaves the rate open. *Chose:* each fade frame has a
-   third of the previous energy value, until the value is 2 or less (for
-   example 33 → 11 → 4 → 1). Inside an utterance, fade frames replace the
-   silence frames after the hiss. At the end, they are added before the stop.
+   repeat frames first" leaves the rate open. *Chose:* after loud hiss only (an
+   unvoiced frame at energy index 6 or more), one unvoiced repeat at a third of
+   its energy value. Inside an utterance it replaces the first silence frame
+   after the hiss; at the end it is added before the stop. Quieter hiss ends
+   as it is, as it does in Acorn's PHROM.
 9. **Leading silence.** §12.2 says to start with a voiced or unvoiced frame.
    *Chose:* after level setting, the encoder drops any leading silence frames,
-   so the first frame always loads every index.
+   and never silences the first frame, so the first frame always loads every
+   index.
+10. **Silence inside an utterance.** A run of silence frames lets the lattice
+    ring into a faint buzz (§12.2). *Chose:* in pauses of three or more silence
+    frames, the second is a voiced frame at energy 1 with every K at its index
+    nearest zero ([Start and end](how-it-works.md#start-and-end)).
 
 ## Analysis (§12.3, §12.6)
 
-10. **Pre-emphasis (§12.3).** The stated chirp spectrum (+3.9, −8.8, −11.7,
+11. **Pre-emphasis (§12.3).** The stated chirp spectrum (+3.9, −8.8, −11.7,
     −17.6 dB at 100, 500, 1000 and 2000 Hz relative to 250 Hz) is right to
-    0.1 dB, and 1 − 0.9z⁻¹ inverts it well. With that filter, 0.8 and 0.95
-    changed the spectral distance by less than 0.05 dB. *Chose:* the order-4
-    LPC inverse of the chirp table, because it also matches the chirp's shape
-    from 300 to 2000 Hz and halves the output's tilt error
+    0.1 dB, and 1 − 0.9z⁻¹ inverts it roughly. *Chose:* the order-4 LPC
+    inverse of the chirp table, because it also matches the chirp's shape
+    from 300 to 2000 Hz. First-order pre-emphasis at μ from 0.85 to 0.97 gave
+    a higher spectral distortion on both TTS and recorded speech
     ([Pre-emphasis](how-it-works.md#pre-emphasis)).
-11. **Window (§12.6 step 3: 25–40 ms).** *Chose:* 30 ms Hamming. For frame 0,
-    whose centre is at the onset, the spectral window is moved to start near
-    the onset, so it does not analyse mostly silence.
-12. **Quantisation (§12.6 step 4).** The text says nearest in LAR. *Chose:*
+12. **Window (§12.6 step 3: 25–40 ms).** *Chose:* 32 ms Hamming (`window`
+    256, the best median quality score over the test inputs). For frame 0,
+    whose centre is near the onset, the spectral window starts no more than
+    5 ms before the onset, so it does not analyse mostly silence.
+13. **Quantisation (§12.6 step 4).** The text says nearest in LAR. *Chose:*
     nearest in LAR, then a coordinate search over ±2 indices of each K that
     minimises the prediction error of the quantised filter on the frame's
     autocorrelation.
-13. **Voicing and pitch (§12.6 step 3).** The datasheet gives no method and no
+14. **Voicing and pitch (§12.6 step 3).** The datasheet gives no method and no
     warning about octave errors. That is encoder craft, not a gap in the
     chip's description. The choices are in
     [Voicing and pitch](how-it-works.md#voicing-and-pitch).
 
 ## Packaging (§12.7–§12.9)
 
-14. **Acorn PHROM: ASCII entries with no word.** The format reserves numbers
+15. **Acorn PHROM: ASCII entries with no word.** The format reserves numbers
     32–126 for "ASCII associated" entries, but the datasheet does not say what
     an image without a word for a character should hold. *Chose:* always 95
     ASCII entries, so word 127's pointer is at byte 254 as in the Acorn PHROM
-    A. Unmapped entries point to one shared byte holding a lone stop code
-    (0x0F), placed after the last word. Speaking it does nothing
-    ([§4](../datasheet/vsm-interface.md): a first-frame stop gives no output).
-15. **Acorn PHROM: where a name starts.** Names are stored backwards before
+    A. An entry can name a word; the rest point to one shared byte holding a
+    lone stop code (0x0F), placed after the last word, and speaking it does
+    nothing ([§4](../datasheet/vsm-interface.md): a first-frame stop gives no
+    output). When every entry names a word, as in Acorn's PHROM A, there is
+    no such byte.
+16. **Acorn PHROM: where a name starts.** Names are stored backwards before
     the data, "shifted left by one, then bit-reversed". The datasheet does not
     say how a reader finds the first byte of a name (the far end), or what the
     freed bit is for. It may be an end-of-name flag. *Chose:* no flag bits.
     Names directly follow the previous word's stop byte, or the pointer
     table's 0xFF for the first word, as described. No spare byte is left after
     a word's stop code, since the datasheet mentions one only for TI images.
-    Unused bytes are 0x00.
-16. **Acorn PHROM: untested.** Whether a BBC Micro reads a new image in this
-    format has not been tested ([known gaps](../datasheet/gaps.md#the-acorn-phrom-format-and-the-bbc-micro)).
+    Unused bytes are 0x00. Reading an image back, a name is the printable
+    ASCII just before the word's data.
 17. **Speak External padding (§12.9).** Silence frames before the stop keep
     the stream at 9 bytes or more. If the last sound frame is unvoiced, those
     silence frames end it abruptly, because unvoiced to silence is inhibited
     ([§8.7](../datasheet/excitation-interpolation.md)). The encoder's own
-    output already fades a final hiss. A stream that is only a stop code
+    output already fades a loud final hiss. A stream that is only a stop code
     becomes 16 silence frames and a stop: 0.4 s of nothing, starting with a
     silence frame, whose start rule is approximate (§7). The datasheet could
     say whether padding is better placed somewhere else.
@@ -124,7 +137,8 @@ speech-like frame lists and on encoded speech, through the VSM path
 These statements were checked and are correct: the glide fractions of §12.2
 (0.125 … 0.906); the energy-step figures of §12.3; the chirp energy of 65,546
 and its RMS at *P* = 16, 100 and 160; the lattice sign convention of §12.3
-(the research encoder's self-test, one-stage check).
+(a negative K1 makes the synthesiser a low-pass,
+`ReferenceSynthesizerTest.NegativeK1IsLowPass`).
 
 ## Settled by the datasheet
 
@@ -147,20 +161,19 @@ Each of these is stated in the datasheet, and the encoder follows it.
   end of IP 4, sample 125; half-way to the next frame's values by sample 325).
   The input frame centres are then `onset + 22 + 200·j`, because the sound
   starts at output sample 203 (energy computed at 201, used from 203, §8.5).
-- **RMS target and peak limit** (§12.3): the peak limit wins over an RMS
-  target, and 15–20 codes RMS at ±120 peaks is the range. On the test inputs,
-  a single scale that puts the loudest output peak at 120 gives a median
-  output RMS of 15.9 codes (40 files, `targetPeak=120`). The encoder uses an
-  RMS target of 20 codes with a per-frame limiter: any frame whose output
-  peaks above 120 has its energy index lowered. This acts on a minority of
-  frames ([Quality](quality.md)). `targetPeak` gives the single-scale reading.
+- **Loudness target and peak limit** (§12.3): the datasheet puts the
+  originals at 19–20 codes RMS with peaks within ±127, and says the peak limit
+  wins over an RMS target. The encoder aims at a loudness of 20 codes (the RMS
+  after the BBC Micro's 279 Hz high-pass, so bass does not count), which gives
+  Acorn's own phrases their own loudness back, and lets the peaks clip a
+  little, as Acorn's do (choice 5). Over the test inputs the limiter lowers
+  13 % of sounding frames ([Quality](quality.md)).
 - **The quietest frame depends on the filter** (§12.3, "The energy steps"): a
   resonant filter can make index 1 too loud, so each frame is checked by
-  synthesis. An unvoiced frame with K1 = −501 (a near-DC resonance) peaked at
-  179 codes at energy index 1. The encoder makes a frame silence if it is
-  still more than 12 dB above its target at index 1, or if the limiter cannot
-  bring it below the peak limit at index 1. A repeat frame that relied on a
-  silenced frame's K is sent as a full frame.
+  synthesis. The encoder makes a frame after the first silence if it is still
+  more than 12 dB above its target at index 1, or if the limiter cannot bring
+  it within the limits at index 1. A repeat frame that relied on a silenced
+  frame's K is sent as a full frame.
 - **Pitch steps** (§12.4): indices 1–28 step one sample at a time (periods
   16–43, steps of 6.3 % down to 2.4 %). Index 29 is 45 and index 30 is 47
   samples; periods 16–31 are indices 1–16.
@@ -181,20 +194,10 @@ Each of these is stated in the datasheet, and the encoder follows it.
   silence before any voiced frame filters its decay with the predecessor's
   K5–K10. A synthesis that always starts from power-up does not show this. On
   the reference emulator it showed in about 20 of 347 utterances, by up to 27
-  codes. With two extreme stored states in the encoder's synthesis, 15 of the
-  243 test inputs depended on the predecessor, by up to 80 codes. The encoder
-  guards against it
+  codes. The encoder guards against it
   ([Start and end](how-it-works.md#start-and-end)):
-    - a faint opening (no voiced frame, every frame more than 36 dB below the
-      loudest, followed by silence) is dropped, with its silence; this drops
-      151 frames in 10 files, all noise blips at −40 to −46 dB before the
-      speech;
+    - a faint opening (no voiced frame, no louder than 36 dB below the
+      loudest frame, followed by silence) is dropped, with its silence;
     - any silence frame still before the first full voiced frame becomes an
-      unvoiced repeat at energy 1, which keeps the zeroing (3 frames in 2
-      files; most such silences are already hiss fades);
-    - a stop after unvoiced frames was checked and does not depend on the
-      predecessor.
-
-  No test input depends on its predecessor. The research encoder's
-  `evaluate.py` measured this ("predecessor-dependent"), and its self-test
-  checked the pattern and one encoded input.
+      unvoiced repeat at energy 1, which keeps the zeroing;
+    - a stop after unvoiced frames does not depend on the predecessor.

@@ -98,7 +98,7 @@ The pitch counter keeps running across voiced frames, so a change of pitch short
 
 ## 12.6 An encoding method
 
-This is one method that follows from [§12.1](#121-the-bit-budget) to [§12.5](#125-choosing-the-kind-of-each-frame). It is not TI's, which is not published. The project's research encoder implements it ([§12.11](#1211-the-projects-encoder)).
+This is one method that follows from [§12.1](#121-the-bit-budget) to [§12.5](#125-choosing-the-kind-of-each-frame). It is not TI's, which is not published. The project's encoder implements it ([§12.11](#1211-the-projects-encoder)).
 
 1. **Resample** the speech to the chip's sample rate: `fosc` / 80, 8000 Hz at 640 kHz. Band-limit it to below 4 kHz.
 2. **Choose the frame times.** Frame *n* describes the sound at 25·*n* ms ([§12.2](#122-when-a-frame-is-heard)). Drop leading and trailing quiet; the first frame should be the first frame with sound.
@@ -191,7 +191,7 @@ Every word of the eight PROMs in the data set, 1148 words, parsed with the frame
 
 ## 12.11 The project's encoder
 
-The project's research encoder is an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its [documentation](../encoder/index.md) gives the method, and [its choices](../encoder/choices.md) list where it had to choose.
+The project's encoder, in the Speak5220 application, is an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its [documentation](../encoder/index.md) gives the method, and [its choices](../encoder/choices.md) list where it had to choose. The results below were made with its first version.
 
 - **The round trip.** Every word of the eight PROMs (1148), parsed with the frame format of [§8.1](coded-parameters.md#81-coded-speech-parameters) and packed again, is bit-identical to the original up to the end of its stop code [`investigation/captures/phase11/roundtrip/`].
 - **New speech on the chip.** 347 utterances (10.4 minutes) were encoded from new speech and hand-designed frames, and packaged as an Acorn-format PHROM and as other VSM images. The [reference emulator](../emulator/index.md)'s predictions were committed before the chip was run. Each utterance was then captured three times through each path on chip 1. The speech is within the tolerance of the capture work's acceptance tests ([capture overview](../capture/index.md), and [§8.8](lattice-filter.md#88-lattice-filter)) in every set: the emulator's median SDR is 28.4–29.7 dB, against 34.0–36.5 dB for chip 1's own takes. Every VSM take read exactly the predicted bits, and every frame read on time, apart from a known limit of the measurement in takes over 5.7 s ([new speech data](../capture/work/new-speech-data.md)) [`investigation/captures/phase11/results/`]. The hand-designed frames are quiet synthetic data, on which the one-code error of [§8.8](lattice-filter.md#88-lattice-filter) weighs as it does on the synthetic vectors.

@@ -82,7 +82,6 @@ OPTION_SETS = {
     "lean": {
         "targetRms": 16.0,
         "repeatLambda": 30.0,
-        "preEmphasis": 0.9,
         "voicingEvidence": 0.0,
     },
     "loud": {

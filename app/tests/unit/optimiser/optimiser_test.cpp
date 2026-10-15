@@ -125,13 +125,16 @@ TEST(OptimiserTest, TriesTheStartThenTheGridAroundIt) {
   ASSERT_FALSE(result->history.empty());
   EXPECT_EQ(result->Start()->stage, SearchStage::kStart);
   EXPECT_EQ(result->Start()->options, EncoderOptions{});
-  // 2 pre-emphases x 3 thresholds x 3 evidences x 3 trade-offs x 3
-  // targets, less the start.
-  constexpr int kGrid = (2 * 3 * 3 * 3 * 3) - 1;
+  // 3 thresholds x 3 evidences x 3 trade-offs x 3 targets, less the
+  // start.
+  constexpr int kGrid = (3 * 3 * 3 * 3) - 1;
+  ASSERT_GT(result->history.size(), static_cast<std::size_t>(kGrid + 1));
   for (int i = 1; i <= kGrid; ++i) {
     EXPECT_EQ(result->history[static_cast<std::size_t>(i)].stage,
               SearchStage::kGrid);
   }
+  EXPECT_EQ(result->history[static_cast<std::size_t>(kGrid + 1)].stage,
+            SearchStage::kDescent);
   std::set<double> targets;
   for (int i = 0; i <= kGrid; ++i) {
     targets.insert(

@@ -71,7 +71,7 @@ TEST(EncodingCacheTest, HashDependsOnAudioOptionsAndVersion) {
   EXPECT_NE(hash, EncodingCache::SettingsHash(other_audio, defaults,
                                               encoder::kEncoderVersion));
   encoder::EncoderOptions other_options;
-  other_options.pre_emphasis = encoder::PreEmphasis::FirstOrder(0.9);
+  other_options.window = 200;
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, other_options,
                                               encoder::kEncoderVersion));
   EXPECT_NE(hash, EncodingCache::SettingsHash(audio, defaults, "0.0.1"));

@@ -2,14 +2,9 @@
 
 This page covers how TI turned recorded speech into TMS5220 frames in the
 early 1980s. It answers one question: what in TI's own process might improve
-the encoder? The measurements here are of a baseline encoder configuration
-(first-order pre-emphasis 0.9, voicing from periodicity alone, and greedy
-repeats: a repeat when the stored K cost at most 0.8 dB). Its median
-mel-cepstral distortion (MCD) over the 243 test inputs is 2.29 dB
-(`investigation/tools/speechqual.py`, see the
-[tools pages](../tools/encoder-speech.md#encoding-quality)); an unquantised
-LPC-10 vocoder at the same frame rate gives 1.92 dB. The changes adopted
-since are in [How it works](how-it-works.md).
+the encoder? The measurements are of the encoder at its default options,
+over the 243 test inputs, scored by the application's quality rating
+([Quality](quality.md)).
 
 There are two sources:
 
@@ -33,8 +28,8 @@ There are two sources:
   is taken from these.
 
 The encoder is written from the datasheet alone ([Encoder](index.md)).
-Everything here is a hypothesis for it to test, measured with `speechqual.py`,
-in the same way other emulators are used for the chip. TI's process is not a
+Everything here is a hypothesis for it to test, measured, in the same way
+other emulators are used for the chip. TI's process is not a
 specification. Its output was also hand-edited and re-recorded until it
 sounded right, so its algorithms were never meant to stand alone.
 
@@ -193,8 +188,8 @@ pre-emphasis to voiced frames only.
 - **The pitch table is the chip's table plus one** (0, 16, 17, … 154, 160). So
   TI treated the period as the stored value + 1 samples. This is what the
   project's measurements found independently
-  ([§8.6](../datasheet/excitation-interpolation.md)), and what `pitchIndex` in
-  the encoder uses.
+  ([§8.6](../datasheet/excitation-interpolation.md)), and what the encoder
+  uses.
 
 ### Frame decisions
 
@@ -209,17 +204,17 @@ pre-emphasis to voiced frames only.
 
 ## How the encoder compares
 
-| | TI (PSL code, or 1981 program) | The research encoder |
+| | TI (PSL code, or 1981 program) | The encoder |
 |---|---|---|
-| Pre-emphasis | Voiced frames only. μ = 1.0 (PSL) or 0.9375 (1981) | Voiced frames only: the order-4 inverse of the chirp (0.9 in the baseline measured below) |
+| Pre-emphasis | Voiced frames only. μ = 1.0 (PSL) or 0.9375 (1981) | Voiced frames only: the order-4 inverse of the chirp |
 | Unvoiced analysis | No pre-emphasis, K1–K4 | The same |
-| Window | 200-sample Hamming, the frame itself | 240-sample Hamming, centred on the frame |
+| Window | 200-sample Hamming, the frame itself | 256-sample Hamming, centred on the frame |
 | Lag window | None | 60 Hz Gaussian |
-| Pitch | Autocorrelation peak on the 800 Hz path (PSL); Gold-Rabiner (1981) | YIN candidates on a 1 kHz path with a Viterbi path at 5 ms hops (`trackPitch`), and an octave fix against neighbours |
-| Voicing | Peak ≥ 0.29·R0, frame by frame | YIN's normalised difference (CMNDF) at a threshold of 0.3, smoothed by the Viterbi path (with tilt and zero-crossing evidence added, from QBox; not in the baseline) |
-| K quantisation | Nearest k | Nearest log-area ratio, then a search that minimises the prediction error of the quantised filter (`quantiseK`) |
-| Energy | Open loop: RMS · Π√(1 − k̂²) (· √P/2 if voiced), from quantised K | Closed loop on the synthesised output, 5 passes |
-| Repeats | Exactly equal K only | Rate-distortion search on the rise in prediction error (greedy, 0.8 dB, in the baseline) |
+| Pitch | Autocorrelation peak on the 800 Hz path (PSL); Gold-Rabiner (1981) | YIN candidates on a 1 kHz path with a Viterbi path at 5 ms hops, held near RAPT's track, and an octave fix against neighbours |
+| Voicing | Peak ≥ 0.29·R0, frame by frame | YIN's normalised difference (CMNDF) against an adaptive threshold (base 0.6), with tilt and zero-crossing evidence from QBox, smoothed by the Viterbi path and over runs of frames |
+| K quantisation | Nearest k | Nearest log-area ratio, then a search that minimises the prediction error of the quantised filter |
+| Energy | Open loop: RMS · Π√(1 − k̂²) (· √P/2 if voiced), from quantised K | Closed loop on the synthesised output's loudness, 5 passes, with a limiter |
+| Repeats | Exactly equal K only | Rate-distortion search on the rise in prediction error |
 | Period | Value + 1 | Value + 1 |
 
 The encoder does what TI did on the main structural points:
@@ -235,101 +230,39 @@ Where the two differ, the encoder is the more elaborate:
 - its K quantisation minimises the prediction error instead of taking the
   nearest k.
 
-The TI code gives no reason to think any of these is the cause of the low
-score.
-
 ## TI's settings measured
 
-These are medians over all 243 test inputs, scored with `speechqual.py` on
-the research encoder's frames with each option changed, on the baseline
-configuration:
+Each of TI's choices that the encoder has an option for, set on its own, over
+the 243 test inputs (medians, and the total bytes):
 
-| Setting | MCD (dB) | Tilt below 800 Hz (dB) | Voicing disagreement (%) | bits/s |
-|---|---|---|---|---|
-| Baseline (pre-emphasis 0.9, window 240) | 2.29 | −1.1 | 11.7 | 1342 |
-| `preEmphasis=0.9375` (1981 default) | 2.30 | −1.2 | 11.7 | 1340 |
-| `window=200` (TI's window) | 2.30 | −1.0 | 11.6 | 1359 |
-| both | 2.31 | −1.2 | 11.9 | 1353 |
-| `preEmphasis=1.0` (PSL) | 2.31 | −1.4 | 11.6 | 1345 |
-| `preEmphasis=1.0`, `window=200` | 2.32 | −1.3 | 11.6 | 1362 |
-| `lagWindowHz=0` (no lag window, as PSL) | 2.27 | −1.1 | 11.9 | 1370 |
-| Greedy repeat threshold 0 (repeats only when K do not change) | 2.26 | −1.1 | 11.8 | 1588 |
+| Setting | Score | LSD (dB) | GPE (%) | VDE (%) | ESTOI | Bytes |
+|---|---|---|---|---|---|---|
+| Defaults | 0.736 | 3.05 | 4.4 | 10.9 | 0.791 | 124,387 |
+| `window=200` (TI's window) | 0.725 | 3.10 | 4.6 | 10.8 | 0.787 | 124,927 |
+| `lag_window_hz=0` (no lag window, as the PSL) | 0.734 | 3.05 | 4.7 | 11.1 | 0.787 | 124,888 |
+| `voicing_evidence=0` (voicing from periodicity alone, as TI) | 0.743 | 3.04 | 4.4 | 11.2 | 0.789 | 124,090 |
+| `repeat_lambda=1000` (the fewest repeats, nearest TI's exact rule) | 0.737 | 3.05 | 4.5 | 10.9 | 0.792 | 127,215 |
 
-None of TI's settings moves the median MCD by more than 0.03 dB, far short
-of the 0.37 dB between the encoder and the unquantised vocoder.
+- **Window.** TI's 25 ms window is worse on every measure but the voicing.
+- **Lag window.** Dropping it changes the envelope little, and the pitch and
+  voicing slightly for the worse.
+- **Voicing evidence.** Periodicity alone raises the median score a little
+  (0.743) but lowers the mean (0.740 against 0.741), and voices worse.
+- **Exact repeats.** The fewest repeats cost 2 % more bytes for no change in
+  quality: at its default the encoder already uses few.
+- **Pre-emphasis.** TI's first-order pre-emphasis (μ = 0.9375, the 1981
+  default) was measured against the chirp's inverse before the encoder dropped
+  the option ([Pre-emphasis](how-it-works.md#pre-emphasis)): on 64 TTS
+  phrases and 33 recorded sentences it raised the spectral distortion from
+  2.88 to 3.07 dB and from 2.87 to 3.01 dB.
 
-- **Pre-emphasis.** The PSL's μ = 1 makes the low band slightly worse
-  (−1.4 dB), as expected from a stronger pre-emphasis.
-- **Lag window.** Dropping it helps MCD a little and voicing not at all.
-- **Exact repeats.** A greedy threshold of 0 cuts out almost all repeats. It
-  costs 18 % more bits for 0.03 dB less MCD, the same as `repeats=False`.
+**Conclusion:** none of TI's analysis choices beats the encoder's by more
+than the spread between near-equal settings. The encoder shares the parts of
+TI's design that matter, and its own refinements are at least as good. Where
+the remaining quality goes is on the [Quality](quality.md#where-the-quality-goes)
+page: mostly the K table and the chip's output.
 
-**Conclusion:** TI's analysis choices are not where the encoder loses
-quality. The encoder shares the parts of TI's design that matter, and its own
-refinements are at least as good.
-
-## Where the quality goes
-
-The gap to the unquantised vocoder (0.37 dB MCD, a low band about
-1 dB short and 4 points more voicing disagreement) has to come from what the
-chip adds:
-
-- quantisation of K, energy and pitch;
-- the chirp excitation in place of a pulse;
-- interpolation between frames;
-- the chip's arithmetic and output range.
-
-`speechqual.py --ladder` adds these to the anchor one at a time; the
-[tools pages](../tools/encoder-speech.md#encoding-quality) describe each step. Steps `q` to `qci` use
-the anchor's simple analysis. `qci` and `enc` speak their frames through the
-reference model's timing, interpolation and excitation, with a floating-point
-lattice in place of the chip's arithmetic.
-
-These are medians over all 243 inputs, on the baseline configuration:
-
-| Step | MCD | lo | mid | hi | vuv% |
-|---|---|---|---|---|---|
-| `anchor`: float LPC-10 vocoder | 1.92 | +0.0 | +0.3 | −0.4 | 7.3 |
-| `q`: + the chip's K, pitch and energy tables | 2.11 | +0.0 | +0.3 | −0.4 | 8.6 |
-| `qc`: + the chip's excitation (chirp, pre-emphasis voiced only) | 2.27 | −1.2 | +1.2 | +0.0 | 6.4 |
-| `qci`: + the chip's interpolation and timing | 2.22 | −1.0 | +1.1 | −0.1 | 8.4 |
-| `enc`: the encoder's frames, same float model | 2.19 | −0.5 | +0.9 | −0.3 | 8.2 |
-| `chip`: the encoder's frames on the emulator | 2.29 | −1.1 | +0.7 | +0.3 | 11.7 |
-
-What this shows:
-
-1. **The format costs about 0.3 dB of MCD.** That is the tables (0.19 dB)
-   and the chirp (0.16 dB), less a little back from the interpolation
-   (0.05 dB). The encoder cannot recover this, only work around it.
-2. **The encoder's analysis is not the problem.** Its frames do as well as
-   the simple analysis does (2.19 against 2.22 dB), so its pitch tracker,
-   closed-loop energy and K search are about as good as the format allows.
-   Tuning them further ([TI's settings measured](#tis-settings-measured))
-   moves MCD by hundredths of a dB.
-3. **The chirp shifts the spectrum.** It moves the low band by −1.2 dB and the
-   mid band by +1.2 dB. Its spectrum falls off much like de-emphasis by 0.9,
-   but it is about 1 dB weaker from 300 to 800 Hz and about 1 dB stronger from
-   800 to 2000 Hz. So a fixed first-difference pre-emphasis (TI's or the
-   baseline's) leaves that difference in the output.
-
-   **Tried:** pre-filtering voiced frames with the inverse of an order-4 fit
-   to the chirp, [1, −0.938, 0.152, −0.104, −0.006], in place of
-   1 − 0.9375z⁻¹. On 40 files the tilt error halves (lo −1.0 → −0.4 dB, mid
-   +1.2 → +0.7 dB at `qci`) and MCD improves by 0.05 dB.
-
-   This is the one analysis change found here that the encoder could take up,
-   and it costs nothing in bits. It was then measured on all inputs, and the encoder uses it
-   ([Pre-emphasis](how-it-works.md#pre-emphasis)).
-4. **The chip's arithmetic and 8-bit output cost in the low band and in
-   voicing.** From `enc` to `chip`, MCD rises 0.10 dB, the low band loses
-   0.6 dB and voicing
-   disagreement rises 3.5 points. That fits white noise from the output's
-   resolution in the quieter parts.
-
-   A louder encoding tests this. `targetRms=40` brings voicing disagreement
-   down to 9.6 % and lo to −0.9 dB. But peaks then reach `peakLimit` and the
-   level error rises from 1.8 to 2.8 dB. Level is a trade-off here, not a
-   free gain.
+## The human in the loop
 
 One TI practice the encoder does not have is the human in the loop. Both TI
 systems relied on listening, editing energy and pitch by hand, and

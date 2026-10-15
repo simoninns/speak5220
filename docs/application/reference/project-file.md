@@ -46,7 +46,7 @@ project:
   default_encoder:
     target_rms: 20
     repeat_lambda: 300
-    pre_emphasis: "chirp"
+    gate_db: 45
     # ... every encoder option, each one required
   phroms:
     - number: 2

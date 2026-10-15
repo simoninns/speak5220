@@ -104,9 +104,9 @@ TEST(EncodingSummaryTest, ChangesTextNamesTheOptionsThatDiffer) {
   core::encoder::EncoderOptions to = from;
   EXPECT_EQ(ChangesText(from, to), QStringLiteral("no change"));
   to.target_rms = 22.0;
-  to.pre_emphasis = core::encoder::PreEmphasis::FirstOrder(0.9);
+  to.gate_db = 40.0;
   EXPECT_EQ(ChangesText(from, to),
-            QStringLiteral("Target RMS 22, Pre-emphasis 0.9"));
+            QStringLiteral("Target RMS 22, Silence gate 40"));
 }
 
 }  // namespace

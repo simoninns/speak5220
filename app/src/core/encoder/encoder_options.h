@@ -21,21 +21,6 @@
 
 namespace speak5220::core::encoder {
 
-// The voiced analysis pre-emphasis (speak5220 datasheet §12.3): the FIR
-// that whitens the chirp, or 1 - mu z^-1.
-struct PreEmphasis {
-  // true: the order-4 LPC inverse of the chirp; false: 1 - mu z^-1.
-  bool chirp = true;
-  double mu = 0.0;
-
-  static PreEmphasis Chirp() { return {}; }
-  static PreEmphasis FirstOrder(double mu) {
-    return {.chirp = false, .mu = mu};
-  }
-
-  friend bool operator==(const PreEmphasis& a, const PreEmphasis& b) = default;
-};
-
 // Everything that controls a phrase's encoding: how its recording is
 // preprocessed (preprocess, applied by preprocess::Preprocess() before the
 // encoder's stages) and the encoder's own options. The defaults are those of
@@ -63,8 +48,6 @@ struct EncoderOptions {
   double repeat_lambda = 300.0;
   // Frames this many dB below the loudest are silence.
   double gate_db = 45.0;
-  // Voiced analysis pre-emphasis.
-  PreEmphasis pre_emphasis;
   // Analysis window, in samples (32 ms).
   int window = 256;
   // Bandwidth of the Gaussian lag window, in Hz.
@@ -109,8 +92,6 @@ enum class EncoderOptionType {
   // A real value that may also be unset (noise_gate_db, bass_cut_hz,
   // de_ess_db, resonance_hold_db).
   kOptionalReal,
-  // "chirp" or a real coefficient (pre_emphasis).
-  kPreEmphasis,
 };
 
 // What the user interface needs to show and check one option.
@@ -127,7 +108,7 @@ struct EncoderOptionInfo {
   std::string_view help;
   OptionStage stage = OptionStage::kEncoder;
   EncoderOptionType type = EncoderOptionType::kReal;
-  // The valid range, inclusive; for kPreEmphasis, the range of mu.
+  // The valid range, inclusive.
   double minimum = 0.0;
   double maximum = 0.0;
   // The default, as text a user would type.
@@ -138,8 +119,7 @@ struct EncoderOptionInfo {
   std::string_view unit;
   // Where useful values lie, within minimum..maximum, and the step
   // between them: what the GUI's sliders offer (a value outside, from a
-  // project file or Optimise, widens the slider). For kPreEmphasis, of
-  // mu.
+  // project file or Optimise, widens the slider).
   double typical_minimum = 0.0;
   double typical_maximum = 0.0;
   double step = 0.0;
@@ -174,9 +154,8 @@ const EncoderOptionInfo* FindEncoderOption(std::string_view field);
 inline constexpr std::string_view kUnsetOptionText = "none";
 
 // Sets one option from text, as a user types it or a project file holds
-// it: a number ("18", "0.35"), "chirp" or a number for pre_emphasis, and
-// a number or "none" for noise_gate_db, bass_cut_hz, de_ess_db and
-// resonance_hold_db.
+// it: a number ("18", "0.35"), and a number or "none" for noise_gate_db,
+// bass_cut_hz, de_ess_db and resonance_hold_db.
 // Numbers use '.' as the decimal point, whatever the locale. Fails,
 // leaving `options` unchanged, for an unknown field, text of the wrong
 // type, a fractional value for a whole-number option, or a value outside
@@ -185,7 +164,7 @@ Status SetEncoderOption(EncoderOptions& options, std::string_view field,
                         std::string_view text);
 
 // The text of one option, which SetEncoderOption() reads back to the same
-// value: the shortest exact number, "chirp", or "none".
+// value: the shortest exact number, or "none".
 // Returns an empty string for an unknown field.
 std::string EncoderOptionText(const EncoderOptions& options,
                               std::string_view field);
