@@ -16,7 +16,7 @@ Speak5220 is a cross-platform Qt/C++ application for creating and editing TMS522
 - imports the words of existing Acorn PHROM images;
 - exports Acorn PHROM images, C headers, WAV, and BBC Micro disc images that speak through Speak External.
 
-<p align="center"><img src="assets/gui-captures/gui-main-window.png" alt="The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating" width="800"></p>
+<p align="center"><img src="assets/gui-captures/gui-main-window-web.webp" alt="The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating" width="800"></p>
 
 It has a GUI, `speak5220`, and a command-line tool, `speak5220-cli`. Each release has installers for Linux (Flatpak), Windows (MSI) and macOS (DMG) on the [Releases](https://github.com/simoninns/speak5220/releases) page; the [user documentation](https://simoninns.github.io/speak5220/application/) says how to install and use it.
 

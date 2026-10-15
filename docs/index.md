@@ -12,7 +12,7 @@ From those measurements the project has produced:
 - the **capture data and tools** that the datasheet's evidence comes from;
 - an analysis of the **die image**.
 
-![The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating](images/gui-main-window.png)
+![The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating](images/gui-main-window.webp)
 
 The Speak5220 application's main window, showing an encoded phrase: its waveform with the frame grid, and its quality rating.
 
