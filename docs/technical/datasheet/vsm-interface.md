@@ -1,6 +1,6 @@
 # 4. Voice synthesis memory (VSM) interface
 
-From the Pico's trace of every VSM function. The VSM here is the Pico's emulation of a TMS6100 ([firmware protocol](../hardware/firmware-protocol.md)).
+From the Pico's trace of every VSM function. The VSM here is the Pico's emulation of a TMS6100.
 
 **The VSM holds the address, not the chip (New).** The TMS5220 has no address counter of its own. Each Load Address command is passed to the VSM at once as one Load Address function with the command's low nibble, about 35–45 µs after the write [p8-25]. The VSM shifts the nibble into its address register, least significant nibble first, as the original describes; five are needed for a full 20-bit address. With fewer, the VSM's register holds the earlier address shifted by the nibbles given, and a sixth nibble shifts the address on [p8-25]. Every read then advances the VSM's own register. So how an address carries from one bank to the next, or wraps, is the VSM's behaviour: with this emulation, reads run on from 0x3FFFF into 0x40000 [corpus `acorn_phrom_a`].
 

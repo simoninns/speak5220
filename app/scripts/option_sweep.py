@@ -14,8 +14,8 @@ overall score, the median component scores, envelope distortion, GPE, VDE
 and ESTOI, the total bytes, the median loudness figures and, with --phrom,
 the round trip's voicing agreement and its breakdown, repeats and
 fade-outs, energy biases and bits. --only takes a list of the files to
-encode (sweeps/investigation-tts.txt picks the encoder-quality
-investigation's 64 TTS files out of the phoneme set). Each set's project,
+encode (sweeps/tts-subset.txt picks the 64 TTS files the encoder's
+options were tuned on out of the phoneme set). Each set's project,
 measures and round-trip report are kept in OUTPUT/SET/. Changes meant to
 improve the encoder's output are judged with it.
 
@@ -164,7 +164,7 @@ def main():
         "--only",
         type=Path,
         help="a list of the files of --input to encode, by stem or prompt id "
-        "(such as sweeps/investigation-tts.txt); default: every file",
+        "(such as sweeps/tts-subset.txt); default: every file",
     )
     ap.add_argument(
         "--phrom",

@@ -127,7 +127,7 @@ computer would play it, choose that computer under
 | Filter | What it models |
 |---|---|
 | None | The chip's samples as they are, the default |
-| BBC Micro | The BBC Model B's speech path: a 279 Hz high-pass, which removes the offset and cuts the bass, and a reconstruction filter that is −3 dB at about 5.5 kHz. Its components are given in the [audio output stage](../../technical/hardware/audio-output-stage.md) |
+| BBC Micro | The BBC Model B's speech path: a 279 Hz high-pass, which removes the offset and cuts the bass, and a reconstruction filter that is −3 dB at about 5.5 kHz. It follows the speech path of Acorn's sound schematic for the Model B |
 
 The filter changes the encoded waveform and the encoded audio played in the
 main window and in the Optimise window. The original and preprocessed

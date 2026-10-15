@@ -17,8 +17,8 @@
 // The values of ki_double, wi_double and fi_double, and the tail start,
 // in NumPy 2.4.4's numpy/random/src/distributions/ziggurat_constants.h
 // (NumPy is BSD-3-Clause licensed). Re-implements the tables behind
-// numpy.random.Generator.standard_normal(), which
-// investigation/tools/speechqual.py's anchor draws its noise from.
+// numpy.random.Generator.standard_normal(), which the research tools'
+// anchor vocoder (speechqual.py, commit c537c1d) draws its noise from.
 
 namespace speak5220::core::quality::normal_ziggurat {
 

@@ -16,7 +16,7 @@ exact.
 
 It was first written in C99, by an agent that saw only those texts, and
 checked against the whole data set of captures
-([reference emulator validation](../capture/work/reference-emulator.md)).
+(the validation is in the repository's history: [The research](../index.md#the-research)).
 The C++ emulator re-implements that code as classes. The structure changes,
 not the arithmetic or the order of evaluation: on every reference run in
 `app/golden/emulator/` (the C emulator's self-test scenarios, synthetic

@@ -38,7 +38,7 @@ This matched the chip better than every other form tried:
 - K negated before or after the product;
 - (from the patent) stage 0 seeing only the twelve high bits of *M*, and the previous output fed back with its four or six low bits dropped, in the multiplier or in the adder. Each fitted the vectors as well as or worse than the form above, by up to 20 times [vectors `pitch`, `k`, `interp`, `energy`].
 
-**From the die (provisional).** The die image agrees with this form ([the multiplier's low end](../die-analysis/multiplier-low-end.md)).
+**From the die (provisional).** The die image agrees with this form.
 
 - **Stage 0 is built without an adder.** Its cells lack the half that adds the incoming partial sum, so the +1 that would complete its negative digit has no carry-in to enter.
 - **Stages 1–3 are one cell, with identical bit-0 tie-offs.** Each stage's own +1 enters there. Stage 4 is a different cell.
@@ -46,7 +46,7 @@ This matched the chip better than every other form tried:
 
 No reading of the bit-0 tie-offs fitted the vectors better than the form above.
 
-The summer side agrees too ([the adder and the delay stack](../die-analysis/adder-and-delay-stack.md), provisional):
+The summer side agrees too (provisional):
 
 - **Each bit of the adder, the summer multiplexer, the Y latch and the multiplier multiplexer is one repeated cell,** the same at bit 0 as in the middle. So none of them has extra logic at its lowest bits, and nothing saturates at the top.
 - **The multiplier's input wiring was traced.** It fits this form only if the array sees 2*M* with a 0 below its lowest bit, which gives exactly the same products as the form above.
@@ -110,7 +110,7 @@ The filter's lowest-order arithmetic is not known ([Appendix B](gaps.md#the-lowe
     - **Further entries improve the vectors and make the PROM words worse.**
     - **The multiplier variants tried at the same time all fit worse:** a stage 1 +1 conditioned on *d*₀, a stage 0 +1 conditioned on *d*₁, rounding at a shift, and a carry-save array.
     
-    So no fixed function of a product's operands explains the error, and the model keeps the multiplier form above ([the lowest-order arithmetic](../die-analysis/lowest-order-arithmetic.md)).
+    So no fixed function of a product's operands explains the error, and the model keeps the multiplier form above.
 - **Expected agreement.** Until the arithmetic is known, these are the measured distances between outputs of the same utterance, from `investigation/tools/variance.py` [`investigation/captures/phase9/variance/`]. Each is taken over the speech window and given as the median over pairs, and the model is the emulator (they agree on every take). The signal-to-difference ratio (SDR) is the chip's code power over the difference's power.
 
     | Pair | Set | Pairs | Exact | Samples equal | SDR (dB) | Largest difference (codes, 90th percentile) |
@@ -137,7 +137,7 @@ The filter's lowest-order arithmetic is not known ([Appendix B](gaps.md#the-lowe
     - **On strongly resonant data, the model is as close to either chip as the two chips are to each other** (ring: 81–84 % against 85 %, 22–23 dB against 22 dB).
     - **On ordinary voiced data, the model is further from the chips than they are from each other**, by about 6 dB (pitch: 31 dB against 37 dB). This is the error of the lowest-order arithmetic. On real speech (the Acorn words) it is about 5 dB below the chip's agreement with itself: 32.5 dB against 37.5 dB.
     - **Every set has a typical difference of one code.** Larger ones come from a one-code difference growing in a resonant or overloaded filter, as they do between takes on the chip itself ([§7](power-up.md#7-power-up-clear-and-the-state-between-utterances)). The loud, random and decay vectors, not in the table, are dominated by that growth: their median SDR is 18–28 dB, and chip 1's own takes of them agree at a median of 45–99 dB.
-    - **The acceptance tests of the capture work ([capture overview](../capture/index.md)) use these figures as a tolerance.** The emulator's median SDR against chip 1 may be at most 7 dB below the agreement of a second chip, or of chip 1's own takes, counting agreement above 40 dB as 40 dB. **This tolerance is observed, not proven.** It comes from two chips of one date code, at one temperature and supply. Nothing shows that it bounds the chip on other data, other parts or other conditions.
+    - **The acceptance tests of the capture work use these figures as a tolerance.** The emulator's median SDR against chip 1 may be at most 7 dB below the agreement of a second chip, or of chip 1's own takes, counting agreement above 40 dB as 40 dB. **This tolerance is observed, not proven.** It comes from two chips of one date code, at one temperature and supply. Nothing shows that it bounds the chip on other data, other parts or other conditions.
 - **Also ruled out** (each fits as well or worse, on voiced energy, pitch and K vectors):
     - every completion of the Booth array's inverted partial products (0, +1 or +2 at each stage), with each of four final roundings;
     - sign-magnitude rounding of products;

@@ -20,7 +20,7 @@
 namespace speak5220::core::project {
 namespace {
 
-// The Acorn PHROM A word list (investigation/proms/acorn_phrom_a.json):
+// The Acorn PHROM A word list (app/scripts/phroms/acorn_phrom_a.json):
 // each word's name as listed, and as stored in the PHROM.
 constexpr auto kAcornNames = std::to_array<std::string_view>({"-0.125",
                                                               "-0.25",

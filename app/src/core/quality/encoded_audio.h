@@ -47,7 +47,7 @@ struct EncodedAudio {
 // where the output lines up with `source` (8 kHz). The offset is the
 // chip's start latency plus wherever the encoder put its first frame (it
 // leaves out leading silence, and the project does not record where), so
-// it is found by speechqual.py's alignment (AlignOutput()'s lag) rather
+// it is found by the quality measures' alignment (AlignOutput()'s lag) rather
 // than assumed; the quality measures use the same placement. The level gain is
 // measured on the output so placed. With no source, or an output that never
 // leaves idle, the offset is kFirstFrameStretch (frame 0's stretch starts at

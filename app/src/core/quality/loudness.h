@@ -57,8 +57,7 @@ struct Loudness {
 
 // The loudness of `codes`, the chip's output for `frames` from the first
 // frame read (synth::ReferenceSynthesizer, or Synth's VSM path), with
-// `wrapped_samples` as the synthesis counted them. Re-implements the
-// encoder-quality investigation's scratch measures. Pure; thread-safe.
+// `wrapped_samples` as the synthesis counted them. Pure; thread-safe.
 // O(samples).
 Loudness MeasureLoudness(std::span<const int> codes,
                          std::span<const lpc::Frame> frames,

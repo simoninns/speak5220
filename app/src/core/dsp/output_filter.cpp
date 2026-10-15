@@ -36,9 +36,9 @@ constexpr std::array<OutputFilterInfo, 2> kFilters = {{
 // The BBC Micro's speech path: the C21/R31 high-pass (1st order, 279 Hz),
 // then the IC17 Sallen-Key low-passes (2nd-order Butterworth, 6.95 kHz)
 // before and after the mixer. The full circuit differs from this cascade
-// by at most 0.1 dB from 30 Hz to 20 kHz
-// (docs/technical/hardware/audio-output-stage.md, "Overall response");
-// investigation/tools/process.py listenAudio() uses the same.
+// by at most 0.1 dB from 30 Hz to 20 kHz (Acorn's sound schematic for the
+// Model B, as the research capture board copied it: its audio output stage,
+// documented until commit c537c1d).
 constexpr double kBbcHighPassHz = 279.0;
 constexpr double kBbcLowPassHz = 6950.0;
 

@@ -4,8 +4,9 @@
 speaks one phrase from a binary image. It writes the output codes and an event
 log. It is the command line of the retired C emulator, on the application's
 emulator, with the same options and output; the reference-data scripts
-(`app/scripts/golden/generate_golden.py`, `measures.py`) and the research
-tools (`regress.py`, `replay.py`, `phase11.py`, `speechqual.py`) run it.
+(`app/scripts/golden/generate_golden.py`, `measures.py`) run it, as did the
+research tools (`regress.py`, `replay.py`, `phase11.py`, `speechqual.py`), now
+in the repository's history ([The research](../index.md#the-research)).
 
 It is built with the application's tests, into
 `build/app/tests/support/tms5220emu`, and is never installed. The scripts

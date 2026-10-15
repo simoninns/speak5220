@@ -1,9 +1,6 @@
 # 8.9 Reference algorithm and the model
 
-**New.** `investigation/tools/model.py` implements [§8.5](frame-timing.md#85-timing-of-a-frame)–[§8.8](lattice-filter.md#88-lattice-filter) and [§7](power-up.md#7-power-up-clear-and-the-state-between-utterances). Its defaults are the behaviour described here. Its options select the alternatives that were tested and rejected, so that each claim above can be checked against the captures:
-
-    python investigation/tools/model.py investigation/captures/vectors/vectors_energy/*/vsm01   # compare takes with the model
-    python investigation/tools/vecfit.py investigation/captures/vectors                          # table confirmation, every take
+**New.** `investigation/tools/model.py` implements [§8.5](frame-timing.md#85-timing-of-a-frame)–[§8.8](lattice-filter.md#88-lattice-filter) and [§7](power-up.md#7-power-up-clear-and-the-state-between-utterances). Its defaults are the behaviour described here. Its options select the alternatives that were tested and rejected, so that each claim above could be checked against the captures. `model.py` compared takes with the model, and `investigation/tools/vecfit.py` made the table confirmation over every take. Both are in the repository's history ([Conventions](index.md#conventions)).
 
 **How well it matches** (`investigation/captures/phase9/regress/`, `investigation/tools/regress.py`; standard takes that passed their checks, the DAC model's apart, each spoken after the takes captured before it back to the last with a voiced frame):
 

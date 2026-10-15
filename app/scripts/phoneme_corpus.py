@@ -6,8 +6,8 @@
 Every prompt of phoneme_prompts.csv (its consonant, and whether the
 consonant starts or ends the word) is rendered with a text-to-speech
 engine in each of its voices, resampled to 8 kHz and written as 16-bit WAV
-with peaks at -3 dBFS, as investigation/tools/ttsgen.py renders the
-encoder's test speech:
+with peaks at -3 dBFS, as the encoder's test corpus
+(app/scripts/fetch-corpus.sh) was rendered:
 
     OUTPUT/ENGINE/ID_VOICE.wav
     OUTPUT/ENGINE/index.tsv     file, prompt, voice, text, consonant,
@@ -16,12 +16,12 @@ encoder's test speech:
 The engines:
 
     piper   Piper (Linux; in the default Nix shell there) with four of
-            ttsgen.py's voices, their models pinned by SHA-256 and kept in
+            the corpus's Piper voices, their models pinned by SHA-256 and kept in
             the gitignored local/piper/ ("fetch" downloads them). Piper's
             render is random, so a render is never repeated without
             --force: the files are the frozen inputs.
-    say     macOS's say, with the voices the encoder-quality investigation
-            used.
+    say     macOS's say, with the voices the encoder's options were tuned
+            on.
 
 The files go into the gitignored local/phoneme-corpus/ by default. "check"
 confirms them against the index. phoneme-check.sh encodes them and reports
@@ -56,8 +56,8 @@ RATE = 8000
 PEAK_DBFS = -3.0
 SENTENCE_SILENCE = 0.3  # Piper's pause between sentences, in seconds
 
-# Four of ttsgen.py's voices, and the SHA-256 of their model files as
-# downloaded on 2026-10-09 (ttsgen.py PINNED).
+# Four of the corpus's Piper voices (its tts/README.md), and the
+# SHA-256 of their model files as downloaded on 2026-10-09.
 PIPER_VOICES = {
     "alba": "en/en_GB/alba/medium/en_GB-alba-medium",
     "nem": "en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium",

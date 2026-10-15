@@ -4,11 +4,11 @@
 #
 # Builds a project of real speech for trying the GUI by hand: the 33 CMU
 # ARCTIC prompts (a0001 to a0033) of the speech corpus recordings
-# (investigation/captures/phase11/inputs/recordings/, CC BY-SA 4.0), each
+# (local/corpus/recordings/, CC BY-SA 4.0, restored by fetch-corpus.sh), each
 # added as a phrase with the prompt's text (from the recordings'
 # index.csv) as its description, and encoded with the default options.
 # Open it in speak5220 to compare the original and encoded audio. The project is
-# derived from committed files, so it is generated, not committed
+# derived from the corpus, so it is generated, not committed
 # (TESTING.md); running the script again replaces it.
 #
 # Usage: arctic-project.sh [BUILD_DIR [OUTPUT_DIR]]
@@ -33,7 +33,7 @@ if [[ ! -x $cli ]]; then
   exit 2
 fi
 
-recordings=$script_dir/../../investigation/captures/phase11/inputs/recordings
+recordings=$script_dir/../../local/corpus/recordings
 corpus=$build_dir/generated-corpus
 python3 "$script_dir/generate_corpus.py" --output "$corpus"
 

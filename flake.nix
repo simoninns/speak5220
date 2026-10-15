@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 {
-  description = "speak5220 - TMS5220 speech synthesiser hardware";
+  description = "Speak5220 - LPC speech data and PHROMs for the TMS5220";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
@@ -302,8 +302,8 @@
               };
             };
 
-          # The sources the hooks look at, so the check does not copy the
-          # investigation captures into the store
+          # The sources the hooks look at, so the check does not copy local
+          # data into the store
           hookSrc = lib.fileset.toSource {
             root = ./.;
             fileset = lib.fileset.unions [
@@ -377,11 +377,8 @@
       devShells = forAllSystems (
         pkgs:
         let
-          # Pico SDK with its submodules (TinyUSB is needed for USB stdio)
-          pico-sdk = pkgs.pico-sdk.override { withSubmodules = true; };
-
           # Google's REAPER pitch tracker as its own command-line tool, for the
-          # quality reference data (app/scripts/golden/quality.py); the
+          # quality reference data (app/scripts/golden/measures.py); the
           # application uses SPTK's copy
           reaper-f0 = pkgs.stdenv.mkDerivation {
             pname = "reaper-f0";
@@ -411,13 +408,11 @@
             };
           };
 
-          # Capture and analysis tools (investigation/tools/), and the
-          # reference tools of app/scripts/golden/
+          # The application's scripts (app/scripts/) and the reference tools
+          # of app/scripts/golden/
           python = pkgs.python3.withPackages (p: [
             p.numpy
             p.scipy
-            p.matplotlib
-            p.pyserial
             p.soundfile
             # The quality reference data (app/scripts/golden/measures.py):
             # the original WebRTC voice activity detector, ESTOI and WORLD's
@@ -463,39 +458,12 @@
                 python
                 reaper-f0
                 git
-
-                # Speech recognition, for the intelligibility check (investigation/tools/asrcheck.py)
-                whisper-cpp
-
-                # Raspberry Pi Pico 2 (RP2350) firmware
-                cmake
-                ninja
-                gcc-arm-embedded
-                picotool
-                openocd-rp2040 # Raspberry Pi's OpenOCD fork (supports RP2350)
-                minicom
               ]
-              # Not available on macOS in nixpkgs (install KiCad separately there)
+              # Not available on macOS in nixpkgs
               ++ lib.optionals stdenv.hostPlatform.isLinux [
-                # Hardware design
-                kicad
-                # Text to speech for the encoder's test inputs (investigation/tools/ttsgen.py)
+                # Text to speech for the phoneme test set (app/scripts/phoneme_corpus.py)
                 piper-tts
               ];
-
-            PICO_SDK_PATH = "${pico-sdk}/lib/pico-sdk";
-            picotool_DIR = "${pkgs.picotool}/lib/cmake/picotool";
-
-            # Runtime dependencies of PicoScope 7's libps3000a.so, preloaded by
-            # investigation/tools/ps3000a.py (the driver itself comes from the PicoScope install)
-            # (Linux only)
-            PICO_DRIVER_DEPS = pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux "${pkgs.libusb1}/lib/libusb-1.0.so.0:${pkgs.stdenv.cc.cc.lib}/lib/libstdc++.so.6";
-
-            shellHook = ''
-              if [ ! -e investigation/kicad/libraries/ki-lime-pi-pico/MCU_Module_RaspberryPi_Pico.kicad_sym ]; then
-                echo "Note: ki-lime-pi-pico submodule missing; run: git submodule update --init"
-              fi
-            '';
           };
         }
       );

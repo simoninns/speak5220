@@ -70,7 +70,7 @@ class MeasuresGoldenTest : public ::testing::Test {
 
 // The alignment and the voice activity mask match
 // the reference's. libfvad is the WebRTC code that py-webrtcvad wraps, and
-// the alignment the same as speechqual.py's, so both are exact.
+// the alignment the same as measures.py's, so both are exact.
 TEST_F(MeasuresGoldenTest, AlignmentAndMaskMatchTheReference) {
   ASSERT_EQ(Prepared().size(), 32U);
   std::map<std::string, std::map<std::string, std::vector<bool>>> masks;

@@ -11,6 +11,8 @@
 # word and a total to OUTPUT_DIR/phrom-roundtrip.tsv and prints a summary.
 # SPEAK5220_PHROM_OPTIONS sets the encoder options (as
 # "repeat_lambda=300,voicing_threshold=0.5"; unset for the defaults).
+# The PHROM image is not committed: phrom_roundtrip.py reads MAME's
+# local/mame/roms/bbcb/cm62024.bin, or SPEAK5220_PHROM_IMAGE.
 # It is run by hand, not by CTest.
 #
 # Usage: phrom-check.sh [BUILD_DIR [OUTPUT_DIR]]

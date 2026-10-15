@@ -20,7 +20,7 @@ title: "[Docs] "
 Where is the documentation issue?
 - docs/application/ (application user documentation)
 - docs/technical/datasheet/ (reference datasheet)
-- docs/technical/ (research record: capture, die analysis, hardware, tools)
+- docs/technical/ (the emulator and the encoder)
 - README.md, BUILD.md, TESTING.md, AGENTS.md
 - Other: __________
 

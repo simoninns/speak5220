@@ -26,7 +26,7 @@ The output is within 3 % of its final value 2.3 µs after slot 1 starts [p2-01].
 
 **Direction and zero.** A more positive code gives less current, as in the original's Table 4. Code +127 gives no current: across either load the pin sits at 0 V, to within ±2 mV [p2-01 to p2-06].
 
-**Transfer function (Correction).** This chip delivers about 20 % less current than the original's Table 4. Its step is not uniform, and it jumps by about six steps between codes −1 and 0. Table 8-1 gives the main figures. `investigation/captures/phase2/dac_transfer*/dac_table.csv` gives the mean current for each code seen, at each load.
+**Transfer function (Correction).** This chip delivers about 20 % less current than the original's Table 4. Its step is not uniform, and it jumps by about six steps between codes −1 and 0. Table 8-1 gives the main figures. `investigation/captures/phase2/dac_transfer*/dac_table.csv` gave the mean current for each code seen, at each load.
 
 *Table 8-1. DAC output current. Means of 83,190 sample periods per load. Each step is the median of single-code steps that do not cross a multiple of 16.*
 
@@ -103,4 +103,4 @@ Measured on one chip [p2-01 to p2-06].
 - **Quoting a current means quoting the load.** At 996 Ω, full scale extrapolates to about 1.17 mA. At 482 Ω it extrapolates to about 1.23 mA. A virtual-ground (transimpedance) measurement would give the current at 0 V, which has not been made ([Appendix B](gaps.md#the-dacs-absolute-scale)).
 - **A lower-value load gives a more linear voltage.** The extra shortfall at large currents ([§8.2](#82-da-conversion)) grows with the pin voltage.
 - **The original's 1.8 kΩ application.** The original says that 1.8 kΩ in series gives 2.7 V at 1.5 mA. That has not been tested here ([Appendix B](gaps.md#the-originals-18-k-application)). Given the output resistance above, expect noticeably less current into that load.
-- **AC coupling on the pin changes what the pin delivers.** The test board's own coupling network (C1 and 4.7 kΩ to ground, after a 1 kΩ load) made the voltage on the pin depend on earlier samples. That network was disconnected for these measurements ([bench hardware](../capture/bench-hardware.md)).
+- **AC coupling on the pin changes what the pin delivers.** The test board's own coupling network (C1 and 4.7 kΩ to ground, after a 1 kΩ load) made the voltage on the pin depend on earlier samples. That network was disconnected for these measurements.

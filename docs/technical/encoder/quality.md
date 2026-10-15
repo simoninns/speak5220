@@ -3,12 +3,15 @@
 ## The evaluation
 
 The figures on this page are for the encoder at its default options, on the
-243 test inputs in `investigation/captures/phase11/inputs/`: 210 TTS files
+243 test inputs of the encoder's corpus: 210 TTS files
 from nine voices with median f0 87–246 Hz, and 33 recorded sentences
-(`arctic_*_si`). `app/scripts/option_sweep.py` encodes them as a project
+(`arctic_*_si`). The corpus is not in the working tree:
+`app/scripts/fetch-corpus.sh` restores it from the repository's history
+into `local/corpus/`. `app/scripts/option_sweep.py` encodes them as a project
 (from the WAV copies `app/scripts/generate_corpus.py` writes) and measures
-them, and `investigation/tools/speechqual.py` speaks the same frames on the
-application's emulator. Two sets of measures:
+them, and `speechqual.py`, a research tool, spoke the same frames on the
+application's emulator. It was removed with the research after commit
+`c537c1d` ([The research](../index.md#the-research)). Two sets of measures:
 
 - **The application's quality rating** (`speak5220-cli measure`; the
   [user manual](../../application/user-manual/encoder.md#the-quality-rating)
@@ -19,7 +22,7 @@ application's emulator. Two sets of measures:
   overall score from 0 to 1 (*Good* from 0.70, *Poor* below 0.50). The same
   run gives the output's loudness, its peak, its clipping at the DAC and its
   lattice wraps.
-- **`speechqual.py`** ([tools pages](../tools/encoder-speech.md#encoding-quality)):
+- **`speechqual.py`**:
   the frames spoken on the emulator (VSM Speak after a Reset), aligned with
   the input by their level envelopes, and compared by mel-cepstral distortion
   (MCD), the spectrum's balance in three bands, the level error and the
@@ -107,10 +110,9 @@ carry over. None of this replaces listening on the chip.
 
 ## Where the quality goes
 
-`speechqual.py --ladder` starts from an unquantised floating-point LPC-10
-vocoder at the chip's frame rate (the anchor) and adds what the chip imposes
-one step at a time; the
-[tools pages](../tools/encoder-speech.md#encoding-quality) describe each step.
+`speechqual.py --ladder` started from an unquantised floating-point LPC-10
+vocoder at the chip's frame rate (the anchor) and added what the chip imposes
+one step at a time.
 Steps `q` to `qci` use the anchor's simple analysis. `qci` and `enc` speak
 their frames through the reference model's timing, interpolation and
 excitation, with a floating-point lattice in place of the chip's arithmetic.

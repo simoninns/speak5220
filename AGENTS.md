@@ -6,14 +6,15 @@
 
 ### 1.1 Role & Scope
 - You are a coding assistant for the **speak5220** project.
-- The repository has two parts:
-  - **`app/`**: the Speak5220 application, a Qt/C++ tool for creating LPC
-    speech data and building PHROMs. This is where development happens.
-  - **`investigation/`**: the research record (hardware, firmware and
-    capture tools). The C emulator and the Python encoder that the
-    application's emulator and encoder re-implement (in git history, last
-    changed in commit `6abe9ed`) are retired reference implementations. **Do not modify `investigation/`** unless the user explicitly
-    asks.
+- The repository holds the Speak5220 application, a Qt/C++ tool for
+  creating LPC speech data and building PHROMs, in **`app/`**, and its
+  documentation in **`docs/`**.
+- The research that produced the reference datasheet (hardware, firmware,
+  capture and analysis tools, captures) was removed after commit
+  `c537c1d`, the last commit that contains it. The C emulator and the
+  Python encoder that the application's emulator and encoder re-implement
+  (last changed in commit `6abe9ed`) are retired reference
+  implementations. Do not restore any of it unless the user asks.
 - Follow these instructions **in addition to** any `AGENTS.md` files in the
   task directory or above.
 - For pull-request workflows, see the template in `.github/PULL_REQUEST_TEMPLATE/`; issues use the templates in `.github/ISSUE_TEMPLATE/`.
@@ -25,7 +26,6 @@
 
 ### 1.3 Naming
 - Never use planning-phase terminology (e.g., `phase0`, `mvp-phase`) in code, files or identifiers under `app/`.
-  - The `investigation/captures/phaseN/` directories are names from the historical capture campaigns and are exempt.
 - Use **descriptive, domain-oriented names**: `frame_codec`, `lattice_filter`, `pitch_tracker`, `phrom_allocator`, `speak_external_stream`.
 
 ### 1.4 Content Restrictions
@@ -179,7 +179,7 @@
 - Run normal workflows inside the project shell:
   `nix develop --command <command>`
   - For application work, the smaller `nix develop .#app --command <command>` is enough (it is the shell CI uses).
-  - Do **not** use `path:$PWD` (or any `path:` flake reference). It copies the whole working tree into the Nix store, including the tens of gigabytes of gitignored captures under `investigation/`. The default git flake reads only tracked files.
+  - Do **not** use `path:$PWD` (or any `path:` flake reference). It copies the whole working tree into the Nix store, including the gitignored `local/` and `build/` directories. The default git flake reads only tracked files.
   - Because of that, `nix build`, `nix run` and `nix flake check` do not see untracked files. Commands run *inside* the shell (CMake, CTest, the scripts) work on the working tree as usual. Before running those three on new files, ask the user to stage them, because agents do not run `git add` (§1.2).
 - Temporary tools (profiling, debugging, one-off analysis):
   - Use ad-hoc shells:
@@ -221,10 +221,10 @@ the affected documents (§9.3) have been updated in the **same task**.
 | `docs/` | MkDocs source for the published site (<https://simoninns.github.io/speak5220/>) | End users |
 | `docs/technical/datasheet/` | The reference datasheet: the authoritative description of the TMS5220 (§9.4) | Everyone |
 | `docs/technical/sources/` | Transcriptions of TI's data manuals and US patent 4,335,277 — **read-only**, never edit | Reference |
-| `docs/technical/` (other pages) | The research record: capture, die analysis, how the encoder and emulator work, hardware, tools | Developers, researchers |
+| `docs/technical/` (other pages) | How the emulator and the encoder work | Developers |
 | `docs/application/` | The application's user documentation (§9.2) | End users |
 | `README.md` | Repository overview and directory map | Everyone |
-| `BUILD.md` | Development environment and build instructions for every part of the repository | Developers |
+| `BUILD.md` | Development environment and build instructions | Developers |
 | `TESTING.md` | Testing vision, strategy and repository rules | Developers |
 | `AGENTS.md` | Contribution and coding standards (this file) | Agents |
 

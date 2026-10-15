@@ -64,7 +64,7 @@ core::StatusOr<ReferenceTracks> ReadTracks(const std::filesystem::path& path);
 struct PreparedEncoding {
   std::string set_name;
   std::string name;
-  // The alignment's lag, as speechqual.py gives it: the output, from its
+  // The alignment's lag, as measures.py gives it: the output, from its
   // first non-idle code, is delayed by this many samples.
   int lag = 0;
   core::quality::PreparedSignals prepared;

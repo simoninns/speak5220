@@ -9,8 +9,7 @@ From those measurements the project has produced:
 - a **reference datasheet** that describes the chip exactly, sample for sample;
 - a **reference emulator** written from that datasheet alone;
 - a **speech encoder** that turns recorded or synthesised speech into TMS5220 data, also written from the datasheet alone;
-- the **capture data and tools** that the datasheet's evidence comes from;
-- an analysis of the **die image**.
+- the **capture data and tools** that the datasheet's evidence comes from, and an analysis of the **die image**. These are no longer in the working tree; they are kept in the repository's history ([the research](technical/index.md#the-research)).
 
 ![The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating](images/gui-main-window.webp)
 
@@ -19,7 +18,7 @@ The Speak5220 application's main window, showing an encoded phrase: its waveform
 ## Sections
 
 - [Application](application/index.md): Speak5220, the desktop application built on this work, which encodes speech for the TMS5220 and builds PHROMs, with its installers, user manual and reference.
-- [Technical](technical/index.md): the reference datasheet, the emulator, the encoder, the capture method and tools, the hardware, the die analysis, and transcriptions of TI's original documents.
+- [Technical](technical/index.md): the reference datasheet, the emulator, the encoder, and transcriptions of TI's original documents.
 
 The technical documentation is the basis of the application: its emulator and encoder are written from the reference datasheet.
 

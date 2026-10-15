@@ -33,8 +33,7 @@ inline constexpr int kBoundaryLagBins =
 using BoundaryLags = std::array<int, kBoundaryLagBins>;
 
 // An unvoiced frame of the encoding at this energy index or above where
-// the reference starts voicing is a loud hiss (encoder-quality
-// investigation §4.2).
+// the reference starts voicing is a loud hiss.
 inline constexpr int kLoudOnsetEnergy = 8;
 
 // The repeat runs counted by length: 1, 2, 3, and 4 or more.
@@ -105,8 +104,7 @@ FrameTrackFacts DescribeFrameTrack(std::span<const lpc::Frame> frames);
 // speech, each ending in a stop: both are synthesised
 // (synth::ReferenceSynthesizer), lined up by their output levels, and
 // compared frame by frame. A repeat frame takes its voicing from its pitch
-// and its filter from the last full frame. Re-implements the
-// encoder-quality investigation's scratch comparison. Pure; thread-safe.
+// and its filter from the last full frame. Pure; thread-safe.
 // O(frames x samples per frame).
 FrameTrackComparison CompareFrameTracks(std::span<const lpc::Frame> reference,
                                         std::span<const lpc::Frame> encoded);

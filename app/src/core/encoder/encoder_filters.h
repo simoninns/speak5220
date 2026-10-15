@@ -35,7 +35,7 @@ std::vector<double> LowPass1kHz(std::span<const double> x);
 std::vector<double> ChirpInverse();
 
 // The corner of the first-order high-pass of the BBC Micro's speech path
-// (C21/R31; docs/technical/hardware/audio-output-stage.md), through which
+// (C21/R31 of Acorn's sound schematic for the Model B), through which
 // the encoder measures loudness.
 inline constexpr double kLoudnessHighPassHz = 279.0;
 

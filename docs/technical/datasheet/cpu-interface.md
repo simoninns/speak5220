@@ -1,6 +1,6 @@
 # 3. CPU interface
 
-Measured with the host interface tests of [controlled stimulus](../capture/stimulus.md) (`investigation/tools/protocol.py`), from the Pico's trace of every host cycle, at 640 kHz. Trace times are late by up to about 1.5 µs ([firmware protocol](../hardware/firmware-protocol.md)). The same tests were replayed through the [reference emulator](../emulator/index.md) with `investigation/tools/replay.py`.
+Measured with the host interface tests (`investigation/tools/protocol.py`), from the Pico's trace of every host cycle, at 640 kHz. Trace times are late by up to about 1.5 µs. The same tests were replayed through the [reference emulator](../emulator/index.md) with `investigation/tools/replay.py`.
 
 **READY (New).** The original (§3.2) says READY goes inactive 100 ns after `RS` or `WS` goes active, and active again when the transfer can complete. These are the times from the strobe to READY active again [p8-19 to p8-25]:
 

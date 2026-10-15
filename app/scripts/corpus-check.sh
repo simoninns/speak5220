@@ -27,7 +27,8 @@
 # BUILD_DIR defaults to build/app (the functional tests must be built);
 # OUTPUT_DIR, where the reports go (report.tsv, optimise.tsv, measures.tsv),
 # to
-# BUILD_DIR/corpus-check. The corpus WAVs are written to
+# BUILD_DIR/corpus-check. The corpus is not committed: fetch-corpus.sh
+# restores it into local/corpus/ first. Its WAV copies are written to
 # BUILD_DIR/generated-corpus. Run from the repository root in the default
 # Nix shell, which has the Python packages the corpus step needs:
 #

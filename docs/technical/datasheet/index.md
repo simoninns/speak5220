@@ -2,7 +2,7 @@
 
 This datasheet describes the TMS5220 as measured on real hardware. It follows the section order of TI's *TMS 5220 Voice Synthesis Processor Data Manual* ([transcribed here](../sources/tms5220-data-manual/index.md), referred to below as "the original"), so that readers of the original can find things. The text is written fresh, and it cites the original rather than copying it.
 
-The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly. [Capture work](../capture/index.md) describes how the measurements are made.
+The aim is that someone working from this document alone can author new phrases, author new speech PROMs, and emulate the chip exactly.
 
 ## Contents
 
@@ -28,16 +28,19 @@ The aim is that someone working from this document alone can author new phrases,
 | 11. Pin assignments and functions | [Pin functions](pins.md) |
 | 12. Authoring speech data | [Authoring speech data](authoring.md) |
 | Appendix B: Known gaps | [Known gaps](gaps.md) |
-| Evidence | [Evidence index](evidence.md) |
 
 Section 10 of the original has no counterpart here.
 
 ## Conventions
 
-- **Evidence.** Every measured statement cites one or more capture IDs in brackets, for example [p1-03]. The [evidence index](evidence.md) lists each capture with its settings and the SHA-256 hash of its raw data. A citation of the form [corpus `acorn_phrom_a`] refers to a PROM's whole reference set ([data layout](../capture/data-layout.md)). The set itself is kept outside the repository until it is published, but its index is committed in `investigation/captures/corpus/<prom>/`: `index.md`, `takes.csv` and `sweep.csv`. These give every take's checks and the SHA-256 hashes of its output and raw files.
-- **Vector sets.** A citation of the form [vectors `energy`] refers to one of the synthetic vector sets ([controlled stimulus](../capture/stimulus.md)): its definition is in `investigation/captures/phase8/vectors/<set>.json` and `.csv`, its captures are kept local like the corpus, and its index (`investigation/captures/vectors/vectors_<set>/index.md`, `takes.csv`) is committed. `investigation/captures/phase8/analysis/` holds every take's comparison with the model of [§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model) (`vectors.csv`) and the table measurements (`tables.csv`, `pitch_periods.csv`).
-- **Chips.** Four TMS5220NLs, all marked `DEP 8423`, are labelled 1–4 on the package. **Chip 1** made every measurement in this datasheet unless another chip is named. Chip 2 gave no `M0` pulses. Chip 3 loaded a wrong address and then stopped responding to writes, after the board's Pico restarted while the chip was fitted; that symptom matches the wedge described in the [firmware protocol](../hardware/firmware-protocol.md), so chip 3 may work after a power cycle. **Chip 4** is the one compared with chip 1 in [§8.8](lattice-filter.md#88-lattice-filter). `investigation/tools/bench.json` names the chip fitted; captures of chip 4 made before it was numbered record it as `replacement3`.
-- **The model.** `investigation/tools/model.py` implements the behaviour this datasheet describes for the synthesis path ([§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model)). Statements of the form "the model matches" mean its I/O codes equal the chip's, sample for sample.
+!!! note "Where the evidence is"
+    The evidence pages, the captures and the tools cited in this datasheet (by capture ID, or by a path under `investigation/`) were removed from the repository after commit `c537c1d`, together with the pages on the capture method and the capture hardware. They can be read at that commit: [github.com/simoninns/speak5220/tree/c537c1d](https://github.com/simoninns/speak5220/tree/c537c1d).
+
+- **Evidence.** Every measured statement cites one or more capture IDs in brackets, for example [p1-03]. The evidence index listed each capture with its settings and the SHA-256 hash of its raw data. A citation of the form [corpus `acorn_phrom_a`] refers to a PROM's whole reference set. The set itself is kept outside the repository until it is published, but its index was committed in `investigation/captures/corpus/<prom>/`: `index.md`, `takes.csv` and `sweep.csv`. These give every take's checks and the SHA-256 hashes of its output and raw files.
+
+- **Vector sets.** A citation of the form [vectors `energy`] refers to one of the synthetic vector sets: its definition was in `investigation/captures/phase8/vectors/<set>.json` and `.csv`, its captures are kept local like the corpus, and its index (`investigation/captures/vectors/vectors_<set>/index.md`, `takes.csv`) was committed. `investigation/captures/phase8/analysis/` held every take's comparison with the model of [§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model) (`vectors.csv`) and the table measurements (`tables.csv`, `pitch_periods.csv`).
+- **Chips.** Four TMS5220NLs, all marked `DEP 8423`, are labelled 1–4 on the package. **Chip 1** made every measurement in this datasheet unless another chip is named. Chip 2 gave no `M0` pulses. Chip 3 loaded a wrong address and then stopped responding to writes, after the board's Pico restarted while the chip was fitted; that symptom matches the wedge that follows stopping the clock while the chip is busy ([§7](power-up.md#7-power-up-clear-and-the-state-between-utterances)), so chip 3 may work after a power cycle. **Chip 4** is the one compared with chip 1 in [§8.8](lattice-filter.md#88-lattice-filter). `investigation/tools/bench.json` named the chip fitted; captures of chip 4 made before it was numbered record it as `replacement3`.
+- **The model.** `investigation/tools/model.py`, the Python model used for the measurements, implements the behaviour this datasheet describes for the synthesis path ([§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model)). Statements of the form "the model matches" mean its I/O codes equal the chip's, sample for sample.
 - **New and corrected content.** Content the original does not have is marked **New**. Content that disagrees with the original is marked **Correction** and says what the original states.
 - **Voltages** are measured at the probe tip, referred to board ground (`VREF`, 0 V), with `VSS` = +5 V and `VDD` = −5 V. Probes are 10 MΩ passive ×10 probes unless stated. Edge times are 10–90 % unless stated, and edge positions are taken at the midpoint between the low and high levels.
 - **Slots.** A *slot* is one ROMCLK period, 6.25 µs at the nominal clock. Each 125 µs sample period has 20 slots, numbered 0–19. Slot 0 is the one in which `T11` is high ([§8.4](serial-output.md#84-serial-sample-output-t11-and-io)).

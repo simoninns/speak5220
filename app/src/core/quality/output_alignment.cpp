@@ -29,7 +29,7 @@ namespace speak5220::core::quality {
 
 namespace {
 
-// speechqual.py's mel bank: 40 triangular bands from 100 to 3800 Hz.
+// measures.py's mel bank: 40 triangular bands from 100 to 3800 Hz.
 constexpr int kMelBands = 40;
 constexpr double kMelLowHz = 100.0;
 constexpr double kMelHighHz = 3800.0;
@@ -47,7 +47,7 @@ constexpr double kEnvelopeRangeDb = 50.0;
 constexpr int kRefineRange = 200;
 constexpr int kRefineStep = 5;
 
-// Added before taking logs, as speechqual.py does.
+// Added before taking logs, as measures.py does.
 constexpr double kLogFloor = 1e-12;
 
 std::size_t Index(int i) { return static_cast<std::size_t>(i); }
@@ -57,7 +57,7 @@ double InverseMel(double mel) {
   return 700 * (std::pow(10.0, mel / 2595.0) - 1);
 }
 
-// speechqual.py's mel bank.
+// measures.py's mel bank.
 const std::vector<double>& MelBank() {
   static const std::vector<double> kBank = MelFilterBank(kMelBands);
   return kBank;
@@ -113,7 +113,7 @@ std::vector<bool> SpeechFrames(const std::vector<double>& levels) {
   return speech;
 }
 
-// speechqual.py envelope(): the level of each 2.5 ms block in dB,
+// measures.py envelope(): the level of each 2.5 ms block in dB,
 // smoothed by a 4-point moving average (numpy.convolve, mode "same") and
 // floored kEnvelopeRangeDb below its peak.
 std::vector<double> Envelope(std::span<const double> x) {

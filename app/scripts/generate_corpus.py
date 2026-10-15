@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Writes WAV copies of the speech corpus for the corpus check.
 
-The corpus (investigation/captures/phase11/inputs/, 8 kHz 16-bit FLAC) is
-converted losslessly to 16-bit WAV, named by file stem, so the application's
+The corpus (8 kHz 16-bit FLAC, not committed: fetch-corpus.sh restores it
+from the repository's history into local/corpus/) is converted losslessly to 16-bit WAV, named by file stem, so the application's
 code reads WAV only (TESTING.md). The copies are mechanically derived, so
 they are generated, not committed: by default into build/app/generated-corpus/.
 
@@ -20,7 +20,7 @@ from pathlib import Path
 import soundfile as sf
 
 ROOT = Path(__file__).resolve().parents[2]
-CORPUS = ROOT / "investigation" / "captures" / "phase11" / "inputs"
+CORPUS = ROOT / "local" / "corpus"
 DEFAULT_OUTPUT = ROOT / "build" / "app" / "generated-corpus"
 
 
@@ -35,7 +35,7 @@ def main():
     args = ap.parse_args()
     files = sorted(CORPUS.glob("*/*.flac"))
     if not files:
-        sys.exit("no corpus files in %s" % CORPUS)
+        sys.exit("no corpus files in %s; run app/scripts/fetch-corpus.sh" % CORPUS)
     if len({p.stem for p in files}) != len(files):
         sys.exit("corpus file names are not unique")
     args.output.mkdir(parents=True, exist_ok=True)

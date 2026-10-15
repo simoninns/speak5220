@@ -22,7 +22,7 @@
 
 **New.** `TEST` is an active-high test input. [US 4,335,277](../sources/patent-us4335277/index.md) Fig. 8g shows a `TEST` pad with an on-chip load to `VDD`, NANDed with two internal signals, C4 and C5, whose source is not drawn, to make two test signals. TEST1 (Fig. 7a) forces the interpolation counter to step. TEST2 (Figs. 11c, 11d) disables the `I/O` output driver and connects the `I/O` pad into the serial chain that feeds the DAC, while blocking that chain's load from the Y latch: the DAC is then driven from outside, through `I/O`.
 
-The die agrees that pin 20 is a protected input: a diffusion resistor, a short metal line and a contact into the control logic at (10,412, 1,709) ([die analysis](../die-analysis/index.md)); a little further on, the image cannot be followed. The TMS5220NL and TMS5200NL die images were both used. What C4 and C5 are is not known ([Appendix B](gaps.md#the-test-mode)); on chip 1 both test signals act with `TEST` high alone.
+The die agrees that pin 20 is a protected input: a diffusion resistor, a short metal line and a contact into the control logic at (10,412, 1,709); a little further on, the image cannot be followed. The TMS5220NL and TMS5200NL die images were both used. What C4 and C5 are is not known ([Appendix B](gaps.md#the-test-mode)); on chip 1 both test signals act with `TEST` high alone.
 
 It floats on the test board, where the chip runs normally. Left floating, it sits at −4.32 V on a meter (chip 1), near `VDD`, as the patent's load predicts. So that level is the normal state, and the test mode is asserted by pulling the pin to `VSS`.
 
@@ -32,4 +32,4 @@ It floats on the test board, where the chip runs normally. Left floating, it sit
 
 **Handling.** Changing `TEST` with the chip running, and power-cycling by hand, left the write logic hung (READY never returned) until a clean power cycle. Afterwards the chip passed the Pico self-test, and an ACORN take departed from the model at the same sample (218) as its reference takes of four days earlier, and by a similar count (1,606 of 5,899 samples, against 1,548–1,608).
 
-The records of the bench trials are kept locally (in `investigation/local/testpin/`, outside the repository).
+The records of the bench trials were kept locally, outside the repository.

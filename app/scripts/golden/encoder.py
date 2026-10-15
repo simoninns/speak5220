@@ -6,7 +6,7 @@
 The frames and the level setting come from the C++ encoder; the stages
 before level setting, in the intermediates, are the retired Python
 encoder's, kept as committed. On the speech corpus
-(investigation/captures/phase11/inputs/) it writes:
+(local/corpus/, restored by app/scripts/fetch-corpus.sh) it writes:
 
 - inputs/NAME.wav: the WAV copies of a corpus subset (public-domain and CC0
   voices only), so the functional tests read WAV and never the FLAC
@@ -52,7 +52,7 @@ from pathlib import Path
 import soundfile as sf
 
 ROOT = Path(__file__).resolve().parents[3]
-CORPUS = ROOT / "investigation" / "captures" / "phase11" / "inputs"
+CORPUS = ROOT / "local" / "corpus"
 GOLDEN = ROOT / "app" / "golden" / "encoder"
 SCRIPTS = ROOT / "app" / "scripts"
 DEFAULT_BUILD = ROOT / "build" / "app"
@@ -60,7 +60,7 @@ ENCODER_H = ROOT / "app" / "src" / "core" / "encoder" / "encoder.h"
 WRITER = "EncoderReferenceWriter.DISABLED_WritesFramesAndLevelSetting"
 
 # Corpus subset: public-domain and CC0 voices only (see
-# investigation/captures/phase11/inputs/tts/README.md), one or two of each
+# local/corpus/tts/README.md), one or two of each
 # category of prompt.
 SUBSET = [
     "w07_joe",

@@ -150,7 +150,7 @@ core::StatusOr<std::vector<PreparedEncoding>> PrepareReferenceEncodings() {
       if (!signals_or.IsOk()) {
         return signals_or.GetStatus();
       }
-      // speechqual.py's lag counts from the first non-idle code.
+      // measures.py's lag counts from the first non-idle code.
       const auto first = std::ranges::find_if(
           audio->samples, [](std::int16_t s) { return s != -64; });
       const int first_sound = static_cast<int>(first - audio->samples.begin());

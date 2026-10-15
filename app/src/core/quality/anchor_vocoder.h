@@ -25,7 +25,8 @@ namespace speak5220::core::quality {
 // score's calibration. Order 10, 25 ms
 // frames, K and gain interpolated over 8 steps a frame, an impulse per
 // pitch period or Gaussian noise, pre- and de-emphasis 0.9375. Re-implements
-// investigation/tools/speechqual.py lpcVocoder() with its noise from
+// the research tools' lpcVocoder() (speechqual.py, in the repository's
+// history at commit c537c1d) with its noise from
 // numpy.random.default_rng(1).
 
 inline constexpr int kAnchorOrder = 10;

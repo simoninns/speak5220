@@ -27,7 +27,7 @@ Driving `OSC` from an external clock is covered in [Appendix A](#appendix-a-syst
 
 **New.** The original shows only the RC option (Figure A-1): a resistor and capacitor network on `OSC`, trimmed by measuring ROMCLK. It does not describe an external clock.
 
-`OSC` is not an ordinary logic input. It is the threshold node of the internal RC oscillator, whose timing network returns to `VDD` (−5 V). On the test board (the bench tests of [bench hardware](../capture/bench-hardware.md)):
+`OSC` is not an ordinary logic input. It is the threshold node of the internal RC oscillator, whose timing network returns to `VDD` (−5 V). On the test board (the bench tests of the capture hardware):
 
 - A 0 to +5 V square wave at 640 kHz did not clock the chip, so there was no ROMCLK.
 - A 0 to +5 V square wave at 320 kHz with `PROM OUT` pulled towards −5 V also did not clock the chip. (A TI-99/4A note says this setup selects an external clock at half rate. That was not true for this chip.)

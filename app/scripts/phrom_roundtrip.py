@@ -4,7 +4,7 @@
 """Writes every word of a PHROM image as frames and as the chip's output.
 
 The PHROM round trip:
-each word of the image named by a PROM manifest (investigation/proms/;
+each word of the image named by a PROM manifest (app/scripts/phroms/;
 by default Acorn PHROM A) is parsed with the frame format of speak5220
 datasheet §8.1, packed again and checked against the image's bytes
 (§12.11), and written into --output as
@@ -17,6 +17,12 @@ datasheet §8.1, packed again and checked against the image's bytes
 with index.tsv listing the words. The output is the application's
 emulator, spoken from power-up; its agreement with the chip is the
 emulator's reference data (app/golden/emulator/), not checked here.
+
+The image is copyrighted, so it is not committed: it is read from the
+manifest's local copy (for Acorn PHROM A, MAME's cm62024.bin in
+local/mame/roms/bbcb/, BUILD.md), or from --image (or
+SPEAK5220_PHROM_IMAGE), and checked against the
+manifest's size and SHA-256.
 
 The files are mechanically derived, so they are generated, not committed:
 by default into build/app/phrom-roundtrip/. phrom-check.sh runs this, then
@@ -31,14 +37,14 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-INVESTIGATION = ROOT / "investigation"
-DEFAULT_MANIFEST = INVESTIGATION / "proms" / "acorn_phrom_a.json"
+DEFAULT_MANIFEST = ROOT / "app" / "scripts" / "phroms" / "acorn_phrom_a.json"
 DEFAULT_OUTPUT = ROOT / "build" / "app" / "phrom-roundtrip"
 DEFAULT_CLI = ROOT / "build" / "app" / "src" / "cli" / "speak5220-cli"
 
@@ -53,22 +59,17 @@ SILENCE, STOP = 0, 15
 # manifest's word addresses are 18-bit, bank in the top four bits.
 BANK_SHIFT = 14
 
-# A speech word, as the investigation counted them: more than this many
+# A speech word, as the PROM inventory counted them: more than this many
 # frames, and not one of the tones.
 MIN_SPEECH_FRAMES = 9
 
 
-def read_image(manifest):
+def read_image(manifest, path):
     image = manifest["image"]
-    path = INVESTIGATION / image["file"]
-    if path.suffix == ".h":
-        text = path.read_text()
-        data = bytes(
-            int(v, 16)
-            for v in re.findall(r"0x([0-9A-Fa-f]{2})", text[text.index("{") :])
-        )
-    else:
-        data = path.read_bytes()
+    path = path or ROOT / image["file"]
+    if not path.exists():
+        sys.exit(f"{path} not found: the image is not committed (see --image)")
+    data = path.read_bytes()
     if (
         len(data) != image["size"]
         or hashlib.sha256(data).hexdigest() != image["sha256"]
@@ -170,6 +171,13 @@ def main():
         help="the PROM manifest (default: %(default)s)",
     )
     ap.add_argument(
+        "--image",
+        type=Path,
+        default=os.environ.get("SPEAK5220_PHROM_IMAGE"),
+        help="the PROM image (default: SPEAK5220_PHROM_IMAGE, or the "
+        "manifest's local copy)",
+    )
+    ap.add_argument(
         "--output",
         type=Path,
         default=DEFAULT_OUTPUT,
@@ -188,7 +196,7 @@ def main():
         sys.exit(f"{args.manifest}: only Acorn PHROMs for the TMS5220 are supported")
     if not args.cli.exists():
         sys.exit(f"{args.cli} not found: build speak5220-cli first")
-    data = read_image(manifest)
+    data = read_image(manifest, args.image)
     base = manifest["bank"] << BANK_SHIFT
     args.output.mkdir(parents=True, exist_ok=True)
 

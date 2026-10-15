@@ -83,7 +83,8 @@ TEST(OutputFilterTest, BbcMicroRemovesAnOffset) {
 }
 
 TEST(OutputFilterTest, BbcMicroPassesTheSpeechBand) {
-  // The audio-output-stage page's table: -0.4 dB at 1 kHz.
+  // The speech path's response: -0.4 dB at 1 kHz (0.3 dB from the
+  // high-pass, 0.0 dB from the low-passes).
   const std::vector<float> output =
       FilterDacOutput(OutputFilter::kBbcMicro, Sine(1000.0));
   EXPECT_NEAR(20.0 * std::log10(SettledPeak(output) / 0.5), -0.4, 0.3);

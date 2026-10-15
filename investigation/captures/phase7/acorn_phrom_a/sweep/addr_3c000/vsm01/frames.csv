@@ -1,4 +1,0 @@
-frame,bit_offset,bits,kind,energy,repeat,pitch,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,read_us,read_sample
-0,0,4,silence,0,,,,,,,,,,,,,12503.167,99
-1,4,4,silence,0,,,,,,,,,,,,,37503.090,299
-2,8,4,stop,15,,,,,,,,,,,,,62503.208,499

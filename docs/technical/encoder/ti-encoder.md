@@ -15,7 +15,7 @@ There are two sources:
   and links a dump of the system's EPROMs. We disassembled the dump.
   [The PSL's encoder](#the-psls-encoder-eprom-dump) below is taken from that
   code and cites addresses in it. The dump, the TMS9900 disassembler written
-  for it and the listings are kept in `investigation/local/ti_psl/`, which is not in the
+  for it and the listings are kept locally, outside the
   repository.
 - **TI's minicomputer analysis program, 1981.** It is described in
   "Speech-synthesizer software generated from text or speech", *Electronic

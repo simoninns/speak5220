@@ -117,14 +117,14 @@ This is one method that follows from [§12.1](#121-the-bit-budget) to [§12.5](#
 A TMS6100 VSM, or an emulation of one, holds the data the chip reads by address ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)).
 
 - **Byte order.** The chip reads each byte least significant bit first, so a VSM byte holds the bits of the stream in that order: the same bytes as the Speak External stream ([§12.9](#129-speak-external-streams)).
-- **Words start on byte boundaries,** at any address. The chip reads exactly to the end of the stop code and no further ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)), so no padding is needed after a word. TI's own images leave one spare byte after the byte holding each stop code ([PROM corpus](../capture/prom-corpus.md)), and a VSM image may do the same. The chip does not need it.
+- **Words start on byte boundaries,** at any address. The chip reads exactly to the end of the stop code and no further ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)), so no padding is needed after a word. TI's own images leave one spare byte after the byte holding each stop code, and a VSM image may do the same. The chip does not need it.
 - **Speaking a word by its address.** Load Address with five nibbles, least significant first, then Speak ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface), [§6](commands.md#6-description-of-commands)).
 - **Speaking a word by its number, through a pointer table.** Load the address of the word's pointer, then Read and Branch ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)). The VSM replaces the low 14 bits of its address with the two bytes there, low byte first, and keeps the bits above. Then Speak. So a pointer can reach only its own 16 KB bank, and the bytes of a pointer are stored as the value itself, not bit-reversed. A word's data may run on past the end of the bank; how a VSM continues there is its own behaviour ([§4](vsm-interface.md#4-voice-synthesis-memory-vsm-interface)).
 - **Reading data bytes from the host.** Read Byte returns each VSM byte bit-reversed ([§6](commands.md#6-description-of-commands)). Any header or text meant for the host, such as names and counts, is therefore stored bit-reversed, so that the host reads it the right way round.
 
 ## 12.8 Word tables
 
-Each of the following formats is used by original PROMs in the data set ([PROM corpus](../capture/prom-corpus.md)). The chip itself knows none of them: only the host does.
+Each of the following formats is used by original PROMs in the data set. The chip itself knows none of them: only the host does.
 
 **Acorn PHROM** (the BBC Micro's speech system; the Acorn PHROM A, CM62024). One 16 KB bank:
 
@@ -147,7 +147,7 @@ Whether a BBC Micro reads a new image in this format has not been tested ([Appen
 
 **Unindexed** (VM61004). The first word at byte 0, and each word one spare byte after the byte holding the previous word's stop code. The host must know where each word starts.
 
-**TI-99/4A** (the CD2325A and CD2326A VSMs). A binary search tree of names, read by the host through Read Byte; see [PROM corpus](../capture/prom-corpus.md).
+**TI-99/4A** (the CD2325A and CD2326A VSMs). A binary search tree of names, read by the host through Read Byte.
 
 ## 12.9 Speak External streams
 
@@ -194,4 +194,4 @@ Every word of the eight PROMs in the data set, 1148 words, parsed with the frame
 The project's encoder, in the Speak5220 application, is an encoder and packager written from this section and the rest of this datasheet alone, without the project's model or the original PROMs. Its [documentation](../encoder/index.md) gives the method, and [its choices](../encoder/choices.md) list where it had to choose. The results below were made with its first version.
 
 - **The round trip.** Every word of the eight PROMs (1148), parsed with the frame format of [§8.1](coded-parameters.md#81-coded-speech-parameters) and packed again, is bit-identical to the original up to the end of its stop code [`investigation/captures/phase11/roundtrip/`].
-- **New speech on the chip.** 347 utterances (10.4 minutes) were encoded from new speech and hand-designed frames, and packaged as an Acorn-format PHROM and as other VSM images. The [reference emulator](../emulator/index.md)'s predictions were committed before the chip was run. Each utterance was then captured three times through each path on chip 1. The speech is within the tolerance of the capture work's acceptance tests ([capture overview](../capture/index.md), and [§8.8](lattice-filter.md#88-lattice-filter)) in every set: the emulator's median SDR is 28.4–29.7 dB, against 34.0–36.5 dB for chip 1's own takes. Every VSM take read exactly the predicted bits, and every frame read on time, apart from a known limit of the measurement in takes over 5.7 s ([new speech data](../capture/work/new-speech-data.md)) [`investigation/captures/phase11/results/`]. The hand-designed frames are quiet synthetic data, on which the one-code error of [§8.8](lattice-filter.md#88-lattice-filter) weighs as it does on the synthetic vectors.
+- **New speech on the chip.** 347 utterances (10.4 minutes) were encoded from new speech and hand-designed frames, and packaged as an Acorn-format PHROM and as other VSM images. The [reference emulator](../emulator/index.md)'s predictions were committed before the chip was run. Each utterance was then captured three times through each path on chip 1. The speech is within the tolerance of the capture work's acceptance tests ([§8.8](lattice-filter.md#88-lattice-filter)) in every set: the emulator's median SDR is 28.4–29.7 dB, against 34.0–36.5 dB for chip 1's own takes. Every VSM take read exactly the predicted bits, and every frame read on time, apart from a known limit of the measurement in takes over 5.7 s [`investigation/captures/phase11/results/`]. The hand-designed frames are quiet synthetic data, on which the one-code error of [§8.8](lattice-filter.md#88-lattice-filter) weighs as it does on the synthetic vectors.

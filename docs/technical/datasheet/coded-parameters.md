@@ -1,6 +1,6 @@
 # 8.1 Coded speech parameters
 
-Measured with the synthetic vector sets ([controlled stimulus](../capture/stimulus.md)) [vectors `energy`, vectors `pitch`, vectors `k`]:
+Measured with the synthetic vector sets [vectors `energy`, vectors `pitch`, vectors `k`]:
 
 - **energy:** every index, voiced and unvoiced, with the K parameters near zero;
 - **pitch:** every non-zero index;
@@ -19,12 +19,12 @@ An entry is left unconfirmed by the fit where a neighbouring value fits as well 
 
 **Read from the ROM.** The energy, pitch and K tables were read directly from chip 1's parameter ROM through `PROM OUT` ([§8.10](prom-out.md#810-parameter-rom-output-prom-out)). All 248 entries equal Tables 8-4 to 8-6, including the 26 K entries the fit left unconfirmed [`investigation/captures/promout/chip1/`]. The chirp ROM is separate and does not appear on `PROM OUT`.
 
-**Read from the die.** Both ROMs were also read from the die image ([die analysis: the ROMs](../die-analysis/roms.md)).
+**Read from the die.** Both ROMs were also read from the die image.
 
 - **The parameter ROM:** every readable bit of the 248 entries equals `PROM OUT`.
 - **The chirp ROM:** a separate array of 52 words of 8 bits. All 52 equal Table 8-7, including the 26 chirp entries that the fit left unconfirmed. The die has no locations 52–63.
 
-[[`rom_chirp.csv`](../die-analysis/data/rom_chirp.csv), [`rom_parameters.csv`](../die-analysis/data/rom_parameters.csv)]
+[`rom_chirp.csv`, `rom_parameters.csv` of the die analysis]
 
 **Where the values come from.** Every value is measured: through the vectors, through `PROM OUT` ([§8.10](prom-out.md#810-parameter-rom-output-prom-out)) and, for the chirp and parameter ROMs, read from the die image. The pitch period is one sample longer than the stored pitch value ([§8.6](excitation-interpolation.md#86-excitation)). The original lists only coded index ranges, not values. The energy table is also the one in [US 4,335,277](../sources/patent-us4335277/index.md) (its Table IV). That patent's pitch and K tables belong to an earlier chip and differ, though it stores them in the same form: 10-bit two's-complement values in a ROM addressed by the coded index.
 

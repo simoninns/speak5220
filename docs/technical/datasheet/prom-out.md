@@ -11,7 +11,7 @@ The original lists pin 10 only as "Testing use only". It is the serial output of
 | Parameter | Sample period (from energy's) | First slot | Value |
 |---|---|---|---|
 | Energy | 0 | 0 | Table 8-4, two's complement |
-| Pitch | 2 | 0 | Table 8-5 × 4, unsigned (the value in bits 2–9). The ROM itself stores the value unshifted, in bits 0–7 (die, [the ROMs](../die-analysis/roms.md)) |
+| Pitch | 2 | 0 | Table 8-5 × 4, unsigned (the value in bits 2–9). The ROM itself stores the value unshifted, in bits 0–7 (die) |
 | K1 | 3 | 19 | Table 8-6, two's complement |
 | K2 | 5 | 18 | 〃 |
 | K3 | 7 | 17 | 〃 |
@@ -33,6 +33,6 @@ The order is the parameter counter's, energy first (PC 0), as in the patent. Whi
 - **No zeroing.** Silence and the K5–K10 zeroing of unvoiced frames ([§8.7](excitation-interpolation.md#87-interpolation)) do not appear. In an unvoiced frame, K5–K10 show the values at their stored indices, which are the last voiced frame's, even from an earlier utterance. This is the stored state that [§12.2](authoring.md#122-when-a-frame-is-heard) warns about. Both kinds of zeroing are applied after the ROM, as target(i) in [§8.9](reference-algorithm.md#89-reference-algorithm-and-the-model) describes.
 - **Between utterances**, the last frame's indices, with energy 0 for the stop code (index 15).
 
-**Reading the tables.** `investigation/tools/promout.py dump` speaks 64 runs through Speak External, each of 25 identical frames. Run *i* uses energy index *i* mod 14 + 1, pitch index *i*, and every K at index *i* modulo its table's size; run 0 is unvoiced. It reads the fields in mid-speech, then reads energy index 0 from a silence frame and index 15 while idle after the stop code. Every one of the 248 entries (energy 16, pitch 64, K 168) equals Tables 8-4 to 8-6, in two complete dumps. The chirp ROM (Table 8-7, ROM 409 in the patent) is a separate ROM and does not appear on `PROM OUT`. `investigation/tools/promout.py idle` decodes the stream at any moment, which shows the chip's stored indices directly.
+**Reading the tables.** The `dump` command of `investigation/tools/promout.py` speaks 64 runs through Speak External, each of 25 identical frames. Run *i* uses energy index *i* mod 14 + 1, pitch index *i*, and every K at index *i* modulo its table's size; run 0 is unvoiced. It reads the fields in mid-speech, then reads energy index 0 from a silence frame and index 15 while idle after the stop code. Every one of the 248 entries (energy 16, pitch 64, K 168) equals Tables 8-4 to 8-6, in two complete dumps. The chirp ROM (Table 8-7, ROM 409 in the patent) is a separate ROM and does not appear on `PROM OUT`. Its `idle` command decodes the stream at any moment, which shows the chip's stored indices directly.
 
 **Relation to TI's bit-time names (inference).** With [§8.4](serial-output.md#84-serial-sample-output-t11-and-io)'s mapping (slot 0 is T11), energy and pitch start in T11, and K1 to K10 start in T10 down to T1. The patent's load signal LDP is also staggered from one parameter to the next, by a different pattern. That pattern is given in its own bit-time numbering, which does not match the pin name's ([§8.4](serial-output.md#84-serial-sample-output-t11-and-io)), so neither mapping is confirmed.

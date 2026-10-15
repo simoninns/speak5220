@@ -27,7 +27,7 @@ enum class OutputFilter {
   kNone,
   // The BBC Microcomputer Model B's speech path: a 279 Hz 1st-order
   // high-pass and two 2nd-order Butterworth low-passes at 6.95 kHz
-  // (docs/technical/hardware/audio-output-stage.md).
+  // (Acorn's sound schematic for the Model B: C21/R31, IC17).
   kBbcMicro,
 };
 

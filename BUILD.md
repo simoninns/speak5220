@@ -1,24 +1,16 @@
 # Building speak5220
 
-How to set up the development environment and build each part of the project. What the parts do is in the documentation: <https://simoninns.github.io/speak5220/>.
+How to set up the development environment and build the application and its documentation. What the parts do is in the documentation: <https://simoninns.github.io/speak5220/>.
 
 ## Cloning
 
-The repository uses a git submodule for the [Ki-Lime Pi](https://github.com/recursivenomad/ki-lime-pi-to-go) Raspberry Pi Pico KiCad library, so clone it recursively:
-
 ```bash
-git clone --recursive https://github.com/simoninns/speak5220.git
-```
-
-If you have already cloned without `--recursive`, fetch the submodule with:
-
-```bash
-git submodule update --init
+git clone https://github.com/simoninns/speak5220.git
 ```
 
 ## Development environment (Nix)
 
-A Nix flake provides a development shell with KiCad, the Pico SDK and its toolchain, Python 3 with the analysis packages, and MkDocs:
+A Nix flake provides a development shell with the application's tools and libraries, Python 3 with the packages the scripts and the reference tools need, and MkDocs:
 
 ```bash
 nix develop
@@ -28,7 +20,7 @@ The flake requires Nix with flakes enabled (`experimental-features = nix-command
 
 A smaller shell, `nix develop .#app`, has only the application's tools and libraries (Qt 6, the libraries it links, Google Test, and the format and lint tools). CI uses it. Both shells install the application's pre-commit hooks into `.git/hooks` when entered.
 
-The flake supports Linux (x86-64 and ARM64) and macOS on Apple silicon. On macOS, `nix develop` leaves out KiCad and Piper, which nixpkgs does not build there (install KiCad separately), and `nix build .#speak5220` installs `speak5220.app` and `bin/speak5220-cli`.
+The flake supports Linux (x86-64 and ARM64) and macOS on Apple silicon. On macOS, `nix develop` leaves out Piper, which nixpkgs does not build there, and `nix build .#speak5220` installs `speak5220.app` and `bin/speak5220-cli`.
 
 ## The Speak5220 application
 
@@ -176,9 +168,9 @@ nix develop --command app/scripts/phoneme-check.sh --engine say   # renders and 
 
 `bbc-check.sh` needs MAME, which it takes from `PATH` or else runs with `nix shell nixpkgs#mame` (MAME is not in the dev shells: it is large and used only here), and the ROM set in `local/mame/roms/`. Its recordings, logs and summary go to `build/app/bbc-check/`.
 
-`corpus-check.sh` first writes WAV copies of the corpus into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`, and the fixtures' exports to `build/app/project-output/SUITE/`.
+The speech corpus is not committed. `app/scripts/fetch-corpus.sh` restores it from the repository's history (commit `c537c1d`) into the gitignored `local/corpus/`, once, before the first corpus check. `corpus-check.sh` then writes WAV copies of it into `build/app/generated-corpus/` with `app/scripts/generate_corpus.py`, which needs Python with soundfile (the default shell). Its reports go to `build/app/corpus-check/`, the benchmark's timings to `build/app/project-output/benchmark/`, and the fixtures' exports to `build/app/project-output/SUITE/`.
 
-The encoder-quality diagnostics (TESTING.md) need the default shell's Python (soundfile, NumPy, SciPy). `phrom-check.sh` writes the PHROM's words to `build/app/phrom-roundtrip/` and its report to `build/app/phrom-check/`; `option_sweep.py` writes to `build/app/option-sweep/`. `phoneme-check.sh` renders into the gitignored `local/phoneme-corpus/ENGINE/`: with Piper, which the default shell has on Linux only, after `python3 app/scripts/phoneme_corpus.py fetch` has downloaded the pinned voices into `local/piper/`; with `--engine say`, with macOS's own voices. Its report goes to `build/app/phoneme-check/`.
+The encoder-quality diagnostics (TESTING.md) need the default shell's Python (soundfile, NumPy, SciPy). `phrom-check.sh` reads Acorn PHROM A from `local/mame/roms/bbcb/cm62024.bin` (or `SPEAK5220_PHROM_IMAGE`), writes its words to `build/app/phrom-roundtrip/` and its report to `build/app/phrom-check/`; `option_sweep.py` writes to `build/app/option-sweep/`. `phoneme-check.sh` renders into the gitignored `local/phoneme-corpus/ENGINE/`: with Piper, which the default shell has on Linux only, after `python3 app/scripts/phoneme_corpus.py fetch` has downloaded the pinned voices into `local/piper/`; with `--engine say`, with macOS's own voices. Its report goes to `build/app/phoneme-check/`.
 
 ### Format and lint
 
@@ -210,64 +202,9 @@ Nix builds from the files git tracks, so `git add` new files before running thes
 
 `.github/workflows/release.yml` runs for a tag `vMAJOR.MINOR.PATCH` (optionally with a suffix, such as `v1.0.0-rc1`, for a pre-release). It runs both of the above; once they pass, it builds the Flatpak, the MSI and the DMG (see [Installers](#installers)) and drafts a GitHub Release with them and their SHA-256 checksums. Publish the draft by hand.
 
-## Hardware (KiCad)
-
-Start KiCad with `kicad`, or use `kicad-cli` for command-line tasks such as ERC:
-
-```bash
-kicad-cli sch erc investigation/kicad/tms5220_usb/tms5220_usb.kicad_sch
-```
-
-The documentation shows the schematic sheets as SVG. To regenerate them after a change to the schematic:
-
-```bash
-kicad-cli sch export svg --exclude-drawing-sheet -o <dir> investigation/kicad/tms5220_usb/tms5220_usb.kicad_sch
-```
-
-Copy the files into `docs/technical/hardware/img/` as `schematic_top.svg`, `schematic_pico_interface.svg`, `schematic_audio_output.svg` and `schematic_poweramp.svg` (the "Power Amp" sheet's file is the one renamed to `schematic_poweramp.svg`).
-
-## Firmware (Raspberry Pi Pico 2)
-
-The dev shell provides the Pico SDK, the Arm GCC toolchain, CMake/Ninja, `picotool` and Raspberry Pi's OpenOCD fork (which supports the RP2350).
-
-Build:
-
-```bash
-cmake -S investigation/firmware -B investigation/firmware/build -G Ninja
-cmake --build investigation/firmware/build
-```
-
-Flash over USB (the running firmware reboots itself into BOOTSEL):
-
-```bash
-picotool load -f -x investigation/firmware/build/speak5220.uf2
-```
-
-**Reflash only while the TMS5220 is idle.** Flashing stops its clock, and stopping it mid-speech can leave the chip unable to complete a write until it is power-cycled. Afterwards, `python investigation/tools/pico.py reset` should print a status. The firmware protocol page of the documentation ("Stopping the clock") has the details.
-
-Alternatively, flash through a Raspberry Pi Debug Probe:
-
-```bash
-openocd -f interface/cmsis-dap.cfg -f target/rp2350.cfg -c "adapter speed 5000" \
-  -c "program investigation/firmware/build/speak5220.elf verify reset exit"
-picotool reboot -f
-```
-
-The `picotool reboot -f` is needed: after an OpenOCD reset, core 1 (which runs the TMS6100 emulation) is put back into the bootrom shortly after it is launched. A clean reboot over USB (or a power cycle) avoids this.
-
-`investigation/tools/pico.py` finds the Pico's USB serial port by its USB ID. The debug probe's UART is unused, because GPIO0/1 form part of the TMS5220 data bus. To check the board after flashing:
-
-```bash
-python investigation/tools/pico.py selftest    # upload, speak and trace, checking every result
-```
-
 ## Emulator command line
 
-The research tools that run the emulator (`regress.py`, `replay.py`, `phase11.py`, `speechqual.py`) use `tms5220emu`, the application's emulator behind the retired C emulator's command line. It is built with the application's tests (above), into `build/app/tests/support/tms5220emu`; `TMS5220EMU` names another copy.
-
-## Capture tools
-
-The Python tools in `investigation/tools/` need no build. Capturing also needs PicoScope 7 installed: it provides `libps3000a.so`, which is found next to the `picoscope` executable (set `PS3000A_LIB` to use a different copy). On Linux, the dev shell sets `PICO_DRIVER_DEPS` to the driver's libusb and libstdc++ dependencies.
+`tms5220emu` is the application's emulator behind the retired C emulator's command line. The reference-data scripts (`app/scripts/golden/generate_golden.py`, `measures.py`) run it. It is built with the application's tests (above), into `build/app/tests/support/tms5220emu`; `TMS5220EMU` names another copy.
 
 ## Documentation
 

@@ -10,9 +10,12 @@ implementations of the quality measures, for the C++ to be checked
 against:
 
 - The signals are prepared as the application prepares them: the chip's output
-  with its idle code at 0, placed against the source by the alignment of
-  investigation/tools/speechqual.py (align() and refine(), on the source
-  after the encoder's 60 Hz high-pass); both band-limited by the same
+  with its idle code at 0, placed against the source by the research
+  tools' alignment (speechqual.py's align() and refine(), in the
+  repository's history at commit c537c1d, kept here unchanged: level
+  envelopes correlated in 2.5 ms steps, then refined within 25 ms by the
+  closest mel-cepstra, on the source after the encoder's 60 Hz high-pass);
+  both band-limited by the same
   zero-phase Butterworth band-pass (order 4, 80 to 3600 Hz, SciPy's
   sosfiltfilt); the voice activity mask from the original WebRTC detector
   (py-webrtcvad, aggressiveness 3, 10 ms frames) less the frames more than
@@ -54,8 +57,8 @@ with the committed files. Ask before rewriting the reference data
 
 import argparse
 import filecmp
-import hashlib
 import importlib.metadata
+import math
 import multiprocessing
 import os
 import shutil
@@ -73,20 +76,14 @@ for _var in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"):
 import numpy as np  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
-TOOLS = ROOT / "investigation" / "tools"
 INPUTS = ROOT / "app" / "golden" / "encoder" / "inputs"
 FRAMES = ROOT / "app" / "golden" / "encoder" / "frames"
 GOLDEN = ROOT / "app" / "golden" / "quality" / "measures"
 
-sys.path.insert(0, str(TOOLS))
-import speechqual as sq  # noqa: E402
-
-# The reference sources the data depends on. The emulator that speaks the
-# frames is the application's, which its own reference data holds to the
-# same codes (app/golden/emulator/).
-SOURCES = [
-    TOOLS / "speechqual.py",
-]
+# The application's emulator, as its command line, built with the tests.
+EMU = os.environ.get(
+    "TMS5220EMU", str(ROOT / "build" / "app" / "tests" / "support" / "tms5220emu")
+)
 
 RATE = 8000
 # The chip's output: codes x 64 of 16-bit full scale.
@@ -107,6 +104,16 @@ LSD_BAND_HZ = (100.0, 3500.0)
 # The pitch search range, and the ratio beyond which an error is gross.
 F0_RANGE_HZ = (50.0, 400.0)
 GROSS_RATIO = 0.2
+# The alignment: the level envelope's hop, then the refinement's range and
+# step, its spectral window, mel bands and cepstra, and the speech frames
+# it compares (within this many dB of the source's loudest).
+ENV_HOP = 20
+REFINE, REFINE_STEP = 200, 5
+ALIGN_WIN = 256
+ALIGN_FFT = 256
+MEL_BANDS, MEL_LO, MEL_HI = 40, 100.0, 3800.0
+CEPS = 24
+SPEECH_DB = 35
 
 SCORE_COLUMNS = [
     "name",
@@ -150,23 +157,11 @@ def compare(a, b):
     return diff
 
 
-def reference_commit():
-    """The last commit that changed the references; refuses local edits."""
-    paths = [str(p.relative_to(ROOT)) for p in SOURCES]
-    dirty = run(
-        ["git", "status", "--porcelain", "--", *paths],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
-    if dirty:
-        sys.exit("the reference tools have local changes:\n" + dirty)
-    return run(
-        ["git", "log", "-1", "--format=%H", "--", *paths],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-    ).stdout.strip()
+def alignment_reference():
+    """The committed REFERENCE.tsv lines on the alignment's source: the
+    retired speechqual.py, which the alignment here keeps unchanged."""
+    lines = (GOLDEN / "REFERENCE.tsv").read_text().splitlines()
+    return [x for x in lines if x.startswith(("reference_commit\t", "sha256\t"))]
 
 
 def option_sets():
@@ -178,6 +173,132 @@ def packed_frames(set_name):
     """{stem: packed bytes} of one option set's reference encodings."""
     rows = (FRAMES / (set_name + ".tsv")).read_text().splitlines()[1:]
     return {r.split("\t")[0]: bytes.fromhex(r.split("\t")[3]) for r in rows}
+
+
+def read_audio(path):
+    """A WAV file as float samples at RATE, its channels averaged."""
+    import scipy.signal
+    import soundfile
+
+    x, rate = soundfile.read(path, dtype="float64", always_2d=True)
+    x = x.mean(axis=1)
+    if rate != RATE:
+        g = math.gcd(rate, RATE)
+        x = scipy.signal.resample_poly(x, RATE // g, rate // g)
+    return x
+
+
+def emulate(data, tmp):
+    """The chip's I/O codes for the packed frames spoken from VSM address 0
+    after a Reset, from the first non-idle code to the last."""
+    image = os.path.join(tmp, "image.bin")
+    samples = os.path.join(tmp, "samples.txt")
+    with open(image, "wb") as f:
+        f.write(bytes(data))
+    run([EMU, "-s", samples, "-e", "none", "--image", image, "--addr", "0", "--reset"])
+    codes = np.loadtxt(samples, dtype=np.int64, ndmin=2)[:, 2]
+    active = np.flatnonzero(codes != -1)
+    if not len(active):
+        return codes[:0]
+    return codes[active[0] : active[-1] + 1]
+
+
+def analysis_frames(x):
+    """ALIGN_WIN-sample frames centred on 0, HOP, 2 HOP, ... (zero-padded)."""
+    n = len(x) // HOP + 1
+    pad = np.concatenate([np.zeros(ALIGN_WIN // 2), x, np.zeros(ALIGN_WIN)])
+    idx = np.arange(n)[:, None] * HOP + np.arange(ALIGN_WIN)[None, :]
+    return pad[idx]
+
+
+def mel_bank():
+    """Triangular mel bands from MEL_LO to MEL_HI on the ALIGN_FFT bins."""
+
+    def mel(f):
+        return 2595 * np.log10(1 + f / 700.0)
+
+    def imel(m):
+        return 700 * (10 ** (m / 2595.0) - 1)
+
+    edges = imel(np.linspace(mel(MEL_LO), mel(MEL_HI), MEL_BANDS + 2))
+    freqs = np.arange(ALIGN_FFT // 2 + 1) * RATE / ALIGN_FFT
+    fb = np.zeros((MEL_BANDS, len(freqs)))
+    for i in range(MEL_BANDS):
+        a, c, b = edges[i : i + 3]
+        fb[i] = np.clip(
+            np.minimum((freqs - a) / (c - a), (b - freqs) / (b - c)), 0, None
+        )
+    return fb
+
+
+MEL_BANK = mel_bank()
+ALIGN_WINDOW = np.hamming(ALIGN_WIN)
+
+
+def level_db(x):
+    f = analysis_frames(x) * ALIGN_WINDOW
+    return 10 * np.log10(np.sum(f * f, axis=1) / np.sum(ALIGN_WINDOW**2) + 1e-12)
+
+
+def mel_log(x):
+    """Natural log of the mel band magnitudes, per frame."""
+    p = np.abs(np.fft.rfft(analysis_frames(x) * ALIGN_WINDOW, ALIGN_FFT)) ** 2
+    return 0.5 * np.log(p @ MEL_BANK.T + 1e-12)
+
+
+def envelope(x):
+    n = len(x) // ENV_HOP
+    e = 10 * np.log10(
+        np.mean(x[: n * ENV_HOP].reshape(n, ENV_HOP) ** 2, axis=1) + 1e-12
+    )
+    e = np.convolve(e, np.ones(4) / 4, mode="same")
+    return np.maximum(e, e.max() - 50)
+
+
+def align(ref, out):
+    """Samples by which out is delayed to line up with ref: the shift (in
+    ENV_HOP steps) that best correlates their level envelopes over the
+    source's length, the output being silent outside its own."""
+    a, b = envelope(ref), envelope(out)
+    floor = b.min()
+    best, lag = -np.inf, 0
+    for shift in range(-len(b) + 1, len(a)):
+        y = np.full(len(a), floor)
+        lo, hi = max(0, shift), min(len(a), shift + len(b))
+        if hi - lo < min(len(a), len(b)) // 2:
+            continue
+        y[lo:hi] = b[lo - shift : hi - shift]
+        r = np.corrcoef(a, y)[0, 1]
+        if r > best:
+            best, lag = r, shift
+    return lag * ENV_HOP
+
+
+def refine(ref, out, lag):
+    """The lag within REFINE samples of the envelope's that gives the
+    closest spectra (lowest mean mel-cepstral distance over the speech
+    frames)."""
+    import scipy.fft
+
+    lin = level_db(ref)
+    speech = lin > lin.max() - SPEECH_DB
+    cr = scipy.fft.dct(mel_log(ref), axis=1)[speech, 1 : CEPS + 1]
+    best, at = np.inf, lag
+    for d in range(-REFINE, REFINE + 1, REFINE_STEP):
+        co = scipy.fft.dct(mel_log(placed(out, lag + d, len(ref))), axis=1)
+        dist = np.mean(np.sqrt(np.sum((cr - co[speech, 1 : CEPS + 1]) ** 2, axis=1)))
+        if dist < best:
+            best, at = dist, lag + d
+    return at
+
+
+def placed(out, lag, n):
+    """out delayed by lag samples into an n-sample signal."""
+    y = np.zeros(n)
+    a, b = max(0, lag), min(n, lag + len(out))
+    if b > a:
+        y[a:b] = out[a - lag : b - lag]
+    return y
 
 
 def lround(v):
@@ -228,8 +349,8 @@ def prepare(source, codes):
     hp = scipy.signal.butter(2, 60.0 / (RATE / 2), "highpass", output="sos")
     reference = scipy.signal.sosfiltfilt(hp, source)
     out = codes.astype(float) + 1.0
-    lag = sq.refine(reference, out, sq.align(reference, out))
-    y = sq.placed(out, lag, len(source)) * SAMPLE_SCALE
+    lag = refine(reference, out, align(reference, out))
+    y = placed(out, lag, len(source)) * SAMPLE_SCALE
     x = bandlimit(source)
     y = bandlimit(y)
     mask = speech_mask(x)
@@ -385,9 +506,9 @@ def track_text(x_tracks):
 
 def measure_job(job):
     set_name, stem, data = job
-    source = sq.readAudio(str(INPUTS / (stem + ".wav")))
+    source = read_audio(str(INPUTS / (stem + ".wav")))
     with tempfile.TemporaryDirectory() as tmp:
-        codes = sq.emulate(data, tmp)
+        codes = emulate(data, tmp)
         x, y, mask, lag = prepare(source, codes)
         rx, ry = reaper_track(x, tmp), reaper_track(y, tmp)
     hx, hy = harvest_track(x), harvest_track(y)
@@ -401,9 +522,9 @@ def measure_job(job):
 
 
 def generate(out, processes):
-    commit = reference_commit()
-    if not Path(sq.EMU).exists():
-        sys.exit("build the tests first: tms5220emu is not at " + sq.EMU)
+    ref = alignment_reference()
+    if not Path(EMU).exists():
+        sys.exit("build the tests first: tms5220emu is not at " + EMU)
     if shutil.which("reaper") is None:
         sys.exit(
             "REAPER's command-line tool is not on PATH (use the default Nix shell)"
@@ -433,12 +554,6 @@ def generate(out, processes):
 
     import scipy
 
-    ref = ["reference_commit\t" + commit]
-    ref += [
-        "sha256\t%s\t%s"
-        % (hashlib.sha256(p.read_bytes()).hexdigest(), p.relative_to(ROOT))
-        for p in SOURCES
-    ]
     ref += [
         "numpy\t" + np.__version__,
         "scipy\t" + scipy.__version__,
