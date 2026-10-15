@@ -55,7 +55,7 @@ target_link_libraries(
 
 # The desktop's light or dark preference comes from the XDG desktop portal
 # over D-Bus on Linux and the BSDs; Qt follows the desktop itself on
-# Windows and macOS (plan §5, "Colours").
+# Windows and macOS.
 if(TARGET Qt6::DBus)
     target_sources(speak5220_gui PRIVATE theme/portal_colour_scheme.cpp)
     target_link_libraries(speak5220_gui PRIVATE Qt6::DBus)

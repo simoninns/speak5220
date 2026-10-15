@@ -6,10 +6,10 @@
 Runs the reference C emulator (investigation/emulator, built here into a
 temporary directory) on the committed inputs of app/golden/emulator/ and
 writes, for each run listed in runs.tsv, the output codes and the full event
-log (application plan §1.4, Phase 1 tasks 4-6). The inputs are the scenario
-scripts (copied from app/scripts/golden/scenarios/) with the images they
-load, and the phrases: a subset of the synthetic vectors and the retired
-Python encoder's output for a corpus subset, each with its frames as CSV.
+log. The inputs are the scenario scripts (copied from
+app/scripts/golden/scenarios/) with the images they load, and the phrases:
+a subset of the synthetic vectors and the retired Python encoder's output
+for a corpus subset, each with its frames as CSV.
 
 runs.tsv's synth_matches column and REFERENCE.tsv record the reference data's
 origin: whether the Python encoder's synthesiser matched the emulator on each

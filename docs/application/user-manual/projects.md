@@ -6,8 +6,8 @@ each with its audio, its encoder settings and its frames. It is kept in one
 [project file](../reference/project-file.md) reference. Projects are made
 and edited in the [main window](main-window.md) or with the
 [command-line tool](cli.md). Both encode them (the window's
-[encoder panel](encoder.md) also optimises their settings); so far only
-the command-line tool exports them.
+[encoder panel](encoder.md) also optimises their settings) and
+[export](export.md) them.
 
 ## Phrases and their names
 

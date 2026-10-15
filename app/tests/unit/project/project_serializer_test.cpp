@@ -471,7 +471,6 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       "frames:\n"
       "  - {energy: 15}\n"
       "quality:\n"
-      "  pesq: 2.5\n"
       "  stoi: 0.9\n"
       "notes: \"YES\"\n";
   ProjectFiles files = WithProjectYaml(project_yaml);
@@ -516,8 +515,6 @@ TEST_F(ProjectSerializerTest, UnknownKeysAreKeptAndWrittenBack) {
       saved.at(PhraseFile(1, "frames.yaml"));
   const std::string frames(frames_bytes.begin(), frames_bytes.end());
   EXPECT_THAT(frames, HasSubstr("  stoi: 0.9\n"));
-  // PESQ, written before the quality measures, is dropped.
-  EXPECT_THAT(frames, Not(HasSubstr("pesq")));
   EXPECT_FALSE(phrase.encoding->quality.has_value());
   EXPECT_THAT(frames, HasSubstr("notes: \"YES\"\n"));
   EXPECT_EQ(saved.at(PhraseFile(1, "notes.txt")), Bytes("phrase notes"));

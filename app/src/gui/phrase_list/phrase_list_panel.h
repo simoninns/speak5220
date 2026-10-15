@@ -23,7 +23,7 @@ namespace speak5220::app {
 
 class PhraseListModel;
 
-// Plan §5: the phrase list, a QListView over a PhraseListModel with
+// The phrase list, a QListView over a PhraseListModel with
 // multi-selection and drag-and-drop, under a row of buttons for the given
 // actions (add, remove, up, down, A-Z). The selection is kept by phrase
 // id across the model's resets, so it follows phrases that move.

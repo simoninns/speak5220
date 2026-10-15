@@ -19,7 +19,7 @@ namespace speak5220::app {
 
 class WaveformView;
 
-// Plan §5: the waveform of one of the phrase editor's tabs: the title and
+// The waveform of one of the phrase editor's tabs: the title and
 // a note above the view. Playback, zoom, scroll and the play start are
 // controlled under it (PhraseWaveforms). GUI thread only.
 class WaveformPane : public QWidget {

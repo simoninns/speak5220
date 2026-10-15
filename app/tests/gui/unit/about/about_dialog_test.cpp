@@ -31,7 +31,7 @@ QString ToQString(std::string_view text) {
 }
 
 TEST(ThirdPartyNoticesTest, ListsEveryLibraryOfThePlan) {
-  // Plan §2.4, the libraries the application and its tests use.
+  // The third-party libraries the application and its tests use.
   std::set<std::string> names;
   for (const ThirdPartyNotice& notice : ThirdPartyNotices()) {
     names.emplace(notice.name);

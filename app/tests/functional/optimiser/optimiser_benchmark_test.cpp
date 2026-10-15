@@ -35,13 +35,12 @@ namespace {
 namespace optimiser = core::optimiser;
 namespace project = core::project;
 
-// Run by app/scripts/benchmark.sh, not by CTest (plan Phase 7, item 4):
+// Run by app/scripts/benchmark.sh, not by CTest:
 // optimises every phrase of the project in SPEAK5220_BENCHMARK_PROJECT
 // (app/projects/benchmark/synthetic-speech if unset) from its settings,
 // within the project's budget, once on one thread and once on every core.
 // Writes one row per phrase and thread count to
-// SPEAK5220_BENCHMARK_REPORT, if set. The plan sets no target; the rates
-// are recorded in the HLD.
+// SPEAK5220_BENCHMARK_REPORT, if set. There is no target.
 TEST(OptimiserBenchmark, DISABLED_TimesOptimise) {
   const char* project_env = std::getenv("SPEAK5220_BENCHMARK_PROJECT");
   const std::filesystem::path path =

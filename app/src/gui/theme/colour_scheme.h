@@ -72,7 +72,7 @@ Qt::ColorScheme SchemeFromPortalValue(quint32 value);
 // elsewhere.
 std::unique_ptr<IDesktopColourScheme> MakeDesktopColourScheme();
 
-// Plan §5, "Colours": applies the user's theme choice at once and
+// Applies the user's theme choice at once and
 // whenever it changes, and for Auto the desktop's preference, at once and
 // whenever that changes (SchemeFor()). A dark or light scheme is requested
 // from Qt (QStyleHints::setColorScheme()), which switches the style's

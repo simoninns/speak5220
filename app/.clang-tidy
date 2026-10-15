@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# clang-tidy settings for app/ (application plan §1.3). Every disabled check
+# clang-tidy settings for app/. Every disabled check
 # below has a comment saying why; add to this list only with a reason.
 ---
 Checks: >
@@ -39,7 +39,7 @@ Checks: >
 #       flags every literal in tests and in the datasheet coding tables, where
 #       the literal is the clearest form.
 #   cppcoreguidelines-owning-memory
-#       Plan §1.3 agreed exception: Qt widgets are created with
+#       AGENTS.md §4.1 agreed exception: Qt widgets are created with
 #       "new QWidget(parent)" and owned by their parent.
 #   cppcoreguidelines-pro-type-vararg
 #       Qt's and Google Test's macros expand to variadic calls.
@@ -59,7 +59,7 @@ HeaderFilterRegex: '.*/app/(src|tests)/.*'
 FormatStyle: file
 
 CheckOptions:
-  # Names, following the table in plan §1.3.
+  # Names, following the Google C++ Style Guide (AGENTS.md §4.1).
   - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
   - { key: readability-identifier-naming.ClassCase, value: CamelCase }
   - { key: readability-identifier-naming.StructCase, value: CamelCase }
@@ -71,7 +71,7 @@ CheckOptions:
   - { key: readability-identifier-naming.ConceptCase, value: CamelCase }
   - { key: readability-identifier-naming.FunctionCase, value: CamelCase }
   - { key: readability-identifier-naming.MethodCase, value: CamelCase }
-  # Plan §1.3 agreed exception: overrides keep Qt's names (paintEvent(),
+  # AGENTS.md §4.1 agreed exception: overrides keep Qt's names (paintEvent(),
   # rowCount(), data(), ...). Overrides are not checked against this rule;
   # this list covers Qt-mandated members that are not overrides.
   - { key: readability-identifier-naming.MethodIgnoredRegexp, value: '^(metaObject|qt_metacast|qt_metacall|qt_static_metacall|tr|trUtf8)$' }
@@ -98,6 +98,6 @@ CheckOptions:
   # delete their copies without declaring moves; both are the usual idiom.
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true }
   - { key: cppcoreguidelines-special-member-functions.AllowMissingMoveFunctionsWhenCopyIsDeleted, value: true }
-  # Header guards end in "_" (plan §1.3), which UPPER_CASE does not allow;
+  # Header guards end in "_", which UPPER_CASE does not allow;
   # app/scripts/check-header-guards.sh checks them instead.
   - { key: readability-identifier-naming.MacroDefinitionIgnoredRegexp, value: '^SPEAK5220_[A-Z0-9_]+_H_$' }

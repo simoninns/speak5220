@@ -111,7 +111,7 @@ void PhraseListModel::SetProject(const project::Project& project,
       kept_checks.insert(*check);
     }
   }
-  // Plan §4.1, §5: a divider above the first phrase of each PHROM after
+  // A divider above the first phrase of each PHROM after
   // the first, at the allocator's boundaries.
   for (std::size_t phrom = 1; phrom < allocation.phroms.size(); ++phrom) {
     const std::vector<int>& members = allocation.phroms[phrom].phrases;
@@ -136,7 +136,7 @@ EncodingState PhraseListModel::StateOf(const project::Phrase& phrase,
   if (!phrase.encoding.has_value()) {
     return EncodingState::kNotEncoded;
   }
-  // Plan §3.4: the encoding is current when its hash matches the phrase's
+  // The encoding is current when its hash matches the phrase's
   // inputs. A phrase's audio never changes once imported, so the inputs
   // that can change are the options and the stored encoding.
   std::string key = defaults_key;

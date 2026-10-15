@@ -211,7 +211,7 @@ TEST(BbcDiscTest, PlayerTokenisesAndFitsBesideTheBuffer) {
   const StatusOr<Bytes> player =
       BasicTokeniser::Tokenise(BbcDisc::PlayerSource());
   ASSERT_TRUE(player.IsOk()) << player.GetStatus().ToString();
-  // Plan §6: with PAGE at &1900 and the 16 KB buffer below the MODE 7
+  // With PAGE at &1900 and the 16 KB buffer below the MODE 7
   // screen at &7C00, the program, its variables and the routine share
   // about 8.75 KB; the player refuses to start with less than &900 bytes
   // above the program.

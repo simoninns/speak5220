@@ -106,8 +106,8 @@ FrameTrackFacts DescribeFrameTrack(std::span<const lpc::Frame> frames);
 // (synth::ReferenceSynthesizer), lined up by their output levels, and
 // compared frame by frame. A repeat frame takes its voicing from its pitch
 // and its filter from the last full frame. Re-implements the
-// investigation's scratch comparison (docs-tech/encoder-quality-
-// investigation.md §3.1). Pure; thread-safe. O(frames x samples per frame).
+// encoder-quality investigation's scratch comparison. Pure; thread-safe.
+// O(frames x samples per frame).
 FrameTrackComparison CompareFrameTracks(std::span<const lpc::Frame> reference,
                                         std::span<const lpc::Frame> encoded);
 

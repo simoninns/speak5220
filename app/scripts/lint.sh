@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Runs every read-only check of application plan §1.3 on all files, and
-# reports each one that fails. The "lint" CMake target runs this.
+# Runs every read-only check on all files, and reports each one that
+# fails. The "lint" CMake target runs this.
 #
 # Usage: lint.sh [BUILD_DIR]
 # BUILD_DIR (default build/app) supplies compile_commands.json for

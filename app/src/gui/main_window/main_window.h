@@ -54,7 +54,7 @@ class PhraseDetails;
 class PhraseListPanel;
 class PhraseWaveforms;
 
-// Plan §5: the top-level window. The phrase list is docked on the left;
+// The top-level window. The phrase list is docked on the left;
 // on the right are the selected phrase's details and its tabs
 // (PhraseWaveforms): Original, Preprocess with the preprocessing settings
 // (EncoderPanel::PreprocessPanel()), and Encode with the encoder panel
@@ -115,12 +115,12 @@ class MainWindow : public QMainWindow {
 
   // Imports WAV files as phrases before `row` (clamped to the list), in
   // the background. Files that clip or are very quiet are imported again
-  // normalised if the user agrees (plan §3.1). The phrases are added as
+  // normalised if the user agrees. The phrases are added as
   // one undoable step; files that fail are reported.
   void ImportFiles(const QStringList& paths, int row);
   // Imports started and not yet finished.
   int ImportsRunning() const { return imports_running_; }
-  // Plan §3.4: adds the words of the Acorn PHROM images at `paths` (each
+  // Adds the words of the Acorn PHROM images at `paths` (each
   // one or more 16 KB banks) before `row` (clamped to the list), as
   // locked phrases with no source audio, in one undoable step. Images
   // that cannot be read are reported, and the others still added.

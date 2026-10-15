@@ -35,8 +35,8 @@ class IVoiceActivity {
       std::span<const double> samples) = 0;
 };
 
-// IVoiceActivity over libfvad, the WebRTC detector as a C library, at 8 kHz
-// (plan §3.3). Each call starts a fresh detector, so the result depends
+// IVoiceActivity over libfvad, the WebRTC detector as a C library, at 8 kHz.
+// Each call starts a fresh detector, so the result depends
 // only on the samples. Samples are rounded to 16 bits and clipped, as the
 // detector takes them. Thread-safe.
 class FvadVoiceActivity : public IVoiceActivity {

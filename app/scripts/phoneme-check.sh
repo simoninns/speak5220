@@ -2,9 +2,9 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# The phoneme check (docs-tech/encoder-quality-plan.md, Phase 1): renders
-# the phoneme test set (phoneme_prompts.csv) with a text-to-speech engine
-# where files are missing (phoneme_corpus.py), encodes every file, and
+# The phoneme check: renders the phoneme test set (phoneme_prompts.csv)
+# with a text-to-speech engine where files are missing (phoneme_corpus.py),
+# encodes every file, and
 # writes per file how its S, SH, CH, K, T or F and its vowel came out to
 # OUTPUT_DIR/phoneme-check.tsv, with a summary on the console.
 # SPEAK5220_PHONEME_OPTIONS sets the encoder options (as

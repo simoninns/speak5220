@@ -274,9 +274,8 @@ void PrintSummary(const std::vector<PhonemeRow>& rows) {
             << "+ before a voiced frame: " << loud_onsets << '\n';
 }
 
-// Run by hand by phoneme-check.sh (docs-tech/encoder-quality-plan.md,
-// Phase 1): encodes every file phoneme_corpus.py listed in
-// SPEAK5220_PHONEME_DIR/index.tsv with the options in
+// Run by hand by phoneme-check.sh: encodes every file phoneme_corpus.py
+// listed in SPEAK5220_PHONEME_DIR/index.tsv with the options in
 // SPEAK5220_PHONEME_OPTIONS (as "repeat_lambda=300"; unset for the
 // defaults) and writes, per file, to SPEAK5220_PHONEME_REPORT: its score,
 // gross pitch and voicing errors, how its consonant's frames were coded

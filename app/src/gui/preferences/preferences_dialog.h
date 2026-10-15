@@ -32,7 +32,7 @@ namespace speak5220::app {
 
 class EncoderSettingsForm;
 
-// What the Preferences dialog sets (plan Phase 12). A plain value type.
+// What the Preferences dialog sets. A plain value type.
 struct Preferences {
   ThemeChoice theme = ThemeChoice::kAuto;
   WaveformColours waveform_colours = WaveformColours::kDark;
@@ -52,7 +52,7 @@ Preferences ReadPreferences(IViewPreferences& store);
 // Stores `preferences` in `store`.
 void WritePreferences(const Preferences& preferences, IViewPreferences& store);
 
-// Plan Phase 12: the Preferences dialog, in four tabs.
+// The Preferences dialog, in four tabs.
 // - Appearance: the theme (as View > Theme) and the waveforms' colours.
 // - Audio: the output device, "System default" first; a device chosen
 //   before that is not there now stays listed, marked as not connected.

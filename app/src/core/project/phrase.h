@@ -27,15 +27,15 @@
 namespace speak5220::core::project {
 
 // A phrase's identity: a UUID in its canonical lower-case form, which also
-// names its directory in the project (phrases/<id>/, plan §4).
+// names its directory in the project (phrases/<id>/).
 using PhraseId = std::string;
 
-// The rate of a project's audio (plan §3.1).
+// The rate of a project's audio.
 inline constexpr int kProjectSampleRate = 8000;
 
 // YAML keys this version does not know, in the order read, each with its
 // value as YAML text. They are written back unchanged, so a project saved
-// by an older version keeps what a newer one added (plan §4).
+// by an older version keeps what a newer one added.
 using UnknownKeys = std::vector<std::pair<std::string, std::string>>;
 
 // The options a phrase sets for itself, over the project's defaults, of
@@ -49,7 +49,7 @@ using EncoderOverrides = std::map<std::string, std::string>;
 // does not use, by path; kept and saved again unchanged.
 using ExtraFiles = std::map<std::string, std::vector<std::uint8_t>>;
 
-// Where a phrase's audio came from (plan §3.1). A plain value type.
+// Where a phrase's audio came from. A plain value type.
 struct SourceInfo {
   // The imported file's name, without its directory.
   std::string file = {};
@@ -65,7 +65,7 @@ struct SourceInfo {
   friend bool operator==(const SourceInfo& a, const SourceInfo& b) = default;
 };
 
-// The quality measured with an encoding (plan §3.3, §4): the figures of
+// The quality measured with an encoding: the figures of
 // the measures and the overall score, as the measures of
 // quality::kMeasuresVersion gave them. A plain value type.
 struct CachedQuality {
@@ -88,7 +88,7 @@ struct CachedQuality {
                          const CachedQuality& b) = default;
 };
 
-// A phrase's frames and the inputs they were made from (plan §3.4). For an
+// A phrase's frames and the inputs they were made from. For an
 // unlocked phrase they are a cache, redone when the hash of the inputs no
 // longer matches; a locked phrase's frames are its content. A plain value
 // type.
@@ -130,7 +130,7 @@ struct Phrase {
   EncoderOverrides encoder;
   UnknownKeys preprocess_unknown;
   UnknownKeys encoder_unknown;
-  // A locked phrase is never re-encoded (plan §3.4).
+  // A locked phrase is never re-encoded.
   bool locked = false;
   // Where playback starts, in samples of `audio`.
   int play_start = 0;

@@ -58,15 +58,14 @@ constexpr double kMinimumLevel = 1e-6;
 constexpr double kSettledDb = 1.5;
 constexpr double kStepFraction = 0.7;
 // The closed loop's passes (tms5220enc.py DEFAULTS "iterations"): more
-// change no corpus file's score by more than 0.02 (HLD §8, "Options").
+// change no corpus file's score by more than 0.02.
 constexpr int kLevelPasses = 5;
 // A frame this many times too loud at energy 1 becomes silence.
 constexpr double kTooLoud = 4.0;
 // The limiter. The reference holds every output code within 120
 // (tms5220enc.py DEFAULTS "peakLimit"); Acorn's PHROM A clips the DAC on
-// the peaks of half its words, 0.21 % of its samples on average
-// (docs-tech/encoder-quality-investigation.md §4.1). So no frame's peak
-// may pass kPeakCeiling, and at most kClipBudget of the phrase's samples
+// the peaks of half its words, 0.21 % of its samples on average. So no frame's
+// peak may pass kPeakCeiling, and at most kClipBudget of the phrase's samples
 // may pass the DAC's +-127 (speak5220 datasheet §8.9), which clips them.
 constexpr double kPeakCeiling = 160.0;
 constexpr int kDacLimit = 127;

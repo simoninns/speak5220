@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# The PHROM round trip (docs-tech/encoder-quality-investigation.md §3.1,
-# docs-tech/encoder-quality-plan.md Phase 1): writes every word of Acorn
+# The PHROM round trip:
+# writes every word of Acorn
 # PHROM A as frames and as the chip's output (phrom_roundtrip.py), encodes
 # the output of each of the 157 speech words, and compares the encodings
 # with the PHROM's own frames: voicing, onsets and offsets, energy, filter

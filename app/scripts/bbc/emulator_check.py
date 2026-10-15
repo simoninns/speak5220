@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Checks the BBC Micro discs on an emulated BBC Micro (plan Phase 10).
+"""Checks the BBC Micro discs on an emulated BBC Micro.
 
 Run by bbc-check.sh, after run-projects.sh has exported the bbc fixture
 suite. MAME's BBC Micro Model B, with the Acorn speech system and Acorn

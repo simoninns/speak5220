@@ -42,12 +42,12 @@ struct RefreshReport {
   std::vector<RefreshFailure> failures;
 };
 
-// Plan §3.4: a phrase's frames are a cache of its source audio and
+// A phrase's frames are a cache of its source audio and
 // encoder settings, invalidated by a hash of (audio, settings, encoder
 // version). This class makes and checks those encodings with an injected
 // IEncoder, and stores them through Project::SetEncoding(), so a
-// re-encoding that would take the project past its budget is not applied
-// (plan §4.1). Thread-compatible; the encoder must outlive it.
+// re-encoding that would take the project past its budget is not applied.
+// Thread-compatible; the encoder must outlive it.
 class EncodingCache {
  public:
   explicit EncodingCache(encoder::IEncoder& encoder);
@@ -81,7 +81,7 @@ class EncodingCache {
 
   // Changes a phrase's encoder overrides and re-encodes it with them. If
   // the new encoding would take the project past its budget, nothing
-  // changes and the status says why (plan §4.1). Returns the previous
+  // changes and the status says why. Returns the previous
   // overrides and encoding, for undo. Fails also for an unknown or locked
   // phrase.
   StatusOr<EncodingChange> ChangeSettings(Project& project, const PhraseId& id,

@@ -92,7 +92,7 @@ StatusOr<double> Estoi(std::span<const double> x, std::span<const double> y);
 
 // ESTOI of `prepared`'s output against its original, with the samples of
 // the frames outside the mask set to zero in both, so its own removal of
-// silent frames drops them (plan §3.3). Fails as Estoi() does.
+// silent frames drops them. Fails as Estoi() does.
 StatusOr<double> MeasureIntelligibility(const PreparedSignals& prepared);
 
 }  // namespace speak5220::core::quality

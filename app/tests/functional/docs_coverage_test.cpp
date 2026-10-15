@@ -21,7 +21,6 @@
 #include <format>
 #include <fstream>
 #include <iterator>
-#include <regex>
 #include <set>
 #include <sstream>
 #include <string>
@@ -190,6 +189,28 @@ std::string RunCli(const QStringList& arguments) {
       .toStdString();
 }
 
+// The long options `text` names: "--", a lower-case letter, then lower-case
+// letters and hyphens. Scanned by hand: std::regex trips GCC's
+// -Wmaybe-uninitialized in Release and sanitizer builds.
+std::set<std::string> LongOptions(std::string_view text) {
+  const auto is_lower = [](char c) { return c >= 'a' && c <= 'z'; };
+  std::set<std::string> options;
+  std::size_t at = text.find("--");
+  while (at != std::string_view::npos) {
+    std::size_t end = at + 2;
+    if (end < text.size() && is_lower(text[end])) {
+      while (end < text.size() && (is_lower(text[end]) || text[end] == '-')) {
+        ++end;
+      }
+      options.emplace(text.substr(at, end - at));
+      at = text.find("--", end);
+    } else {
+      at = text.find("--", at + 1);
+    }
+  }
+  return options;
+}
+
 // The column of `header` called `name`, or std::string::npos.
 std::size_t Column(const std::vector<std::string>& header,
                    std::string_view name) {
@@ -286,12 +307,7 @@ TEST(DocsCoverageTest, EveryEncoderOptionHasARowWithItsTypeDefaultAndRange) {
 
 TEST(DocsCoverageTest, EveryCliOptionHasARow) {
   const std::string help = RunCli({QStringLiteral("--help")});
-  const std::regex option_pattern("--[a-z][a-z-]*");
-  std::set<std::string> options;
-  for (auto it = std::sregex_iterator(help.begin(), help.end(), option_pattern);
-       it != std::sregex_iterator(); ++it) {
-    options.insert(it->str());
-  }
+  const std::set<std::string> options = LongOptions(help);
   // The options of main() and of AddCommandOptions().
   ASSERT_TRUE(options.contains("--log-level")) << help;
   ASSERT_TRUE(options.contains("--output")) << help;

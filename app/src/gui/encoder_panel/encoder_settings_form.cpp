@@ -61,7 +61,7 @@ constexpr std::string_view kSamplesUnit = "samples";
 constexpr double kMillisecondsPerSample = 1000.0 / 8000.0;
 // What the optional options' and the coefficient's sliders show before
 // one is set: a noise gate under most breaths, a bass cut like Acorn's own
-// phrases (HLD §9), a moderate de-esser, the default resonance hold, and
+// phrases, a moderate de-esser, the default resonance hold, and
 // the coefficient Optimise tries.
 constexpr double kUnsetNoiseGate = 30.0;
 constexpr double kUnsetBassCut = 200.0;

@@ -38,7 +38,7 @@ TEST(ProjectSizeTextTest, EmptyProjectUsesNoPhroms) {
 }
 
 TEST(ProjectSizeTextTest, MatchesThePlansExample) {
-  // Plan §5: two full PHROMs and 12 296 bytes of a third, 4 088 free.
+  // Two full PHROMs and 12 296 bytes of a third, 4 088 free.
   const PhromAllocation allocation = WithPhroms({16384, 16384, 12296});
   EXPECT_EQ(ProjectSizeText(allocation),
             QStringLiteral("44.0 KB · 3 PHROMs of 64 · 4.0 KB free "

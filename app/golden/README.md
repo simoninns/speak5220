@@ -5,7 +5,7 @@ Python encoder (`tms5220enc.py`, in the repository's history at commit
 `6abe9ed`) produced, the C++ encoder's own level setting and frames where
 it departs from the Python encoder, and what independent implementations
 of the quality measures give, for the application's functional tests to
-compare against (application plan §1.4). The build and tests read only
+compare against. The build and tests read only
 these files.
 
 `app/scripts/golden/generate_golden.py` (`emulator/runs/`),
@@ -34,7 +34,7 @@ nix develop --command python3 app/scripts/golden/generate_golden.py --check
 | `encoder/frames/SET.tsv` | For each option set, every corpus file's frame count, near-tie frames (`-` for none) and packed frames (hex), from the C++ encoder |
 | `encoder/inputs/NAME.wav` | WAV copies of the corpus subset (public-domain and CC0 voices only) |
 | `encoder/intermediates/NAME.json` | For each subset file with the default options, the Python encoder's intermediate values up to the plan (from its `encodeDetailed()`), and in `encode` the C++ encoder's level setting and frames |
-| `quality/measures/scores/SET.tsv` | For each option set, each subset file's reference encoding measured by independent implementations of the quality measures (plan §3.3): the alignment lag, the frames the voice activity mask keeps, the mean log spectral distortion and its percentages of frames over 2 and 4 dB, REAPER's and Harvest's gross pitch error, F0 RMSE (cents) and voicing decision error, and ESTOI |
+| `quality/measures/scores/SET.tsv` | For each option set, each subset file's reference encoding measured by independent implementations of the quality measures: the alignment lag, the frames the voice activity mask keeps, the mean log spectral distortion and its percentages of frames over 2 and 4 dB, REAPER's and Harvest's gross pitch error, F0 RMSE (cents) and voicing decision error, and ESTOI |
 | `quality/measures/masks/SET.tsv` | Each subset file's voice activity mask, from py-webrtcvad, one character per 10 ms frame (`1` for speech) |
 | `quality/measures/tracks/SET/NAME.tsv` | Each subset file's F0 tracks every 10 ms (0 where unvoiced), of the prepared original and output, from REAPER's command-line tool and from Harvest through pyworld |
 
@@ -49,14 +49,13 @@ nix develop --command python3 app/scripts/golden/encoder.py --check
 The frames and the level-setting intermediates are the C++ encoder's own,
 regenerated with each intended change to it; the stages before level
 setting are the Python encoder's, which `encoder.py` keeps as committed
-(HLD §13). The C++ encoder's level setting, onsets and fades and pitch
-anchor depart from the Python's (docs-tech/design/high-level-design.md §8,
-"Level setting", "Onsets and fades" and "The pitch anchor"): the pitch
+(the Python encoder is retired). The C++ encoder's level setting, onsets
+and fades and pitch anchor depart from the Python's: the pitch
 track in the intermediates is the Python's, which the C++ tracker gives
 without its anchor, and each frame's voicing is the Python's, without the
 C++ encoder's onset rule, which only the unit tests check. A near-tie frame
 is one whose coding changes when the input is disturbed at the level of
-floating-point noise (plan §3.2). The C++ encoder, which gives the same
+floating-point noise. The C++ encoder, which gives the same
 frames on every platform, marks none.
 
 The quality measures' data is written by `app/scripts/golden/measures.py`,

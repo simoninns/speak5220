@@ -30,7 +30,7 @@ namespace {
 
 constexpr int kRate = 8000;
 
-// The `six` case (docs-tech/encoder-quality-investigation.md §4.3): one
+// The `six` case of the encoder-quality investigation: one
 // second of a 117.6 Hz voice whose narrow first formant sits on its 4th
 // harmonic, its period wandering by up to 3 % from cycle to cycle, between
 // 0.2 s of silence; peak 0.5.

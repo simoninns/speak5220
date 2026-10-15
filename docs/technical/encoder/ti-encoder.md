@@ -4,11 +4,12 @@ This page covers how TI turned recorded speech into TMS5220 frames in the
 early 1980s. It answers one question: what in TI's own process might improve
 the encoder? The measurements here are of a baseline encoder configuration
 (first-order pre-emphasis 0.9, voicing from periodicity alone, and greedy
-repeats: a repeat when the stored K cost at most 0.8 dB). It scores a median
-PESQ of 2.00 over the 243 test inputs (`investigation/tools/speechqual.py`, see the
-[tools pages](../tools/encoder-speech.md#encoding-quality)). An unquantised LPC-10 vocoder at the same
-frame rate scores 2.30. The changes adopted since
-([How it works](how-it-works.md)) raise the encoder to 2.03.
+repeats: a repeat when the stored K cost at most 0.8 dB). Its median
+mel-cepstral distortion (MCD) over the 243 test inputs is 2.29 dB
+(`investigation/tools/speechqual.py`, see the
+[tools pages](../tools/encoder-speech.md#encoding-quality)); an unquantised
+LPC-10 vocoder at the same frame rate gives 1.92 dB. The changes adopted
+since are in [How it works](how-it-works.md).
 
 There are two sources:
 
@@ -243,26 +244,25 @@ These are medians over all 243 test inputs, scored with `speechqual.py` on
 the research encoder's frames with each option changed, on the baseline
 configuration:
 
-| Setting | PESQ | MCD (dB) | Tilt below 800 Hz (dB) | Voicing disagreement (%) | bits/s |
-|---|---|---|---|---|---|
-| Baseline (pre-emphasis 0.9, window 240) | 2.00 | 2.29 | −1.1 | 11.7 | 1342 |
-| `preEmphasis=0.9375` (1981 default) | 2.01 | 2.30 | −1.2 | 11.7 | 1340 |
-| `window=200` (TI's window) | 2.00 | 2.30 | −1.0 | 11.6 | 1359 |
-| both | 2.00 | 2.31 | −1.2 | 11.9 | 1353 |
-| `preEmphasis=1.0` (PSL) | 2.02 | 2.31 | −1.4 | 11.6 | 1345 |
-| `preEmphasis=1.0`, `window=200` | 2.01 | 2.32 | −1.3 | 11.6 | 1362 |
-| `lagWindowHz=0` (no lag window, as PSL) | 2.02 | 2.27 | −1.1 | 11.9 | 1370 |
-| Greedy repeat threshold 0 (repeats only when K do not change) | 2.03 | 2.26 | −1.1 | 11.8 | 1588 |
+| Setting | MCD (dB) | Tilt below 800 Hz (dB) | Voicing disagreement (%) | bits/s |
+|---|---|---|---|---|
+| Baseline (pre-emphasis 0.9, window 240) | 2.29 | −1.1 | 11.7 | 1342 |
+| `preEmphasis=0.9375` (1981 default) | 2.30 | −1.2 | 11.7 | 1340 |
+| `window=200` (TI's window) | 2.30 | −1.0 | 11.6 | 1359 |
+| both | 2.31 | −1.2 | 11.9 | 1353 |
+| `preEmphasis=1.0` (PSL) | 2.31 | −1.4 | 11.6 | 1345 |
+| `preEmphasis=1.0`, `window=200` | 2.32 | −1.3 | 11.6 | 1362 |
+| `lagWindowHz=0` (no lag window, as PSL) | 2.27 | −1.1 | 11.9 | 1370 |
+| Greedy repeat threshold 0 (repeats only when K do not change) | 2.26 | −1.1 | 11.8 | 1588 |
 
-None of TI's settings moves the median PESQ by more than 0.03. That is small
-beside the spread between files (p10–p90 1.79–2.32) and far short of the 0.3
-between the encoder and the unquantised vocoder.
+None of TI's settings moves the median MCD by more than 0.03 dB, far short
+of the 0.37 dB between the encoder and the unquantised vocoder.
 
 - **Pre-emphasis.** The PSL's μ = 1 makes the low band slightly worse
   (−1.4 dB), as expected from a stronger pre-emphasis.
 - **Lag window.** Dropping it helps MCD a little and voicing not at all.
 - **Exact repeats.** A greedy threshold of 0 cuts out almost all repeats. It
-  costs 18 % more bits for +0.03, the same as `repeats=False`.
+  costs 18 % more bits for 0.03 dB less MCD, the same as `repeats=False`.
 
 **Conclusion:** TI's analysis choices are not where the encoder loses
 quality. The encoder shares the parts of TI's design that matter, and its own
@@ -270,7 +270,7 @@ refinements are at least as good.
 
 ## Where the quality goes
 
-The gap to the unquantised vocoder (0.3 PESQ, 0.35 dB MCD, a low band about
+The gap to the unquantised vocoder (0.37 dB MCD, a low band about
 1 dB short and 4 points more voicing disagreement) has to come from what the
 chip adds:
 
@@ -287,37 +287,25 @@ lattice in place of the chip's arithmetic.
 
 These are medians over all 243 inputs, on the baseline configuration:
 
-| Step | PESQ | Change | MCD | lo | mid | hi | vuv% |
-|---|---|---|---|---|---|---|---|
-| `anchor`: float LPC-10 vocoder | 2.29 | | 1.92 | +0.0 | +0.3 | −0.4 | 7.3 |
-| `q`: + the chip's K, pitch and energy tables | 2.11 | −0.16 | 2.11 | +0.0 | +0.3 | −0.4 | 8.6 |
-| `qc`: + the chip's excitation (chirp, pre-emphasis voiced only) | 1.99 | −0.12 | 2.27 | −1.2 | +1.2 | +0.0 | 6.4 |
-| `qci`: + the chip's interpolation and timing | 1.94 | −0.05 | 2.22 | −1.0 | +1.1 | −0.1 | 8.4 |
-| `enc`: the encoder's frames, same float model | 1.95 | +0.03 | 2.19 | −0.5 | +0.9 | −0.3 | 8.2 |
-| `chip`: the encoder's frames on the emulator | 2.00 | +0.00 | 2.29 | −1.1 | +0.7 | +0.3 | 11.7 |
-
-The quantisation step breaks down like this, each table applied to the anchor
-alone:
-
-| Table | PESQ change |
-|---|---|
-| K | −0.12 |
-| Pitch | −0.04 |
-| Energy | −0.01 |
-
-The "Change" column is the median of each file's change, so the steps do not
-add up exactly to the difference of the medians.
+| Step | MCD | lo | mid | hi | vuv% |
+|---|---|---|---|---|---|
+| `anchor`: float LPC-10 vocoder | 1.92 | +0.0 | +0.3 | −0.4 | 7.3 |
+| `q`: + the chip's K, pitch and energy tables | 2.11 | +0.0 | +0.3 | −0.4 | 8.6 |
+| `qc`: + the chip's excitation (chirp, pre-emphasis voiced only) | 2.27 | −1.2 | +1.2 | +0.0 | 6.4 |
+| `qci`: + the chip's interpolation and timing | 2.22 | −1.0 | +1.1 | −0.1 | 8.4 |
+| `enc`: the encoder's frames, same float model | 2.19 | −0.5 | +0.9 | −0.3 | 8.2 |
+| `chip`: the encoder's frames on the emulator | 2.29 | −1.1 | +0.7 | +0.3 | 11.7 |
 
 What this shows:
 
-1. **The format costs about 0.33.** That is the tables (0.16, mostly K), the
-   chirp (0.12) and the interpolation (0.05). The encoder cannot recover this,
-   only work around it.
-2. **The encoder's analysis is not the problem.** Its frames score as well as
-   the simple analysis does (+0.03), so its pitch tracker, closed-loop energy
-   and K search are about as good as the format allows. Tuning them further
-   ([TI's settings measured](#tis-settings-measured)) moves the score by
-   hundredths.
+1. **The format costs about 0.3 dB of MCD.** That is the tables (0.19 dB)
+   and the chirp (0.16 dB), less a little back from the interpolation
+   (0.05 dB). The encoder cannot recover this, only work around it.
+2. **The encoder's analysis is not the problem.** Its frames do as well as
+   the simple analysis does (2.19 against 2.22 dB), so its pitch tracker,
+   closed-loop energy and K search are about as good as the format allows.
+   Tuning them further ([TI's settings measured](#tis-settings-measured))
+   moves MCD by hundredths of a dB.
 3. **The chirp shifts the spectrum.** It moves the low band by −1.2 dB and the
    mid band by +1.2 dB. Its spectrum falls off much like de-emphasis by 0.9,
    but it is about 1 dB weaker from 300 to 800 Hz and about 1 dB stronger from
@@ -327,21 +315,21 @@ What this shows:
    **Tried:** pre-filtering voiced frames with the inverse of an order-4 fit
    to the chirp, [1, −0.938, 0.152, −0.104, −0.006], in place of
    1 − 0.9375z⁻¹. On 40 files the tilt error halves (lo −1.0 → −0.4 dB, mid
-   +1.2 → +0.7 dB at `qci`) and MCD improves by 0.05. PESQ moves only +0.02.
+   +1.2 → +0.7 dB at `qci`) and MCD improves by 0.05 dB.
 
    This is the one analysis change found here that the encoder could take up,
    and it costs nothing in bits. It was then measured on all inputs, and the encoder uses it
    ([Pre-emphasis](how-it-works.md#pre-emphasis)).
-4. **The chip's arithmetic and 8-bit output hardly change PESQ, but they cost
-   elsewhere.** From `enc` to `chip`, the low band loses 0.6 dB and voicing
+4. **The chip's arithmetic and 8-bit output cost in the low band and in
+   voicing.** From `enc` to `chip`, MCD rises 0.10 dB, the low band loses
+   0.6 dB and voicing
    disagreement rises 3.5 points. That fits white noise from the output's
    resolution in the quieter parts.
 
    A louder encoding tests this. `targetRms=40` brings voicing disagreement
    down to 9.6 % and lo to −0.9 dB. But peaks then reach `peakLimit` and the
-   level error rises from 1.8 to 2.8 dB, so PESQ falls to 1.90 (1.97 at
-   `targetRms=30`; `targetPeak=120` gives 2.00). Level is a trade-off here,
-   not a free gain.
+   level error rises from 1.8 to 2.8 dB. Level is a trade-off here, not a
+   free gain.
 
 One TI practice the encoder does not have is the human in the loop. Both TI
 systems relied on listening, editing energy and pitch by hand, and

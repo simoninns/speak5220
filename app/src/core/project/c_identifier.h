@@ -18,7 +18,7 @@
 
 namespace speak5220::core::project {
 
-// Plan §4: the C identifier for a phrase name. Characters other than
+// The C identifier for a phrase name. Characters other than
 // letters and digits become "_", runs of "_" collapse to one, leading and
 // trailing "_" are dropped, and a name starting with a digit gets the
 // prefix "W_" ("ONE,WON" -> "ONE_WON", "-ING" -> "ING", "2- (TWEN-)" ->

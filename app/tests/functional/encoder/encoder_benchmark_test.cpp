@@ -2,7 +2,7 @@
  * File:        encoder_benchmark_test.cpp
  * Module:      encoder tests
  * Purpose:     Times the encoder on a set of WAV files, for
- *              app/scripts/benchmark.sh (plan Phase 2 task 6)
+ *              app/scripts/benchmark.sh
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -26,7 +26,7 @@
 namespace speak5220::testing {
 namespace {
 
-// Plan Phase 2 task 6: under 0.05 s per second of speech on one core.
+// The target: under 0.05 s per second of speech on one core.
 constexpr double kTargetSecondsPerSecond = 0.05;
 // Each file is encoded this many times, and the fastest run counts, so
 // other load on the machine affects the result less.

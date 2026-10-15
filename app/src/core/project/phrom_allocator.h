@@ -19,7 +19,7 @@
 
 namespace speak5220::core::project {
 
-// Plan §4.1, decision D4: the project budget, 64 PHROMs (1 MB). A limit
+// The project budget, 64 PHROMs (1 MB). A limit
 // chosen for testing, not a hardware one.
 inline constexpr int kPhromBudget = 64;
 
@@ -41,10 +41,10 @@ inline constexpr int kPhromFixedOverhead = kPhromHeaderBytes +
 inline constexpr int kPhromWordCapacity =
     static_cast<int>(packaging::kPhromSize) - kPhromFixedOverhead;  // 16128
 
-// Plan §4.1: each word's 2-byte pointer.
+// Each word's 2-byte pointer.
 inline constexpr int kPhromPointerBytes = 2;
 
-// What a phrase costs in its PHROM (plan §4.1): its packed bytes, its name
+// What a phrase costs in its PHROM: its packed bytes, its name
 // (one byte per character, stored before the data) and its pointer.
 constexpr int PhraseCost(int packed_bytes, int name_length) {
   return packed_bytes + name_length + kPhromPointerBytes;
@@ -61,7 +61,7 @@ struct PhraseCostInput {
 // What happened to a phrase.
 enum class Placement {
   kPlaced,      // in `phrom`
-  kTooLarge,    // bigger than an empty PHROM: in no PHROM (plan §4.1)
+  kTooLarge,    // bigger than an empty PHROM: in no PHROM
   kNotEncoded,  // no frames yet: in no PHROM
 };
 
@@ -111,7 +111,7 @@ struct PhromAllocation {
   int FreeInLastPhrom() const;
 };
 
-// Plan §4.1: fills PHROM 1 in list order and starts the next PHROM when the
+// Fills PHROM 1 in list order and starts the next PHROM when the
 // next phrase does not fit; earlier PHROMs are never back-filled, so the
 // result is predictable. A PHROM whose phrases have all 95 ASCII entries
 // needs no null word, so takes one byte more (AcornPhrom::Build() leaves it

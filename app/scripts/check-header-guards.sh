@@ -2,9 +2,9 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Checks header guards against application plan §1.3: SPEAK5220_ followed by
-# the header's path from app/src/ (or from app/ for headers outside src/),
-# upper case, with every other character replaced by "_", and a trailing "_".
+# Checks header guards: SPEAK5220_ followed by the header's path from
+# app/src/ (or from app/ for headers outside src/), upper case, with every
+# other character replaced by "_", and a trailing "_".
 # Example: app/src/core/lpc/frame_codec.h -> SPEAK5220_CORE_LPC_FRAME_CODEC_H_
 #
 # cpplint's own guard check cannot add the SPEAK5220_ prefix, so it is

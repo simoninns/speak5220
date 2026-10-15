@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
       QStringLiteral("[project]"));
   parser.process(application);
 
-  // Plan §2.6: the log level and file chosen in Preferences, unless the
+  // The log level and file chosen in Preferences, unless the
   // command line gives them for this run.
   speak5220::app::SettingsViewPreferences view_preferences;
   const core::LogSettings preferred =
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
   speak5220::app::QtDialogs dialogs;
   speak5220::app::SettingsRecentFilesStore recent_files;
 
-  // Plan §5, "Colours": light or dark as the desktop prefers, unless the
+  // Light or dark as the desktop prefers, unless the
   // user chose one (View > Theme). Applied before the window is shown.
   const std::unique_ptr<speak5220::app::IDesktopColourScheme> desktop_scheme =
       speak5220::app::MakeDesktopColourScheme();
@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
   core::SteadyClock clock;
   core::dsp::SincResampler resampler;
   speak5220::app::Player player(audio_output, clock, resampler);
-  // Plan §3.3: the quality measures for the encoder panel and Optimise.
+  // The quality measures for the encoder panel and Optimise.
   // Their synth keeps nothing, since Optimise speaks hundreds of
   // candidates once each.
   const std::unique_ptr<core::encoder::IEncoder> encoder =

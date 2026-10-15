@@ -103,7 +103,7 @@ void PhraseListDelegate::paint(QPainter* painter,
   item.palette.setColor(QPalette::Text, NameColour(option.palette, index));
 
   if (divider > 0) {
-    // Plan §5: "PHROM N" where each PHROM after the first starts.
+    // "PHROM N" where each PHROM after the first starts.
     const QRect band(option.rect.left(), option.rect.top(), option.rect.width(),
                      divider);
     painter->save();

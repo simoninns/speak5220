@@ -51,7 +51,7 @@ struct CHeaderStream {
 // uint16_t.
 inline constexpr std::size_t kMaxCHeaderStreamBytes = 65535;
 
-// Writes and checks the C headers of plan §6. Every header has an SPDX
+// Writes and checks the C headers of the C export. Every header has an SPDX
 // line, a comment naming the project and listing each phrase's name with
 // its identifier, an include guard, and <stdint.h>. Arrays are
 // `static const`, so the header can be included by more than one file.

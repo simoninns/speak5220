@@ -2,22 +2,22 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# The full-corpus acceptance of the C++ encoder and quality measures
-# (application plan §3.2 and Phase 8, TESTING.md):
+# The full-corpus check of the C++ encoder and quality measures
+# (TESTING.md):
 # - encodes all 243 corpus files with every option set in
 #   app/golden/encoder/option_sets.tsv and checks that at least 99% of the
 #   encodings are identical to the reference frames, and that every other
 #   one differs only at the reference's near-tie frames and its overall
 #   quality score is within 0.02 of the reference's;
-# - optimises every file from the default options on every core (plan
-#   Phase 7), with each file's byte limit at its default encoding's size,
+# - optimises every file from the default options on every core, with
+#   each file's byte limit at its default encoding's size,
 #   and checks that the best is within the limit and scores above the
 #   defaults on most files. SPEAK5220_OPTIMISE_STRIDE=N takes every Nth
 #   file, for a quicker run;
-# - measures every file with the quality measures of plan §3.3, as the
+# - measures every file with the quality measures, as the
 #   reference encodings, the application's default and optimised
 #   encodings and the anchor vocoder render it, for the calibration of the
-#   overall score (measures.tsv; plan Phase 8, task 12).
+#   overall score (measures.tsv).
 # With --listening it only writes the listening check's samples instead:
 # for each rating band, files spread over its scores, as the original and
 # the chip's output (listening/BAND/*.wav, with listening/index.tsv).

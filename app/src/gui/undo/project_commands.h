@@ -22,7 +22,7 @@
 
 namespace speak5220::app {
 
-// An undo command over one IProjectEditor operation (plan §2.5). Execute()
+// An undo command over one IProjectEditor operation. Execute()
 // runs the operation the first time, before the command is pushed, so a
 // failed operation is never pushed (ProjectEdits). The redo() that
 // QUndoStack::push() then calls does nothing; later redo() and undo()
@@ -229,7 +229,7 @@ class ReplacePhrasesCommand : public ProjectCommand {
   std::vector<core::project::PlacedPhrase> replaced_;
 };
 
-// Plan §3.4: words of PHROM images with the images' ASCII entries and
+// Words of PHROM images with the images' ASCII entries and
 // header strings. SetPhromSettings() and then InsertPhrases(), so the
 // budget is checked with the new ASCII map; if the insertion fails, the
 // settings are put back. Reversed by RemovePhrases() and SetPhromSettings()

@@ -95,7 +95,7 @@ TEST(QualityRatingViewTest, BarStaysShortEnoughToReadAtAGlance) {
 
 class QualityRatingColoursTest : public ::testing::TestWithParam<QPalette> {};
 
-// Plan Phase 8: the rating stays readable with colour removed. Each band
+// The rating stays readable with colour removed. Each band
 // is named in words, and the marks differ in lightness, not just hue,
 // from every band (WCAG 2.1's contrast ratio is of luminance alone).
 TEST_P(QualityRatingColoursTest, MarksStandOutFromEveryBandWithoutColour) {

@@ -186,7 +186,7 @@ void EncoderPanel::ShowPhrase(const project::Project& project,
   } else {
     if (phrase->id != id_) {
       id_ = phrase->id;
-      // A phrase's audio never changes once imported (plan §3.1).
+      // A phrase's audio never changes once imported.
       audio_ = phrase->audio;
     }
     name_ = QString::fromStdString(phrase->name);
@@ -300,7 +300,7 @@ void EncoderPanel::StartEncode(const EncoderOptions& options) {
   latest_job_[id_] = job;
   ++jobs_running_;
   ++encodes_running_[id_];
-  // Plan §5: encoded and measured in the background; the result comes back
+  // Encoded and measured in the background; the result comes back
   // to this thread queued (AGENTS.md §4.3.3).
   runner_->Post([this, job, id = id_, name = name_, audio = audio_, options,
                  overrides = project::OverridesFor(defaults_, options),

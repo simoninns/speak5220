@@ -5,9 +5,8 @@
 
 The frames and the level setting come from the C++ encoder; the stages
 before level setting, in the intermediates, are the retired Python
-encoder's, kept as committed (HLD §8 and §13). On the phase 11 corpus
-(investigation/captures/phase11/inputs/) it writes (application plan §1.4
-and §3.2, Phase 2 task 1):
+encoder's, kept as committed. On the speech corpus
+(investigation/captures/phase11/inputs/) it writes:
 
 - inputs/NAME.wav: the WAV copies of a corpus subset (public-domain and CC0
   voices only), so the functional tests read WAV and never the FLAC

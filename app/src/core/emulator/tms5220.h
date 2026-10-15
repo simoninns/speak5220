@@ -29,7 +29,7 @@ namespace speak5220::core::emulator {
 // Re-implements the reference emulator investigation/emulator/tms5220.c
 // as a class. The structure changes, not the arithmetic or the order of
 // evaluation: the codes and events are the reference's, sample for sample
-// and slot for slot (plan §2.3). Every "DATASHEET GAP" is a field of
+// and slot for slot. Every "DATASHEET GAP" is a field of
 // Tms5220Config or a comment here.
 //
 // The VSM bus, sample sink and observer are borrowed, may be null, and

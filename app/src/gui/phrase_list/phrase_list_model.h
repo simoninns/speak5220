@@ -31,7 +31,7 @@
 
 namespace speak5220::app {
 
-// Whether a phrase's frames are up to date (plan §3.4, §5).
+// Whether a phrase's frames are up to date.
 enum class EncodingState {
   kNotEncoded,  // no frames yet
   kStale,       // frames made from other audio, settings or encoder
@@ -39,7 +39,7 @@ enum class EncodingState {
   kLocked,      // frames are the phrase's content and never redone
 };
 
-// Plan §5: the model behind the phrase list. Rows are the project's
+// The model behind the phrase list. Rows are the project's
 // phrases in list order, which is PHROM word order. The model shows a
 // snapshot of the project (SetProject()), and makes its edits through
 // ProjectEdits, so each is one undoable command; the document then sends

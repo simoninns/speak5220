@@ -83,7 +83,7 @@ StatusOr<ImportResult> PhraseImporter::Import(
                  .sha256 = *std::move(sha256),
                  .unknown = {}};
 
-  // Plan §3.1 step 2: resample, or copy 8 kHz input unchanged.
+  // Resample, or copy 8 kHz input unchanged.
   if (wav->sample_rate == kProjectSampleRate) {
     phrase.audio = std::move(wav->samples);
   } else {

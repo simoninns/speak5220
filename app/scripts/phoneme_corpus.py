@@ -21,11 +21,11 @@ The engines:
             render is random, so a render is never repeated without
             --force: the files are the frozen inputs.
     say     macOS's say, with the voices the encoder-quality investigation
-            used (docs-tech/encoder-quality-investigation.md §3.2).
+            used.
 
 The files go into the gitignored local/phoneme-corpus/ by default. "check"
 confirms them against the index. phoneme-check.sh encodes them and reports
-on each consonant (docs-tech/encoder-quality-plan.md, Phase 1).
+on each consonant.
 
     nix develop --command python3 app/scripts/phoneme_corpus.py render --engine say
     nix develop --command python3 app/scripts/phoneme_corpus.py check --engine say

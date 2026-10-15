@@ -52,7 +52,7 @@ std::vector<FrameVoicing> CentredVoicing(const PitchTrack& track,
 // the median period of those voiced hops. Decided on `voicing` as given,
 // so a frame voiced here does not voice the one before it. Not in the
 // reference encoder: on Acorn's PHROM it brings the encoder's onsets
-// nearer the PHROM's own (HLD §9). O(n).
+// nearer the PHROM's own. O(n).
 void VoiceOnsets(const PitchTrack& track, std::span<const int> centres,
                  std::span<FrameVoicing> voicing);
 
@@ -67,7 +67,7 @@ void CorrectOctaves(std::span<FrameVoicing> voicing);
 // periods; then voiced islands become unvoiced. Runs at either end are
 // kept, and `min_run` 1 or less changes nothing. Not in the reference
 // encoder: on Acorn's PHROM it brings the encoder's voicing nearer the
-// PHROM's own (HLD §9). O(n).
+// PHROM's own. O(n).
 void SmoothVoicingRuns(std::span<FrameVoicing> voicing, int min_run);
 
 }  // namespace speak5220::core::encoder

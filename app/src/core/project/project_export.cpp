@@ -494,7 +494,7 @@ StatusOr<std::vector<packaging::PhromImage>> BuildAcornPhroms(
     }
     packaging::AcornPhromOptions options;
     options.strings = PhromHeaderStrings(settings, number);
-    // Plan §4.1: only the entries whose word is in this PHROM.
+    // Only the entries whose word is in this PHROM.
     for (const auto& [character, name] : settings.ascii_map) {
       if (names.contains(name)) {
         options.ascii_map[static_cast<int>(character)] = name;

@@ -18,7 +18,6 @@ Example: "Implements the §12.9 Buffer Low refill in the BBC Speak External play
 <!--
 Link to any relevant issues, discussions, or specification sections.
 - Fixes #XXXX
-- Implements docs-tech/application-plan.md Phase N / §Y.Y
 - Aligns with docs/technical/datasheet/XXXX.md §Y.Y
 -->
 
@@ -42,7 +41,7 @@ Link to any relevant issues, discussions, or specification sections.
 - [ ] New public APIs are documented
 - [ ] Specification references added where applicable (AGENTS.md §4.3.6)
 - [ ] Documentation updated per AGENTS.md §9.3, and `mkdocs build --strict` passes if `docs/` changed
-- [ ] HLD updated if behaviour changed (AGENTS.md §9.5)
+- [ ] Documentation updated if behaviour changed (AGENTS.md §9.3)
 - [ ] Reference data in `app/golden/` unchanged, or the change is intended and explained below
 - [ ] Export hash baseline unchanged, or the change is intended and explained below
 - [ ] No secrets or credentials committed

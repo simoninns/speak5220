@@ -19,8 +19,8 @@ namespace speak5220::app {
 // The play symbol, or the pause symbol if `pause`, for a button of
 // `widget`: drawn in its palette's button text colour, enabled and
 // disabled, at the style's small icon size. The style's own media icons
-// are fixed black images, so they would vanish in dark mode (plan §5,
-// "Colours"). Redraw it when the palette changes.
+// are fixed black images, so they would vanish in dark mode. Redraw it when the
+// palette changes.
 QIcon PlayPauseIcon(bool pause, const QWidget& widget);
 
 }  // namespace speak5220::app

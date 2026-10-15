@@ -24,13 +24,13 @@
 
 namespace speak5220::core::project {
 
-// The files of a project (plan §4).
+// The files of a project.
 inline constexpr std::string_view kProjectYamlPath = "project.yaml";
 inline constexpr std::string_view kPhrasesDirectory = "phrases";
 inline constexpr std::string_view kSourceWavName = "source.wav";
 inline constexpr std::string_view kFramesYamlName = "frames.yaml";
 
-// A phrase's frames.yaml (plan §4): the encoder version, the settings
+// A phrase's frames.yaml: the encoder version, the settings
 // hash, the frames, one flow mapping each, and the cached quality. Pure.
 std::string FramesYaml(const CachedEncoding& encoding);
 
@@ -39,7 +39,7 @@ std::string FramesYaml(const CachedEncoding& encoding);
 StatusOr<CachedEncoding> ReadFramesYaml(const std::vector<std::uint8_t>& bytes,
                                         const std::string& file);
 
-// Plan §4: the project's metadata as YAML 1.2 (yaml-cpp), with snake_case
+// The project's metadata as YAML 1.2 (yaml-cpp), with snake_case
 // keys named after the C++ fields; each phrase's audio as 8 kHz mono
 // 24-bit PCM through an injected IWavCodec; its frames as YAML.
 //

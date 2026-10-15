@@ -83,7 +83,7 @@ TEST(SynthGoldenTest, MatchesReferenceEmulatorThroughBothPaths) {
   }
 }
 
-// Phase 1 task 5: the encoder's reference-algorithm synthesiser matches
+// The encoder's reference-algorithm synthesiser matches
 // the emulator's VSM path, from the first frame read (sample 200), on the
 // reference frame lists.
 TEST(SynthGoldenTest, ReferenceSynthesizerMatchesEmulatorVsmPath) {

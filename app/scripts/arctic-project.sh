@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Builds a project of real speech for trying the GUI by hand: the 33 CMU
-# ARCTIC prompts (a0001 to a0033) of the phase 11 corpus recordings
+# ARCTIC prompts (a0001 to a0033) of the speech corpus recordings
 # (investigation/captures/phase11/inputs/recordings/, CC BY-SA 4.0), each
 # added as a phrase with the prompt's text (from the recordings'
 # index.csv) as its description, and encoded with the default options.

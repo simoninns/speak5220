@@ -19,11 +19,11 @@
 
 namespace speak5220::core::project {
 
-// Plan §4, decision D2: a name has at most 16 characters (the Acorn PHROM
+// A name has at most 16 characters (the Acorn PHROM
 // A's longest is 14).
 inline constexpr int kMaxPhraseNameLength = 16;
 
-// Plan §4, decision D2: the characters of the Acorn PHROM A word list,
+// The characters of the Acorn PHROM A word list,
 // upper-case A-Z, digits, space and ' ( ) , - . (a name is stored in a
 // PHROM one byte per character, speak5220 datasheet §12.8).
 bool IsPhraseNameCharacter(char c);

@@ -23,7 +23,7 @@ class QPainter;
 
 namespace speak5220::app {
 
-// Plan §5: each row shows the phrase's name, its state (stale, not
+// Each row shows the phrase's name, its state (stale, not
 // encoded, locked) and its size in bytes; the name of a phrase changed
 // since the project was last saved is marked, as the window title marks
 // a modified project; the name of a phrase too large for a PHROM is in

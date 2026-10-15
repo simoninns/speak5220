@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# s5core: everything that produces a result, with no Qt GUI dependency
-# (application plan §2.1). It depends on QtCore at most.
+# s5core: everything that produces a result, with no Qt GUI dependency.
+# It depends on QtCore at most.
 add_library(
     s5core
     STATIC

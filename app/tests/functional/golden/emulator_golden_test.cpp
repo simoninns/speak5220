@@ -35,7 +35,7 @@ std::size_t FirstDifference(const std::vector<T>& a, const std::vector<T>& b) {
   return i;
 }
 
-// Plan §2.3, Phase 1 task 4: the C++ emulator gives identical codes sample
+// The C++ emulator gives identical codes sample
 // for sample, and identical events slot for slot, on every run of the
 // reference emulator: its self-test scenarios, the synthetic vectors and
 // encoder output, through both paths.

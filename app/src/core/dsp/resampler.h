@@ -31,7 +31,7 @@ class IResampler {
 };
 
 // IResampler over libsamplerate's best sinc converter,
-// SRC_SINC_BEST_QUALITY (plan §2.4, §3.1). Stateless; thread-safe.
+// SRC_SINC_BEST_QUALITY. Stateless; thread-safe.
 class SincResampler : public IResampler {
  public:
   StatusOr<std::vector<float>> Resample(std::span<const float> input,

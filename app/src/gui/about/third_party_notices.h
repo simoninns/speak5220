@@ -17,7 +17,7 @@
 
 namespace speak5220::app {
 
-// One library, or other code Speak5220 reproduces (plan §2.4). A plain
+// One library, or other code Speak5220 reproduces. A plain
 // value type.
 struct ThirdPartyNotice {
   std::string_view name;
@@ -32,7 +32,7 @@ struct ThirdPartyNotice {
   bool tests_only = false;
 };
 
-// Every entry, the libraries of plan §2.4 first, then code ported from
+// Every entry, the third-party libraries first, then code ported from
 // other projects. Pure.
 std::span<const ThirdPartyNotice> ThirdPartyNotices();
 

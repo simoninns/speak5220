@@ -35,7 +35,7 @@ class IPitchEstimator {
       std::span<const double> samples) = 0;
 };
 
-// The estimators SPTK 4 provides (plan §3.3), each SPTK's own copy of the
+// The estimators SPTK 4 provides, each SPTK's own copy of the
 // original code.
 enum class PitchAlgorithm {
   // Google's REAPER, with its defaults: an 80 Hz high-pass, no Hilbert

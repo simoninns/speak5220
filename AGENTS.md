@@ -9,12 +9,10 @@
 - The repository has two parts:
   - **`app/`**: the Speak5220 application, a Qt/C++ tool for creating LPC
     speech data and building PHROMs. This is where development happens.
-    Its plan is [docs-tech/application-plan.md](docs-tech/application-plan.md).
   - **`investigation/`**: the research record (hardware, firmware, capture
     tools and the C emulator). The emulator, and the Python encoder that
     the application's encoder re-implements (in git history, last changed
-    in commit `6abe9ed`), are retired reference implementations (plan
-    §1.4). **Do not modify `investigation/`** unless the user explicitly
+    in commit `6abe9ed`), are retired reference implementations. **Do not modify `investigation/`** unless the user explicitly
     asks.
 - Follow these instructions **in addition to** any `AGENTS.md` files in the
   task directory or above.
@@ -23,7 +21,7 @@
 ### 1.2 Git Operations
 - **Do not** run `git add`, `git commit`, `git push`, `git stash`, or any command that modifies repository state unless the user explicitly requests it.
 - Read-only commands (`git status`, `git log`, `git diff`, `git show`) are permitted.
-- When asked to commit, the pre-commit hooks (plan §1.3) must pass. **Never** use `--no-verify`.
+- When asked to commit, the pre-commit hooks must pass. **Never** use `--no-verify`.
 
 ### 1.3 Naming
 - Never use planning-phase terminology (e.g., `phase0`, `mvp-phase`) in code, files or identifiers under `app/`.
@@ -77,7 +75,7 @@
 - CI: the default unit-test lane must stay fast and mocked; do **not** add functional tests to it.
 
 ### 3.2 Logging
-- Logging uses spdlog, at three selectable levels, to the console, a file (`--log-file`), or both (plan §2.6). Warnings and errors are always logged.
+- Logging uses spdlog, at three selectable levels, to the console, a file (`--log-file`), or both. Warnings and errors are always logged.
 - **info**: normal lifecycle messages, stage transitions, validation summaries.
 - **debug**: configuration details, branch decisions, resolved paths, chosen encoder options.
 - **trace**: per-frame, per-sample and per-slot state, tight loops, intermediate values (pitch candidates, lattice sums, FIFO contents).
@@ -90,7 +88,10 @@
 ## 4. C++ Coding Standards
 
 ### 4.1 Baseline & Tooling
-- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), with the agreed exceptions in plan §1.3 (`.cpp` source files, Qt override names, Qt macros).
+- Follow the [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html), with these agreed exceptions, each recorded in the configuration with a comment:
+  - `.cpp` source files (the guide prefers `.cc`).
+  - Qt API names: overrides and Qt-mandated members keep Qt's names (`paintEvent()`, `rowCount()`, `data()`, `Q_PROPERTY` accessors). Signals and slots the application defines itself follow the guide.
+  - Qt macros and ownership: `Q_OBJECT`, `signals:`/`slots:` and parent-owned `new QWidget(parent)` are allowed; everything else uses `std::unique_ptr` or values.
 - C++20, no compiler extensions, no exceptions: errors are returned as `Status`/`StatusOr<T>`.
 - **Never** use manual column-alignment (e.g. double-spacing before `=`, aligning continuation lines to opening parentheses) — clang-format will undo these and leave violations.
 - Use static analysers (`clang-tidy`, `cpplint`) and sanitizers where available in the Nix environment. The pre-commit hooks run them; fix failures rather than suppressing them. An exception to the style guide goes in the configuration, with a comment saying why.
@@ -151,8 +152,8 @@
   - `// TI TMS5220 data manual, Table 3: coding table for K1.`
   - `// Acorn Speech System User Guide Section 6: OSBYTE &9F writes to the speech processor.`
   - `// Jensen and Taal 2016, Eq. (2): the normalised segment correlation.`
-- Supported sources: the speak5220 reference datasheet, TI data manuals (TMS5220, TMS6100), US patent 4,335,277, Acorn manuals (Speech System User Guide, DFS, BBC Micro User Guide), ITU-T, IEC.
-- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared (plan §1.3); the Python encoder's files are in git history at commit `6abe9ed`.
+- Supported sources: the speak5220 reference datasheet, TI data manuals (TMS5220, TMS6100), US patent 4,335,277, Acorn manuals (Speech System User Guide, DFS, BBC Micro User Guide), IEC.
+- Code re-implemented from the retired references names its original (e.g. `// Re-implements tms5220enc.py trackPitch().`), so the two can be compared; the Python encoder's files are in git history at commit `6abe9ed`.
 
 #### 4.3.7 Commenting
 - Use inline comments **above** function declarations for purpose, parameters, and return values when non-obvious.
@@ -222,7 +223,6 @@ the affected documents (§9.3) have been updated in the **same task**.
 | `docs/technical/sources/` | Transcriptions of TI's data manuals and US patent 4,335,277 — **read-only**, never edit | Reference |
 | `docs/technical/` (other pages) | The research record: capture, die analysis, the retired encoder and emulator, hardware, tools | Developers, researchers |
 | `docs/application/` | The application's user documentation (§9.2) | End users |
-| `docs-tech/` | `application-plan.md` (the implementation plan) and `design/high-level-design.md` (the living design specification, §9.5) | Developers |
 | `README.md` | Repository overview and directory map | Everyone |
 | `BUILD.md` | Development environment and build instructions for every part of the repository | Developers |
 | `TESTING.md` | Testing vision, strategy and repository rules | Developers |
@@ -231,8 +231,9 @@ the affected documents (§9.3) have been updated in the **same task**.
 Rules:
 - `docs/` is **exclusively** the published site. Do not add design documents,
   implementation plans, notes, or submodules there.
-- Anything developer-facing that is not the published site belongs under
-  `docs-tech/`.
+- Anything developer-facing that is not the published site belongs in
+  `README.md`, `BUILD.md`, `TESTING.md` or this file, or in comments beside
+  the code it describes.
 - Never edit the transcriptions in `docs/technical/sources/`; they are copies of upstream sources.
 
 ### 9.2 Published Site Structure (`docs/`)
@@ -269,13 +270,13 @@ same task:
 
 | Change | Update |
 |--------|--------|
-| New/renamed/removed project-file YAML key, or changed default or valid range | `docs/application/reference/project-file.md`; `docs/application/user-manual/` page if user-visible; HLD (§9.5) |
+| New/renamed/removed project-file YAML key, or changed default or valid range | `docs/application/reference/project-file.md`; `docs/application/user-manual/` page if user-visible |
 | New or changed encoder option | `docs/application/reference/encoder-options.md`; `docs/application/user-manual/encoder.md` |
 | New or changed CLI option | `docs/application/reference/cli-options.md`, `docs/application/user-manual/cli.md` |
 | New or changed GUI workflow | The relevant `docs/application/user-manual/` page (and `getting-started.md` if the walkthrough steps change) |
 | New or changed export format or layout | `docs/application/reference/export-formats.md`; `docs/application/user-manual/export.md` |
 | New validation rule or error message | `docs/application/user-manual/troubleshooting.md` |
-| New subsystem or pipeline stage | HLD (§9.5); a `docs/application/user-manual/` page if user-visible |
+| New subsystem or pipeline stage | A `docs/application/user-manual/` page if user-visible; the comments of the code that introduces it |
 | New directory, build dependency or build step | `README.md` and `BUILD.md` |
 | Changed testing rules or layout | `TESTING.md` and §3 of this file |
 
@@ -300,15 +301,14 @@ Additional rules:
   TMS6100 data manuals, US patent 4,335,277). Use them where the reference
   datasheet says the original still applies.
 - **BBC Micro speech**: the [Acorn Speech System User Guide](https://chrisacorns.computinghistory.org.uk/docs/Acorn/Manuals/Acorn_SpeechSystemUG.pdf) (Sections 5–7).
-- **Speech quality**: the measures of plan §3.3 and their sources: libfvad (WebRTC VAD), SPTK 4 (LPC analysis, REAPER, WORLD's Harvest), and pystoi with Jensen and Taal, "An Algorithm for Predicting the Intelligibility of Speech Masked by Modulated Noise Maskers" (2016) for ESTOI.
+- **Speech quality**: the quality measures and their sources: libfvad (WebRTC VAD), SPTK 4 (LPC analysis, REAPER, WORLD's Harvest), and pystoi with Jensen and Taal, "An Algorithm for Predicting the Intelligibility of Speech Masked by Modulated Noise Maskers" (2016) for ESTOI.
 - **Rule**: if code conflicts with assumptions, align code **and** tests to the
   reference datasheet first. The datasheet itself is changed only when the user
   asks.
 
-### 9.5 High-Level Design (HLD) Consistency
-- `docs-tech/design/high-level-design.md` is a **living document** and must stay aligned with implemented behaviour. It is created when implementation starts; until then, `docs-tech/application-plan.md` is the design reference.
-- The same requirement applies to all design sub-specifications linked from the HLD.
-- When changing code that affects HLD-described behaviour, **update the HLD in the same task** whenever practical.
+### 9.5 Documentation Consistency
+- The documents of §9.1 and the code's comments must stay aligned with implemented behaviour.
+- When changing code that affects documented behaviour, **update the documentation in the same task** whenever practical.
 - If you detect a code/documentation mismatch:
   - Explicitly warn the user.
   - Offer to update the documentation to match the code (or the code to match the documentation).

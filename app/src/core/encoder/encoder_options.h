@@ -41,14 +41,12 @@ struct PreEmphasis {
 // encoder's stages) and the encoder's own options. The defaults are those of
 // tms5220enc.py DEFAULTS but for window, voicing_evidence and level_agc,
 // chosen for the best median quality score on the corpus, and
-// voicing_threshold and repeat_lambda, chosen against Acorn's PHROM
-// (HLD §9); target_rms keeps the reference's 20, of loudness (the level
-// after LoudnessHighPass()) rather than level; and the options the
-// reference does not
-// have: resonance_hold_db, 14, and voicing_min_run, 2, with no
-// preprocessing. The reference's other options are fixed at its defaults
-// (HLD §8, "Options").
-// Projects list every option (plan §4), so changing a default never
+// voicing_threshold and repeat_lambda, chosen against Acorn's PHROM;
+// target_rms keeps the reference's 20, of loudness (the level after
+// LoudnessHighPass()) rather than level; and the options the reference
+// does not have: resonance_hold_db, 14, and voicing_min_run, 2, with no
+// preprocessing. The reference's other options are fixed at its defaults.
+// Projects list every option, so changing a default never
 // changes a project's encodings. Each field's range and help text are in
 // EncoderOptionInfos(). A plain value type.
 struct EncoderOptions {
@@ -58,10 +56,10 @@ struct EncoderOptions {
   // RMS of the output over sounding frames, in codes, after the loudness
   // high-pass (LoudnessHighPass()), so bass does not count. The
   // reference's is 20 too, but of the plain output; 20 gives Acorn's
-  // PHROM's own words its loudness (HLD §9).
+  // PHROM's own words its loudness.
   double target_rms = 20.0;
   // Bits a repeat run may trade per dB of prediction error. The
-  // reference's is 70; 300 comes near Acorn's PHROM's repeats (HLD §9).
+  // reference's is 70; 300 comes near Acorn's PHROM's repeats.
   double repeat_lambda = 300.0;
   // Frames this many dB below the loudest are silence.
   double gate_db = 45.0;
@@ -75,11 +73,11 @@ struct EncoderOptions {
   // below the voiced frame before it, as the sound fades, repeats that
   // frame's filter (HoldResonantFilters()), so the level does not fall
   // suddenly (a pop). Not in the reference encoder; 14 catches the pops
-  // heard on the corpus at little cost to its score (HLD §9).
+  // heard on the corpus at little cost to its score.
   std::optional<double> resonance_hold_db = 14.0;
   // CMNDF level at which voiced and unvoiced cost the same. The
   // reference's is 0.3; 0.6 voices Acorn's PHROM most like its own frames
-  // without voicing its hiss (HLD §9).
+  // without voicing its hiss.
   double voicing_threshold = 0.6;
   // Weight of spectral tilt and zero crossings in the voicing threshold.
   double voicing_evidence = 5.0;
@@ -87,7 +85,7 @@ struct EncoderOptions {
   // the other kind, take their neighbours' voicing (SmoothVoicingRuns());
   // 1 is off. Not in the reference encoder; 2, which removes one-frame
   // islands, brings the voicing nearer Acorn's PHROM's at no cost on the
-  // corpus (HLD §9).
+  // corpus.
   int voicing_min_run = 2;
   // Slow gain control ratio over about 0.75 s (1: off).
   double level_agc = 1.25;
@@ -96,7 +94,7 @@ struct EncoderOptions {
                          const EncoderOptions& b) = default;
 };
 
-// The stage an option belongs to (plan Phase 11): the preprocessing of the
+// The stage an option belongs to: the preprocessing of the
 // recording, whose result an encoding is measured against, or the
 // encoder.
 enum class OptionStage {
@@ -123,7 +121,7 @@ struct EncoderOptionInfo {
   // style.
   std::string_view key;
   // The name in project files and on the command line: the EncoderOptions
-  // field (target_rms, ...), as plan §4 names YAML keys.
+  // field (target_rms, ...), as project files name YAML keys.
   std::string_view field;
   std::string_view label;
   std::string_view help;

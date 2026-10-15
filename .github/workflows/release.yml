@@ -1,14 +1,13 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# A release (docs-tech/application-plan.md, Phase 13 task 4). A tag
-# vMAJOR.MINOR.PATCH, optionally with a suffix such as -rc1, runs the Linux
-# checks (app.yml) and the Windows and macOS tests (app-platforms.yml); when
-# they pass it builds the three installers, the Flatpak, the MSI and the
-# DMG, and drafts a GitHub Release with them, to be published by hand. A tag
-# with a suffix makes a pre-release. The installers are unsigned and the DMG
-# is not notarised (decision D8). Uses only free services: GitHub's hosted
-# runners and Flathub's runtimes.
+# A release. A tag vMAJOR.MINOR.PATCH, optionally with a suffix such as
+# -rc1, runs the Linux checks (app.yml) and the Windows and macOS tests
+# (app-platforms.yml); when they pass it builds the three installers, the
+# Flatpak, the MSI and the DMG, and drafts a GitHub Release with them, to be
+# published by hand. A tag with a suffix makes a pre-release. The installers
+# are unsigned and the DMG is not notarised. Uses only free services:
+# GitHub's hosted runners and Flathub's runtimes.
 name: Release
 
 on:

@@ -18,7 +18,7 @@ class QTextBrowser;
 
 namespace speak5220::app {
 
-// Plan Phase 12: Help > About, in three tabs. About: the logo, the
+// Help > About, in three tabs. About: the logo, the
 // version, the Qt version in use and the GPL's notice. Licence: the GNU
 // GPL version 3, from the application's resources (kLicenceResource), or a
 // link to it when the resources lack it. Third-Party Software: every

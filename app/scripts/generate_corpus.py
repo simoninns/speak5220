@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Writes WAV copies of the phase 11 corpus for the corpus check.
+"""Writes WAV copies of the speech corpus for the corpus check.
 
 The corpus (investigation/captures/phase11/inputs/, 8 kHz 16-bit FLAC) is
 converted losslessly to 16-bit WAV, named by file stem, so the application's

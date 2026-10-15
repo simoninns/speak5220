@@ -18,7 +18,7 @@
 
 namespace speak5220::core::project {
 
-// IProjectStore over a ZIP file (plan §4), which any ZIP tool can open.
+// IProjectStore over a ZIP file, which any ZIP tool can open.
 // Saving writes a temporary file beside the project and renames it over
 // the old one only when it is complete (libzip's commit), after copying
 // the old one to <path>~. Entries are written in path order with a fixed

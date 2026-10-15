@@ -213,8 +213,8 @@ TEST(BitReverseTest, MatchesReadByteExamples) {
   }
 }
 
-// Plan §6: the guide's "ZERO" data parses only after bit reversal: 25
-// frames, with the stop code in the last of its 143 bytes.
+// The guide's "ZERO" data parses only after bit reversal: 25 frames,
+// with the stop code in the last of its 143 bytes.
 TEST(FrameCodecTest, GuideZeroParsesAfterBitReversal) {
   std::vector<std::uint8_t> reversed;
   reversed.reserve(kGuideZero.size());

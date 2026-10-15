@@ -319,7 +319,7 @@ bool WaveformView::event(QEvent* event) {
 }
 
 void WaveformView::changeEvent(QEvent* event) {
-  // Plan §5, "Colours": a change of scheme reaches every widget as a
+  // A change of scheme reaches every widget as a
   // palette change. A dark waveform stays dark, keeping only the new
   // palette's other roles.
   if (event->type() == QEvent::PaletteChange) {

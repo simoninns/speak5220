@@ -29,7 +29,7 @@ namespace speak5220::core::synth {
 // the DAC's +-127 codes take a quarter of 16-bit full scale.
 inline constexpr int kSampleScale = 64;
 
-// How the phrase reaches the chip (plan §2.3).
+// How the phrase reaches the chip.
 enum class SynthPath {
   // Loaded into a TMS6100 at address 0 and spoken with Load Address x 5,
   // Speak: how a PHROM word is spoken. The default for playback.

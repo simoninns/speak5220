@@ -3,7 +3,7 @@
  * Module:      quality tests
  * Purpose:     Compares the quality measures on the corpus subset's
  *              reference encodings with independent implementations'
- *              values (plan Phase 8)
+ *              values
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -62,13 +62,13 @@ class MeasuresGoldenTest : public ::testing::Test {
     return it == set.end() ? nullptr : &it->second;
   }
 
-  // Plan Phase 8, task 9: SPTK's REAPER and Harvest give the original
+  // SPTK's REAPER and Harvest give the original
   // tools' tracks of the same signals, frame for frame, and so the same
   // errors.
   static void ExpectPitchMatches(core::quality::PitchAlgorithm algorithm);
 };
 
-// Plan Phase 8, task 7: the alignment and the voice activity mask match
+// The alignment and the voice activity mask match
 // the reference's. libfvad is the WebRTC code that py-webrtcvad wraps, and
 // the alignment the same as speechqual.py's, so both are exact.
 TEST_F(MeasuresGoldenTest, AlignmentAndMaskMatchTheReference) {
@@ -91,7 +91,7 @@ TEST_F(MeasuresGoldenTest, AlignmentAndMaskMatchTheReference) {
   }
 }
 
-// Plan Phase 8, task 8: the mean distortion within 0.01 dB of the NumPy
+// The mean distortion within 0.01 dB of the NumPy
 // reference's. A frame's distortion can fall either side of a threshold
 // between the two, so the outlier percentages may differ by one frame.
 TEST_F(MeasuresGoldenTest, EnvelopeDistortionMatchesTheReference) {
@@ -188,7 +188,7 @@ TEST_F(MeasuresGoldenTest, HarvestMatchesPyworld) {
   ExpectPitchMatches(core::quality::PitchAlgorithm::kHarvest);
 }
 
-// Plan Phase 8, task 10: the ESTOI port within 0.005 of pystoi's.
+// The ESTOI port within 0.005 of pystoi's.
 TEST_F(MeasuresGoldenTest, EstoiMatchesPystoi) {
   double worst = 0.0;
   for (const PreparedEncoding& e : Prepared()) {

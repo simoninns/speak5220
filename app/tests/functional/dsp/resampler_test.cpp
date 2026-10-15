@@ -53,8 +53,8 @@ TEST(SincResamplerTest, KeepsLevelAndLengthOfInBandTone) {
   EXPECT_NEAR(Rms(Middle(*out)), 0.5 / std::sqrt(2.0), 0.005);
 }
 
-// Phase 1 task 7: a swept sine entirely above the output's Nyquist
-// frequency leaves nothing behind: no aliasing above 4 kHz.
+// A swept sine entirely above the output's Nyquist frequency leaves
+// nothing behind: no aliasing above 4 kHz.
 TEST(SincResamplerTest, RemovesSweptSineAboveFourKilohertz) {
   constexpr double kStartHz = 4500.0;
   constexpr double kEndHz = 20000.0;

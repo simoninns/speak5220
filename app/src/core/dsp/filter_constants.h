@@ -47,8 +47,8 @@ inline constexpr SosFilter<2> kLowPass1kHz = {
 };
 
 // Order-4 Butterworth bandpass at 80 to 3600 Hz;
-// the band both signals are limited to before the quality measures (plan §3.3,
-// app/scripts/golden/measures.py).
+// the band both signals are limited to before the quality measures
+// (app/scripts/golden/measures.py).
 inline constexpr SosFilter<4> kQualityBand = {
     .sections = {{
         {.b = {0.6089446327156706, 1.2178892654313411, 0.6089446327156706},

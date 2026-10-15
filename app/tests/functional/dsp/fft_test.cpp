@@ -51,8 +51,7 @@ std::vector<double> RandomSignal(std::size_t n, unsigned seed) {
 
 class PocketFftTest : public ::testing::TestWithParam<std::size_t> {};
 
-// Phase 1 task 7: Fft matches a direct DFT, for power-of-two and other
-// lengths.
+// Fft matches a direct DFT, for power-of-two and other lengths.
 TEST_P(PocketFftTest, ForwardMatchesDirectDft) {
   const std::vector<double> x = RandomSignal(GetParam(), 1);
   PocketFft fft;

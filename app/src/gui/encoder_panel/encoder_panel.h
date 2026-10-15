@@ -41,7 +41,7 @@ namespace speak5220::app {
 class EncoderSettingsForm;
 class QualityRatingView;
 
-// Plan §5, "Encoder panel", and Phase 7: on the Encode tab, under the
+// The encoder panel: on the Encode tab, under the
 // encoded waveform, the selected phrase's encoding.
 //
 // - Statistics (FramesText(), KindsText(), LevelText()) and the quality
@@ -72,7 +72,7 @@ class EncoderPanel : public QWidget {
   Q_OBJECT
 
  public:
-  // Plan §5: the pause after the last change before it is applied.
+  // The pause after the last change before it is applied.
   static constexpr int kDebounceMs = 600;
 
   // What the settings form edits.

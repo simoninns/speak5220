@@ -19,10 +19,10 @@
 
 namespace speak5220::core::audio {
 
-// The sample formats a WAV file may hold (plan §2.4).
+// The sample formats a WAV file may hold.
 enum class WavSampleFormat { kPcm8, kPcm16, kPcm24, kPcm32, kFloat, kDouble };
 
-// A WAV file as read: mixed to mono, as floats in -1..1 (plan §3.1).
+// A WAV file as read: mixed to mono, as floats in -1..1.
 struct DecodedWav {
   int sample_rate = 0;
   int channels = 0;  // in the file, before mixing
@@ -57,7 +57,7 @@ class IWavWriter {
 };
 
 // Converts between samples and the bytes of a WAV file held in memory, as
-// a project stores its audio (plan §4). Implementations are thread-safe.
+// a project stores its audio. Implementations are thread-safe.
 class IWavCodec {
  public:
   virtual ~IWavCodec() = default;

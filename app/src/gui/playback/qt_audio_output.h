@@ -25,7 +25,7 @@ class QAudioSink;
 
 namespace speak5220::app {
 
-// Plan §2.4: IAudioOutput on the chosen output device (the system's default
+// IAudioOutput on the chosen output device (the system's default
 // unless SetDevice() chose another that is still there) through QAudioSink
 // in pull mode, from a QBuffer, so the device's progress is known. Mono
 // 16-bit at the rate asked for if the device takes it; otherwise its

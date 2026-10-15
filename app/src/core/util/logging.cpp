@@ -29,7 +29,7 @@ namespace {
 
 // Console lines: level and module, no timestamp.
 constexpr std::string_view kConsolePattern = "[%^%l%$] [%n] %v";
-// File lines: timestamp, level, thread and module (plan §2.6).
+// File lines: timestamp, level, thread and module.
 constexpr std::string_view kFilePattern =
     "%Y-%m-%d %H:%M:%S.%e [%l] [thread %t] [%n] %v";
 // Messages queued for the asynchronous file logger before a caller waits.
@@ -117,7 +117,8 @@ Status ConfigureLogging(const LogSettings& settings) {
   }
   if (!settings.file_path.empty()) {
     // spdlog reports a file it cannot open by throwing; exceptions from
-    // third-party code are caught here, at the boundary (plan §1.3).
+    // third-party code are caught here, at the boundary, as the code uses
+    // none.
     try {
       auto file = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
           settings.file_path, /*truncate=*/true);
@@ -152,7 +153,7 @@ std::shared_ptr<spdlog::logger> Logger(std::string_view module) {
   LoggingState& state = State();
   const std::scoped_lock lock(state.mutex);
   if (!state.configured) {
-    // Before any set-up: the default of plan §2.6, info to the console.
+    // Before any set-up: the default, info to the console.
     InstallLocked(state, LogLevel::kInfo, {ConsoleSink()}, false);
   }
   const std::string name(module);

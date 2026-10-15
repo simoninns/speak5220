@@ -36,8 +36,9 @@ endif()
 # both programs are in the bundle (src/cli/CMakeLists.txt), which is then
 # signed ad hoc: macdeployqt changes the binaries, breaking the signatures
 # the linker gave them, and Apple silicon runs no unsigned code. It is not
-# notarised (plan decision D8). QT_DEPLOY_PREFIX, which includes DESTDIR,
-# is escaped twice: once for set() and once for qt_generate_deploy_script().
+# notarised: the project uses no paid services, and notarising needs a paid
+# Apple developer account. QT_DEPLOY_PREFIX, which includes DESTDIR, is
+# escaped twice: once for set() and once for qt_generate_deploy_script().
 if(APPLE)
     set(_bundle "$<TARGET_FILE_NAME:speak5220>.app")
     set(_executable "${_bundle}")

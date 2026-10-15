@@ -22,7 +22,7 @@
 
 namespace speak5220::core::preprocess {
 
-// The rate of the audio preprocessed: a project's (plan §3.1).
+// The rate of the audio preprocessed: a project's.
 inline constexpr int kPreprocessSampleRate = 8000;
 
 // The noise gate's default speed: how long it takes to close, in ms.
@@ -32,7 +32,7 @@ inline constexpr double kDefaultNoiseGateMs = 100.0;
 // hiss is, of what an 8 kHz recording keeps of it.
 inline constexpr double kDeEssBandHz = 2500.0;
 
-// How a phrase's recording is preprocessed (plan Phase 11). The encoding
+// How a phrase's recording is preprocessed. The encoding
 // is made from the preprocessed recording and measured against it. Each
 // option's range and help text are with the encoder's options
 // (encoder::EncoderOptionInfos(), the preprocessing stage). All off by
@@ -67,7 +67,7 @@ struct PreprocessPreset {
 
 // The presets, in the order offered: "None" (everything off) and "BBC
 // Micro" (a bass cut at 200 Hz and a treble tilt of 0.4, like the
-// spectrum of Acorn's PHROM phrases; HLD §9).
+// spectrum of Acorn's PHROM phrases).
 std::span<const PreprocessPreset> PreprocessPresets();
 
 // The preset whose options have the same effect as `options`, or nullptr

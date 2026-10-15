@@ -5,9 +5,9 @@
 
 Each program in app/golden/bbc/programs/NAME.bas is typed into BBC BASIC II
 on MAME's BBC Micro (app/scripts/bbc/basic_in_mame.py), and the program
-BASIC stored, the bytes SAVE writes, is written to NAME.bin beside it
-(application plan Phase 10, task 2). The application's tokeniser is
-compared with these files by its functional tests.
+BASIC stored, the bytes SAVE writes, is written to NAME.bin beside it.
+The application's tokeniser is compared with these files by its functional
+tests.
 
 MAME's bbcb ROM set is not part of the repository; it is read from --roms
 (default local/mame/roms). REFERENCE.tsv records the SHA-256 of the BASIC

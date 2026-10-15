@@ -34,7 +34,7 @@ QString KindsText(const core::lpc::FrameStatistics& stats);
 QString LevelText(std::optional<int> peak_code,
                   const std::optional<core::encoder::LevelStats>& levels);
 
-// Plan §3.3, "Presenting quality to the user": the rating and the overall
+// The rating and the overall
 // score, "Good · 0.72"; "Quality not measured" with no score. Pure.
 QString QualityText(std::optional<double> overall);
 

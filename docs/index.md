@@ -1,5 +1,7 @@
 # speak5220
 
+![Speak5220 logo](images/speak5220-logo.svg){ width="480" }
+
 speak5220 studies the Texas Instruments TMS5220 voice synthesis processor on real hardware. A purpose-built board drives the chip from a Raspberry Pi Pico 2, emulates its speech ROMs and records every output sample, so that the chip's behaviour can be measured rather than guessed.
 
 From those measurements the project has produced:
@@ -12,9 +14,10 @@ From those measurements the project has produced:
 
 ## Sections
 
+- [Application](application/index.md): Speak5220, the desktop application built on this work, which encodes speech for the TMS5220 and builds PHROMs, with its installers, user manual and reference.
 - [Technical](technical/index.md): the reference datasheet, the emulator, the encoder, the capture method and tools, the hardware, the die analysis, and transcriptions of TI's original documents.
 
-The technical documentation is the basis for an application to encode and decode TMS5220 speech PROMs (and make new ones), and to generate Speak External data.
+The technical documentation is the basis of the application: its emulator and encoder are written from the reference datasheet.
 
 ## Source
 

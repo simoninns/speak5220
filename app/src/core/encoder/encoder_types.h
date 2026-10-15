@@ -16,7 +16,7 @@
 
 namespace speak5220::core::encoder {
 
-// The encoder works on 8 kHz audio only (plan §3.1).
+// The encoder works on 8 kHz audio only.
 inline constexpr int kEncoderSampleRate = 8000;
 // Samples per frame: 25 ms (speak5220 datasheet §8.5).
 inline constexpr int kFrameSamples = 200;

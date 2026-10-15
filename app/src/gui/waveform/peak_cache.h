@@ -26,7 +26,7 @@ struct Peak {
   friend bool operator==(const Peak& a, const Peak& b) = default;
 };
 
-// Plan §5: the waveform view draws one vertical line per pixel, from the
+// The waveform view draws one vertical line per pixel, from the
 // lowest to the highest sample under it. The cache keeps each block's
 // peak at block sizes of 16, 64, 256, ... samples, so a range takes the
 // largest blocks that fit inside it and finer ones at its ends: O(log n)

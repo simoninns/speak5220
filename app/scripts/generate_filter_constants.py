@@ -4,8 +4,8 @@
 """Writes app/src/core/dsp/filter_constants.h.
 
 The encoder and the quality measures filter only 8 kHz audio, with fixed
-Butterworth corners (application plan §3.2, §3.3), so their second-order
-sections are designed once, by SciPy, and committed as constants. This script writes them, with the
+Butterworth corners, so their second-order sections are designed once, by
+SciPy, and committed as constants. This script writes them, with the
 steady-state initial conditions (scipy.signal.sosfilt_zi) and the edge
 padding length that scipy.signal.sosfiltfilt uses for each filter, so the
 C++ filtfilt gives the same results without SciPy.
@@ -50,7 +50,7 @@ FILTERS = [
     (
         "kQualityBand",
         "the band both signals are limited to before the quality measures"
-        " (plan §3.3, app/scripts/golden/measures.py)",
+        " (app/scripts/golden/measures.py)",
         "bandpass",
         (80.0, 3600.0),
         4,

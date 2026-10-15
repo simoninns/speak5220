@@ -81,7 +81,7 @@ class IViewPreferences {
   virtual void SetDefaultEncoder(
       const core::encoder::EncoderOptions& options) = 0;
 
-  // The log level and the log file of the next start (plan §2.6); info
+  // The log level and the log file of the next start; info
   // and none if never saved. A command-line option overrides them.
   virtual core::LogLevel ChosenLogLevel() = 0;
   virtual void SetLogLevel(core::LogLevel level) = 0;

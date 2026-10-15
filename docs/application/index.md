@@ -1,13 +1,12 @@
 # Speak5220 application
 
 Speak5220 is a desktop application for creating TMS5220 speech data and
-building PHROMs. It is in development: the pages here describe only what is
-built so far.
+building PHROMs.
 
 To try it, start with [getting started](getting-started.md), a
 walkthrough from a recording to a PHROM image.
 
-So far the application has:
+The application has:
 
 - a GUI, `speak5220`, whose [main window](user-manual/main-window.md) opens
   and saves projects, imports WAV files as phrases, orders, sorts, renames

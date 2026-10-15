@@ -29,7 +29,7 @@ namespace {
 // 3 x (2 x sections + 1).
 constexpr int kOneSectionPad = 9;
 
-// HLD §9: Acorn's PHROM phrases have about 11 dB less at 125 Hz and up to
+// Acorn's PHROM phrases have about 11 dB less at 125 Hz and up to
 // 5 dB more treble than the recordings of the corpus; this pair fits that
 // difference within 3.7 dB rms.
 constexpr double kBbcMicroBassCutHz = 200.0;

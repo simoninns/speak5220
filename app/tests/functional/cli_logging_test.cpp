@@ -77,7 +77,7 @@ QString ReadFile(const QString& path) {
   return QString::fromUtf8(file.readAll());
 }
 
-// Plan Phase 1 task 1: the same messages in the file and on the console.
+// The same messages in the file and on the console.
 TEST(CliLoggingTest, DebugLevelWritesSameMessagesToFileAndConsole) {
   QTemporaryDir dir;
   ASSERT_TRUE(dir.isValid());

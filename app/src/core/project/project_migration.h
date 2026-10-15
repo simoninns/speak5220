@@ -21,8 +21,7 @@
 
 namespace speak5220::core::project {
 
-// project.yaml's "format" value, and the version this build writes
-// (plan §4).
+// project.yaml's "format" value, and the version this build writes.
 inline constexpr std::string_view kProjectFormatName = "speak5220-project";
 inline constexpr int kProjectFormatVersion = 1;
 

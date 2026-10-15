@@ -56,7 +56,6 @@ python investigation/tools/speechqual.py --set all --bin DIR --ladder        # w
 
 | Column | Measure |
 |---|---|
-| `PESQ` | ITU-T P.862 narrowband, as P.862.1 MOS-LQO (1.0–4.5), from the `pesq` package. P.862 was not validated for vocoders, so use it to rank encodings, not as a listener's score |
 | `MCD` | Mel-cepstral distortion (dB), coefficients 1–24 of 40 mel bands from 100 to 3800 Hz. It measures the spectral shape, not level or phase. It is computed from a filter bank, not with SPTK's `mcep`, so compare it only with itself |
 | `lo`, `mid`, `hi` | The level-normalised spectrum, output minus input (dB), below 800 Hz, from 800 to 2000 Hz, and above 2000 Hz |
 | `lvl`, `lvlr` | Per 10 ms frame: the mean absolute level error (dB, after removing the file's median offset), and the correlation of the two level envelopes |

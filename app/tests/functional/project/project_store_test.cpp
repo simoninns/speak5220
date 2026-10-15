@@ -105,7 +105,7 @@ Project SampleProject() {
                     .estoi = 0.75,
                     .score = 0.6875};
   phrase.audio = {0.0F, 0.123456F, -0.5F, 0.999F};
-  // The project stores audio on the 24-bit grid (plan §3.1).
+  // The project stores audio on the 24-bit grid.
   audio::QuantiseToPcm24(phrase.audio);
   phrase.source->duration = 1.25;
   phrase.encoder = {{"voicing_threshold", "0.35"}, {"pre_emphasis", "0.9375"}};

@@ -108,13 +108,13 @@ core::Status OptimiseSession::Start(const project::Project& project,
   core::Logger(core::kLogModuleGui)
       ->info("optimising {} phrase(s)", order.size());
 
-  // Plan §3.3: a cancellable background job. The project is copied, so
+  // A cancellable background job. The project is copied, so
   // the search sees it as it was, with its own results added as it goes.
   tools_.optimiser_driver->Post([this, working = project,
                                  order = std::move(order), limits, plan,
                                  tools = tools_, workers = workers_,
                                  cancel = cancel_]() mutable {
-    // Optimise maximises the overall score (plan §3.3).
+    // Optimise maximises the overall score.
     core::quality::OverallQualityMetric metric(*tools.quality);
     optimiser::Optimiser search(*tools.encoder, metric, *workers);
     for (std::size_t p = 0; p < order.size() && !cancel->load(); ++p) {
@@ -317,7 +317,7 @@ void OptimiseSession::OnFinished(bool cancelled) {
   running_ = false;
   cancelled_ = cancelled;
   if (cancelled) {
-    // Plan Phase 7: cancelling leaves the settings as they were.
+    // Cancelling leaves the settings as they were.
     Discard();
   }
   core::Logger(core::kLogModuleGui)

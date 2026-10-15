@@ -535,7 +535,7 @@ int RunImportPhrom(const QCommandLineParser& parser,
     }
   }
   // The images' ASCII entries and header strings first, so the budget is
-  // checked with them (plan §3.4).
+  // checked with them.
   if (core::StatusOr<project::PhromSettings> previous =
           edited.SetPhromSettings(project::MergeImportedPhromSettings(
               edited.Settings(), edited.Phrases().empty(), all));

@@ -2,11 +2,11 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# The by-hand check of every window and dialog (plan Phase 12, task 4):
-# renders the main window's tabs, the Optimise window, and the Export,
-# Preferences and About dialogs, in light and dark, at 1x and 2x pixel
-# density, to PNG files to be looked at for unreadable text, colours of
-# the wrong scheme, and blurred or clipped drawing.
+# The by-hand check of every window and dialog: renders the main window's
+# tabs, the Optimise window, and the Export, Preferences and About dialogs,
+# in light and dark, at 1x and 2x pixel density, to PNG files to be looked
+# at for unreadable text, colours of the wrong scheme, and blurred or
+# clipped drawing.
 #
 # Usage: window-check.sh [BUILD_DIR]
 # BUILD_DIR defaults to build/app (the GUI functional tests must be built).

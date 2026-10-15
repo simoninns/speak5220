@@ -46,7 +46,7 @@ class ILpcAnalysis {
 };
 
 // ILpcAnalysis over SPTK 4: WaveformToAutocorrelation,
-// LevinsonDurbinRecursion and FilterCoefficientsToSpectrum (plan §3.3).
+// LevinsonDurbinRecursion and FilterCoefficientsToSpectrum.
 // Stateless; thread-safe.
 class SptkLpcAnalysis : public ILpcAnalysis {
  public:

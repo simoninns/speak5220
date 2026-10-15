@@ -55,11 +55,11 @@ struct ExportRequest {
                          const ExportRequest& b) = default;
 };
 
-// Plan §6: chooses an export. The scope is every phrase or the selected
+// Chooses an export. The scope is every phrase or the selected
 // ones; the format's own options appear with it (the PHROM layout, the
 // header licence, the WAV audio). Below, the files it will write, or why it
 // cannot: a phrase not encoded with its current settings, one too large for a
-// PHROM (plan §4.1), a name that cannot name files
+// PHROM, a name that cannot name files
 // (core::project::ExportFileNames(), CheckEncodingsCurrent()). Export is
 // enabled only for an export that can run, into a chosen folder. If any of its
 // files already exist there, Export asks first (ExportStart::confirm_overwrite)

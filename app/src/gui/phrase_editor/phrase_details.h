@@ -33,13 +33,13 @@ struct NameEdit {
   QString refusal;
 };
 
-// Decision D2 applied to a name as it is typed: lower case is converted
-// to upper case, and a character outside A-Z, 0-9, space and ' ( ) , - .
-// refuses the edit, with a message naming it. Spaces at the ends and the
+// The phrase name rules applied to a name as it is typed: lower case is
+// converted to upper case, and a character outside A-Z, 0-9, space and ' ( ) ,
+// - . refuses the edit, with a message naming it. Spaces at the ends and the
 // length are left to the rename (and the field's length limit). Pure.
 NameEdit FilterNameEdit(const QString& text);
 
-// Plan §5: the name and description of the selected phrase. Typing in
+// The name and description of the selected phrase. Typing in
 // the name is filtered by FilterNameEdit(): a refused character leaves the
 // name as it was and shows the message below the fields. Each field is
 // applied when editing finishes (Return or leaving it), as one undoable

@@ -48,7 +48,7 @@ bool IsChipOutput(PlaybackSource source);
 
 enum class PlaybackState { kStopped, kPlaying, kPaused };
 
-// Plan §5 and Phase 6: plays one buffer of 8 kHz samples at a time, so
+// Plays one buffer of 8 kHz samples at a time, so
 // starting one waveform stops another. Play starts at a sample (the
 // play-start marker) and goes to the end, or to a given sample (the end of
 // a selection); Pause holds the position and Resume goes on from
@@ -75,7 +75,7 @@ class Player : public QObject {
   Q_OBJECT
 
  public:
-  // The rate of the samples played (plan §3.1).
+  // The rate of the samples played.
   static constexpr int kSampleRate = 8000;
   // How often the playhead moves while playing: about 30 Hz.
   static constexpr int kTickIntervalMs = 33;

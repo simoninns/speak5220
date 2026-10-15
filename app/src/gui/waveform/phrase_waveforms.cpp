@@ -351,7 +351,7 @@ void PhraseWaveforms::ShowPhrase(const project::Phrase* phrase,
     id_ = phrase->id;
     selection_.reset();
     ShowSelection();
-    // A phrase's audio never changes once imported (plan §3.1).
+    // A phrase's audio never changes once imported.
     audio_ = phrase->audio;
     UpdatePreprocessed();
     if (audio_.empty()) {
@@ -869,7 +869,7 @@ void PhraseWaveforms::SetPlaying(Track& track, bool playing) {
   track.shows_pause = playing;
   const QString name = AudioName(track.source);
   // The icon is drawn in the button text's colour, so it matches the
-  // other controls in light and dark (plan §5, "Colours").
+  // other controls in light and dark.
   track.play->setIcon(PlayPauseIcon(playing, *this));
   track.play->setToolTip(
       (playing ? QStringLiteral("Pause %1") : QStringLiteral("Play %1 (Space)"))

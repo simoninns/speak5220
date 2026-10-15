@@ -133,7 +133,7 @@ void EmitUnknown(YAML::Emitter& out, const UnknownKeys& unknown) {
   }
 }
 
-// One option's value, typed as the option is (plan §4).
+// One option's value, typed as the option is.
 void EmitOptionValue(YAML::Emitter& out, const EncoderOptionInfo& info,
                      const std::string& text) {
   switch (info.type) {
@@ -158,7 +158,7 @@ void EmitOptionValue(YAML::Emitter& out, const EncoderOptionInfo& info,
   }
 }
 
-// The mappings of each stage's options (plan Phase 11): in the project's
+// The mappings of each stage's options: in the project's
 // defaults, and in a phrase.
 std::string_view DefaultsKey(encoder::OptionStage stage) {
   return stage == encoder::OptionStage::kPreprocess ? "default_preprocess"
@@ -344,7 +344,7 @@ std::string ProjectYaml(const ProjectContents& contents) {
   return std::string(out.c_str()) + "\n";
 }
 
-// A frame as one flow mapping (plan §4), with only the fields its kind
+// A frame as one flow mapping, with only the fields its kind
 // carries.
 void EmitFrame(YAML::Emitter& out, const lpc::Frame& frame) {
   out << YAML::Flow << YAML::BeginMap;
@@ -562,7 +562,7 @@ Status ForEachEntry(const YAML::Node& node, const Where& where,
 }
 
 // An option value as SetEncoderOption() reads it, checked against the
-// option's YAML type (plan §4).
+// option's YAML type.
 StatusOr<std::string> ReadOptionText(const YAML::Node& node,
                                      const EncoderOptionInfo& info,
                                      const Where& where) {
@@ -612,7 +612,7 @@ Status ReadOptionsMapping(const YAML::Node& node, const Where& where,
 }
 
 // Fails unless project.default_preprocess and project.default_encoder
-// list every option of their stage (plan §4), as projects saved before the
+// list every option of their stage, as projects saved before the
 // options last changed do not.
 Status CheckEveryOptionListed(const YAML::Node& root, const Where& where) {
   const YAML::Node settings = root["project"];
@@ -1013,8 +1013,7 @@ StatusOr<lpc::Frame> ReadFrame(const YAML::Node& node, const Where& where) {
 
 // Reads a quality mapping into `encoding`. Figures from other measures
 // than quality::kMeasuresVersion's, or incomplete, are dropped, to be
-// measured again (plan §4), as are the pesq and anchor keys the
-// application wrote before its measures; other keys are kept.
+// measured again; other keys are kept.
 Status ReadQuality(const YAML::Node& node, const Where& where,
                    CachedEncoding& encoding) {
   CachedQuality q;
@@ -1024,9 +1023,6 @@ Status ReadQuality(const YAML::Node& node, const Where& where,
           node, where,
           [&](const std::string& key, const YAML::Node& value) -> Status {
             const Where at = where.Key(key);
-            if (key == "pesq" || key == "anchor") {
-              return OkStatus();
-            }
             if (key == "measures_version") {
               StatusOr<int> number = ReadInteger(value, at, 0, kIntMax);
               if (!number.IsOk()) {

@@ -56,7 +56,7 @@ class RatingBar : public QWidget {
   ThemeColours colours_;
 };
 
-// Plan §3.3, "Presenting quality to the user": the rating's bar, and under
+// The rating's bar, and under
 // it the rating and score in words (QualityText()), so it reads the same
 // without colour; a small bar for each component, with its score as text;
 // and the figures behind them (FiguresText()). The tooltip explains the

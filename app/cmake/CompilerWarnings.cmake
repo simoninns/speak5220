@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Compiler settings shared by every target in app/ (application plan §1.3).
+# Compiler settings shared by every target in app/.
 # Targets link speak5220_compile_options instead of setting flags themselves.
 
 add_library(speak5220_compile_options INTERFACE)
@@ -28,8 +28,8 @@ if(MSVC)
 else()
     # -ffp-contract=off: no fused multiply-add contraction, which Clang
     # applies by default (and GCC where the target has FMA), so the
-    # encoder's floating point rounds as NumPy's does on every platform
-    # (plan §3.2). -ffast-math is never used.
+    # encoder's floating point rounds as NumPy's does on every platform.
+    # -ffast-math is never used.
     target_compile_options(
         speak5220_compile_options
         INTERFACE

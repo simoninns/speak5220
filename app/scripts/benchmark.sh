@@ -2,13 +2,12 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Times the encoder (TESTING.md, plan Phase 2 task 6): the default encoding
-# of each WAV file, on one core, against the target of 0.05 s per second of
-# speech. Then times the quality measures of those encodings (plan §3.3,
-# Phase 8), with their synthesis and preparation. Then times
-# Optimise (plan Phase 7) on every phrase of the
-# benchmark project, app/projects/benchmark/synthetic-speech, on one
-# thread and on every core.
+# Times the encoder (TESTING.md): the default encoding of each WAV file, on
+# one core, against the target of 0.05 s per second of speech. Then times
+# the quality measures of those encodings, with their synthesis and
+# preparation. Then times Optimise on every phrase of the benchmark
+# project, app/projects/benchmark/synthetic-speech, on one thread and on
+# every core.
 #
 # Usage: benchmark.sh [BUILD_DIR [INPUT_DIR]]
 # BUILD_DIR defaults to build/app (the functional tests must be built);

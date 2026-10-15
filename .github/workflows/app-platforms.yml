@@ -2,16 +2,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Builds and tests the Speak5220 application (app/) on Windows (MSVC) and
-# macOS (docs-tech/application-plan.md, Phase 2 task 7 and decision D7).
-# During development these jobs do not run on every push: only when started
-# by hand from the Actions tab, or for a release tag (v*) from release.yml,
-# which also asks for the installers: after the tests pass, a second build
-# makes the Windows MSI or the macOS DMG (app/cmake/Packaging.cmake).
-# Qt comes from aqtinstall, pinned to the version in the Nix flake; the other
-# libraries come from vcpkg, pinned by the baseline in app/vcpkg.json (risk
-# R6); vcpkg builds them from source on each run. Uses only free services
-# (decision D8): GitHub's hosted runners and the Qt cache in the GitHub
-# Actions cache.
+# macOS. These jobs do not run on every push: only when started by hand from
+# the Actions tab, or for a release tag (v*) from release.yml, which also
+# asks for the installers: after the tests pass, a second build makes the
+# Windows MSI or the macOS DMG (app/cmake/Packaging.cmake). Qt comes from
+# aqtinstall, pinned to the version in the Nix flake; the other libraries
+# come from vcpkg, pinned by the baseline in app/vcpkg.json, so the builds
+# do not drift from the Nix one between releases; vcpkg builds them from
+# source on each run. Uses only free services: GitHub's hosted runners and
+# the Qt cache in the GitHub Actions cache.
 name: Application (Windows and macOS)
 
 on:
@@ -61,7 +60,7 @@ jobs:
         uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
-          # Qt Multimedia plays the audio (plan §2.4)
+          # Qt Multimedia plays the audio
           modules: qtmultimedia
           cache: true
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7

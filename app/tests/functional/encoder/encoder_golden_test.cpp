@@ -2,7 +2,7 @@
  * File:        encoder_golden_test.cpp
  * Module:      encoder tests
  * Purpose:     Encodes the reference corpus and compares the frames with the
- *              reference frames of app/golden/encoder/ (plan §3.2)
+ *              reference frames of app/golden/encoder/
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  * SPDX-FileCopyrightText: (c) 2026 Simon Inns
@@ -40,7 +40,7 @@ namespace {
 
 using core::encoder::EncoderOptions;
 
-// Plan §3.2: identical frames on at least 99% of files, and an encoding
+// Identical frames on at least 99% of files, and an encoding
 // that differs (at near-tie frames only) scores within this of the
 // reference's overall quality score.
 constexpr double kIdenticalShare = 0.99;
@@ -177,7 +177,7 @@ void ExpectAccepted(const CorpusTally& tally) {
       << failures.str();
 }
 
-// Plan Phase 2 task 6: the corpus subset (committed as WAV) encodes to the
+// The corpus subset (committed as WAV) encodes to the
 // reference frames with every option set, except at near-tie frames, where
 // it scores within kScoreTolerance of the reference's overall score.
 TEST(EncoderGoldenTest, MatchesReferenceFramesOnCorpusSubset) {
@@ -192,8 +192,8 @@ TEST(EncoderGoldenTest, MatchesReferenceFramesOnCorpusSubset) {
   ExpectAccepted(CheckCorpus(inputs, nullptr));
 }
 
-// The full-corpus acceptance of plan §3.2, run by app/scripts/corpus-check.sh
-// (TESTING.md), not by CTest: it reads the WAV copies of the whole corpus
+// The full-corpus check, run by app/scripts/corpus-check.sh (TESTING.md),
+// not by CTest: it reads the WAV copies of the whole corpus
 // from SPEAK5220_CORPUS_DIR (app/scripts/generate_corpus.py) and writes a
 // report, with each encoding's score difference from the reference's and
 // its frames, to SPEAK5220_CORPUS_REPORT.

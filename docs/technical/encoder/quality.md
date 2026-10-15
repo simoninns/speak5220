@@ -24,10 +24,11 @@ synthesised the frames with the encoder's reference-algorithm synthesis
 - **Pitch:** the median f0 of voiced frames against the index's `f0_p50`, and
   octave-like jumps (period ratio above 1.6) between adjacent voiced frames.
 
-A perceptual score (PESQ) of the output spoken on the emulator comes from
-`investigation/tools/speechqual.py`, described in the [tools pages](../tools/encoder-speech.md#encoding-quality); the
-PESQ figures on the [TI encoder](ti-encoder.md) page and in
-[How it works](how-it-works.md) come from it.
+Objective measures of the output spoken on the emulator (mel-cepstral
+distortion, the spectrum's balance, level and voicing) come from
+`investigation/tools/speechqual.py`, described in the
+[tools pages](../tools/encoder-speech.md#encoding-quality); the figures on
+the [TI encoder](ti-encoder.md) page come from it.
 
 ## Results
 

@@ -78,7 +78,7 @@ std::string OptionsColumns(const core::encoder::EncoderOptions& options) {
   return columns;
 }
 
-// Run by app/scripts/corpus-check.sh, not by CTest (plan Phase 7, item 4):
+// Run by app/scripts/corpus-check.sh, not by CTest:
 // optimises every WAV file in SPEAK5220_CORPUS_DIR from the default
 // options on every core, with the per-phrase byte limit set to the
 // default encoding's size, so a better score cannot come from more bytes.
@@ -172,7 +172,7 @@ TEST(OptimiserCorpusCheck, DISABLED_RaisesTheScoreOverTheDefaults) {
       << "the score rose on only " << raised << " of " << files << " files";
 }
 
-// Run by hand when choosing the default options (plan Phase 8, task 14):
+// Run by hand when choosing the default options:
 // encodes every WAV file in SPEAK5220_CORPUS_DIR with the options in
 // SPEAK5220_OPTIONS (as "target_rms=18,noise_gate_db=30"; unset for the
 // defaults) and writes each one's size, encoding time and overall score,

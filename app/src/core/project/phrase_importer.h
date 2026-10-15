@@ -26,7 +26,7 @@
 
 namespace speak5220::core::project {
 
-// Plan §3.1: input whose peak reaches this (about -0.01 dBFS) is taken to
+// Input whose peak reaches this (about -0.01 dBFS) is taken to
 // clip, and input whose peak stays below kQuietPeak (-30 dBFS) is very
 // quiet. Either may be normalised, if the user agrees, to kNormalisedPeak
 // (-1 dBFS); otherwise the level is left alone, since the encoder sets its
@@ -41,7 +41,7 @@ struct ImportRequest {
   // The phrase's name; by default one is made from the file name
   // (SuggestPhraseName()).
   std::optional<std::string> name = std::nullopt;
-  // Normalise clipping or very quiet input (plan §3.1: the user is asked
+  // Normalise clipping or very quiet input (the user is asked
   // first). Input that is neither is never changed.
   bool normalise = false;
 };
@@ -54,14 +54,14 @@ struct ImportResult {
   bool normalised = false;
 };
 
-// Plan §3.1 over injected readers, so each step can be tested with mocks:
-// read the WAV (any rate and channel count, mixed to mono), resample to
+// The import pipeline over injected readers, so each step can be tested with
+// mocks: read the WAV (any rate and channel count, mixed to mono), resample to
 // 8 kHz with the best sinc converter (or copy, if already 8 kHz), check
 // for clipping and quiet input, normalise if asked, and move the samples
 // to the 24-bit grid the project stores. The source's name, rate,
 // channels, duration and SHA-256 go into the phrase. The original file is
-// not kept (decision D1). Thread-safe if its collaborators are; they must
-// outlive it.
+// not kept, only its 8 kHz copy. Thread-safe if its collaborators are; they
+// must outlive it.
 class PhraseImporter {
  public:
   PhraseImporter(audio::IWavReader& reader, dsp::IResampler& resampler,

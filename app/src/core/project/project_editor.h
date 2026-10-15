@@ -24,7 +24,7 @@
 
 namespace speak5220::core::project {
 
-// Header strings that replace the project's in one PHROM (plan §4.1).
+// Header strings that replace the project's in one PHROM.
 struct PhromHeader {
   // The PHROM, from 1.
   int number = 0;
@@ -55,8 +55,8 @@ struct PlacedPhrase {
 };
 
 // A phrase's encoder settings together with the encoding made from them,
-// which change together (plan §4.1: a change that would exceed the budget
-// is not applied, and the phrase keeps its previous encoding).
+// which change together (a change that would exceed the budget is
+// not applied, and the phrase keeps its previous encoding).
 struct EncodingChange {
   EncoderOverrides overrides = {};
   std::optional<CachedEncoding> encoding = std::nullopt;
@@ -65,12 +65,12 @@ struct EncodingChange {
                          const EncodingChange& b) = default;
 };
 
-// The editing operations of plan §2.5. Each one either succeeds or fails
-// with nothing changed, and returns what is needed to reverse it, so the
-// GUI can wrap each in an undo command and the CLI can call them directly.
-// No operation takes the project to more PHROMs than the budget (plan
-// §4.1), or to more than it already uses if it is over the budget.
-// Implementations are thread-compatible.
+// The editing operations shared by the GUI and the CLI. Each one either
+// succeeds or fails with nothing changed, and returns what is needed to reverse
+// it, so the GUI can wrap each in an undo command and the CLI can call them
+// directly. No operation takes the project to more PHROMs than the budget, or
+// to more than it already uses if it is over the budget. Implementations are
+// thread-compatible.
 class IProjectEditor {
  public:
   virtual ~IProjectEditor() = default;

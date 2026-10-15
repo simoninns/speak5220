@@ -71,13 +71,13 @@ std::string Row(const std::string& name, const std::string& kind, int bytes,
   return row.str();
 }
 
-// Run by app/scripts/corpus-check.sh, not by CTest (plan Phase 8, task
-// 12): measures every WAV file in SPEAK5220_CORPUS_DIR as the reference
-// encodings of every option set, as the application encodes it with the default
-// options, as the anchor vocoder renders it, and (every
-// SPEAK5220_OPTIMISE_STRIDE-th file) as Optimise leaves it from the defaults
-// with the default encoding's size as its limit. Writes one row per measurement
-// to SPEAK5220_MEASURES_REPORT.
+// Run by app/scripts/corpus-check.sh, not by CTest: measures every WAV
+// file in SPEAK5220_CORPUS_DIR as the reference encodings of every option
+// set, as the application encodes it with the default options, as the
+// anchor vocoder renders it, and (every SPEAK5220_OPTIMISE_STRIDE-th file)
+// as Optimise leaves it from the defaults with the default encoding's size
+// as its limit. Writes one row per measurement to
+// SPEAK5220_MEASURES_REPORT.
 TEST(MeasuresCorpusCheck, DISABLED_WritesTheCalibrationData) {
   const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");
   const char* report_path = std::getenv("SPEAK5220_MEASURES_REPORT");
@@ -219,13 +219,13 @@ TEST(MeasuresCorpusCheck, DISABLED_WritesTheCalibrationData) {
 // The samples per rating band of the listening check.
 constexpr std::size_t kListeningSamples = 5;
 
-// Run by app/scripts/corpus-check.sh with --listening, not by CTest (plan
-// Phase 8, task 12): scores every WAV file in SPEAK5220_CORPUS_DIR as the
-// application encodes it with the default options, and writes, for each
-// rating band, kListeningSamples files spread over the band's scores to
+// Run by app/scripts/corpus-check.sh with --listening, not by CTest:
+// scores every WAV file in SPEAK5220_CORPUS_DIR as the application
+// encodes it with the default options, and writes, for each rating band,
+// kListeningSamples files spread over the band's scores to
 // SPEAK5220_LISTENING_DIR/BAND/: NN_NAME_1_original.wav and
-// NN_NAME_2_chip.wav (the chip's output placed against the original, at its
-// level), with index.tsv listing every file's score.
+// NN_NAME_2_chip.wav (the chip's output placed against the original, at
+// its level), with index.tsv listing every file's score.
 TEST(MeasuresCorpusCheck, DISABLED_WritesListeningSamples) {
   const char* corpus = std::getenv("SPEAK5220_CORPUS_DIR");
   const char* listening = std::getenv("SPEAK5220_LISTENING_DIR");

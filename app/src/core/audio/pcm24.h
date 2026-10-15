@@ -18,7 +18,7 @@
 
 namespace speak5220::core::audio {
 
-// A project stores its 8 kHz audio as 24-bit PCM (plan §3.1). Full scale
+// A project stores its 8 kHz audio as 24-bit PCM. Full scale
 // is 2^23, so a sample k / 2^23 is exact in a float (24-bit mantissa) and
 // survives a save and a load unchanged, which keeps the encoding cache's
 // hashes stable.

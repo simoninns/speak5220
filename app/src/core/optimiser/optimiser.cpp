@@ -43,11 +43,11 @@ namespace {
 
 using encoder::EncoderOptions;
 
-// The rate the encoder takes (plan §3.1).
+// The rate the encoder takes.
 constexpr int kSampleRate = 8000;
 constexpr double kBitsPerKilobit = 1000.0;
 
-// The options the search moves along (plan §3.3).
+// The options the search moves along.
 enum class Axis {
   kTargetRms,
   kRepeatLambda,
@@ -92,7 +92,7 @@ constexpr std::array<AxisSteps, 9> kDescentAxes = {{
     {.axis = Axis::kLevelAgc, .step = 0.5, .min_step = 0.125, .decimals = 3},
 }};
 
-// The grid (plan §3.3, step 1), around the start.
+// The grid, the search's first step, around the start.
 constexpr double kGridVoicingThreshold = 0.05;
 constexpr double kGridVoicingEvidence = 2.0;
 constexpr double kGridRepeatLambdaFactor = 2.0;

@@ -55,7 +55,7 @@ int StreamBits(std::span<const lpc::Frame> frames) {
 // 8 kHz REAPER, which the quality measures use, loses the voicing of whole
 // words and drops an octave on low and high voices, and Harvest, as right
 // as RAPT on the octave, takes five times as long as the rest of the
-// encoder (docs-tech/design/high-level-design.md §8, "The pitch anchor").
+// encoder.
 class StandardEncoder : public IEncoder {
  public:
   StandardEncoder()

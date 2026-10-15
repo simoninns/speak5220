@@ -30,7 +30,7 @@
 
 namespace speak5220::app {
 
-// What the GUI encodes and measures with (plan §3.3, §5). The encoder and
+// What the GUI encodes and measures with. The encoder and
 // the quality assessor must be thread-safe: they run on worker threads;
 // Optimise maximises the assessor's overall score. `optimiser_driver` runs
 // Optimise's search, one at a time; its candidates go to the window's

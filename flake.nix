@@ -5,7 +5,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-    # Pre-commit hooks for the application (docs-tech/application-plan.md §1.3)
+    # Pre-commit hooks for the application
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -96,8 +96,8 @@
             };
           });
 
-          # Libraries the application links (plan §2.4). SPTK 4 brings its
-          # own copies of REAPER and WORLD (HLD §10).
+          # Libraries the application links. SPTK 4 brings its
+          # own copies of REAPER and WORLD.
           libraries = [
             pkgs.qt6.qtbase
             pkgs.qt6.qtmultimedia
@@ -114,7 +114,7 @@
             sptk
           ];
 
-          # Format and lint tools (plan §1.3)
+          # Format and lint tools
           linters = [
             pkgs.clang-tools
             pkgs.cpplint
@@ -216,7 +216,7 @@
 
           cppFiles = "^app/.*\\.(cpp|h)$";
 
-          # The hooks of plan §1.3. clang-tidy needs a configured build
+          # The pre-commit hooks. clang-tidy needs a configured build
           # directory, so it runs in the dev shell's hooks and in CI's build
           # job, but not in the sandboxed `nix flake check`.
           hooks =
@@ -415,7 +415,6 @@
             p.matplotlib
             p.pyserial
             p.soundfile
-            p.pesq # ITU-T P.862 speech quality (investigation/tools/speechqual.py)
             # The quality reference data (app/scripts/golden/quality.py): the
             # original WebRTC voice activity detector, ESTOI and WORLD's
             # Harvest

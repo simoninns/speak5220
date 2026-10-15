@@ -35,7 +35,7 @@ struct BbcDiscPhrom {
   std::vector<BbcDiscPhrase> phrases = {};
 };
 
-// The BBC Micro disc of plan §6: a double-sided 40-track Acorn DFS image
+// The BBC Micro disc: a double-sided 40-track Acorn DFS image
 // whose fixed player program (SPEAK, from speak.bas) finds the PHROMs by
 // their index files and speaks their phrases with Speak External.
 //
@@ -49,7 +49,7 @@ struct BbcDiscPhrom {
 // little-endian. Stateless; thread-safe.
 class BbcDisc {
  public:
-  // Plan §6: the disc holds at most 8 PHROMs, 4 on each side.
+  // The disc holds at most 8 PHROMs, 4 on each side.
   static constexpr int kMaxPhroms = 8;
   static constexpr int kPhromsPerSide = 4;
   // A PHROM's data file fits the player's 16 KB buffer.

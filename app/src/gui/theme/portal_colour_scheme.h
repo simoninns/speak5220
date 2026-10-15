@@ -26,8 +26,8 @@ namespace speak5220::app {
 // (org.freedesktop.appearance color-scheme), which GNOME, KDE Plasma and
 // other desktops provide. Preference() asks the portal, waiting at most
 // a second; with no portal it is Unknown. Watch() follows the portal's
-// SettingChanged signal. A thin adapter over Qt D-Bus, checked by hand
-// (plan Phase 6). GUI thread only.
+// SettingChanged signal. A thin adapter over Qt D-Bus, checked by hand.
+// GUI thread only.
 class PortalColourScheme : public QObject, public IDesktopColourScheme {
   Q_OBJECT
 

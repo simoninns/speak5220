@@ -290,12 +290,11 @@ void PrintSummary(const quality::FrameTrackComparison& t, const LoudnessPair& l,
             << '\n';
 }
 
-// Run by hand by phrom-check.sh (docs-tech/encoder-quality-plan.md, Phase
-// 1): for every word phrom_roundtrip.py wrote into SPEAK5220_PHROM_DIR,
-// checks that its frames pack to the image's bytes and parse back
-// (speak5220 datasheet §12.11); then encodes each speech word's chip
-// output with the options in SPEAK5220_PHROM_OPTIONS (as
-// "repeat_lambda=300,voicing_threshold=0.5"; unset for the defaults),
+// Run by hand by phrom-check.sh: for every word phrom_roundtrip.py wrote
+// into SPEAK5220_PHROM_DIR, checks that its frames pack to the image's
+// bytes and parse back (speak5220 datasheet §12.11); then encodes each
+// speech word's chip output with the options in SPEAK5220_PHROM_OPTIONS
+// (as "repeat_lambda=300,voicing_threshold=0.5"; unset for the defaults),
 // compares the encoding with the word's frames and writes one row per word
 // and a total to SPEAK5220_PHROM_REPORT.
 TEST(PhromRoundTripCheck, DISABLED_WritesTheReport) {

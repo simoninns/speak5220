@@ -21,7 +21,7 @@ namespace speak5220::core::quality {
 // Which way a metric's values improve.
 enum class MetricDirection { kHigherIsBetter, kLowerIsBetter };
 
-// Measures how well an encoding reproduces its source (plan §3.3), as one
+// Measures how well an encoding reproduces its source, as one
 // number for Optimise to maximise or minimise: OverallQualityMetric.
 // Implementations are deterministic and thread-safe.
 class IQualityMetric {

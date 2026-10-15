@@ -51,7 +51,7 @@ namespace speak5220::app {
 class WaveformPane;
 class WaveformView;
 
-// Plan §5, Phase 6 and Phase 11: the phrase editor's three tabs (PhraseTab).
+// The phrase editor's three tabs (PhraseTab).
 // Under the tab bar are two areas with one splitter between them, which
 // the tabs share, so neither area moves or changes size when another tab
 // is chosen and the waveforms can be compared by switching tabs:

@@ -1,19 +1,18 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Third-party libraries used by s5core (application plan §2.4). Each one is
+# Third-party libraries used by s5core. Each one is
 # exposed as an imported target, so its headers are system headers and the
 # project's warning flags do not apply to them.
 
 # 6.8 for QStyleHints::setColorScheme(); Multimedia plays the audio
-# (plan §2.4)
 find_package(Qt6 6.8 REQUIRED COMPONENTS Core Widgets Multimedia)
 # D-Bus asks the XDG desktop portal for the desktop's colour scheme
 if(UNIX AND NOT APPLE)
     find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
 endif()
 find_package(spdlog 1.12 CONFIG REQUIRED)
-# The project file (plan §4): YAML metadata in a ZIP container
+# The project file: YAML metadata in a ZIP container
 find_package(yaml-cpp 0.7 CONFIG REQUIRED)
 find_package(libzip 1.7 CONFIG REQUIRED)
 
@@ -51,7 +50,7 @@ target_compile_definitions(
     INTERFACE POCKETFFT_NO_MULTITHREADING
 )
 
-# The quality measures (plan §3.3): libfvad's voice activity detector, and
+# The quality measures: libfvad's voice activity detector, and
 # SPTK 4's LPC analysis and pitch estimators (its own copies of REAPER and
 # WORLD's Harvest); and the encoder's pitch anchor, SPTK's copy of Snack's
 # RAPT

@@ -38,15 +38,14 @@ Link to authoritative sources if applicable:
 - Reference datasheet: docs/technical/datasheet/ (e.g. §12.8 word tables)
 - TI data manuals: docs/technical/sources/
 - Acorn Speech System User Guide
-- ITU-T P.862 / P.862.1
 -->
 
-## HLD / Design Impact
+## Documentation Impact
 
 <!--
-Does this require updates to:
-- docs-tech/design/high-level-design.md
-- docs-tech/application-plan.md
+Does this require updates to (AGENTS.md §9.3):
+- docs/application/ (user manual, reference)
+- README.md, BUILD.md, TESTING.md
 -->
 
 ## Testing Considerations

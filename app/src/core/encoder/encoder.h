@@ -30,7 +30,7 @@
 namespace speak5220::core::encoder {
 
 // The version of the encoder's output. A project's cached encodings record
-// it, and are redone when it changes (plan §3.4), so it changes whenever
+// it, and are redone when it changes, so it changes whenever
 // the same audio and options can give different frames (AGENTS.md §3.1).
 // 1.1.0: quiet pauses (QuietPauses()), on by default.
 // 1.2.0: the noise gate mutes everything under its level.
@@ -77,8 +77,8 @@ class IEncoder {
   virtual ~IEncoder() = default;
 
   // Encodes `samples` (-1..1), a phrase's original recording, at
-  // `sample_rate`, which must be 8000 (the import pipeline resamples, plan
-  // §3.1): preprocessed by options.preprocess (preprocess::Preprocess()),
+  // `sample_rate`, which must be 8000 (the import pipeline
+  // resamples): preprocessed by options.preprocess (preprocess::Preprocess()),
   // then encoded. Fails for another rate, for non-finite samples or for
   // options outside their ranges. Input with no sound gives a lone stop
   // frame.

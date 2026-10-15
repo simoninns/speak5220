@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.24)
 
-# Out-of-source builds only (application plan §1.2). A build directory
+# Out-of-source builds only. A build directory
 # anywhere inside app/ is refused, not only app/ itself.
 cmake_path(
     IS_PREFIX

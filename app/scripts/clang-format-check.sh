@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Checks C++ formatting without changing anything (application plan §1.3).
+# Checks C++ formatting without changing anything.
 # On failure, prints the command that fixes the files.
 #
 # Usage: clang-format-check.sh [FILE...]

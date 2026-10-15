@@ -20,9 +20,9 @@
 
 namespace speak5220::core::quality {
 
-// Plan §3.3: the best a TMS5220-style LPC coding could do with a source,
+// The best a TMS5220-style LPC coding could do with a source,
 // with nothing quantised, which places the good ends of the quality
-// score's calibration (HLD §9). Order 10, 25 ms
+// score's calibration. Order 10, 25 ms
 // frames, K and gain interpolated over 8 steps a frame, an impulse per
 // pitch period or Gaussian noise, pre- and de-emphasis 0.9375. Re-implements
 // investigation/tools/speechqual.py lpcVocoder() with its noise from

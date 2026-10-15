@@ -2,8 +2,8 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Runs clang-tidy with app/.clang-tidy (application plan §1.3), using the
-# compile_commands.json of a configured build directory.
+# Runs clang-tidy with app/.clang-tidy, using the compile_commands.json of
+# a configured build directory.
 #
 # Usage: clang-tidy.sh [-p BUILD_DIR] [FILE...]
 # BUILD_DIR defaults to build/app. With no files, checks every .cpp under

@@ -23,7 +23,7 @@ namespace speak5220::app {
 // The number of bands of the quality rating (core::quality::QualityRating).
 inline constexpr std::size_t kQualityBandCount = 3;
 
-// Plan §5, "Colours": the colours the palette has no role for. Widgets
+// The colours the palette has no role for. Widgets
 // take everything else from the palette. A plain value type.
 struct ThemeColours {
   // A refused name, a phrase too large for a PHROM.

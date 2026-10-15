@@ -51,7 +51,7 @@ double Fastest(const std::function<void()>& f) {
 // unset), times QualityAssessor (the synthesis, alignment, preparation,
 // the three measures with REAPER, and the score), one file at a time on
 // one core. Writes one row per file to SPEAK5220_BENCHMARK_REPORT, if set.
-// The plan sets no target; the rate is recorded in the HLD.
+// There is no target.
 TEST(QualityBenchmark, DISABLED_TimesTheQualityMeasures) {
   const char* dir_env = std::getenv("SPEAK5220_BENCHMARK_DIR");
   const std::filesystem::path dir = dir_env != nullptr

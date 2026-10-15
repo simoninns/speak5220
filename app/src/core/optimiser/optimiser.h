@@ -77,7 +77,7 @@ struct Candidate {
   bool IsScored() const { return outcome == CandidateOutcome::kScored; }
 };
 
-// Plan §3.3, step 4: what the best encoding must satisfy, or trade. A
+// What the best encoding must satisfy, or trade. A
 // plain value type.
 struct OptimiseLimits {
   // At most this many bytes for the phrase; none for no limit.
@@ -95,7 +95,7 @@ struct SearchPlan {
   int max_rounds = 10;
 };
 
-// Plan §3.3, step 3: OK if the phrase may be this many packed bytes
+// OK if the phrase may be this many packed bytes
 // without taking the project past its budget (project::PhraseBudgetCheck).
 // Called from the worker threads; must be thread-safe.
 using BudgetCheck = std::function<Status(int packed_bytes)>;
@@ -137,7 +137,7 @@ struct OptimiseResult {
 using ProgressCallback = std::function<void(const OptimiseResult& so_far,
                                             int evaluated, int expected)>;
 
-// Plan §3.3, "Optimise": searches the options in EncoderOptions for the
+// Optimise: searches the options in EncoderOptions for the
 // encoding that maximises the metric (or the metric less a bit-rate cost),
 // within the project budget and a per-phrase byte limit.
 //

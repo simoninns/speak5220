@@ -26,7 +26,7 @@
 
 namespace speak5220::app {
 
-// The GUI's way to edit a project (plan §2.5): each method makes the
+// The GUI's way to edit a project: each method makes the
 // command for one IProjectEditor operation, runs it, and pushes it onto
 // the undo stack only if it succeeded. A failure leaves the project and
 // the stack as they were, and is returned for the caller to report.

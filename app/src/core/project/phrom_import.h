@@ -26,7 +26,7 @@ namespace speak5220::core::project {
 
 // The words of one or more concatenated 16 KB Acorn PHROM images
 // (packaging::AcornPhrom::Read(), speak5220 datasheet §12.8) as locked
-// phrases with no source audio (plan §3.4), in image then word order. Each
+// phrases with no source audio, in image then word order. Each
 // phrase gets a NewPhraseId(), its name from the image made valid
 // (NormalisePhraseName(), or SuggestPhraseName() when that fails or the
 // name is taken; "WORD <number>" for a word with no name) and unique

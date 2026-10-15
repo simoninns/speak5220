@@ -28,7 +28,7 @@ namespace speak5220::core::project {
 // "phrases/<id>/source.wav"), with "/" between components.
 using ProjectFiles = std::map<std::string, std::vector<std::uint8_t>>;
 
-// The extension of a project in its ZIP form (plan §4).
+// The extension of a project in its ZIP form.
 inline constexpr std::string_view kProjectExtension = ".s5proj";
 
 // The suffix of the copy of the previous version kept on each save.
@@ -40,7 +40,7 @@ inline constexpr std::size_t kMaxProjectFiles = 100000;
 inline constexpr std::uint64_t kMaxProjectBytes = std::uint64_t{1} << 30U;
 
 // Reads and writes a whole project's files. Saving is atomic: a failure or
-// a crash part-way leaves the previous version intact (plan §4).
+// a crash part-way leaves the previous version intact.
 // Implementations are thread-compatible.
 class IProjectStore {
  public:
@@ -62,7 +62,7 @@ class IProjectStore {
 bool IsSafeProjectPath(std::string_view path);
 
 // The store for `path`: a ZIP file when `path` ends in kProjectExtension,
-// the directory form otherwise (plan §4).
+// the directory form otherwise.
 std::unique_ptr<IProjectStore> MakeProjectStore(
     const std::filesystem::path& path);
 

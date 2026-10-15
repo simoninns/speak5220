@@ -206,9 +206,7 @@ recording:
 | `estoi` | Number | ESTOI, 0 to 1; absent when the phrase had too little speech for it |
 | `score` | Number | The overall score, 0 to 1 |
 
-Projects saved before the quality measures had `pesq` and `anchor` keys
-here; they are dropped when the project is opened, and the quality is
-measured again. Other keys are kept.
+Other keys are kept.
 
 For a phrase that is not locked, the frames are a cache: they are kept so a
 project opens instantly, and are redone from the audio and options when

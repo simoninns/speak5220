@@ -40,7 +40,7 @@ std::vector<lpc::Frame> GuardK510(std::span<const lpc::Frame> frames);
 // 6 (value 8) or more is followed by one unvoiced repeat at about a third
 // of its energy, in place of the silence frame after it (or appended at
 // the end). Quieter unvoiced sound ends as it is, as it does in Acorn's
-// PHROM, whose words decay in their own frames (HLD §9). Then applies
+// PHROM, whose words decay in their own frames. Then applies
 // GuardK510() and adds the stop. Departs from tms5220enc.py _addFades(),
 // which faded every unvoiced ending in steps of a third down to energy
 // value 2.

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# The developer convenience targets of application plan §1.3:
+# The developer convenience targets:
 #   format  applies clang-format, ruff format, nixfmt and gersemi in place;
 #   lint    runs every read-only check, clang-tidy included.
 # Both are thin wrappers over scripts in app/scripts/, which the pre-commit

@@ -26,7 +26,7 @@ nix develop
 
 The flake requires Nix with flakes enabled (`experimental-features = nix-command flakes`). Every command below is run from the repository root inside this shell, or prefixed with `nix develop -c`.
 
-A smaller shell, `nix develop .#app`, has only the application's tools and libraries (Qt 6, the libraries of the plan's §2.4, Google Test, and the format and lint tools). CI uses it. Both shells install the application's pre-commit hooks into `.git/hooks` when entered.
+A smaller shell, `nix develop .#app`, has only the application's tools and libraries (Qt 6, the libraries it links, Google Test, and the format and lint tools). CI uses it. Both shells install the application's pre-commit hooks into `.git/hooks` when entered.
 
 The flake supports Linux (x86-64 and ARM64) and macOS on Apple silicon. On macOS, `nix develop` leaves out KiCad and Piper, which nixpkgs does not build there (install KiCad separately), and `nix build .#speak5220` installs `speak5220.app` and `bin/speak5220-cli`.
 
@@ -142,7 +142,7 @@ nix develop --command python3 app/scripts/golden/basic_programs.py            # 
 
 The emulator's reference data is never rewritten unless the reference datasheet changes, and the encoder's (with the quality data that measures it) only for an intended improvement; see [`TESTING.md`](TESTING.md).
 
-Copies of copyrighted reference texts, such as the ITU-T P.862 Recommendation, can be kept in `local/` at the repository root, which git ignores. They are never committed. So is the ROM set for MAME's BBC Micro Model B, in `local/mame/roms/`: `bbcb/` (`os12.rom`, `basic2.rom`, and `cm62024.bin`, the Acorn PHROM A), `saa5050/saa5050` and `bbc_acorn8271/dnfs120.rom`, with the checksums `mame -listroms bbcb` gives.
+Copies of copyrighted reference texts can be kept in `local/` at the repository root, which git ignores. They are never committed. So is the ROM set for MAME's BBC Micro Model B, in `local/mame/roms/`: `bbcb/` (`os12.rom`, `basic2.rom`, and `cm62024.bin`, the Acorn PHROM A), `saa5050/saa5050` and `bbc_acorn8271/dnfs120.rom`, with the checksums `mame -listroms bbcb` gives.
 
 The encoder's two fixed Butterworth filters are constants in `app/src/core/dsp/filter_constants.h`, designed by SciPy:
 
@@ -164,7 +164,7 @@ The build puts the icon in the executable on Windows (`speak5220.rc`) and in the
 Scripts check the encoder, the quality measures and the exports by hand, from the repository root, after building the functional tests (and `speak5220-cli`):
 
 ```bash
-nix develop --command app/scripts/corpus-check.sh   # the whole phase 11 corpus against the reference frames and quality measures (plan §3.2, Phase 3), and Optimise on it (Phase 7)
+nix develop --command app/scripts/corpus-check.sh   # the whole speech corpus against the reference frames and quality measures, and Optimise on it
 nix develop .#app --command app/scripts/benchmark.sh   # encoding and quality-measure speed on one core; Optimise on one thread and on every core
 nix develop .#app --command app/scripts/run-projects.sh   # encodes copies of the fixture projects and runs their export presets
 nix develop .#app --command app/scripts/output-hashes.sh  # checks those exports against the recorded hashes in app/golden/output-hashes/
@@ -192,7 +192,7 @@ cmake --build build/app --target format   # clang-format, ruff format, nixfmt, g
 cmake --build build/app --target lint     # every read-only check, clang-tidy included
 ```
 
-The style rules are in the plan's §1.3 and in [`AGENTS.md`](AGENTS.md) §4. Their configuration is in `app/.clang-format`, `app/.clang-tidy` (with `app/tests/.clang-tidy` for the tests), `app/CPPLINT.cfg` and `app/.gersemirc`.
+The style rules are in [`AGENTS.md`](AGENTS.md) §4. Their configuration is in `app/.clang-format`, `app/.clang-tidy` (with `app/tests/.clang-tidy` for the tests), `app/CPPLINT.cfg` and `app/.gersemirc`.
 
 ### Nix package
 

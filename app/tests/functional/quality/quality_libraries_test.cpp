@@ -146,7 +146,7 @@ void ExpectTracksTheVowel(PitchAlgorithm algorithm) {
   }
 }
 
-// Plan Phase 8, task 9: on pulse trains at 8 kHz each estimator finds F0
+// On pulse trains at 8 kHz each estimator finds F0
 // within 1 %, at each F0 with a whole period in samples.
 void ExpectFindsPulseTrainF0(PitchAlgorithm algorithm) {
   SptkPitchEstimator estimator(algorithm);

@@ -23,7 +23,7 @@
 
 namespace speak5220::core {
 
-// The selectable levels of plan §2.6. Warnings and errors are logged at
+// The selectable levels. Warnings and errors are logged at
 // every level.
 enum class LogLevel {
   kInfo,   // lifecycle messages, stage transitions, validation summaries
@@ -47,7 +47,7 @@ struct LogSettings {
 };
 
 // Module names used by the core and the front ends. Any name may be used;
-// these are the ones the plan lists.
+// these are the ones the core and front ends use.
 inline constexpr std::string_view kLogModuleCli = "cli";
 inline constexpr std::string_view kLogModuleGui = "gui";
 inline constexpr std::string_view kLogModuleEmulator = "emulator";

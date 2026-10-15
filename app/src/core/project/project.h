@@ -29,11 +29,11 @@
 
 namespace speak5220::core::project {
 
-// An export the CLI can run (plan §4).
+// An export the CLI can run.
 struct ExportPreset {
   std::string name = {};
   // "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav" or
-  // "bbc-dsd" (plan §6).
+  // "bbc-dsd".
   std::string format = {};
   // "all" phrases, or the "selected" ones in `phrases`.
   std::string scope = "all";
@@ -59,7 +59,7 @@ struct ExportPreset {
 struct ProjectSettings {
   std::string name;
   // The strings of each PHROM's header (speak5220 datasheet §12.8); each
-  // PHROM gets its number appended to the second (plan §4.1).
+  // PHROM gets its number appended to the second.
   std::vector<std::string> header_strings = {"(C)2026 speak5220",
                                              "Speak5220 PHROM", "1.00"};
   // Printable ASCII characters (32-126) to phrase names: the "ASCII
@@ -82,7 +82,7 @@ struct ProjectSettings {
 // Everything a project holds, as loaded and saved.
 struct ProjectContents {
   ProjectSettings settings;
-  // In PHROM order: list order is word order (plan §4.1).
+  // In PHROM order: list order is word order.
   std::vector<Phrase> phrases;
   std::vector<ExportPreset> exports;
   // Unknown keys of project.yaml's top level, and files outside the
@@ -99,8 +99,8 @@ struct ProjectContents {
 // valid default encoder options.
 Status ValidateProjectSettings(const ProjectSettings& settings);
 
-// Whether one phrase may take a new size, the rest of the project as it is
-// (plan §4.1): for the optimiser, which tries many encodings of one
+// Whether one phrase may take a new size, the rest of the project as it is:
+// for the optimiser, which tries many encodings of one
 // phrase. A value; Check() is thread-safe.
 class PhraseBudgetCheck {
  public:
@@ -155,7 +155,7 @@ class Project : public IProjectEditor {
   // repeated name.
   Status SetExports(std::vector<ExportPreset> exports);
 
-  // The PHROMs the phrases fill now (plan §4.1).
+  // The PHROMs the phrases fill now.
   PhromAllocation Allocation() const;
   // The check of a new size for the phrase with `id`. Fails for an
   // unknown id.

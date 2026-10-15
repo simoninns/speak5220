@@ -27,7 +27,7 @@
 
 namespace speak5220::core::quality {
 
-// The primary measures of one encoding (plan §3.3).
+// The primary measures of one encoding.
 struct QualityMeasurement {
   EnvelopeDistortion envelope;
   PitchErrors pitch;

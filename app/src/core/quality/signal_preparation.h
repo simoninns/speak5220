@@ -34,7 +34,7 @@ inline constexpr int kSpeechDetectorMode = 3;
 // drops frames by the same margin.
 inline constexpr double kMaskFloorDb = 40.0;
 
-// An original and the chip's output prepared alike (plan §3.3).
+// An original and the chip's output prepared alike.
 struct PreparedSignals {
   // The source, band-limited (BandLimit()).
   std::vector<double> original;

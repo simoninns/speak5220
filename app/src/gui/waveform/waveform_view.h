@@ -35,7 +35,7 @@ class QWheelEvent;
 
 namespace speak5220::app {
 
-// Plan §5: one waveform pane's drawing. Time is counted in samples of the
+// One waveform pane's drawing. Time is counted in samples of the
 // phrase's source audio (TimeAxis); this view's own samples are placed by
 // their source offset, so the encoded audio lines up with the original.
 // It draws, from the back: the frames' kinds and the 25 ms frame grid

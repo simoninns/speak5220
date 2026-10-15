@@ -21,7 +21,6 @@ Where is the documentation issue?
 - docs/application/ (application user documentation)
 - docs/technical/datasheet/ (reference datasheet)
 - docs/technical/ (research record: capture, die analysis, hardware, tools)
-- docs-tech/ (implementation plan, high-level design)
 - README.md, BUILD.md, TESTING.md, AGENTS.md
 - Other: __________
 

@@ -35,7 +35,7 @@ class IFft {
 };
 
 // IFft over pocketfft, the FFT NumPy itself uses, which helps the encoder
-// match the Python golden data (plan §2.4). Single-threaded per call.
+// match the Python golden data. Single-threaded per call.
 // Stateless; thread-safe.
 class PocketFft : public IFft {
  public:

@@ -80,7 +80,7 @@ std::string CommentText(std::string_view text) {
 }
 
 // The comment at the top: the SPDX line, what the file holds and the name
-// mapping (plan §4).
+// mapping.
 void AppendComment(std::string& out, const CHeaderInfo& info,
                    std::string_view contents,
                    std::span<const CHeaderName> names,

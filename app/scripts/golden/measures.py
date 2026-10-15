@@ -6,10 +6,10 @@
 Measures the reference encodings of the encoder's corpus subset (the WAV
 files in app/golden/encoder/inputs/, encoded as app/golden/encoder/frames/
 SET.tsv records, spoken by the reference emulator) with independent
-implementations of the quality measures of application plan §3.3, for the
-C++ to be checked against (Phase 8, task 6):
+implementations of the quality measures, for the C++ to be checked
+against:
 
-- The signals are prepared as plan §3.3 sets out (HLD §9): the chip's output
+- The signals are prepared as the application prepares them: the chip's output
   with its idle code at 0, placed against the source by the alignment of
   investigation/tools/speechqual.py (align() and refine(), on the source
   after the encoder's 60 Hz high-pass); both band-limited by the same
@@ -223,7 +223,7 @@ def sample_mask(mask, n):
 
 
 def prepare(source, codes):
-    """(original, output, mask, lag): the prepared pair of plan §3.3."""
+    """(original, output, mask, lag): the prepared pair."""
     import scipy.signal
 
     hp = scipy.signal.butter(2, 60.0 / (RATE / 2), "highpass", output="sos")

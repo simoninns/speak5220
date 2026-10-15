@@ -16,8 +16,8 @@ the round trip's voicing agreement and its breakdown, repeats and
 fade-outs, energy biases and bits. --only takes a list of the files to
 encode (sweeps/investigation-tts.txt picks the encoder-quality
 investigation's 64 TTS files out of the phoneme set). Each set's project,
-measures and round-trip report are kept in OUTPUT/SET/. The encoder-quality plan's phases are judged with it
-(docs-tech/encoder-quality-plan.md).
+measures and round-trip report are kept in OUTPUT/SET/. Changes meant to
+improve the encoder's output are judged with it.
 
 It is run by hand from the repository root in the default Nix shell, with
 speak5220-cli and the functional tests built:

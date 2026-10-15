@@ -22,7 +22,7 @@
 namespace speak5220::core::quality {
 
 // An output F0 more than this fraction away from the original's is a gross
-// error (plan §3.3).
+// error.
 inline constexpr double kGrossPitchRatio = 0.2;
 
 // The pitch and voicing measures of an encoding.

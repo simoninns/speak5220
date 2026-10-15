@@ -46,7 +46,7 @@ namespace speak5220::app {
 class OptimiseSession;
 class QualityRatingView;
 
-// Plan §3.3 and Phase 7, "Optimise in the GUI". Prepare() shows the
+// Optimise in the GUI. Prepare() shows the
 // limits for the phrases chosen: an optional byte limit per phrase, and an
 // optional weight that trades quality for bit rate (the overall score less
 // the weight per kbit/s). Start runs the session; while it runs the window

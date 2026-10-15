@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Writes every word of a PHROM image as frames and as the chip's output.
 
-The PHROM round trip (docs-tech/encoder-quality-investigation.md §3.1):
+The PHROM round trip:
 each word of the image named by a PROM manifest (investigation/proms/;
 by default Acorn PHROM A) is parsed with the frame format of speak5220
 datasheet §8.1, packed again and checked against the image's bytes

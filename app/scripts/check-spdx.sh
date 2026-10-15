@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Checks the SPDX headers of application plan §1.1 and AGENTS.md §4.2:
+# Checks the SPDX headers of AGENTS.md §4.2:
 #   - every source file carries both SPDX lines;
 #   - a C++ file's "File:" line matches its filename exactly.
 #

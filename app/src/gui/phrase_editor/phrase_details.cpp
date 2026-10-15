@@ -137,7 +137,7 @@ QColor PhraseDetails::MessageColour() const {
 }
 
 void PhraseDetails::changeEvent(QEvent* event) {
-  // Plan §5, "Colours": a change of scheme reaches the widget as a palette
+  // A change of scheme reaches the widget as a palette
   // change.
   if (event->type() == QEvent::PaletteChange) {
     UpdateColours();
@@ -154,7 +154,7 @@ void PhraseDetails::UpdateColours() {
 void PhraseDetails::OnNameEdited(const QString& text) {
   const NameEdit edit = FilterNameEdit(text);
   if (!edit.text.has_value()) {
-    // Decision D2: the refused character is not taken; the name stays as
+    // The refused character is not taken; the name stays as
     // it was, with the cursor where it was before the keystroke.
     const int cursor = name_->cursorPosition() -
                        static_cast<int>(text.size() - accepted_name_.size());

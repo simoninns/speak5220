@@ -27,7 +27,7 @@ namespace speak5220::app {
 
 class OptionSlider;
 
-// Plan §5 and Phase 11: one row per EncoderOptionInfos() entry, in two
+// One row per EncoderOptionInfos() entry, in two
 // columns: its label (the help text and default as the tooltip), an
 // editor, and a button that puts it back to the baseline (the project's
 // defaults for a phrase, the encoder's for the project). Rows that differ

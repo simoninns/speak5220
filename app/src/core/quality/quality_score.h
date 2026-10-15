@@ -26,7 +26,7 @@ struct ScoreRange {
   double good = 1.0;
 };
 
-// The calibration of the overall score (plan §3.3, HLD §9), on the 243
+// The calibration of the overall score, on the 243
 // corpus files: each figure's good end is what the anchor vocoder
 // (unquantised LPC) reaches at its median, for the envelope and ESTOI, or
 // the best tenth of the default encodings, for the pitch figures (the

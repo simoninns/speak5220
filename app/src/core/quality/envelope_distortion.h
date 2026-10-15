@@ -21,7 +21,7 @@
 
 namespace speak5220::core::quality {
 
-// The envelope analysis (plan §3.3): order-10 LPC, as the chip's, of
+// The envelope analysis: order-10 LPC, as the chip's, of
 // Hamming-windowed 25 ms frames (the chip's), compared over 100 to 3500 Hz
 // on a 512-point grid.
 inline constexpr int kEnvelopeOrder = 10;

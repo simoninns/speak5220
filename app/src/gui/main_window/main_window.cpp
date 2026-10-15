@@ -1155,7 +1155,7 @@ void MainWindow::RunImport(std::vector<project::ImportRequest> requests,
   ++imports_running_;
   statusBar()->showMessage(
       QStringLiteral("Importing %1 file(s)...").arg(requests.size()));
-  // Plan §3.1: the import runs in the background; its results come back
+  // The import runs in the background; its results come back
   // to this thread queued (AGENTS.md §4.3.3). The names taken are those
   // of the project now, and of the files before each one.
   runner_->Post([this, requests = std::move(requests), ids = std::move(ids),
@@ -1195,7 +1195,7 @@ void MainWindow::FinishImport(
   }
 
   if (!asked_to_normalise) {
-    // Plan §3.1: clipping or very quiet input is normalised only if the
+    // Clipping or very quiet input is normalised only if the
     // user agrees; then the files are imported again with that request,
     // as the CLI's --normalise does.
     QStringList flagged;

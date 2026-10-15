@@ -24,7 +24,7 @@ QString ToQString(std::string_view text) {
   return QString::fromUtf8(text.data(), static_cast<qsizetype>(text.size()));
 }
 
-// Plan §2.4, then the code the quality measures reproduce.
+// The third-party libraries, then the code the quality measures reproduce.
 constexpr std::array kNotices = {
     ThirdPartyNotice{.name = "Qt 6",
                      .use = "The windows, threads and audio playback (Widgets, "

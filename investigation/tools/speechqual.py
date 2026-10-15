@@ -11,9 +11,6 @@
     encoder's own synthesis), aligned with the input by its level envelope,
     and compared with it:
 
-      pesq     ITU-T P.862 narrowband, as P.862.1 MOS-LQO (1.0 bad to 4.5).
-               P.862 was not validated for vocoders below 4 kbit/s, so read
-               it as a ranking of encodings, not as a listener's MOS
       mcd      mel-cepstral distortion, dB: the spectral envelope, ignoring
                level and phase (coefficients 1-24 of 40 mel bands,
                100-3800 Hz). Computed from a filter bank, not SPTK's mcep,
@@ -267,15 +264,10 @@ def placed(out, lag, n):
 
 def compare(ref, deg):
     """The measures for one input and one output already aligned with it."""
-    import pesq as pesqlib
     lin, lout = levelDb(ref), levelDb(deg)
     speech = lin > lin.max() - SPEECH_DB
     quiet = lin < lin.max() - SPEECH_DB - 10
     m = {}
-    try:
-        m["pesq"] = float(pesqlib.pesq(RATE, ref, deg, "nb"))
-    except Exception:
-        m["pesq"] = float("nan")
     ci, co = melLog(ref), melLog(deg)
     # cepstra scaled so that log|X| = c0 + 2·sum(cn·cos(n·w)), the usual MCD convention
     dc = (scipy.fft.dct(ci, axis=1) - scipy.fft.dct(co, axis=1))[:, 1:CEPS + 1] / (2 * MEL_BANDS)
@@ -603,7 +595,7 @@ def scaled(y, ref):
 
 # ---- reporting ----------------------------------------------------------
 
-COLUMNS = [("pesq", "PESQ", "%4.2f"), ("mcd", "MCD", "%5.2f"), ("tiltLow", "lo", "%+5.1f"),
+COLUMNS = [("mcd", "MCD", "%5.2f"), ("tiltLow", "lo", "%+5.1f"),
            ("tiltMid", "mid", "%+5.1f"), ("tiltHigh", "hi", "%+5.1f"), ("levelErr", "lvl", "%4.1f"),
            ("levelCorr", "lvlr", "%4.2f"), ("drop", "drop%", "%5.1f"), ("pause", "pause", "%+5.1f"),
            ("vuv", "vuv%", "%5.1f"), ("gpe", "gpe%", "%5.1f"), ("f0Cents", "f0c", "%5.0f")]
@@ -611,14 +603,14 @@ COLUMNS = [("pesq", "PESQ", "%4.2f"), ("mcd", "MCD", "%5.2f"), ("tiltLow", "lo",
 
 def header(anchor):
     h = "%-26s %5s %5s" % ("file", "b/s", "lagms") + "".join(" %*s" % (len(fmt % 0), t) for _, t, fmt in COLUMNS)
-    return h + ("   anchor PESQ  MCD" if anchor else "")
+    return h + ("   anchor MCD" if anchor else "")
 
 
 def line(r, anchor):
     s = "%-26s %5.0f %+5.0f" % (r["file"][:26], r["bitrate"], r["lagMs"])
     s += "".join(" " + fmt % r[k] for k, _, fmt in COLUMNS)
     if anchor:
-        s += "        %4.2f %5.2f" % (r["anchor_pesq"], r["anchor_mcd"])
+        s += "        %5.2f" % r["anchor_mcd"]
     return s
 
 
@@ -628,17 +620,17 @@ def summary(name, rows, anchor):
     s = "%-26s %5.0f %5s" % (f"median, {name} (n={len(rows)})"[:26], med("bitrate"), "")
     s += "".join(" " + fmt % med(k) for k, _, fmt in COLUMNS)
     if anchor:
-        s += "        %4.2f %5.2f" % (med("anchor_pesq"), med("anchor_mcd"))
+        s += "        %5.2f" % med("anchor_mcd")
     return s
 
 
-LADDER_COLUMNS = [("pesq", "PESQ", "%4.2f"), ("mcd", "MCD", "%5.2f"), ("tiltLow", "lo", "%+5.1f"),
+LADDER_COLUMNS = [("mcd", "MCD", "%5.2f"), ("tiltLow", "lo", "%+5.1f"),
                   ("tiltMid", "mid", "%+5.1f"), ("tiltHigh", "hi", "%+5.1f"), ("levelErr", "lvl", "%4.1f"),
                   ("vuv", "vuv%", "%5.1f"), ("gpe", "gpe%", "%5.1f"), ("f0Cents", "f0c", "%5.0f")]
 
 
 def ladderLine(r):
-    return "%-26s" % r["file"][:26] + "".join(" %6s" % ("%4.2f" % r[s + "_pesq"]) for s, _ in LADDER)
+    return "%-26s" % r["file"][:26] + "".join(" %6s" % ("%5.2f" % r[s + "_mcd"]) for s, _ in LADDER)
 
 
 def ladderSummary(rows):
@@ -651,15 +643,15 @@ def ladderSummary(rows):
         lines.append("%-8s" % s + "".join(" %*s" % (max(5, len(fmt % 0)), fmt % med[k])
                                           for k, _, fmt in LADDER_COLUMNS) + "   " + what)
         if prev is not None:
-            d = float(np.nanmedian([r[f"{s}_pesq"] - r[f"{prev}_pesq"] for r in rows]))
-            lines[-1] += "  (PESQ %+.2f)" % d
+            d = float(np.nanmedian([r[f"{s}_mcd"] - r[f"{prev}_mcd"] for r in rows]))
+            lines[-1] += "  (MCD %+.2f)" % d
         prev = s
     lines.append("")
     for s, what in PARTS:
         med = {k: float(np.nanmedian([r[f"{s}_{k}"] for r in rows])) for k, _, _ in LADDER_COLUMNS}
-        d = float(np.nanmedian([r[f"{s}_pesq"] - r["anchor_pesq"] for r in rows]))
+        d = float(np.nanmedian([r[f"{s}_mcd"] - r["anchor_mcd"] for r in rows]))
         lines.append("%-8s" % s + "".join(" %*s" % (max(5, len(fmt % 0)), fmt % med[k])
-                                          for k, _, fmt in LADDER_COLUMNS) + "   " + what + "  (PESQ %+.2f)" % d)
+                                          for k, _, fmt in LADDER_COLUMNS) + "   " + what + "  (MCD %+.2f)" % d)
     return "\n".join(lines)
 
 
@@ -706,7 +698,7 @@ def main():
     jobs = [(p, args.bin, args.anchor, args.ladder, args.wav, args.frames_csv) for _, p in items]
 
     if args.ladder:
-        print("%-26s" % "file PESQ:" + "".join(" %6s" % s for s, _ in LADDER))
+        print("%-26s" % "file MCD:" + "".join(" %6s" % s for s, _ in LADDER))
     else:
         print(header(args.anchor))
     rows = []

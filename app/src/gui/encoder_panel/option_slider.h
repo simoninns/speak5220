@@ -41,7 +41,7 @@ class DefaultTickSlider : public QSlider {
   std::optional<int> default_position_;
 };
 
-// One option's slider (plan §5, the settings form): positions from a
+// One option's slider (the settings form): positions from a
 // minimum to a maximum in equal steps, the value shown beside it as text
 // (`format`), and a tick at the default. A value off the steps, or outside
 // the range (from a project file or Optimise), is shown exactly and widens

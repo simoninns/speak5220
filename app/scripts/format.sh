@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Formats the application's sources in place: clang-format, ruff format,
-# nixfmt and gersemi (application plan §1.3). The "format" CMake target runs
-# this. Run from the repository root.
+# nixfmt and gersemi. The "format" CMake target runs this. Run from the
+# repository root.
 
 set -euo pipefail
 

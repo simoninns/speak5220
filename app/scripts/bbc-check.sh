@@ -2,11 +2,11 @@
 # SPDX-FileCopyrightText: (c) 2026 Simon Inns
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Checks the BBC Micro discs on an emulated BBC Micro (plan Phase 10,
-# TESTING.md): exports the bbc fixture suite with run-projects.sh, then
-# boots each disc in MAME's BBC Micro Model B with the Acorn speech system
-# and Acorn DFS, and drives the player (app/scripts/bbc/emulator_check.py
-# says what is checked). Run by hand, in the default Nix shell, which has
+# Checks the BBC Micro discs on an emulated BBC Micro (TESTING.md):
+# exports the bbc fixture suite with run-projects.sh, then boots each disc
+# in MAME's BBC Micro Model B with the Acorn speech system and Acorn DFS,
+# and drives the player (app/scripts/bbc/emulator_check.py says what is
+# checked). Run by hand, in the default Nix shell, which has
 # the Python packages it needs; MAME is taken from PATH, or else from
 # nixpkgs with "nix shell".
 #

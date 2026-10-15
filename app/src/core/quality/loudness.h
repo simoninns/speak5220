@@ -24,8 +24,8 @@ namespace speak5220::core::quality {
 // datasheet §8.9).
 inline constexpr int kDacLimit = 127;
 
-// The corner of the first-order high-pass of the BBC Micro's speech path
-// (HLD §16), the one the encoder measures loudness through.
+// The corner of the first-order high-pass of the BBC Micro's speech path,
+// the one the encoder measures loudness through.
 inline constexpr double kBbcHighPassHz = encoder::kLoudnessHighPassHz;
 
 // The sample from which the high-passed and A-weighted levels are taken:
@@ -58,8 +58,8 @@ struct Loudness {
 // The loudness of `codes`, the chip's output for `frames` from the first
 // frame read (synth::ReferenceSynthesizer, or Synth's VSM path), with
 // `wrapped_samples` as the synthesis counted them. Re-implements the
-// investigation's scratch measures (docs-tech/encoder-quality-
-// investigation.md §3.3). Pure; thread-safe. O(samples).
+// encoder-quality investigation's scratch measures. Pure; thread-safe.
+// O(samples).
 Loudness MeasureLoudness(std::span<const int> codes,
                          std::span<const lpc::Frame> frames,
                          int wrapped_samples);

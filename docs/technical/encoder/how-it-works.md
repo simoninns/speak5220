@@ -119,14 +119,11 @@ memory fixed the cases found. Voiced fricatives come out voiced, the choice
     median sounding level, by its ratio.
 
   Both make the output follow the input's level contour less closely.
-  Measured over the 243 test inputs, PESQ
-  against the unprocessed input changed as follows:
-
-  | Setting | At the default settings | Played as loud as the DAC allows, with a hiss of 2 codes RMS added |
-  |---|---|---|
-  | `levelAgc` 4 | +0.005 | +0.05 |
-  | `compression` 1.5 | −0.03 | +0.10 |
-  | Both | −0.05 | +0.13, and about 1 dB louder |
+  Measured over the 243 test inputs against the unprocessed input, `levelAgc`
+  4, `compression` 1.5 and both together made the output no better at the
+  default settings. Played as loud as the DAC allows, with a hiss of 2 codes
+  RMS added, each made it better, and both together most, and about 1 dB
+  louder.
 
   The hiss level is an assumption, not a measurement of real hardware.
   Compression of 2 or more, or lifting only the quiet frames, cost more than
@@ -143,7 +140,8 @@ memory fixed the cases found. Voiced fricatives come out voiced, the choice
   best pass is kept. Because of the glide, a frame's window also holds part of
   its neighbours. Measuring both sides the same way, and damping the
   correction, keeps this stable. Lowering unvoiced frames below the input's
-  level (by 1–6 dB) only lowered PESQ, most of all on the recordings.
+  level (by 1–6 dB) only made the output worse, most of all on the
+  recordings.
 - **Too loud at index 1.** A frame still more than 12 dB above its target at
   energy index 1 becomes silence. This happens with strongly resonant filters
   ([Implementation choices](choices.md#settled-by-the-datasheet), the quietest frame).
@@ -167,8 +165,8 @@ memory fixed the cases found. Voiced fricatives come out voiced, the choice
   quantised K: an Itakura-style likelihood ratio. The segment's K is either
   its first frame's or the K quantised from the segment's pooled normalised
   autocorrelation, whichever costs less. At equal bit rate this beats a greedy
-  rule (a repeat when the stored K cost at most 0.8 dB) by 0.01–0.06 PESQ, or
-  saves about 100 bit/s at equal quality. A repeat never crosses
+  rule (a repeat when the stored K cost at most 0.8 dB) on quality, or saves
+  about 100 bit/s at equal quality. A repeat never crosses
   silence or a change of voicing.
 - **Voicing rules.** A voiced repeat never follows an unvoiced frame, and the
   first voiced frame after unvoiced speech is always full (§12.2). Unvoiced

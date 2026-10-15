@@ -68,7 +68,7 @@ If this relates to a documented behaviour, reference it:
 - Reference datasheet: docs/technical/datasheet/ (e.g. §8.8, §12.8, §12.9)
 - TI data manuals: docs/technical/sources/
 - Acorn Speech System User Guide (Section 5, 6 or 7)
-- The quality measures: plan §3.3 (docs-tech/application-plan.md)
+- The quality measures: docs/application/user-manual/encoder.md
 -->
 
 ## Possible Solution

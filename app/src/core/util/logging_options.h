@@ -18,12 +18,12 @@ class QCommandLineParser;
 
 namespace speak5220::core {
 
-// Adds the logging options of plan §2.6 to `parser`.
+// Adds the logging options to `parser`.
 void AddLoggingOptions(QCommandLineParser& parser);
 
 // Reads the logging options from a parser that has processed its
 // arguments. An option not given takes its value from `defaults`: the
-// GUI's preferences (plan §2.6), so a command-line option overrides the
+// GUI's preferences, so a command-line option overrides the
 // preference for that run. Fails for an unknown level, or for
 // --no-console-log with no log file.
 StatusOr<LogSettings> LogSettingsFromParser(const QCommandLineParser& parser,

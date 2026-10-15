@@ -17,7 +17,7 @@
 
 namespace speak5220::app {
 
-// Plan §5 and §4.1: "37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3".
+// "37.2 KB · 3 PHROMs of 64 · 4.1 KB free in PHROM 3".
 // The size is every PHROM in use, overheads included
 // (PhromAllocation::TotalBytes()), in units of 1024 bytes with one decimal.
 // "No PHROMs in use" when nothing is placed. Appended when they apply:

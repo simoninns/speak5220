@@ -18,7 +18,7 @@
 
 namespace speak5220::core::project {
 
-// IProjectStore over a directory (plan §4): the form of the test fixtures,
+// IProjectStore over a directory: the form of the test fixtures,
 // which can be diffed and reviewed. Saving writes a complete new directory
 // beside the project (<path>.saving), then renames the old one to <path>~
 // and the new one into place. A directory that holds files but no

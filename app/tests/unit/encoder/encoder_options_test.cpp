@@ -26,7 +26,7 @@ namespace speak5220::core::encoder {
 namespace {
 
 // tms5220enc.py DEFAULTS, but for five chosen on the corpus and Acorn's
-// PHROM (HLD §9).
+// PHROM.
 TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
   const EncoderOptions o;
   EXPECT_EQ(o.target_rms, 20.0);
@@ -41,7 +41,7 @@ TEST(EncoderOptionsTest, DefaultsAreTheReferencesButForFiveChosenOnes) {
 }
 
 // Not in the reference encoder: short voicing runs are smoothed by
-// default, and there is no preprocessing (HLD §9).
+// default, and there is no preprocessing.
 TEST(EncoderOptionsTest, VoicingRunsAreSmoothedAndNothingIsPreprocessed) {
   const EncoderOptions o;
   EXPECT_EQ(o.voicing_min_run, 2);
@@ -67,8 +67,7 @@ TEST(EncoderOptionsTest, OptionsWithAnOffValueNameIt) {
 }
 
 // The noise gate and its speed, the bass cut and the treble tilt are the
-// preprocessing's
-// (plan Phase 11), listed first; the rest are the encoder's.
+// preprocessing's, listed first; the rest are the encoder's.
 TEST(EncoderOptionsTest, PreprocessingOptionsComeFirst) {
   std::vector<std::string_view> preprocessing;
   bool encoder_seen = false;
@@ -129,7 +128,7 @@ TEST(EncoderOptionsTest, NewOptionsAreCheckedAgainstTheirRanges) {
 }
 
 // The reference's options that made no difference on the corpus, or
-// repeated another option, are fixed in the encoder (HLD §8, "Options"),
+// repeated another option, are fixed in the encoder,
 // so a project that still lists one is told it is not an option.
 TEST(EncoderOptionsTest, FixedOptionsAreNotOptions) {
   EncoderOptions o;
@@ -146,7 +145,7 @@ TEST(EncoderOptionsTest, FixedOptionsAreNotOptions) {
 }
 
 // The resonance hold is not in the reference encoder either, and is on
-// by default: it removes pops a high voice can give (HLD §9).
+// by default: it removes pops a high voice can give.
 TEST(EncoderOptionsTest, ResonanceHoldIsOnByDefault) {
   EXPECT_EQ(EncoderOptions{}.resonance_hold_db, 14.0);
   EncoderOptions o;
@@ -159,7 +158,7 @@ TEST(EncoderOptionsTest, ResonanceHoldIsOnByDefault) {
 }
 
 // The noise gate is not in the reference encoder, and is off by default:
-// what it mutes is the user's choice (HLD §9). Its speed has a default, and
+// what it mutes is the user's choice. Its speed has a default, and
 // the GUI disables it while the gate is off; it is the only option that
 // needs another.
 TEST(EncoderOptionsTest, NoiseGateIsOffByDefault) {

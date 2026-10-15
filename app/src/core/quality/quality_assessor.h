@@ -28,7 +28,7 @@
 namespace speak5220::core::quality {
 
 // The version of the measures and their calibration. A project's cached
-// quality records it, and is measured again when it differs (plan §4), so
+// quality records it, and is measured again when it differs, so
 // it changes whenever the same encoding can be given other figures or
 // another score.
 inline constexpr int kMeasuresVersion = 1;
@@ -39,7 +39,7 @@ struct QualityAssessment {
   QualityScore score;
 };
 
-// Assesses encodings (plan §3.3). Implementations are thread-safe.
+// Assesses encodings. Implementations are thread-safe.
 class IQualityAssessor {
  public:
   virtual ~IQualityAssessor() = default;

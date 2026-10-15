@@ -20,7 +20,7 @@ namespace speak5220::core::lpc {
 // speak5220 datasheet §8.1: each frame lasts 25 ms (200 samples at 8 kHz).
 inline constexpr double kFrameSeconds = 0.025;
 
-// What a phrase's frames add up to (plan §5, the encoder panel). A plain
+// What a phrase's frames add up to (the encoder panel). A plain
 // value type.
 struct FrameStatistics {
   // Frames before the stop, and how many of them are of each kind.

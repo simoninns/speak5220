@@ -77,7 +77,7 @@ struct WavSamples {
 };
 core::StatusOr<WavSamples> ReadWavSamples(const std::filesystem::path& path);
 
-// How an encoding compares with its reference (plan §3.2).
+// How an encoding compares with its reference.
 struct EncodingComparison {
   bool identical = false;
   // Every differing frame is a near-tie frame of the reference.

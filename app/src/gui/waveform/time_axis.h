@@ -21,7 +21,7 @@ struct TimeExtent {
   friend bool operator==(const TimeExtent& a, const TimeExtent& b) = default;
 };
 
-// Plan §5: which source sample is at each pixel. Both waveform panes count
+// Which source sample is at each pixel. Both waveform panes count
 // time in samples of the phrase's source audio, so with the same axis the
 // same sound is at the same place in both (the encoded pane places its
 // own samples by the encoded audio's offset). A plain value type.

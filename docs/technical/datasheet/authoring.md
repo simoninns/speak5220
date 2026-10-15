@@ -51,7 +51,7 @@ A voicing change therefore takes effect in one step, where the frame's values ar
 
 **Quietening a pause.** A voiced frame at energy index 1 with every K at its table entry nearest zero (Table 8-6: K1 index 23, K2 9, K3 8, K4 6, K5 7, K6 6, K7 6, K8–K10 3) leaves the filter neutral K to hold. The silence frames after it are then exactly code 0, at the bench's noise floor: 0.7 to 0.8 mV rms at TP2, 47 dB below the loudest frame, in all three pauses tested, two of two utterances [p12-03 to p12-06, p12-08]. Put it in the second frame of the pause, not the first:
 
-- In the first frame of the pause, the change from the sound before is a glide ([§8.7](excitation-interpolation.md#87-interpolation)). The K then move to neutral while that sound fades, which dulls its end. In the model, over the 243 recordings of the phase 11 corpus, this lowered PESQ by 0.02 in the median.
+- In the first frame of the pause, the change from the sound before is a glide ([§8.7](excitation-interpolation.md#87-interpolation)). The K then move to neutral while that sound fades, which dulls its end. In the model, over the 243 recordings of the phase 11 corpus, this made the output slightly worse in the median.
 - After a silence frame, the change is inhibited: the K jump while the energy is already 0, and the frame's only output is the chirp at energy index 1, within a code of zero [p12-05, p12-06].
 - With no silence frame after it, the next sound would glide in from it, voiced to voiced, instead of starting at once as it does after silence.
 

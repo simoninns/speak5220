@@ -51,7 +51,7 @@ struct OptimiseHistoryRow {
   core::optimiser::Candidate candidate;
 };
 
-// Plan §3.3 and Phase 7: Optimise, and Optimise all over a selection, in
+// Optimise, and Optimise all over a selection, in
 // the GUI. Start() copies the project and runs core::optimiser::Optimiser
 // on each phrase in list order, one at a time, as a job on
 // EncodingTools::optimiser_driver; each search's candidates run on the

@@ -27,7 +27,7 @@
 
 namespace speak5220::core::project {
 
-// Export formats and their options (plan §6).
+// Export formats and their options.
 inline constexpr std::string_view kAcornPhromFormat = "acorn-phrom";
 inline constexpr std::string_view kCHeaderPhromFormat = "c-header-phrom";
 inline constexpr std::string_view kCHeaderSpeakExternalFormat =
@@ -94,14 +94,14 @@ Status CheckExportBase(std::string_view base);
 StatusOr<std::vector<const Phrase*>> PhrasesInScope(const Project& project,
                                                     const ExportPreset& preset);
 
-// Plan §4.1: the header strings of PHROM `number` (from 1): its own, if
+// The header strings of PHROM `number` (from 1): its own, if
 // the project sets them, or the project's with " <number>" appended to the
 // second string.
 std::vector<std::string> PhromHeaderStrings(const ProjectSettings& settings,
                                             int number);
 
 // One Acorn PHROM image per PHROM that `phrases` fill, allocated in their
-// order as the project's are (plan §4.1, speak5220 datasheet §12.8), from
+// order as the project's are (speak5220 datasheet §12.8), from
 // their current frames: word numbers from 127, each PHROM with the ASCII
 // entries whose phrase it holds. Fails if a phrase has no frames or is too
 // large for a PHROM.
@@ -113,7 +113,7 @@ StatusOr<std::vector<packaging::PhromImage>> BuildAcornPhroms(
 
 // The PHROMs of a BBC Micro disc for `phrases`: allocated as
 // BuildAcornPhroms() allocates them, each with the second of its header
-// strings as its title (plan §4.1) and its phrases' Speak External streams
+// strings as its title and its phrases' Speak External streams
 // (speak5220 datasheet §12.9). Fails as BuildAcornPhroms(), and if the
 // phrases fill more PHROMs than the disc holds (bbc::BbcDisc::kMaxPhroms).
 StatusOr<std::vector<bbc::BbcDiscPhrom>> BuildBbcDiscPhroms(
@@ -126,7 +126,7 @@ StatusOr<std::vector<bbc::BbcDiscPhrom>> BuildBbcDiscPhroms(
 // - the C headers: "<base>.h", with names prefixed by the C identifier of
 //   `base` in lower case (constants in upper case);
 // - wav: "<base>_<identifier>.wav" per phrase, with the phrase's C
-//   identifier (plan §4). "encoded" is the chip's SPEAKER output through
+//   identifier. "encoded" is the chip's SPEAKER output through
 //   the VSM path, 16-bit at 8 kHz; "original" the phrase's 8 kHz source,
 //   24-bit, as the project holds it; "preprocessed" that source
 //   preprocessed by the phrase's options (preprocess::Preprocess()),
