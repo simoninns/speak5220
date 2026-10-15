@@ -128,9 +128,13 @@
           speak5220 = pkgs.stdenv.mkDerivation (finalAttrs: {
             pname = "speak5220";
             inherit version;
+            # app/ and the licence, which the GUI's resources embed
             src = lib.fileset.toSource {
-              root = ./app;
-              fileset = ./app;
+              root = ./.;
+              fileset = lib.fileset.unions [
+                ./app
+                ./LICENSE
+              ];
             };
 
             nativeBuildInputs = [
@@ -145,7 +149,7 @@
             # app/CMakeLists.txt refuses a build directory inside the source
             # tree, so build next to it rather than in source/build
             cmakeBuildDir = "../build";
-            cmakeDir = "../source";
+            cmakeDir = "../source/app";
 
             # The sources carry no .git, so the version is passed in
             cmakeFlags = [

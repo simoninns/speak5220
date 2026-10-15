@@ -140,3 +140,6 @@ modules:
       - type: dir
         path: ../..
         dest: app
+      # Beside app/, where the GUI's resources embed it from
+      - type: file
+        path: ../../../LICENSE
