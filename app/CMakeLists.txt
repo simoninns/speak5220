@@ -37,6 +37,11 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(SPEAK5220_BUILD_TESTS "Build the Google Test suites" ON)
 option(SPEAK5220_SANITIZE "Build with AddressSanitizer and UBSan" OFF)
+option(
+    SPEAK5220_PACKAGE
+    "Bundle Qt into the installed application and build the Windows MSI or macOS DMG with CPack"
+    OFF
+)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(GNUInstallDirs)
@@ -45,6 +50,10 @@ include(QualityTargets)
 include(Dependencies)
 
 add_subdirectory(src)
+
+if(SPEAK5220_PACKAGE)
+    include(Packaging)
+endif()
 
 if(SPEAK5220_BUILD_TESTS)
     enable_testing()

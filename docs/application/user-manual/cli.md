@@ -14,6 +14,15 @@ speak5220-cli --help
 speak5220-cli --help-all   # also Qt's own options
 ```
 
+The installers ([installing](../getting-started.md#installing)) put it
+here:
+
+| Installer | Running `speak5220-cli` |
+|---|---|
+| Linux (Flatpak) | `flatpak run --command=speak5220-cli io.github.simoninns.speak5220 ...`; it reads and writes files in your home directory only |
+| Windows (MSI) | `"C:\Program Files\Speak5220\bin\speak5220-cli.exe" ...` |
+| macOS (DMG) | `/Applications/speak5220.app/Contents/MacOS/speak5220-cli ...` |
+
 ## Commands
 
 A command is followed by the project: a `.s5proj` file, or any other path

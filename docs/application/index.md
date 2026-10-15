@@ -34,6 +34,8 @@ So far the application has:
   in the [encoder options](reference/encoder-options.md) reference;
 - logging options shared by both executables.
 
-Messages and what to do about them are in
+Each release has installers for Linux (Flatpak), Windows (MSI) and macOS
+(DMG); [getting started](getting-started.md#installing) says how to
+install them. Messages and what to do about them are in
 [troubleshooting](user-manual/troubleshooting.md). Building it is described
 in `BUILD.md` in the repository.

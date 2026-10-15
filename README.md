@@ -19,7 +19,7 @@ So far its core library has the emulator, the encoder and the quality measures (
 
 | Path | Contents |
 |---|---|
-| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), fixture projects for the tests (`projects/`), reference data from the retired encoder, emulator and quality tools, and the recorded hashes of the fixtures' exports (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`, with overlay ports in `vcpkg-ports/`), the icon set, About-box logo and Linux `.desktop` file (`resources/`), and check, corpus, benchmark, export, BBC Micro emulator golden-data, icon and encoder-quality diagnostic scripts (`scripts/`, with the diagnostics' option sets in `scripts/sweeps/`) |
+| [`app/`](app/CMakeLists.txt) | The Speak5220 application: its CMake build, sources (`src/`), tests (`tests/`), fixture projects for the tests (`projects/`), reference data from the retired encoder, emulator and quality tools, and the recorded hashes of the fixtures' exports (`golden/`), style configuration, the vcpkg manifest for Windows and macOS (`vcpkg.json`, with overlay ports in `vcpkg-ports/`), the installers' build files (`packaging/`: the Flatpak manifest and the macOS vcpkg triplet), the icon set, About-box logo, Linux `.desktop` file and AppStream metainfo (`resources/`), and check, corpus, benchmark, export, BBC Micro emulator golden-data, icon and encoder-quality diagnostic scripts (`scripts/`, with the diagnostics' option sets in `scripts/sweeps/`) |
 | [`docs/`](docs/index.md) | The published documentation site: the reference datasheet and the research record |
 | [`docs-tech/`](docs-tech/application-plan.md) | Developer documents that are not part of the site: the application's implementation plan and its high-level design |
 | [`investigation/`](investigation/README.md) | The research: the capture board (`kicad/`), its firmware (`firmware/`), the host tools (`tools/`), the captures (`captures/`), the speech PROM manifests (`proms/`), and the reference emulator (`emulator/`) |
@@ -28,7 +28,7 @@ So far its core library has the emulator, the encoder and the quality measures (
 | [`BUILD.md`](BUILD.md) | Development environment and build instructions |
 | [`TESTING.md`](TESTING.md) | Testing vision, strategy and rules for the application |
 | [`AGENTS.md`](AGENTS.md) | Contribution and coding standards. `CLAUDE.md`, `.github/copilot-instructions.md`, `.cody/` and `.vibe/` point AI coding assistants to it |
-| `.github/` | Issue and pull request templates, the application's CI workflow, and the workflow that publishes the documentation site |
+| `.github/` | Issue and pull request templates, the application's CI workflows, the release workflow that builds the installers, and the workflow that publishes the documentation site |
 
 ## Contributing
 

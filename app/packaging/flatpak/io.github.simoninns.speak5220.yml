@@ -1,0 +1,142 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# The Linux Flatpak. The KDE runtime brings Qt (with Multimedia, D-Bus and
+# Wayland), and its freedesktop base brings libsndfile, libsamplerate and
+# zlib; the other libraries are built here, at the versions flake.nix uses.
+# Build from the repository root (BUILD.md, "Flatpak"):
+#   flatpak-builder --user --install-deps-from=flathub --force-clean \
+#     --state-dir build/flatpak/state build/flatpak/app \
+#     app/packaging/flatpak/io.github.simoninns.speak5220.yml
+id: io.github.simoninns.speak5220
+runtime: org.kde.Platform
+# The Qt minor version of flake.nix
+runtime-version: "6.11"
+sdk: org.kde.Sdk
+command: speak5220
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Playback
+  - --socket=pulseaudio
+  # Projects and exports anywhere in the home directory: the recent-file
+  # list reopens projects by path, a project can be a directory, and an
+  # export writes several files beside one another
+  - --filesystem=home
+cleanup:
+  - /include
+  - /lib/cmake
+  - /lib/pkgconfig
+  - /share/doc
+  - "*.a"
+modules:
+  - name: spdlog
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSPDLOG_BUILD_EXAMPLE=OFF
+    sources:
+      - type: git
+        url: https://github.com/gabime/spdlog.git
+        tag: v1.17.0
+        commit: 79524ddd08a4ec981b7fea76afd08ee05f83755d
+
+  - name: yaml-cpp
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -DYAML_CPP_BUILD_TESTS=OFF
+      - -DYAML_CPP_BUILD_TOOLS=OFF
+      # 0.8.0 asks for CMake 3.4, which CMake 4 no longer accepts
+      - -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+    sources:
+      - type: git
+        url: https://github.com/jbeder/yaml-cpp.git
+        tag: 0.8.0
+        commit: f7320141120f720aecc4c32be25586e7da9eb978
+
+  # Without the optional compression and encryption, as on Windows and
+  # macOS (app/vcpkg.json)
+  - name: libzip
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DENABLE_BZIP2=OFF
+      - -DENABLE_LZMA=OFF
+      - -DENABLE_ZSTD=OFF
+      - -DENABLE_GNUTLS=OFF
+      - -DENABLE_MBEDTLS=OFF
+      - -DENABLE_OPENSSL=OFF
+      - -DENABLE_COMMONCRYPTO=OFF
+      - -DENABLE_WINDOWS_CRYPTO=OFF
+      - -DBUILD_TOOLS=OFF
+      - -DBUILD_REGRESS=OFF
+      - -DBUILD_OSSFUZZ=OFF
+      - -DBUILD_EXAMPLES=OFF
+      - -DBUILD_DOC=OFF
+    sources:
+      - type: git
+        url: https://github.com/nih-at/libzip.git
+        tag: v1.11.4
+        commit: 6f8a0cdd24a0dc6cce9dac4a7679da784ab124ea
+
+  - name: pocketfft
+    buildsystem: simple
+    build-commands:
+      - install -Dm644 pocketfft_hdronly.h /app/include/pocketfft_hdronly.h
+    sources:
+      - type: git
+        url: https://github.com/mreineck/pocketfft.git
+        commit: c90e55b3d529f8efa40ed01a20de22405f45fc65
+
+  - name: libfvad
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: git
+        url: https://github.com/dpirch/libfvad.git
+        commit: 532ab666c20d3cfda38bca63abbb0f152706c369
+
+  # Without fused multiply-add contraction, as the application is compiled
+  # (app/cmake/CompilerWarnings.cmake), so its pitch tracks are the same on
+  # every platform
+  - name: sptk
+    buildsystem: cmake-ninja
+    builddir: true
+    build-options:
+      cflags: -ffp-contract=off
+      cxxflags: -ffp-contract=off
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DSPTK_BUILD_COMMANDS=OFF
+    sources:
+      - type: git
+        url: https://github.com/sp-nitech/SPTK.git
+        tag: v4.4
+        commit: f423ff91f91f80c72642b47e521046d29a3fc576
+
+  # app/CMakeLists.txt refuses a build directory inside app/, so the sources
+  # go in app/ and the build beside them. The sources carry no .git, so the
+  # version (the commit) is read from packaging/flatpak/version when the
+  # release workflow has written it there.
+  - name: speak5220
+    buildsystem: simple
+    build-commands:
+      - >-
+        cmake -S app -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        -DCMAKE_INSTALL_PREFIX=/app -DSPEAK5220_BUILD_TESTS=OFF
+        -DSPEAK5220_GIT_VERSION="$(cat app/packaging/flatpak/version 2>/dev/null || echo unknown)"
+      - cmake --build build
+      - cmake --install build
+    sources:
+      - type: dir
+        path: ../..
+        dest: app

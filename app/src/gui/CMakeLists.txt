@@ -112,12 +112,16 @@ install(
     BUNDLE DESTINATION .
 )
 
-# Linux and the BSDs: the menu entry and the icon theme's sizes, named by
-# the application id
+# Linux and the BSDs: the menu entry, the software centre's description
+# (AppStream) and the icon theme's sizes, named by the application id
 if(UNIX AND NOT APPLE)
     install(
         FILES "${SPEAK5220_RESOURCES}/${SPEAK5220_APP_ID}.desktop"
         DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+    )
+    install(
+        FILES "${SPEAK5220_RESOURCES}/${SPEAK5220_APP_ID}.metainfo.xml"
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo
     )
     install(
         DIRECTORY "${SPEAK5220_RESOURCES}/icons/"

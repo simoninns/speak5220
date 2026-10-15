@@ -7,7 +7,8 @@
 #   - a C++ file's "File:" line matches its filename exactly.
 #
 # Usage: check-spdx.sh [FILE...]
-# With no arguments, checks every source file under app/, flake.nix and the
+# With no arguments, checks every source file under app/ (with the
+# packaging files and the desktop metadata), flake.nix and the
 # workflows in .github/workflows/. With arguments (as the pre-commit hook
 # passes them), checks those of the given files that are source files.
 # Run from the repository root.
@@ -25,10 +26,13 @@ is_source_file() {
   # The BBC Micro player's BASIC source carries its header in REM lines;
   # the reference programs under app/golden/ are data.
   app/src/*.bas) return 0 ;;
+  # The Flatpak manifest and the vcpkg triplets
+  app/packaging/*) return 0 ;;
   app/*)
     case "$name" in
     # YAML under app/ (projects, golden data) is data, not source.
     *.cpp | *.h | *.cmake | CMakeLists.txt | *.nix | *.sh | *.py | *.lua | *.ui | *.qrc) return 0 ;;
+    *.desktop | *.metainfo.xml) return 0 ;;
     *) return 1 ;;
     esac
     ;;

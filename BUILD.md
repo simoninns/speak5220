@@ -57,6 +57,8 @@ CMake options:
 |---|---|---|
 | `SPEAK5220_BUILD_TESTS` | `ON` | Builds the Google Test suites (needs Google Test) |
 | `SPEAK5220_SANITIZE` | `OFF` | Builds with AddressSanitizer and UBSan (GCC or Clang); use with `-DCMAKE_BUILD_TYPE=Debug` in a separate build directory |
+| `SPEAK5220_PACKAGE` | `OFF` | Windows and macOS only: installing also bundles Qt beside the programs, and `cpack` builds the MSI or DMG (see [Installers](#installers)) |
+| `SPEAK5220_PACKAGE_VERSION` | `0.0.0` | With `SPEAK5220_PACKAGE`: the installer's version, three numbers |
 
 Debug and sanitizer builds also range-check `operator[]` on standard containers (`_GLIBCXX_ASSERTIONS`). Every build compiles with `-ffp-contract=off` (GCC, Clang), so the encoder's floating point gives the same frames on every platform. SPTK is built the same way, by the flake and by its vcpkg port, so its pitch tracks match the reference data on ARM64 too.
 
@@ -74,6 +76,42 @@ ctest --test-dir build/app -L functional
 ```
 
 `.github/workflows/app-platforms.yml` does the same on GitHub's Windows and macOS runners.
+
+### Installers
+
+The release workflow (see [CI](#ci)) builds three installers. Each can also be built by hand.
+
+**Flatpak (Linux).** The manifest is `app/packaging/flatpak/io.github.simoninns.speak5220.yml`, on the KDE runtime 6.11 from Flathub; it builds the libraries the runtime lacks. Build from the repository root with `flatpak-builder` (not in the Nix shell; install it from the distribution):
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+git rev-parse --short=7 HEAD > app/packaging/flatpak/version   # optional: the version it reports
+flatpak-builder --user --install-deps-from=flathub --force-clean \
+  --state-dir build/flatpak/state --repo build/flatpak/repo build/flatpak/app \
+  app/packaging/flatpak/io.github.simoninns.speak5220.yml
+flatpak build-bundle build/flatpak/repo build/flatpak/speak5220.flatpak io.github.simoninns.speak5220
+```
+
+**MSI (Windows) and DMG (macOS).** Configure a separate build with `SPEAK5220_PACKAGE=ON`, with the libraries linked statically, then run `cpack`. The MSI needs the [WiX](https://wixtoolset.org) 4 .NET tool and its UI extension:
+
+```bash
+dotnet tool install --global wix --version 4.0.4
+wix extension add --global WixToolset.UI.wixext/4.0.4
+```
+
+Then, from a Visual Studio developer prompt on Windows:
+
+```bash
+cmake -S app -B build/package -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+  -DVCPKG_MANIFEST_DIR="$PWD/app" -DCMAKE_PREFIX_PATH="<Qt directory>" \
+  -DSPEAK5220_BUILD_TESTS=OFF -DSPEAK5220_PACKAGE=ON -DSPEAK5220_PACKAGE_VERSION=1.0.0 \
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+cmake --build build/package
+cpack --config build/package/CPackConfig.cmake -B build/package/installer
+```
+
+On macOS, replace the triplet with `-DVCPKG_TARGET_TRIPLET=universal-osx "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0` (the overlay triplet in `app/packaging/vcpkg-triplets/`). The DMG's bundle is signed ad hoc and not notarised. Use Qt from the Qt installer or aqtinstall: a bundle made from the Nix shell's Qt is incomplete, because Nix keeps each Qt module in its own store path and macdeployqt looks in one.
 
 The testing rules are in [`TESTING.md`](TESTING.md).
 
@@ -167,9 +205,11 @@ Nix builds from the files git tracks, so `git add` new files before running thes
 
 ### CI
 
-`.github/workflows/app.yml` runs on every push and pull request, on GitHub's hosted `ubuntu-latest` runner with Nix: `nix flake check` (every hook except `clang-tidy`, on every file), the build with both test lanes and `clang-tidy`, both lanes again under ASan and UBSan, and `nix build .#speak5220`.
+`.github/workflows/app.yml` runs on every push to a branch and every pull request, on GitHub's hosted `ubuntu-latest` runner with Nix: `nix flake check` (every hook except `clang-tidy`, on every file), the build with both test lanes and `clang-tidy`, both lanes again under ASan and UBSan, and `nix build .#speak5220`.
 
-`.github/workflows/app-platforms.yml` builds and runs both lanes on Windows (MSVC) and macOS. It runs only for a release tag (`v*`) or when started by hand from the repository's Actions tab, not on every push.
+`.github/workflows/app-platforms.yml` builds and runs both lanes on Windows (MSVC) and macOS. It runs only for a release or when started by hand from the repository's Actions tab, not on every push.
+
+`.github/workflows/release.yml` runs for a tag `vMAJOR.MINOR.PATCH` (optionally with a suffix, such as `v1.0.0-rc1`, for a pre-release). It runs both of the above; once they pass, it builds the Flatpak, the MSI and the DMG (see [Installers](#installers)) and drafts a GitHub Release with them and their SHA-256 checksums. Publish the draft by hand.
 
 ## Hardware (KiCad)
 

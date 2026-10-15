@@ -36,6 +36,7 @@ in [`docs/technical/datasheet/`](../../docs/technical/datasheet/index.md).
 | Format, lint, pre-commit hooks, CI on Linux | Implemented |
 | CI on Windows and macOS (release tags and manual runs) | Implemented; a manual run passes both lanes on both |
 | Nix dev shells and package | Implemented |
+| Installers: the Flatpak, the Windows MSI, the macOS DMG, and the release workflow (§21) | Implemented; the DMG's build checked locally. Still to be run: a test tag through the release workflow, and the installed checks on a Linux desktop, a clean Windows 11 and macOS (plan Phase 13) |
 | Export: Acorn PHROM images, C headers, WAV, presets, the output hashes (§18) | Implemented |
 | Export: the BBC Micro disc (§19) | Implemented; checked on MAME's emulated BBC Micro. The BBC Micro hardware checks (plan Phase 10, tasks 1 and 6) are still to be run |
 
@@ -48,9 +49,14 @@ app/
   CMakeLists.txt                top level: in-source guard, C++20, options
   .clang-format  .clang-tidy  CPPLINT.cfg  .gersemirc
   vcpkg.json                    the libraries for Windows and macOS (§3)
+  vcpkg-configuration.json      its overlay ports and triplets
+  vcpkg-ports/                  the libfvad and SPTK ports (§3)
   cmake/                        CompilerWarnings.cmake, Dependencies.cmake,
                                 QualityTargets.cmake, GitVersion.cmake,
-                                EmbedText.cmake (§19)
+                                EmbedText.cmake (§19), Packaging.cmake (§21)
+  packaging/
+    flatpak/                    the Flatpak manifest (§21)
+    vcpkg-triplets/             universal-osx.cmake, the DMG's libraries (§21)
   scripts/                      check-spdx.sh, check-header-guards.sh,
                                 clang-format-check.sh, clang-tidy.sh,
                                 format.sh, lint.sh; corpus-check.sh,
@@ -131,7 +137,8 @@ app/
   resources/                    the icon set (hicolor PNGs, .ico, .icns),
                                 the About box's logo, the .qrc, the Windows
                                 .rc and the Linux .desktop file, generated
-                                by scripts/generate-icons.sh from assets/logo/
+                                by scripts/generate-icons.sh from assets/logo/;
+                                the AppStream metainfo (§21)
   tests/
     .clang-tidy                 the app's settings, plus one test exception
     support/                    speak5220_test_support (helpers, mocks, golden
@@ -142,11 +149,6 @@ app/
                                 the GUI's mocks and fakes, test palettes
     gui/unit/  gui/functional/  speak5220_gui_unit_tests, speak5220_gui_functional_tests
 ```
-
-Planned additions, each created with its first code (plan §2.1):
-
-- The AppStream metainfo in `app/resources/`, and `app/packaging/` (Flatpak,
-  WiX/CPack, macOS).
 
 `s5core` is a plain C++20 static library that depends on QtCore at most (for
 the shared command-line options). All DSP, emulation, encoding, packaging and
@@ -255,7 +257,8 @@ Design points:
   (`_GLIBCXX_ASSERTIONS`) in the Debug and sanitizer builds, because the
   emulator and DSP code index arrays in every sample.
 
-**CI** (`.github/workflows/app.yml`), on every push and pull request, on
+**CI** (`.github/workflows/app.yml`), on every push to a branch and every
+pull request, and for a release tag from `release.yml` (§21), on
 `ubuntu-latest` with Nix (decision D8): `nix flake check`; build, both lanes
 and `clang-tidy`; both lanes under ASan/UBSan (Debug); `nix build
 .#speak5220`. Protecting `main` so that this workflow must pass is a
@@ -264,8 +267,9 @@ repository setting on GitHub.
 **Windows and macOS CI** (`.github/workflows/app-platforms.yml`, decision
 D7): `windows-latest` (MSVC, through `ilammy/msvc-dev-cmd`) and
 `macos-latest`, each building with Ninja and running both lanes. They run
-only for a `v*` tag or when started by hand (`workflow_dispatch`), never on
-an ordinary push. Qt comes from `jurplel/install-qt-action` (aqtinstall),
+only when started by hand (`workflow_dispatch`) or for a `v*` tag, from
+`release.yml`, which also has them build the installers (§21); never on an
+ordinary push. Qt comes from `jurplel/install-qt-action` (aqtinstall),
 cached; vcpkg (`lukka/run-vcpkg`) builds the other libraries from source on
 each run. A manually started run passes both lanes on both platforms (plan
 Phase 2 task 7).
@@ -3095,3 +3099,78 @@ selection, reporting the files it could not read.
   docs-coverage test checks that every YAML key, encoder option, CLI
   option and export format is in the reference, and
   `mkdocs build --strict` passes.
+
+---
+
+## 21. Packaging and release
+
+**Implemented** (plan Phase 13). Three installers, each built on GitHub's
+hosted runners from free tools (decision D8), and none signed by a paid
+certificate:
+
+| Installer | Built by | Holds |
+|---|---|---|
+| Flatpak, `Speak5220-<version>-linux-x86_64.flatpak` | `flatpak-builder`, from `app/packaging/flatpak/io.github.simoninns.speak5220.yml` | Both programs, the `.desktop` file, the AppStream metainfo and the icons |
+| Windows MSI, `Speak5220-<version>-windows-x64.msi` | CPack's WiX generator (WiX 4 .NET tool) | `bin\` with both programs, Qt (windeployqt) and the MSVC runtime; a Start menu shortcut |
+| macOS DMG, `Speak5220-<version>-macos-universal.dmg` | CPack's DragNDrop generator | `speak5220.app` (arm64 and x86_64, macOS 13 or later) with Qt (macdeployqt) and `speak5220-cli` in `Contents/MacOS/`, and a link to `/Applications` |
+
+- **Flatpak.** The KDE runtime `org.kde.Platform` 6.11 (the flake's Qt minor
+  version) brings Qt with Multimedia, D-Bus and Wayland; its freedesktop
+  base brings libsndfile, libsamplerate and zlib. The manifest builds
+  spdlog, yaml-cpp, libzip (without its optional compression and
+  encryption), pocketfft, libfvad and SPTK (with `-ffp-contract=off`, §3),
+  pinned to the flake's versions by tag and commit. The application's own
+  module copies `app/` to `app/` and builds beside it, as the in-source
+  guard requires. Its sources have no `.git`, so the version is read from
+  `app/packaging/flatpak/version` (gitignored), which the release workflow
+  writes; without it the version is `unknown`. The sandbox has the home
+  directory (`--filesystem=home`), rather than files from the portal's
+  dialogs, because the recent-file list reopens projects by path, a project
+  can be a directory, and an export writes several files side by side.
+- **MSI and DMG** (`cmake/Packaging.cmake`, with `SPEAK5220_PACKAGE=ON`, on
+  Windows and macOS only). Installing runs a deploy script from
+  `qt_generate_deploy_script()` that runs windeployqt or macdeployqt on the
+  GUI, with the CLI as an additional executable, and writes `qt.conf`.
+  The other libraries are linked statically (`x64-windows-static-md`, and
+  the overlay triplet `universal-osx` for arm64 and x86_64 at macOS 13), so
+  Qt is all there is to bundle. On Windows, `InstallRequiredSystemLibraries`
+  adds the MSVC runtime beside the programs; the MSI's upgrade GUID is
+  fixed, so a newer MSI replaces an older one, and it shows the GPL as its
+  licence page. On macOS the CLI is installed inside the bundle, and the
+  deployed bundle is signed ad hoc (`codesign --sign -`), because
+  macdeployqt's changes break the linker's signatures and Apple silicon
+  runs no unsigned code; it is not notarised. CPack writes a `.sha256` file
+  beside each installer.
+- **Versions.** `SPEAK5220_PACKAGE_VERSION` (three numbers, default
+  `0.0.0`, as an MSI needs) names the MSI and DMG and is their product
+  version. The release workflow sets it from the tag. The programs still
+  report their commit (§3).
+- **Release** (`.github/workflows/release.yml`), for a tag
+  `vMAJOR.MINOR.PATCH`, optionally with a suffix such as `-rc1`: it calls
+  `app.yml` (the Linux checks) and `app-platforms.yml` with `package: true`
+  (the Windows and macOS lanes, and then, in the same jobs, a second
+  Release build with packaging on and `cpack`; hdiutil is retried, since it
+  sometimes fails on the runners). The Flatpak job waits for the Linux
+  checks, validates the `.desktop` file and the metainfo
+  (`desktop-file-validate`, `appstreamcli validate`), builds with
+  `flatpak-builder` (runtimes from Flathub) and bundles. A last job drafts
+  a GitHub Release with the three installers and their checksums and
+  generated notes, as a pre-release when the tag has a suffix; publishing
+  it is done by hand. A tag push does not also start `app.yml` directly, which
+  runs for branch pushes only.
+- **The user's view.** `getting-started.md` says how to install each one,
+  including getting past SmartScreen (the MSI) and Gatekeeper (the DMG),
+  and `cli.md` where each puts `speak5220-cli`.
+
+**Tests** (plan Phase 13). The macOS packaging was built locally with the
+Nix Qt: the DMG holds the signed bundle with both programs and the
+`/Applications` link, the bundled CLI runs, and `codesign --verify --deep`
+passes. (A bundle from the Nix Qt is not usable: Nix keeps Qt's modules in
+separate store paths, which macdeployqt does not search, so it misses the
+Multimedia plugins and leaves plugins pointing at the store; the runners'
+aqtinstall Qt is one prefix.) The metainfo passes `appstreamcli validate
+--pedantic` apart from its missing release list, and the `.desktop` file
+`desktop-file-validate`. Still to be run: a test tag through the release
+workflow (task 4), and installing each installer on a Linux desktop, a
+clean Windows 11 and macOS, starting the application and playing audio
+(tasks 1–3).

@@ -3,6 +3,14 @@
 Messages Speak5220 gives, what they mean, and what to do. `speak5220-cli`
 prints them on stderr, prefixed `speak5220-cli:`.
 
+## Installing
+
+| Message | Meaning |
+|---|---|
+| **Windows protected your PC** (Windows SmartScreen, opening the MSI) | The MSI is not signed with a paid certificate. Choose **More info**, then **Run anyway** (see [installing on Windows](../getting-started.md#windows-msi)) |
+| *"speak5220" Not Opened*, or *Apple could not verify "speak5220" is free of malware* (macOS) | The application is not notarised by Apple. Allow it in **System Settings > Privacy & Security** with **Open Anyway** (see [installing on macOS](../getting-started.md#macos-dmg)) |
+| A file cannot be opened or saved from the Flatpak, or `speak5220-cli` in the Flatpak cannot find a file | The Flatpak can use files in your home directory only. Move the file into your home directory |
+
 ## Phrase names
 
 | Message | Meaning |

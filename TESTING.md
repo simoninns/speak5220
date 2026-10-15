@@ -527,10 +527,11 @@ change that adds one without its entry fails.
 | Pre-commit | Format and lint checks (plan §1.3) | Every commit, locally |
 | `unit` | `ctest -L unit` | Every push in CI, on Linux; the packaged Nix build's check phase |
 | `functional` | `ctest -L functional`, GUI on the offscreen platform | Every push in CI, on Linux |
-| Windows and macOS | Both lanes on Windows and macOS | Only for a release (a `v*` tag) or when started by hand |
+| Windows and macOS | Both lanes on Windows and macOS | Only for a release (a `v*` tag, from `release.yml`) or when started by hand |
 | Sanitisers | Both lanes under ASan and UBSan (Debug) | Every push in CI, on Linux |
 | By hand | `corpus-check.sh`, `output-hashes.sh`, `benchmark.sh`, `bbc-check.sh`; the BBC Micro hardware check ([BBC Micro disc](docs/application/user-manual/bbc-disc.md)) | Before a release, and for any change to the encoder, packaging or BBC export |
 | By hand | `window-check.sh` | Before a release, and for any change to a window's layout or colours |
+| By hand | The installers: install the release workflow's Flatpak on a Linux desktop, its MSI on a clean Windows 11 and its DMG on macOS; start the application and play a phrase | Before publishing a release, and for any change to `app/packaging/`, `app/cmake/Packaging.cmake` or the release workflow |
 | By hand | `phrom-check.sh`, `option_sweep.py`, `phoneme-check.sh` | For a change meant to improve the encoder's output (the encoder-quality plan) |
 
 The default CI unit lane must stay fast and mocked. Do **not** add

@@ -3,8 +3,10 @@
 #
 # Builds and tests the Speak5220 application (app/) on Windows (MSVC) and
 # macOS (docs-tech/application-plan.md, Phase 2 task 7 and decision D7).
-# During development these jobs do not run on every push: only for a
-# release tag (v*) or when started by hand from the Actions tab.
+# During development these jobs do not run on every push: only when started
+# by hand from the Actions tab, or for a release tag (v*) from release.yml,
+# which also asks for the installers: after the tests pass, a second build
+# makes the Windows MSI or the macOS DMG (app/cmake/Packaging.cmake).
 # Qt comes from aqtinstall, pinned to the version in the Nix flake; the other
 # libraries come from vcpkg, pinned by the baseline in app/vcpkg.json (risk
 # R6); vcpkg builds them from source on each run. Uses only free services
@@ -13,10 +15,17 @@
 name: Application (Windows and macOS)
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
+  workflow_call:
+    inputs:
+      package:
+        description: Build the installers after the tests
+        type: boolean
+        default: false
+      version:
+        description: The installers' version, MAJOR.MINOR.PATCH
+        type: string
+        default: "0.0.0"
 
 permissions:
   contents: read
@@ -28,6 +37,9 @@ concurrency:
 env:
   # The Qt version of the Nix flake's nixpkgs (qtbase)
   QT_VERSION: "6.11.2"
+  # WiX, for the MSI: the .NET tool and the UI extension CPack's template
+  # uses, at matching versions
+  WIX_VERSION: "4.0.4"
 
 jobs:
   build:
@@ -71,3 +83,62 @@ jobs:
       # The GUI tests choose the offscreen platform themselves
       - name: Functional tests
         run: ctest --test-dir build/app -L functional --output-on-failure
+
+      # The installers. The libraries are linked statically, so only Qt is
+      # bundled (app/cmake/Packaging.cmake). The DMG is universal (arm64
+      # and x86_64, as Qt's binaries are) for macOS 13 or later, Qt 6.11's
+      # oldest.
+      - name: Install WiX
+        if: inputs.package && runner.os == 'Windows'
+        shell: bash
+        run: |
+          dotnet tool install --global wix --version "$WIX_VERSION"
+          wix="$USERPROFILE/.dotnet/tools/wix"
+          "$wix" extension add --global "WixToolset.UI.wixext/$WIX_VERSION"
+          "$wix" --version
+      - name: Configure the installer build
+        if: inputs.package
+        shell: bash
+        env:
+          PACKAGE_VERSION: ${{ inputs.version }}
+        run: |
+          if [[ $RUNNER_OS == Windows ]]; then
+            platform=(-DVCPKG_TARGET_TRIPLET=x64-windows-static-md)
+          else
+            platform=(
+              -DVCPKG_TARGET_TRIPLET=universal-osx
+              "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64"
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+            )
+          fi
+          cmake -S app -B build/package -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+            -DVCPKG_MANIFEST_DIR="$GITHUB_WORKSPACE/app" \
+            -DCMAKE_PREFIX_PATH="$QT_ROOT_DIR" \
+            -DSPEAK5220_BUILD_TESTS=OFF -DSPEAK5220_PACKAGE=ON \
+            -DSPEAK5220_PACKAGE_VERSION="$PACKAGE_VERSION" "${platform[@]}"
+      - name: Build the installer build
+        if: inputs.package
+        run: cmake --build build/package
+      # hdiutil, which makes the DMG, sometimes fails on GitHub's macOS
+      # runners with "Resource busy", so it is tried three times
+      - name: Make the installer
+        if: inputs.package
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if cpack --config build/package/CPackConfig.cmake \
+              -B build/package/installer; then
+              exit 0
+            fi
+            echo "cpack failed (attempt $attempt)"
+            sleep 10
+          done
+          exit 1
+      - name: Upload the installer
+        if: inputs.package
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ runner.os }}
+          path: build/package/installer/Speak5220-*
+          if-no-files-found: error

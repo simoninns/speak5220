@@ -1,0 +1,112 @@
+# SPDX-FileCopyrightText: (c) 2026 Simon Inns
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# A release (docs-tech/application-plan.md, Phase 13 task 4). A tag
+# vMAJOR.MINOR.PATCH, optionally with a suffix such as -rc1, runs the Linux
+# checks (app.yml) and the Windows and macOS tests (app-platforms.yml); when
+# they pass it builds the three installers, the Flatpak, the MSI and the
+# DMG, and drafts a GitHub Release with them, to be published by hand. A tag
+# with a suffix makes a pre-release. The installers are unsigned and the DMG
+# is not notarised (decision D8). Uses only free services: GitHub's hosted
+# runners and Flathub's runtimes.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The installers' version, three numbers, from the tag
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      number: ${{ steps.tag.outputs.number }}
+    steps:
+      - id: tag
+        shell: bash
+        run: |
+          if [[ ! $GITHUB_REF_NAME =~ ^v([0-9]+\.[0-9]+\.[0-9]+)(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::$GITHUB_REF_NAME is not vMAJOR.MINOR.PATCH[-SUFFIX]"
+            exit 1
+          fi
+          echo "number=${BASH_REMATCH[1]}" >>"$GITHUB_OUTPUT"
+
+  linux:
+    uses: ./.github/workflows/app.yml
+
+  platforms:
+    needs: version
+    uses: ./.github/workflows/app-platforms.yml
+    with:
+      package: true
+      version: ${{ needs.version.outputs.number }}
+
+  flatpak:
+    needs: [version, linux]
+    runs-on: ubuntu-latest
+    env:
+      APP_ID: io.github.simoninns.speak5220
+      FLATHUB: https://dl.flathub.org/repo/flathub.flatpakrepo
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder appstream desktop-file-utils
+      - name: Check the desktop file and the AppStream metainfo
+        run: |
+          desktop-file-validate "app/resources/$APP_ID.desktop"
+          appstreamcli validate --no-net "app/resources/$APP_ID.metainfo.xml"
+      - name: Build
+        run: |
+          flatpak remote-add --user --if-not-exists flathub "$FLATHUB"
+          git rev-parse --short=7 HEAD >app/packaging/flatpak/version
+          flatpak-builder --user --install-deps-from=flathub --force-clean \
+            --disable-rofiles-fuse --state-dir build/flatpak/state \
+            --repo build/flatpak/repo build/flatpak/app \
+            "app/packaging/flatpak/$APP_ID.yml"
+      - name: Bundle
+        env:
+          VERSION: ${{ needs.version.outputs.number }}
+        run: |
+          mkdir -p build/flatpak/installer
+          cd build/flatpak/installer
+          bundle="Speak5220-$VERSION-linux-x86_64.flatpak"
+          flatpak build-bundle --runtime-repo="$FLATHUB" ../repo "$bundle" "$APP_ID"
+          sha256sum "$bundle" >"$bundle.sha256"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-Linux
+          path: build/flatpak/installer/Speak5220-*
+          if-no-files-found: error
+
+  release:
+    needs: [version, flatpak, platforms]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: installers
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          options=(--draft --verify-tag --generate-notes --title "Speak5220 $GITHUB_REF_NAME")
+          if [[ $GITHUB_REF_NAME == *-* ]]; then
+            options+=(--prerelease)
+          fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+            "${options[@]}" installers/*

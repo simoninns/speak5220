@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: (c) 2026 Simon Inns -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- The AppStream description software centres show for the application;
+     installed on Linux and in the Flatpak (app/packaging/flatpak/) -->
+<component type="desktop-application">
+  <id>io.github.simoninns.speak5220</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>Speak5220</name>
+  <summary>Create TMS5220 speech data and build PHROMs</summary>
+  <developer id="io.github.simoninns">
+    <name>Simon Inns</name>
+  </developer>
+  <description>
+    <p>
+      Speak5220 turns recordings of speech into data for the TMS5220 speech
+      synthesiser, the chip in the BBC Micro's speech upgrade and in many
+      other machines of the early 1980s.
+    </p>
+    <ul>
+      <li>Imports WAV files as phrases, and the words of existing Acorn PHROM images</li>
+      <li>Prepares the audio with a noise gate, bass cut, treble tilt and de-esser</li>
+      <li>Encodes it to TMS5220 frames, and plays the result through an emulation of the chip</li>
+      <li>Measures the quality of each phrase, and optimises its settings within a size budget</li>
+      <li>Exports Acorn PHROM images, C headers, WAV files and a BBC Micro disc that speaks the phrases</li>
+    </ul>
+    <p>
+      A command-line tool, speak5220-cli, does the same work on project files.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.simoninns.speak5220.desktop</launchable>
+  <url type="homepage">https://github.com/simoninns/speak5220</url>
+  <url type="bugtracker">https://github.com/simoninns/speak5220/issues</url>
+  <url type="vcs-browser">https://github.com/simoninns/speak5220</url>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Audio</category>
+  </categories>
+  <provides>
+    <binary>speak5220</binary>
+    <binary>speak5220-cli</binary>
+  </provides>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+</component>
