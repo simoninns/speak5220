@@ -38,7 +38,7 @@ replaces an older one.
 
 ## macOS (DMG)
 
-The DMG runs on macOS 13 or later, on Apple silicon and Intel Macs.
+The DMG runs on macOS 13.3 or later, on Apple silicon and Intel Macs.
 
 1. Open the `.dmg` file and drag **speak5220** to **Applications**.
 2. Open it from Applications. macOS says it cannot check the application

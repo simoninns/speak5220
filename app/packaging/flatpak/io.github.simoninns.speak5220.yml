@@ -47,6 +47,10 @@ modules:
   - name: yaml-cpp
     buildsystem: cmake-ninja
     builddir: true
+    # 0.8.0 uses std::uint16_t without including <cstdint>, which GCC 15's
+    # headers no longer include for it
+    build-options:
+      cxxflags: -include cstdint
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DBUILD_SHARED_LIBS=ON

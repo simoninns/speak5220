@@ -328,8 +328,8 @@ StatusOr<std::vector<ExportedFile>> BbcDiscFiles(
 std::span<const ExportFormatInfo> ExportFormats() { return kFormats; }
 
 const ExportFormatInfo* FindExportFormat(std::string_view key) {
-  const auto* found = std::ranges::find(kFormats, key, &ExportFormatInfo::key);
-  return found == kFormats.end() ? nullptr : found;
+  const auto found = std::ranges::find(kFormats, key, &ExportFormatInfo::key);
+  return found == kFormats.end() ? nullptr : &*found;
 }
 
 Status CheckExportPreset(const ExportPreset& preset) {

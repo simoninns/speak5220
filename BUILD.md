@@ -103,7 +103,7 @@ cmake --build build/package
 cpack --config build/package/CPackConfig.cmake -B build/package/installer
 ```
 
-On macOS, replace the triplet with `-DVCPKG_TARGET_TRIPLET=universal-osx "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0` (the overlay triplet in `app/packaging/vcpkg-triplets/`). The DMG's bundle is signed ad hoc and not notarised. Use Qt from the Qt installer or aqtinstall: a bundle made from the Nix shell's Qt is incomplete, because Nix keeps each Qt module in its own store path and macdeployqt looks in one.
+On macOS, replace the triplet with `-DVCPKG_TARGET_TRIPLET=universal-osx "-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.3` (the overlay triplet in `app/packaging/vcpkg-triplets/`). The DMG's bundle is signed ad hoc and not notarised. Use Qt from the Qt installer or aqtinstall: a bundle made from the Nix shell's Qt is incomplete, because Nix keeps each Qt module in its own store path and macdeployqt looks in one.
 
 The testing rules are in [`TESTING.md`](TESTING.md).
 
