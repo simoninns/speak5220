@@ -44,6 +44,7 @@ class QActionGroup;
 class QCloseEvent;
 class QLabel;
 class QMenu;
+class QProgressBar;
 
 namespace speak5220::app {
 
@@ -155,6 +156,10 @@ class MainWindow : public QMainWindow {
   void ExportProject();
   // Exports started and not yet finished.
   int ExportsRunning() const { return exports_running_; }
+  // Shown in the status bar while imports, re-encodings or exports run,
+  // when the pointer is the busy pointer too. It counts the phrases
+  // re-encoded while only re-encodings run.
+  QProgressBar* BusyIndicator() const { return busy_indicator_; }
 
   // Hears and shows the chip's output through `filter` (Audio > Output
   // Filter): the encoded waveform, and the encoded audio played here and
@@ -221,6 +226,9 @@ class MainWindow : public QMainWindow {
   void UpdateRecentMenu();
   void RememberRecent(const QString& path);
   void ShowError(const QString& title, const QString& message);
+  // Shows or hides the busy pointer and the status bar's busy indicator
+  // to match the jobs running.
+  void UpdateBusyIndicator();
 
   void RunImport(std::vector<core::project::ImportRequest> requests,
                  std::vector<core::project::PhraseId> ids, int row,
@@ -258,6 +266,12 @@ class MainWindow : public QMainWindow {
   int imports_running_ = 0;
   int encodes_running_ = 0;
   int exports_running_ = 0;
+  // The phrases the running re-encodings were given, and those finished;
+  // both reset when the last finishes.
+  int encodes_total_ = 0;
+  int encodes_done_ = 0;
+  // Whether this window set the application's busy pointer.
+  bool busy_cursor_set_ = false;
   // The folder of the last export, offered for the next.
   QString last_export_directory_;
   // Counts the projects opened, so an import finishing after another
@@ -274,6 +288,7 @@ class MainWindow : public QMainWindow {
   OptimiseDialog* optimise_dialog_ = nullptr;
   QLabel* status_label_ = nullptr;
   QLabel* hover_label_ = nullptr;
+  QProgressBar* busy_indicator_ = nullptr;
   QMenu* recent_menu_ = nullptr;
 
   QAction* new_action_ = nullptr;

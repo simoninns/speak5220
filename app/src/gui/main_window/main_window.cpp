@@ -14,10 +14,12 @@
 #include <QActionGroup>
 #include <QByteArray>
 #include <QCloseEvent>
+#include <QCursor>
 #include <QDir>
 #include <QDockWidget>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QKeySequence>
 #include <QLabel>
 #include <QList>
@@ -25,6 +27,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMetaObject>
+#include <QProgressBar>
 #include <QStatusBar>
 #include <QString>
 #include <QStringList>
@@ -95,6 +98,9 @@ constexpr int kInitialWidth = 1100;
 constexpr int kInitialHeight = 820;
 // How long a progress message stays in the status bar, in milliseconds.
 constexpr int kStatusMessageMs = 5000;
+// The width of the status bar's busy indicator, in device-independent
+// pixels.
+constexpr int kBusyIndicatorWidth = 160;
 // The largest file read as PHROM images: a project's whole budget of
 // 16 KB banks.
 constexpr qint64 kMaxPhromImageBytes =
@@ -107,6 +113,23 @@ QString ToQString(std::string_view text) {
 
 std::filesystem::path ToPath(const QString& text) {
   return {text.toStdU16String()};
+}
+
+// Shows the wait pointer while the GUI thread is blocked, as by opening or
+// saving a project, for as long as it lives.
+class ScopedWaitCursor {
+ public:
+  ScopedWaitCursor() { QGuiApplication::setOverrideCursor(Qt::WaitCursor); }
+  ~ScopedWaitCursor() { QGuiApplication::restoreOverrideCursor(); }
+  ScopedWaitCursor(const ScopedWaitCursor&) = delete;
+  ScopedWaitCursor& operator=(const ScopedWaitCursor&) = delete;
+};
+
+// Runs `job` with the wait pointer shown.
+template <typename Job>
+auto WithWaitCursor(Job job) {
+  const ScopedWaitCursor cursor;
+  return job();
 }
 
 }  // namespace
@@ -188,6 +211,9 @@ MainWindow::~MainWindow() {
   tools_.optimiser_driver->Wait();
   // Jobs use the importer and post back to this window.
   runner_->Wait();
+  if (busy_cursor_set_) {
+    QGuiApplication::restoreOverrideCursor();
+  }
   disconnect(&document_, nullptr, this, nullptr);
   // Child widgets outlive the members (QObject deletes them later), so
   // those that use the model and the document go first; otherwise their
@@ -641,6 +667,10 @@ void MainWindow::CreateWidgets() {
   statusBar()->addWidget(hover_label_, 1);
   connect(waveforms_, &PhraseWaveforms::HoverTextChanged, hover_label_,
           &QLabel::setText);
+  busy_indicator_ = new QProgressBar(this);
+  busy_indicator_->setMaximumWidth(kBusyIndicatorWidth);
+  busy_indicator_->hide();
+  statusBar()->addPermanentWidget(busy_indicator_);
   status_label_ = new QLabel(this);
   statusBar()->addPermanentWidget(status_label_);
 }
@@ -673,7 +703,9 @@ bool MainWindow::OpenProject(const QString& path) {
   if (!MaybeSave()) {
     return false;
   }
-  if (const core::Status status = document_.Open(path); !status.IsOk()) {
+  if (const core::Status status =
+          WithWaitCursor([&] { return document_.Open(path); });
+      !status.IsOk()) {
     if (!QFileInfo::exists(path)) {
       recent_.Remove(path);
       recent_store_->Save(recent_.Paths());
@@ -691,7 +723,9 @@ bool MainWindow::Save() {
   if (document_.Path().isEmpty()) {
     return SaveAs();
   }
-  if (const core::Status status = document_.Save(); !status.IsOk()) {
+  if (const core::Status status =
+          WithWaitCursor([this] { return document_.Save(); });
+      !status.IsOk()) {
     ShowError(QStringLiteral("Save Project"), ToQString(status.Message()));
     return false;
   }
@@ -714,7 +748,9 @@ bool MainWindow::SaveAs() {
   if (!path.has_value()) {
     return false;
   }
-  if (const core::Status status = document_.SaveAs(*path); !status.IsOk()) {
+  if (const core::Status status =
+          WithWaitCursor([&] { return document_.SaveAs(*path); });
+      !status.IsOk()) {
     ShowError(QStringLiteral("Save Project"), ToQString(status.Message()));
     return false;
   }
@@ -1001,6 +1037,8 @@ void MainWindow::ReEncodeSelected() {
     }
   }
   ++encodes_running_;
+  encodes_total_ += static_cast<int>(inputs.size());
+  UpdateBusyIndicator();
   statusBar()->showMessage(
       QStringLiteral("Encoding %1 phrase(s)...").arg(inputs.size()));
   runner_->Post([this, inputs = std::move(inputs), tools = tools_,
@@ -1018,11 +1056,23 @@ void MainWindow::ReEncodeSelected() {
       } else {
         *failures << ToQString(result.GetStatus().Message());
       }
+      QMetaObject::invokeMethod(
+          this,
+          [this] {
+            ++encodes_done_;
+            UpdateBusyIndicator();
+          },
+          Qt::QueuedConnection);
     }
     QMetaObject::invokeMethod(
         this,
         [this, changes, failures, generation] {
           --encodes_running_;
+          if (encodes_running_ == 0) {
+            encodes_total_ = 0;
+            encodes_done_ = 0;
+          }
+          UpdateBusyIndicator();
           statusBar()->clearMessage();
           if (generation == generation_ && !changes->empty()) {
             const project::Phrase* first =
@@ -1078,6 +1128,7 @@ void MainWindow::ExportProject() {
     return;
   }
   ++exports_running_;
+  UpdateBusyIndicator();
   statusBar()->showMessage(QStringLiteral("Exporting..."));
   runner_->Post([this, project = document_.Project(), request = *request,
                  synth = synth_, codec = &wav_codec_] {
@@ -1096,6 +1147,7 @@ void MainWindow::ExportProject() {
         this,
         [this, status, count, directory = request.directory] {
           --exports_running_;
+          UpdateBusyIndicator();
           statusBar()->clearMessage();
           if (status.IsOk()) {
             statusBar()->showMessage(
@@ -1136,6 +1188,31 @@ void MainWindow::ShowError(const QString& title, const QString& message) {
   dialogs_->ShowError(title, message);
 }
 
+void MainWindow::UpdateBusyIndicator() {
+  const bool busy =
+      imports_running_ > 0 || encodes_running_ > 0 || exports_running_ > 0;
+  // The busy pointer, not the wait pointer: the window still works.
+  if (busy != busy_cursor_set_) {
+    if (busy) {
+      QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    } else {
+      QGuiApplication::restoreOverrideCursor();
+    }
+    busy_cursor_set_ = busy;
+  }
+  if (encodes_running_ > 0 && imports_running_ == 0 && exports_running_ == 0) {
+    busy_indicator_->setRange(0, encodes_total_);
+    busy_indicator_->setValue(encodes_done_);
+    busy_indicator_->setFormat(QStringLiteral("Encoding %v of %m"));
+    busy_indicator_->setTextVisible(true);
+  } else {
+    // How much is left is not known: the indicator only moves.
+    busy_indicator_->setRange(0, 0);
+    busy_indicator_->setTextVisible(false);
+  }
+  busy_indicator_->setVisible(busy);
+}
+
 void MainWindow::ImportFiles(const QStringList& paths, int row) {
   std::vector<project::ImportRequest> requests;
   std::vector<project::PhraseId> ids;
@@ -1153,6 +1230,7 @@ void MainWindow::RunImport(std::vector<project::ImportRequest> requests,
                            std::vector<project::PhraseId> ids, int row,
                            bool asked_to_normalise) {
   ++imports_running_;
+  UpdateBusyIndicator();
   statusBar()->showMessage(
       QStringLiteral("Importing %1 file(s)...").arg(requests.size()));
   // The import runs in the background; its results come back
@@ -1187,6 +1265,7 @@ void MainWindow::FinishImport(
     std::vector<core::StatusOr<project::ImportResult>> results, int row,
     bool asked_to_normalise, int generation) {
   --imports_running_;
+  UpdateBusyIndicator();
   statusBar()->clearMessage();
   if (generation != generation_) {
     // Another project was opened meanwhile.

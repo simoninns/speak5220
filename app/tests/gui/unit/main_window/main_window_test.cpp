@@ -15,9 +15,12 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QCoreApplication>
+#include <QCursor>
+#include <QGuiApplication>
 #include <QLabel>
 #include <QLineEdit>
 #include <QObject>
+#include <QProgressBar>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStatusBar>
@@ -324,6 +327,25 @@ TEST_F(MainWindowTest, ReEncodeEncodesTheSelectionAsOneStep) {
   EXPECT_EQ(window_.Document().UndoStack().count(), steps + 1);
   EXPECT_EQ(window_.Document().UndoStack().undoText(),
             QStringLiteral("Re-encode 2 Phrases"));
+}
+
+// The jobs' results come back queued, so until events are processed the
+// re-encoding is still running.
+TEST_F(MainWindowTest, ReEncodeShowsItIsBusyUntilItFinishes) {
+  AddPhrases({AudioPhrase(1, "ONE"), AudioPhrase(2, "TWO")});
+  window_.Panel()->Select({TestId(1), TestId(2)});
+  ASSERT_EQ(QGuiApplication::overrideCursor(), nullptr);
+  window_.ReEncodeSelected();
+  ASSERT_NE(QGuiApplication::overrideCursor(), nullptr);
+  EXPECT_EQ(QGuiApplication::overrideCursor()->shape(), Qt::BusyCursor);
+  EXPECT_FALSE(window_.BusyIndicator()->isHidden());
+  EXPECT_EQ(window_.BusyIndicator()->maximum(), 2);
+  EXPECT_EQ(window_.BusyIndicator()->value(), 0);
+
+  QCoreApplication::processEvents();
+  EXPECT_EQ(window_.EncodesRunning(), 0);
+  EXPECT_EQ(QGuiApplication::overrideCursor(), nullptr);
+  EXPECT_TRUE(window_.BusyIndicator()->isHidden());
 }
 
 TEST_F(MainWindowTest, ReEncodeIsOfferedOnlyForStaleOrUnencodedPhrases) {
