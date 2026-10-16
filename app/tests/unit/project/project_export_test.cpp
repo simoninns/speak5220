@@ -18,6 +18,7 @@
 #include <string_view>
 #include <vector>
 
+#include "core/dsp/array_math.h"
 #include "core/lpc/frame_codec.h"
 #include "core/packaging/acorn_phrom.h"
 #include "core/packaging/phrom_image.h"
@@ -482,9 +483,9 @@ TEST_F(ProjectWavExportTest, PreprocessedIsTheSourceAsTheEncoderTakesIt) {
             std::vector<double>(phrase.audio.begin(), phrase.audio.end()),
             options)
             .samples;
-    EXPECT_CALL(codec_, Encode(::testing::ElementsAreArray(std::vector<float>(
-                                   samples.begin(), samples.end())),
-                               8000, audio::WavOutputFormat::kPcm24))
+    EXPECT_CALL(codec_,
+                Encode(::testing::ElementsAreArray(dsp::ToFloat(samples)), 8000,
+                       audio::WavOutputFormat::kPcm24))
         .WillOnce(::testing::Return(
             std::vector<std::uint8_t>{static_cast<std::uint8_t>(i)}));
   }

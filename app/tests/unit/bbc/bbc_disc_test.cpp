@@ -96,7 +96,7 @@ TEST(BbcDiscTest, PhromDataIsTheStreamsInOrder) {
   // Filled in place: GCC 15 at -O3 wrongly reports insert() growing a
   // 9-byte vector as writing past it (-Warray-bounds).
   Bytes expected(9 + 10, 0xA1);
-  std::fill_n(expected.begin(), 9, 0xA0);
+  std::fill_n(expected.begin(), 9, std::uint8_t{0xA0});
   EXPECT_EQ(data, expected);
 }
 

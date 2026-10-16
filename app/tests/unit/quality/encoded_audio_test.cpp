@@ -15,6 +15,7 @@
 #include <span>
 #include <vector>
 
+#include "core/dsp/array_math.h"
 #include "core/lpc/frame.h"
 #include "core/synth/synth.h"
 #include "core/util/status.h"
@@ -49,10 +50,6 @@ synth::SynthResult SpokenAsCodes(const std::vector<double>& x, int lead) {
   return r;
 }
 
-std::vector<float> ToFloat(const std::vector<double>& x) {
-  return {x.begin(), x.end()};
-}
-
 const std::vector<lpc::Frame> kFrames = {lpc::Frame::Voiced(10, 30, {}),
                                          lpc::Frame::Stop()};
 
@@ -62,7 +59,7 @@ TEST(EncodedAudioTest, LinesTheOutputUpWithTheSource) {
   EXPECT_CALL(synth, Synthesize(_, synth::SynthPath::kVsm))
       .WillOnce(Return(SpokenAsCodes(x, kSpeechStart)));
   const StatusOr<EncodedAudio> audio =
-      RenderEncodedAudio(synth, ToFloat(x), kFrames);
+      RenderEncodedAudio(synth, dsp::ToFloat(x), kFrames);
   ASSERT_TRUE(audio.IsOk()) << audio.GetStatus().ToString();
   // Within one step of the refinement (0.625 ms, 5 samples): the source
   // is compared after the 60 Hz high-pass.
@@ -92,8 +89,8 @@ TEST(EncodedAudioTest, SilentOutputPutsTheFirstFrameAtTheStart) {
   silent.samples.assign(400, -64);
   testing::MockSynth synth;
   EXPECT_CALL(synth, Synthesize(_, _)).WillOnce(Return(silent));
-  const StatusOr<EncodedAudio> audio =
-      RenderEncodedAudio(synth, ToFloat(testing::SyntheticSpeech()), kFrames);
+  const StatusOr<EncodedAudio> audio = RenderEncodedAudio(
+      synth, dsp::ToFloat(testing::SyntheticSpeech()), kFrames);
   ASSERT_TRUE(audio.IsOk());
   EXPECT_EQ(audio->source_offset, kFirstFrameStretch);
   EXPECT_EQ(audio->samples.size(), 400U);

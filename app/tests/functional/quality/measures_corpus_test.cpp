@@ -27,6 +27,7 @@
 
 #include "core/audio/sndfile_wav_io.h"
 #include "core/audio/wav_io.h"
+#include "core/dsp/array_math.h"
 #include "core/encoder/encoder.h"
 #include "core/encoder/encoder_filters.h"
 #include "core/lpc/frame_statistics.h"
@@ -320,9 +321,6 @@ TEST(MeasuresCorpusCheck, DISABLED_WritesListeningSamples) {
   index << "name\trating\toverall\tenvelope\tpitch\tintelligibility\tlsd_db\t"
            "lsd_over_4db\tgpe\tf0_rmse_cents\tvde\testoi\tsample\n";
   core::audio::SndfileWavWriter writer;
-  const auto to_float = [](const std::vector<double>& x) {
-    return std::vector<float>(x.begin(), x.end());
-  };
   for (const quality::QualityRating rating :
        {quality::QualityRating::kPoor, quality::QualityRating::kFair,
         quality::QualityRating::kGood}) {
@@ -357,8 +355,8 @@ TEST(MeasuresCorpusCheck, DISABLED_WritesListeningSamples) {
              {std::pair("_1_original.wav", &s.source),
               std::pair("_2_chip.wav", &s.chip)}) {
           const core::Status written = writer.Write(
-              out / label / (stem.str() + suffix), to_float(*signal), 8000,
-              core::audio::WavOutputFormat::kPcm16);
+              out / label / (stem.str() + suffix), core::dsp::ToFloat(*signal),
+              8000, core::audio::WavOutputFormat::kPcm16);
           EXPECT_TRUE(written.IsOk()) << written.ToString();
         }
       }

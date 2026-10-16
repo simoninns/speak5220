@@ -62,9 +62,11 @@ class MeasuresGoldenTest : public ::testing::Test {
     return it == set.end() ? nullptr : &it->second;
   }
 
-  // SPTK's REAPER and Harvest give the original
-  // tools' tracks of the same signals, frame for frame, and so the same
-  // errors.
+  // SPTK's REAPER and Harvest give the original tools' tracks of the same
+  // signals, frame for frame, and so the same errors. Off the reference's
+  // platform a last-bit difference in the maths library can tip one
+  // voicing decision: one frame may differ, and the errors by what that
+  // frame moves.
   static void ExpectPitchMatches(core::quality::PitchAlgorithm algorithm);
 };
 
@@ -113,27 +115,27 @@ TEST_F(MeasuresGoldenTest, EnvelopeDistortionMatchesTheReference) {
   std::cout << "worst envelope distortion difference: " << worst << " dB\n";
 }
 
-// The fraction of frames, over the shorter, where two tracks agree on the
-// voicing and, where both are voiced, on F0 within `cents`.
-double Agreement(const std::vector<double>& a, const std::vector<double>& b,
-                 double cents) {
+// The frames, over the shorter, where two tracks differ on the voicing or,
+// where both are voiced, on F0 by more than `cents`.
+int Disagreements(const std::vector<double>& a, const std::vector<double>& b,
+                  double cents) {
   const std::size_t n = std::min(a.size(), b.size());
-  std::size_t agree = 0;
+  int differ = 0;
   for (std::size_t i = 0; i < n; ++i) {
-    if ((a[i] > 0.0) != (b[i] > 0.0)) {
-      continue;
+    if ((a[i] > 0.0) != (b[i] > 0.0) ||
+        (a[i] > 0.0 && std::fabs(1200.0 * std::log2(b[i] / a[i])) > cents)) {
+      ++differ;
     }
-    if (a[i] > 0.0 && std::fabs(1200.0 * std::log2(b[i] / a[i])) > cents) {
-      continue;
-    }
-    ++agree;
   }
-  return n == 0 ? 1.0 : static_cast<double>(agree) / static_cast<double>(n);
+  return differ;
 }
 
 // REAPER's tool writes F0 as text to six decimals, which moves the RMSE by
 // up to a few millionths of a cent.
 constexpr double kCentsTolerance = 1e-4;
+// One frame more or fewer moves the RMSE over a phrase's voiced frames by
+// a few cents.
+constexpr double kOneFrameCentsTolerance = 10.0;
 
 void MeasuresGoldenTest::ExpectPitchMatches(
     core::quality::PitchAlgorithm algorithm) {
@@ -151,8 +153,9 @@ void MeasuresGoldenTest::ExpectPitchMatches(
         reaper ? tracks->reaper_original : tracks->harvest_original;
     const std::vector<double>& ref_output =
         reaper ? tracks->reaper_output : tracks->harvest_output;
-    EXPECT_EQ(Agreement(*original, ref_original, 0.01), 1.0) << id;
-    EXPECT_EQ(Agreement(*output, ref_output, 0.01), 1.0) << id;
+    const int differ = Disagreements(*original, ref_original, 0.01) +
+                       Disagreements(*output, ref_output, 0.01);
+    EXPECT_LE(differ, 1) << id;
 
     const ReferenceMeasures* ref = Reference(e);
     if (ref == nullptr) {
@@ -167,15 +170,20 @@ void MeasuresGoldenTest::ExpectPitchMatches(
             std::min(original->size(), ref_original.size())),
         std::span(*output).first(std::min(output->size(), ref_output.size())),
         e.prepared.speech);
+    const bool exact = differ == 0;
+    const double one_voiced =
+        100.0 / std::max(errors.voiced_frames - 1, 1) + 1e-9;
+    const double one_counted = 100.0 / std::max(errors.frames, 1) + 1e-9;
     EXPECT_NEAR(errors.gross_error, reaper ? ref->reaper_gpe : ref->harvest_gpe,
-                1e-9)
+                exact ? 1e-9 : one_voiced)
         << id;
     EXPECT_NEAR(errors.f0_rmse_cents,
                 reaper ? ref->reaper_f0_rmse_cents : ref->harvest_f0_rmse_cents,
-                kCentsTolerance)
+                exact ? kCentsTolerance : kOneFrameCentsTolerance)
         << id;
     EXPECT_NEAR(errors.voicing_error,
-                reaper ? ref->reaper_vde : ref->harvest_vde, 1e-9)
+                reaper ? ref->reaper_vde : ref->harvest_vde,
+                exact ? 1e-9 : one_counted)
         << id;
   }
 }

@@ -30,6 +30,7 @@ namespace {
 
 using ::testing::_;
 using ::testing::ElementsAre;
+using ::testing::ElementsAreArray;
 using ::testing::Eq;
 using testing::FakeClock;
 using ::testing::InSequence;
@@ -240,7 +241,8 @@ TEST(ToPcm16Test, RoundsAndClips) {
   const std::vector<float> samples = {0.0F,  0.5F, -0.5F,           1.0F,
                                       -1.0F, 2.0F, 0.25F / 32768.0F};
   EXPECT_THAT(ToPcm16(samples),
-              ElementsAre(0, 16384, -16384, 32767, -32768, 32767, 0));
+              ElementsAreArray(std::vector<std::int16_t>{
+                  0, 16384, -16384, 32767, -32768, 32767, 0}));
 }
 
 TEST_F(PlayerTest, PlaysASelectionToItsEnd) {

@@ -35,6 +35,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/array_math.h"
 #include "core/dsp/output_filter.h"
 #include "core/preprocess/preprocess.h"
 #include "core/project/phrase.h"
@@ -597,7 +598,7 @@ TEST_F(PhraseWaveformsTest, EncodedAudioIsShownAndPlayedAtTheOriginalsLevel) {
   // little for the rounded codes and the high-passed source.
   constexpr int kIdle = 300;
   const std::vector<double> speech = testing::SyntheticSpeech();
-  phrase_.audio.assign(speech.begin(), speech.end());
+  phrase_.audio = core::dsp::ToFloat(speech);
   core::synth::SynthResult spoken = Idle(kIdle);
   for (const double v : speech) {
     const int code = static_cast<int>(std::lround(v * 100.0));

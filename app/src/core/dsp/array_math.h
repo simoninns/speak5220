@@ -46,6 +46,9 @@ std::vector<double> HammingWindow(int m);
 // end points, as the encoder's level measures use.
 std::vector<double> InnerHannWindow(int m);
 
+// `values` rounded to float, as the audio interfaces take them.
+std::vector<float> ToFloat(std::span<const double> values);
+
 }  // namespace speak5220::core::dsp
 
 #endif  // SPEAK5220_CORE_DSP_ARRAY_MATH_H_

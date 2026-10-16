@@ -24,6 +24,7 @@
 
 #include "core/audio/sndfile_wav_io.h"
 #include "core/audio/wav_io.h"
+#include "core/dsp/array_math.h"
 #include "core/encoder/encoder.h"
 #include "core/lpc/frame.h"
 #include "core/lpc/frame_codec.h"
@@ -82,7 +83,7 @@ class CliProjectTest : public ::testing::Test {
     ASSERT_TRUE(directory_.isValid());
     // A second of speech-like sound at 8 kHz.
     const std::vector<double> speech = testing::SyntheticSpeech();
-    std::vector<float> samples(speech.begin(), speech.end());
+    const std::vector<float> samples = core::dsp::ToFloat(speech);
     ASSERT_TRUE(core::audio::SndfileWavWriter()
                     .Write(Path("speech.wav"), samples, 8000,
                            core::audio::WavOutputFormat::kPcm16)

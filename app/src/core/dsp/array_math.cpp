@@ -156,4 +156,13 @@ std::vector<double> InnerHannWindow(int m) {
   return {w.begin() + 1, w.end() - 1};
 }
 
+std::vector<float> ToFloat(std::span<const double> values) {
+  std::vector<float> out;
+  out.reserve(values.size());
+  for (const double v : values) {
+    out.push_back(static_cast<float>(v));
+  }
+  return out;
+}
+
 }  // namespace speak5220::core::dsp

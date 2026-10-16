@@ -20,6 +20,7 @@
 #include <string_view>
 #include <vector>
 
+#include "core/dsp/array_math.h"
 #include "core/dsp/iir_filter.h"
 
 namespace speak5220::core::dsp {
@@ -126,7 +127,7 @@ std::vector<float> FilterDacOutput(OutputFilter filter,
     std::vector<double> state(sections.size() * 2, 0.0);
     SosFilterInPlace(sections, state, held);
   }
-  return {held.begin(), held.end()};
+  return ToFloat(held);
 }
 
 std::vector<float> FilterSamples(OutputFilter filter,

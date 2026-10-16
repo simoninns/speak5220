@@ -27,6 +27,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/dsp/array_math.h"
 #include "core/lpc/frame_codec.h"
 #include "core/packaging/acorn_phrom.h"
 #include "core/packaging/c_header.h"
@@ -248,7 +249,7 @@ StatusOr<std::vector<float>> PreprocessedSamples(
           std::vector<double>(phrase.audio.begin(), phrase.audio.end()),
           options->preprocess)
           .samples;
-  return std::vector<float>(samples.begin(), samples.end());
+  return dsp::ToFloat(samples);
 }
 
 StatusOr<std::vector<ExportedFile>> WavFiles(

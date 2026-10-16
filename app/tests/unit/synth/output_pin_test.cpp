@@ -31,6 +31,11 @@ const std::vector<std::int16_t> kSamples = {
     -512 * kSampleScale, -129 * kSampleScale, -128 * kSampleScale, 0,
     127 * kSampleScale,  128 * kSampleScale,  511 * kSampleScale};
 
+// `v` rounded to a sample.
+std::int16_t Rounded(double v) {
+  return static_cast<std::int16_t>(std::lround(v));
+}
+
 TEST(OutputPinTest, KeysNameEachPin) {
   for (const OutputPinInfo& info : OutputPins()) {
     EXPECT_THAT(OutputPinFromKey(info.key), Optional(info.pin));
@@ -58,9 +63,9 @@ TEST(OutputPinTest, SpeakerGivesEachCodeItsDacOutput) {
   const std::vector<std::int16_t> codes = {-1 * kSampleScale, 0,
                                            5 * kSampleScale};
   EXPECT_THAT(PinSamples(OutputPin::kSpeaker, codes),
-              ElementsAre(std::lround(DacOutput(-1) * kSampleScale),
-                          std::lround(DacOutput(0) * kSampleScale),
-                          std::lround(DacOutput(5) * kSampleScale)));
+              ElementsAre(Rounded(DacOutput(-1) * kSampleScale),
+                          Rounded(DacOutput(0) * kSampleScale),
+                          Rounded(DacOutput(5) * kSampleScale)));
 }
 
 TEST(OutputPinTest, DacStepsBetweenMinusOneAndZeroBySixSteps) {
