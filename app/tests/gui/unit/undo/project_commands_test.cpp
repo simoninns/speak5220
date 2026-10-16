@@ -405,5 +405,65 @@ TEST_F(ProjectCommandsTest, FailedImportPutsTheSettingsBackAndIsNotPushed) {
   EXPECT_EQ(stack_.count(), 0);
 }
 
+TEST_F(ProjectCommandsTest, ProjectSettingsAreOneStepUndoneInReverse) {
+  const core::project::ProjectIdentity identity = {
+      .name = "Numbers", .header_strings = {"(C)2026 Me", "Numbers"}};
+  const core::project::ProjectIdentity old_identity = {
+      .name = "", .header_strings = {"(C)", "Old"}};
+  const core::project::PhromSettings settings = {.ascii_map = {{'1', "ONE"}},
+                                                 .phroms = {}};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetIdentity(Eq(identity)))
+        .WillOnce(Return(old_identity));
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(settings)))
+        .WillOnce(Return(core::project::PhromSettings{}));
+    // Undo: the map, then the identity.
+    EXPECT_CALL(editor_, SetPhromSettings(Eq(core::project::PhromSettings{})))
+        .WillOnce(Return(settings));
+    EXPECT_CALL(editor_, SetIdentity(Eq(old_identity)))
+        .WillOnce(Return(identity));
+  }
+  ASSERT_TRUE(edits_.SetProjectSettings(identity, settings).IsOk());
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Change Project Settings"));
+  stack_.undo();
+  EXPECT_EQ(stack_.index(), 0);
+}
+
+TEST_F(ProjectCommandsTest, FailedProjectSettingsPutTheIdentityBack) {
+  const core::project::ProjectIdentity identity = {.name = "Numbers",
+                                                   .header_strings = {}};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetIdentity(Eq(identity)))
+        .WillOnce(Return(core::project::ProjectIdentity{}));
+    EXPECT_CALL(editor_, SetPhromSettings(_))
+        .WillOnce(Return(core::ResourceExhaustedError("too big")));
+    EXPECT_CALL(editor_, SetIdentity(Eq(core::project::ProjectIdentity{})))
+        .WillOnce(Return(identity));
+  }
+  EXPECT_FALSE(edits_.SetProjectSettings(identity, {}).IsOk());
+  EXPECT_EQ(stack_.count(), 0);
+}
+
+TEST_F(ProjectCommandsTest, ExportPresetsAreOneStepNamedAsAsked) {
+  const std::vector<core::project::ExportPreset> presets = {
+      {.name = "phrom", .format = "acorn-phrom"}};
+  {
+    InSequence sequence;
+    EXPECT_CALL(editor_, SetExports(Eq(presets)))
+        .WillOnce(Return(std::vector<core::project::ExportPreset>{}));
+    EXPECT_CALL(editor_,
+                SetExports(Eq(std::vector<core::project::ExportPreset>{})))
+        .WillOnce(Return(presets));
+  }
+  ASSERT_TRUE(
+      edits_.SetExports(presets, QStringLiteral("Save Export Preset phrom"))
+          .IsOk());
+  EXPECT_EQ(stack_.undoText(), QStringLiteral("Save Export Preset phrom"));
+  stack_.undo();
+  EXPECT_EQ(stack_.index(), 0);
+}
+
 }  // namespace
 }  // namespace speak5220::app

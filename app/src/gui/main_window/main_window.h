@@ -127,6 +127,10 @@ class MainWindow : public QMainWindow {
   // that cannot be read are reported, and the others still added.
   void ImportPhromImages(const QStringList& paths, int row);
 
+  // Asks for the project's name, header strings and ASCII map
+  // (IDialogs::AskProjectSettings()), then sets them as one undoable step.
+  void EditProjectSettings();
+
   // Asks for preferences (IDialogs::AskPreferences()), then stores and
   // applies them (ApplyPreferences()).
   void EditPreferences();
@@ -296,6 +300,7 @@ class MainWindow : public QMainWindow {
   QAction* save_action_ = nullptr;
   QAction* save_as_action_ = nullptr;
   QAction* import_phrom_action_ = nullptr;
+  QAction* project_settings_action_ = nullptr;
   QAction* clear_recent_action_ = nullptr;
   QAction* quit_action_ = nullptr;
   QAction* undo_action_ = nullptr;

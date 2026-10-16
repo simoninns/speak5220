@@ -28,6 +28,7 @@ add_library(
     phrase_list/phrase_list_model.cpp
     phrase_list/phrase_list_panel.cpp
     preferences/preferences_dialog.cpp
+    project_settings/project_settings_dialog.cpp
     playback/playback_icon.cpp
     playback/player.cpp
     playback/qt_audio_output.cpp

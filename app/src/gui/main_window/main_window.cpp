@@ -308,6 +308,26 @@ QAction* MainWindow::ThemeAction(ThemeChoice choice) const {
   return nullptr;
 }
 
+void MainWindow::EditProjectSettings() {
+  std::optional<ProjectSettingsChoice> chosen =
+      dialogs_->AskProjectSettings(document_.Project());
+  if (!chosen.has_value()) {
+    return;
+  }
+  const project::ProjectSettings& settings = document_.Project().Settings();
+  if (chosen->identity.name == settings.name &&
+      chosen->identity.header_strings == settings.header_strings &&
+      chosen->phrom_settings.ascii_map == settings.ascii_map &&
+      chosen->phrom_settings.phroms == settings.phroms) {
+    return;
+  }
+  if (const core::Status status = document_.Edits().SetProjectSettings(
+          std::move(chosen->identity), std::move(chosen->phrom_settings));
+      !status.IsOk()) {
+    ShowError(QStringLiteral("Project Settings"), ToQString(status.Message()));
+  }
+}
+
 void MainWindow::EditPreferences() {
   const std::optional<Preferences> chosen =
       dialogs_->AskPreferences(ReadPreferences(*view_preferences_));
@@ -370,6 +390,14 @@ void MainWindow::CreateActions() {
   import_phrom_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
   connect(import_phrom_action_, &QAction::triggered, this,
           &MainWindow::ImportPhromFromDialog);
+
+  project_settings_action_ =
+      new QAction(QStringLiteral("Project Se&ttings..."), this);
+  project_settings_action_->setToolTip(QStringLiteral(
+      "Set the project's name, its PHROMs' header strings and its ASCII "
+      "map"));
+  connect(project_settings_action_, &QAction::triggered, this,
+          &MainWindow::EditProjectSettings);
 
   clear_recent_action_ = new QAction(QStringLiteral("&Clear Menu"), this);
   connect(clear_recent_action_, &QAction::triggered, this, [this] {
@@ -556,7 +584,8 @@ void MainWindow::CreateActions() {
 
   export_action_ = new QAction(QStringLiteral("&Export..."), this);
   export_action_->setToolTip(QStringLiteral(
-      "Export PHROM images, C headers or WAV files, or run a saved preset"));
+      "Export PHROM images, C headers, WAV files or a BBC Micro disc, "
+      "or run a saved preset"));
   export_action_->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_E));
   connect(export_action_, &QAction::triggered, this,
           &MainWindow::ExportProject);
@@ -576,6 +605,7 @@ void MainWindow::CreateMenus() {
   file->addAction(save_as_action_);
   file->addSeparator();
   file->addAction(import_phrom_action_);
+  file->addAction(project_settings_action_);
   file->addSeparator();
   file->addAction(quit_action_);
 
@@ -1113,7 +1143,11 @@ void MainWindow::ExportProject() {
                        ? last_export_directory_
                        : QFileInfo(path).absolutePath(),
       // IDialogs::AskExport() asks the user.
-      .confirm_overwrite = {}};
+      .confirm_overwrite = {},
+      .set_presets = [this](std::vector<project::ExportPreset> presets,
+                            const QString& text) {
+        return document_.Edits().SetExports(std::move(presets), text);
+      }};
   const std::optional<ExportRequest> request = dialogs_->AskExport(start);
   if (!request.has_value()) {
     return;

@@ -15,11 +15,11 @@ of the original or preprocessed audio. The byte layout of each format is in the
 | **Acorn PHROM images** | One 16 KB image per PHROM the phrases fill, as separate files or one concatenated file | A PHROM in a BBC Micro's speech system, or an emulator (datasheet §12.8) |
 | **C header, PHROM images** | One `.h` file with each image as an array, and a table of every phrase's PHROM, word number, offset and length | Firmware that reads PHROM images from its own memory |
 | **C header, Speak External streams** | One `.h` file with each phrase's bytes as an array, ready to write to the chip with Speak External, with its length and a table | Firmware that speaks phrases with Speak External (datasheet §12.9) |
-| **WAV audio** | One WAV file per phrase: the chip's output (16-bit, 8 kHz), or the phrase's 8 kHz original or [preprocessed](encoder.md#preprocessing) recording (24-bit) | Listening, comparing, or using the sound elsewhere |
+| **WAV audio** | One WAV file per phrase: the chip's output (16-bit, 8 kHz), or the phrase's 8 kHz original or [preprocessed](preprocess.md) recording (24-bit) | Listening, comparing, or using the sound elsewhere |
 | **BBC Micro disc** | One double-sided DFS disc image (`.dsd`) holding the phrases of up to 8 PHROMs and a player program | Speaking the phrases on a BBC Micro with the speech system; see [BBC Micro disc](bbc-disc.md) |
 
 The PHROM images, and the PHROM header, hold the phrases in PHROM order:
-the phrases are placed as the [project budget](projects.md#phroms-and-the-project-budget)
+the phrases are placed as the [project budget](phrases.md#phroms-and-the-project-budget)
 places them, from word 127 of PHROM 1, each PHROM with the project's
 header strings (with its number) and its own ASCII entries. When only some
 phrases are exported, they are placed afresh in the same way, so their word
@@ -36,15 +36,16 @@ until the output has been quiet for a while.
 
 **Export > Export...** (Ctrl+Shift+E) opens the dialog.
 
-| Field | What it sets |
-|---|---|
-| Format | One of the formats above |
-| Phrases | **All phrases**, or **Selected phrases**: those selected in the phrase list when the dialog opened |
-| Layout | Acorn PHROM images: **One file per PHROM** (`NAME_1.bin`, `NAME_2.bin`, ...) or **All PHROMs in one file** (`NAME.bin`) |
-| Licence | C headers: the SPDX licence identifier written at the top of the header. Empty for `GPL-3.0-or-later` |
-| Audio | WAV: **Encoded** (the chip's output), **Original** (the 8 kHz source) or **Preprocessed** (the source as the phrase's [preprocessing](encoder.md#preprocessing) prepares it for the encoder) |
-| Name | What the files are named after: `NAME.h`, `NAME_1.bin`, `NAME_HELLO.wav`. It starts as the project file's name |
-| Folder | Where the files are written. **Browse...** chooses it. It starts as the project's folder, then the last folder exported to |
+| Field | Shown for | Choices | Default | What it sets |
+|---|---|---|---|---|
+| **Preset** | Every format | **None**, or a preset of the project, with **Save as Preset** (or **Update Preset**) and **Delete Preset** beside it | None | Fills the fields from a saved export; see [presets](#presets) |
+| **Format** | Every format | **Acorn PHROM images**, **C header, PHROM images**, **C header, Speak External streams**, **WAV audio**, **BBC Micro disc** | Acorn PHROM images | One of the [formats](#the-formats) above |
+| **Phrases** | Every format | **All phrases**, **Selected phrases (N)** | All phrases | Which phrases are exported. *Selected* means those selected in the phrase list when the dialog opened, and is greyed out when none is. Selected phrases are placed in PHROMs afresh, so their word numbers can differ from the whole project's |
+| **Layout** | Acorn PHROM images | **One file per PHROM** (`NAME_1.bin`, `NAME_2.bin`, ...), **All PHROMs in one file** (`NAME.bin`, the images one after another) | One file per PHROM | How the images are written |
+| **Licence** | Both C headers | An SPDX licence identifier or expression | Empty, meaning `GPL-3.0-or-later` | The licence written in the header's `SPDX-License-Identifier` line |
+| **Audio** | WAV audio | **Encoded (the chip's output)**, **Original (the 8 kHz source)**, **Preprocessed (what the encoder aims at)** | Encoded | Which audio each phrase's file holds: the chip's output, 16-bit; the phrase's [original](original.md), 24-bit; or its [preprocessed](preprocess.md) recording, 24-bit |
+| **Name** | Every format | A plain file name | The project file's name | What the files are named after: `NAME.h`, `NAME_1.bin`, `NAME_HELLO.wav`, `NAME.dsd` |
+| **Folder** | Every format | **Browse...** chooses it | The project's folder, then, until Speak5220 closes, the last folder exported to | Where the files are written |
 
 The BBC Micro disc has no options of its own.
 
@@ -72,14 +73,33 @@ chosen; nothing is written until the export goes ahead.
 
 ## Presets
 
-A preset is an export written in the project file (`exports:` in the
-[project file](../reference/project-file.md#exports)): its format, scope,
-phrases and options, under a name. Presets are for repeatable exports
-from the command line: `speak5220-cli export PROJECT --output DIR` runs
-every preset of a project, or those named by `--preset`. The Export
-dialog neither loads nor saves them, and a project keeps its presets when
-the GUI saves it. A preset's files are named after
-the preset. See the [command-line tool](cli.md).
+A preset is an export saved in the project under a name: its format, its
+phrases, its options, and the name its files are named after. It is kept
+in the project file (`exports:` in the
+[project file](../reference/project-file.md#exports)), so the same export
+can be run again, from the Export dialog or the command line, without
+choosing everything again.
+
+In the Export dialog:
+
+| Control | What it does |
+|---|---|
+| **Preset** | Fills the fields from a preset of the project: the format, the phrases, the format's options, and **Name**, which is the preset's name. Greyed out when the project has none. The folder is not part of a preset |
+| **Save as Preset** | Saves the fields as a preset named after the **Name** field. It is called **Update Preset** when a preset of that name exists, which it then replaces. Available only for an export that could run, apart from stale encodings: a name that can name files, and phrases the project has |
+| **Delete Preset** | Removes the preset chosen in **Preset** from the project |
+
+Saving, updating and deleting a preset change the project: each is one
+step to [undo](main-window.md#undo-and-redo) (**Undo Save Export Preset
+PHROM**), and the project must be saved to keep it. With **Selected
+phrases**, a preset keeps the names of the phrases selected; loading it
+selects its own phrases again, whatever is selected in the list, and the
+**Selected phrases** button shows how many (hover over it for their
+names). A preset whose phrase has since been renamed or removed cannot
+run until it is saved again with other phrases.
+
+From the command line, `speak5220-cli export PROJECT --output DIR` runs
+every preset of a project, or those named by `--preset` (see the
+[command-line tool](cli.md)).
 
 ## C headers
 

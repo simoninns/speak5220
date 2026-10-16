@@ -173,6 +173,27 @@ TEST(AcornPhromOptionsTest, RejectsLongHeaderStrings) {
             StatusCode::kInvalidArgument);
 }
 
+TEST(HeaderStringsTest, FitWithANullAfterEach) {
+  // 52 characters and two nulls: the whole of the 54 bytes.
+  const std::vector<std::string> full = {std::string(49, 'x'), "abc"};
+  EXPECT_TRUE(ValidateHeaderStrings(full).IsOk());
+  const std::vector<std::string> over = {std::string(49, 'x'), "abcd"};
+  EXPECT_EQ(ValidateHeaderStrings(over).Code(), StatusCode::kInvalidArgument);
+  EXPECT_TRUE(ValidateHeaderStrings({}).IsOk());
+}
+
+TEST(HeaderStringsTest, ArePrintableAndNotEmpty) {
+  EXPECT_FALSE(
+      ValidateHeaderStrings(std::vector<std::string>{"(C)", ""}).IsOk());
+  EXPECT_FALSE(
+      ValidateHeaderStrings(std::vector<std::string>{"tab\there"}).IsOk());
+  EXPECT_FALSE(
+      ValidateHeaderStrings(std::vector<std::string>{"caf\xc3\xa9"}).IsOk());
+  EXPECT_TRUE(
+      ValidateHeaderStrings(std::vector<std::string>{"(C)1983 Acorn", "~"})
+          .IsOk());
+}
+
 TEST(AcornPhromOptionsTest, AddsStopToOpenWord) {
   const std::vector<Word> words = {{"OPEN", {Frame::Repeat(3, 4)}}};
   const StatusOr<PhromImage> built = AcornPhrom::Build(words, {});

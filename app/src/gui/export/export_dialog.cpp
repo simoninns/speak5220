@@ -25,6 +25,7 @@
 #include <QString>
 #include <QStringList>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <cstddef>
 #include <string>
 #include <string_view>
@@ -53,7 +54,13 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
     : QDialog(parent),
       project_(start.project),
       confirm_overwrite_(start.confirm_overwrite),
+      set_presets_(start.set_presets),
       scope_phrases_(start.selected),
+      preset_box_(new QComboBox(this)),
+      save_preset_button_(new QPushButton(this)),
+      delete_preset_button_(
+          new QPushButton(QStringLiteral("&Delete Preset"), this)),
+      preset_note_(new QLabel(this)),
       format_box_(new QComboBox(this)),
       all_button_(new QRadioButton(QStringLiteral("All phrases"), this)),
       selected_button_(new QRadioButton(this)),
@@ -67,6 +74,23 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
       directory_edit_(new QLineEdit(start.directory, this)),
       summary_label_(new QLabel(this)) {
   setWindowTitle(QStringLiteral("Export"));
+
+  preset_box_->setAccessibleName(QStringLiteral("Preset"));
+  preset_box_->setToolTip(
+      QStringLiteral("Fill the fields from an export saved in the project"));
+  save_preset_button_->setToolTip(QStringLiteral(
+      "Save these fields in the project as an export preset, named after "
+      "the Name field"));
+  delete_preset_button_->setToolTip(
+      QStringLiteral("Remove the chosen preset from the project"));
+  auto* preset_row = new QHBoxLayout;
+  preset_row->addWidget(preset_box_, 1);
+  preset_row->addWidget(save_preset_button_);
+  preset_row->addWidget(delete_preset_button_);
+  preset_note_->setWordWrap(true);
+  save_preset_button_->setVisible(static_cast<bool>(set_presets_));
+  delete_preset_button_->setVisible(static_cast<bool>(set_presets_));
+  FillPresets({});
 
   for (const project::ExportFormatInfo& format : project::ExportFormats()) {
     format_box_->addItem(ToQString(format.label), ToQString(format.key));
@@ -112,6 +136,11 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
                                       QDialogButtonBox::AcceptRole);
 
   auto* form = new QFormLayout;
+  // QFormLayout gives a label a buddy only when it makes the label for a
+  // widget, not for a row of them.
+  auto* preset_label = new QLabel(QStringLiteral("&Preset:"), this);
+  preset_label->setBuddy(preset_box_);
+  form->addRow(preset_label, preset_row);
   form->addRow(QStringLiteral("Format:"), format_box_);
   form->addRow(QStringLiteral("Phrases:"), scope_row);
   form->addRow(layout_label_, layout_box_);
@@ -128,6 +157,7 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
   browse->setToolTip(QStringLiteral("Choose the folder"));
   auto* layout = new QVBoxLayout(this);
   layout->addLayout(form);
+  layout->addWidget(preset_note_);
   layout->addWidget(summary_label_);
   layout->addWidget(buttons);
 
@@ -143,6 +173,11 @@ ExportDialog::ExportDialog(const ExportStart& start, QWidget* parent)
   connect(directory_edit_, &QLineEdit::textChanged, this,
           &ExportDialog::Update);
   connect(browse, &QPushButton::clicked, this, &ExportDialog::Browse);
+  connect(preset_box_, &QComboBox::activated, this, &ExportDialog::LoadPreset);
+  connect(save_preset_button_, &QPushButton::clicked, this,
+          &ExportDialog::SavePreset);
+  connect(delete_preset_button_, &QPushButton::clicked, this,
+          &ExportDialog::DeletePreset);
   connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
   connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
   Update();
@@ -229,6 +264,7 @@ void ExportDialog::Update() {
 
   selected_button_->setText(
       QStringLiteral("Selected phrases (%1)").arg(scope_phrases_.size()));
+  selected_button_->setToolTip(scope_phrases_.join(QStringLiteral(", ")));
   selected_button_->setEnabled(!scope_phrases_.isEmpty());
   if (scope_phrases_.isEmpty() && selected_button_->isChecked()) {
     all_button_->setChecked(true);
@@ -239,6 +275,15 @@ void ExportDialog::Update() {
   can_export_ = false;
   core::StatusOr<std::vector<std::string>> files =
       project::ExportFileNames(*project_, request.preset, request.preset.name);
+  // A preset is saved under the Name field, and must be one that can run.
+  can_save_ = files.IsOk();
+  const bool replaces = PresetIndex(request.preset.name) >= 0;
+  save_preset_button_->setText(replaces ? QStringLiteral("&Update Preset")
+                                        : QStringLiteral("&Save as Preset"));
+  save_preset_button_->setEnabled(can_save_);
+  delete_preset_button_->setEnabled(
+      !preset_box_->currentData().toString().isEmpty());
+  preset_note_->setVisible(!preset_note_->text().isEmpty());
   if (!files.IsOk()) {
     summary = QStringLiteral("Cannot export: %1")
                   .arg(ToQString(files.GetStatus().Message()));
@@ -280,6 +325,121 @@ void ExportDialog::Browse() {
   if (!directory.isEmpty()) {
     directory_edit_->setText(directory);
   }
+}
+
+int ExportDialog::PresetIndex(const std::string& name) const {
+  const std::vector<project::ExportPreset>& presets =
+      project_->Contents().exports;
+  for (std::size_t i = 0; i < presets.size(); ++i) {
+    if (presets[i].name == name) {
+      return static_cast<int>(i);
+    }
+  }
+  return -1;
+}
+
+void ExportDialog::FillPresets(const QString& chosen) {
+  preset_box_->clear();
+  preset_box_->addItem(QStringLiteral("None"), QString());
+  for (const project::ExportPreset& preset : project_->Contents().exports) {
+    preset_box_->addItem(ToQString(preset.name), ToQString(preset.name));
+  }
+  preset_box_->setCurrentIndex(std::max(0, preset_box_->findData(chosen)));
+  preset_box_->setEnabled(preset_box_->count() > 1);
+}
+
+void ExportDialog::LoadPreset() {
+  const int index =
+      PresetIndex(preset_box_->currentData().toString().toStdString());
+  if (index < 0) {
+    preset_note_->clear();
+    Update();
+    return;
+  }
+  const project::ExportPreset& preset =
+      project_->Contents().exports[static_cast<std::size_t>(index)];
+  if (const int format = format_box_->findData(ToQString(preset.format));
+      format >= 0) {
+    format_box_->setCurrentIndex(format);
+    preset_note_->clear();
+  } else {
+    preset_note_->setText(
+        QStringLiteral("The preset's format, \"%1\", is not one Speak5220 "
+                       "has.")
+            .arg(ToQString(preset.format)));
+  }
+  if (preset.scope == project::kScopeSelected) {
+    scope_phrases_.clear();
+    for (const std::string& name : preset.phrases) {
+      scope_phrases_ << ToQString(name);
+    }
+    selected_button_->setEnabled(!scope_phrases_.isEmpty());
+    selected_button_->setChecked(true);
+  } else {
+    all_button_->setChecked(true);
+  }
+  layout_box_->setCurrentIndex(std::max(
+      0,
+      layout_box_->findData(ToQString(
+          preset.layout.empty() ? project::kLayoutSeparate : preset.layout))));
+  licence_edit_->setText(ToQString(preset.licence));
+  audio_box_->setCurrentIndex(std::max(
+      0, audio_box_->findData(ToQString(
+             preset.audio.empty() ? project::kAudioEncoded : preset.audio))));
+  name_edit_->setText(ToQString(preset.name));
+  Update();
+}
+
+void ExportDialog::SavePreset() {
+  if (!set_presets_ || !can_save_) {
+    return;
+  }
+  project::ExportPreset preset = Request().preset;
+  std::vector<project::ExportPreset> presets = project_->Contents().exports;
+  const int index = PresetIndex(preset.name);
+  QString text;
+  if (index >= 0) {
+    // Keys this version does not know are kept.
+    project::ExportPreset& replaced = presets[static_cast<std::size_t>(index)];
+    preset.unknown = replaced.unknown;
+    replaced = preset;
+    text = QStringLiteral("Update Export Preset %1");
+  } else {
+    presets.push_back(preset);
+    text = QStringLiteral("Save Export Preset %1");
+  }
+  const QString name = ToQString(preset.name);
+  if (const core::Status status =
+          set_presets_(std::move(presets), text.arg(name));
+      !status.IsOk()) {
+    preset_note_->setText(QStringLiteral("Cannot save the preset: %1")
+                              .arg(ToQString(status.Message())));
+    return;
+  }
+  FillPresets(name);
+  preset_note_->setText(QStringLiteral("Saved as the preset %1.").arg(name));
+  Update();
+}
+
+void ExportDialog::DeletePreset() {
+  const QString name = preset_box_->currentData().toString();
+  const int index = PresetIndex(name.toStdString());
+  if (!set_presets_ || index < 0) {
+    return;
+  }
+  std::vector<project::ExportPreset> presets = project_->Contents().exports;
+  presets.erase(presets.begin() + index);
+  if (const core::Status status =
+          set_presets_(std::move(presets),
+                       QStringLiteral("Delete Export Preset %1").arg(name));
+      !status.IsOk()) {
+    preset_note_->setText(QStringLiteral("Cannot delete the preset: %1")
+                              .arg(ToQString(status.Message())));
+    return;
+  }
+  FillPresets({});
+  preset_note_->setText(QStringLiteral("Deleted the preset %1.").arg(name));
+  Update();
 }
 
 }  // namespace speak5220::app

@@ -609,7 +609,7 @@ int RunSynth(const QCommandLineParser& parser, const QStringList& arguments) {
   return kExitSuccess;
 }
 
-// The measures file's columns (docs/application/reference/cli-options.md).
+// The measures file's columns (docs/application/user-manual/cli.md).
 constexpr std::string_view kMeasuresHeader =
     "name\tsource\tframes\tbytes\tscore\tenvelope_score\tpitch_score\t"
     "intelligibility_score\tlsd_db\tlsd_over_2db\tlsd_over_4db\t"

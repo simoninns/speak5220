@@ -35,6 +35,7 @@
 #include <vector>
 
 #include "core/project/phrase.h"
+#include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -48,6 +49,7 @@
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/playback/player.h"
 #include "gui/preferences/preferences_dialog.h"
+#include "gui/project_settings/project_settings_dialog.h"
 #include "gui/support/gui_mocks.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
@@ -214,10 +216,13 @@ TEST_F(AccessibilityTest, MainWindowControlsAreNamedAndReachable) {
   }
 }
 
-// The getting-started walkthrough's commands, each with its key.
+// The commands of the walkthrough (docs/application/making-speech.md),
+// each with its key.
 TEST_F(AccessibilityTest, WalkthroughCommandsHaveShortcuts) {
   const QStringList walkthrough = {QStringLiteral("&New"),
                                    QStringLiteral("&Add Phrases..."),
+                                   QStringLiteral("Move &Up"),
+                                   QStringLiteral("Move &Down"),
                                    QStringLiteral("Re-&encode"),
                                    QStringLiteral("&Optimise..."),
                                    QStringLiteral("&Save"),
@@ -306,12 +311,27 @@ TEST_F(AccessibilityTest, ExportDialogControlsAreNamedAndReachable) {
                        .selected = {},
                        .base = QStringLiteral("speech"),
                        .directory = QString(),
-                       .confirm_overwrite = {}});
+                       .confirm_overwrite = {},
+                       .set_presets = [](const auto&, const QString&) {
+                         return core::OkStatus();
+                       }});
   dialog.show();
   QApplication::processEvents();
   const Audit audit = AuditWidgets(&dialog);
   EXPECT_THAT(audit.unnamed, IsEmpty());
   EXPECT_THAT(audit.unreachable, IsEmpty());
+}
+
+TEST_F(AccessibilityTest, ProjectSettingsControlsAreNamedAndReachable) {
+  ProjectSettingsDialog dialog(window_.Document().Project());
+  dialog.show();
+  for (int tab = 0; tab < dialog.Tabs()->count(); ++tab) {
+    dialog.Tabs()->setCurrentIndex(tab);
+    QApplication::processEvents();
+    const Audit audit = AuditWidgets(&dialog);
+    EXPECT_THAT(audit.unnamed, IsEmpty()) << "tab " << tab;
+    EXPECT_THAT(audit.unreachable, IsEmpty()) << "tab " << tab;
+  }
 }
 
 TEST_F(AccessibilityTest, PreferencesControlsAreNamedAndReachable) {

@@ -107,6 +107,11 @@ class MockProjectEditor : public core::project::IProjectEditor {
               (core::encoder::EncoderOptions options), (override));
   MOCK_METHOD(core::StatusOr<core::project::PhromSettings>, SetPhromSettings,
               (core::project::PhromSettings settings), (override));
+  MOCK_METHOD(core::StatusOr<core::project::ProjectIdentity>, SetIdentity,
+              (core::project::ProjectIdentity identity), (override));
+  MOCK_METHOD(core::StatusOr<std::vector<core::project::ExportPreset>>,
+              SetExports, (std::vector<core::project::ExportPreset> exports),
+              (override));
 };
 
 }  // namespace speak5220::testing

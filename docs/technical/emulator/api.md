@@ -103,7 +103,7 @@ the codes from the sample period of the first frame read until the output
 has been idle again, and the same as 16-bit samples (codes × 64). Playback,
 the quality rating, the waveforms and the audio exports all use it; results
 are cached per phrase. `speak5220-cli synth` speaks a frames file through it
-([command-line options](../../application/reference/cli-options.md)).
+([command-line tool](../../application/user-manual/cli.md)).
 
 The encoder has its own synthesiser (`ReferenceSynthesizer`, in the same
 directory), which runs §8.9 without the slot-level timing for its closed

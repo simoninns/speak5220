@@ -29,32 +29,6 @@
 
 namespace speak5220::core::project {
 
-// An export the CLI can run.
-struct ExportPreset {
-  std::string name = {};
-  // "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav" or
-  // "bbc-dsd".
-  std::string format = {};
-  // "all" phrases, or the "selected" ones in `phrases`.
-  std::string scope = "all";
-  // For scope "selected": the phrases' names. They are exported in list
-  // order, whatever the order here.
-  std::vector<std::string> phrases = {};
-  // For PHROM images: "separate" (one file per PHROM) or "concatenated".
-  std::string layout = {};
-  // For C headers: the SPDX licence identifier of the generated file;
-  // empty for GPL-3.0-or-later.
-  std::string licence = {};
-  // For WAV: "encoded" (the chip's output), "original" (the 8 kHz
-  // source) or "preprocessed" (the source as the encoder takes it); empty
-  // for "encoded".
-  std::string audio = {};
-  UnknownKeys unknown = {};
-
-  friend bool operator==(const ExportPreset& a,
-                         const ExportPreset& b) = default;
-};
-
 // The project-wide settings (the "project" mapping of project.yaml).
 struct ProjectSettings {
   std::string name;
@@ -93,6 +67,12 @@ struct ProjectContents {
   friend bool operator==(const ProjectContents& a,
                          const ProjectContents& b) = default;
 };
+
+// Checks the header strings every PHROM starts from: as
+// packaging::ValidateHeaderStrings(), with the largest PHROM number the
+// budget allows appended to the second string, as that PHROM gets them
+// (PhromHeaderStrings()), so they fit every PHROM. Pure.
+Status ValidateProjectHeaderStrings(std::span<const std::string> strings);
 
 // Checks project settings: printable ASCII keys in the ASCII map with
 // valid names, PHROM numbers from 1 to the budget without repeats, and
@@ -151,9 +131,6 @@ class Project : public IProjectEditor {
   // invalid (ValidateProjectSettings()). New default options make
   // encodings stale; they are not redone here.
   Status SetSettings(ProjectSettings settings);
-  // Replaces the export presets. Fails for a preset with no name or a
-  // repeated name.
-  Status SetExports(std::vector<ExportPreset> exports);
 
   // The PHROMs the phrases fill now.
   PhromAllocation Allocation() const;
@@ -180,6 +157,9 @@ class Project : public IProjectEditor {
   StatusOr<encoder::EncoderOptions> SetDefaultEncoder(
       encoder::EncoderOptions options) override;
   StatusOr<PhromSettings> SetPhromSettings(PhromSettings settings) override;
+  StatusOr<ProjectIdentity> SetIdentity(ProjectIdentity identity) override;
+  StatusOr<std::vector<ExportPreset>> SetExports(
+      std::vector<ExportPreset> exports) override;
 
   friend bool operator==(const Project& a, const Project& b) {
     return a.contents_ == b.contents_;

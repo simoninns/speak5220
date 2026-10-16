@@ -399,12 +399,15 @@ The exceptions are the scripts in `app/scripts/golden/` (`generate_golden.py`,
 hand, and only to create or, by agreement, regenerate the reference data
 (AGENTS.md §3.1).
 
-The functional lane also checks the reference pages against the code
+The functional lane also checks the user documentation against the code
 (`app/tests/functional/docs_coverage_test.cpp`, reading
-`docs/application/` through `SPEAK5220_DOCS_DIR`): every encoder option,
-`speak5220-cli` option and command, project-file key, and export format
-and preset value must be documented in `docs/application/reference/`, so a
-change that adds one without its entry fails.
+`docs/application/` through `SPEAK5220_DOCS_DIR`): every preprocessing and
+encoder option must have a settings row, with its type, default, range and
+slider, in `user-manual/preprocess.md` or `user-manual/encode.md`; every
+`speak5220-cli` option and command a row in `user-manual/cli.md`; and every
+project-file key, export format and preset value must be documented in
+`reference/project-file.md` or `reference/export-formats.md`. So a change
+that adds one without its entry fails.
 
 - `app/scripts/run-projects.sh [general|phrom|bbc|all]` runs a fixture suite end to
   end through `speak5220-cli`. It encodes each fixture into a copy (the

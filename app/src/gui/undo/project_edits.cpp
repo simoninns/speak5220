@@ -101,6 +101,18 @@ core::Status ProjectEdits::ReplacePhrases(std::vector<project::Phrase> phrases,
       *editor_, std::move(phrases), text));
 }
 
+core::Status ProjectEdits::SetProjectSettings(project::ProjectIdentity identity,
+                                              project::PhromSettings settings) {
+  return Push(std::make_unique<SetProjectSettingsCommand>(
+      *editor_, std::move(identity), std::move(settings)));
+}
+
+core::Status ProjectEdits::SetExports(
+    std::vector<project::ExportPreset> exports, const QString& text) {
+  return Push(
+      std::make_unique<SetExportsCommand>(*editor_, std::move(exports), text));
+}
+
 core::Status ProjectEdits::Push(std::unique_ptr<ProjectCommand> command) {
   if (core::Status status = command->Execute(); !status.IsOk()) {
     return status;

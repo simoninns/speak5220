@@ -2,23 +2,28 @@
 
 # speak5220
 
-Speak5220 makes speech for the Texas Instruments TMS5220 voice synthesis processor. Its emulator and speech encoder are written from a reference datasheet of the chip, measured on real hardware.
-
-- **Documentation:** <https://simoninns.github.io/speak5220/> (source in [`docs/`](docs/index.md))
-- **Building:** [`BUILD.md`](BUILD.md): cloning, the Nix development shell, the application and the documentation site
-
-## The Speak5220 application
-
-Speak5220 is a cross-platform Qt/C++ application for creating and editing TMS5220 LPC speech data and building new PHROMs. It:
-
-- imports WAV speech and encodes it, with an optimiser that tunes the encoder for the best quality, rated from Poor to Good by objective measures of the spectral envelope, pitch and intelligibility;
-- shows and plays the original, preprocessed and encoded speech, the last through a built-in emulator;
-- imports the words of existing Acorn PHROM images;
-- exports Acorn PHROM images, C headers, WAV, and BBC Micro disc images that speak through Speak External.
+Speak5220 is a desktop application for making speech for the Texas Instruments TMS5220 voice synthesis processor, the chip in the BBC Micro's speech system. You give it recordings of words and phrases; it encodes them into the data the chip speaks, lets you hear exactly how the chip will sound, and builds new speech ROMs (PHROMs) from them.
 
 <p align="center"><img src="assets/gui-captures/gui-main-window-web.webp" alt="The Speak5220 main window: the phrase list, an encoded phrase's waveform with its frame grid, and its quality rating" width="800"></p>
 
-It has a GUI, `speak5220`, and a command-line tool, `speak5220-cli`. Each release has installers for Linux (Flatpak), Windows (MSI) and macOS (DMG) on the [Releases](https://github.com/simoninns/speak5220/releases) page; the [user documentation](https://simoninns.github.io/speak5220/application/) says how to install and use it.
+- **Documentation:** <https://simoninns.github.io/speak5220/> (source in [`docs/`](docs/index.md))
+- **Download:** installers for Linux (Flatpak), Windows (MSI) and macOS (DMG) on the [Releases](https://github.com/simoninns/speak5220/releases) page
+- **Building:** [`BUILD.md`](BUILD.md): cloning, the Nix development shell, the application and the documentation site
+
+## What it does
+
+- **Imports speech** from WAV files of any sample rate, or the words of existing Acorn PHROM images, such as Acorn's own PHROM A.
+- **Prepares the recording** for the chip, with a noise gate, bass cut, treble tilt and de-esser, and a preset for the BBC Micro's speaker.
+- **Encodes it** into TMS5220 frames, and plays the result through a built-in emulator of the chip, so what you hear is what the chip will say.
+- **Rates the result** from *Poor* to *Good*, by objective measures of the spectral envelope, pitch and intelligibility, and **optimises** the encoder's settings for the best quality or the smallest size.
+- **Fills PHROMs**: phrases are packed into 16 KB PHROMs in order, with their names, header strings and ASCII map, and the window shows how much space is left.
+- **Exports** Acorn PHROM images, C headers for your own firmware, WAV files, and BBC Micro disc images that speak the phrases through Speak External, without a PHROM.
+
+It is a cross-platform Qt/C++ application with a GUI, `speak5220`, and a command-line tool, `speak5220-cli`, that does the same from scripts. The [user documentation](https://simoninns.github.io/speak5220/application/) says how to install and use it.
+
+## How it was made
+
+Speak5220's emulator and encoder are not guesses at how the TMS5220 works. A purpose-built board drove a real chip from a Raspberry Pi Pico 2, emulated its speech ROMs and recorded every output sample, so that the chip's behaviour could be measured. From those measurements came a reference datasheet that describes the chip sample for sample, and the application's emulator and encoder were written from that datasheet alone. The datasheet, and how the emulator and encoder work, are in the documentation's [Technical](https://simoninns.github.io/speak5220/technical/) section.
 
 ## Repository layout
 

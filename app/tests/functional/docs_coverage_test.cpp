@@ -1,8 +1,8 @@
 /*
  * File:        docs_coverage_test.cpp
  * Module:      docs tests
- * Purpose:     Checks that the reference pages of the user documentation
- *              cover every encoder option, CLI option and command,
+ * Purpose:     Checks that the user documentation covers every
+ *              preprocessing and encoder option, CLI option and command,
  *              project-file key and export format the code has
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
@@ -57,12 +57,21 @@ constexpr std::string_view kFixture = "general/one-phrase";
 // `export --format acorn-phrom`.
 constexpr std::size_t kMaxMentionWords = 4;
 
-// A reference page, read once: its lines outside fenced code blocks, and
-// the words of its inline code spans.
+// The pages that document each part, relative to docs/application/. The
+// preprocessing options have rows on the Preprocess page, the encoder's on
+// the Encode page.
+constexpr std::string_view kPreprocessPage = "user-manual/preprocess.md";
+constexpr std::string_view kEncodePage = "user-manual/encode.md";
+constexpr std::string_view kCliPage = "user-manual/cli.md";
+constexpr std::string_view kProjectFilePage = "reference/project-file.md";
+constexpr std::string_view kExportFormatsPage = "reference/export-formats.md";
+
+// A documentation page, read once: its lines outside fenced code blocks,
+// and the words of its inline code spans.
 class ReferencePage {
  public:
-  explicit ReferencePage(std::string name) : name_(std::move(name)) {
-    std::ifstream file(fs::path(SPEAK5220_DOCS_DIR) / "reference" / name_);
+  explicit ReferencePage(std::string_view name) : name_(name) {
+    std::ifstream file(fs::path(SPEAK5220_DOCS_DIR) / name_);
     EXPECT_TRUE(file.is_open()) << "cannot read " << name_;
     bool fenced = false;
     for (std::string line; std::getline(file, line);) {
@@ -221,14 +230,18 @@ std::size_t Column(const std::vector<std::string>& header,
 }
 
 TEST(DocsCoverageTest, EveryEncoderOptionHasARowWithItsTypeDefaultAndRange) {
-  const ReferencePage page("encoder-options.md");
+  const ReferencePage preprocess_page(kPreprocessPage);
+  const ReferencePage encode_page(kEncodePage);
   std::set<std::string> missing;
   std::set<std::string> wrong;
   for (const encoder::EncoderOptionInfo& info : encoder::EncoderOptionInfos()) {
+    const ReferencePage& page = info.stage == encoder::OptionStage::kPreprocess
+                                    ? preprocess_page
+                                    : encode_page;
     const std::vector<std::string> row = page.RowFor(info.field);
     const std::vector<std::string> header = page.HeaderFor(info.field);
     if (row.empty()) {
-      missing.insert(std::string(info.field));
+      missing.insert(std::format("{} ({})", info.field, page.Name()));
       continue;
     }
     const std::size_t type_column = Column(header, "Type");
@@ -293,9 +306,9 @@ TEST(DocsCoverageTest, EveryEncoderOptionHasARowWithItsTypeDefaultAndRange) {
     }
   }
   EXPECT_TRUE(missing.empty())
-      << page.Name() << " has no row for the options:" << List(missing);
+      << "no settings row for the options:" << List(missing);
   EXPECT_TRUE(wrong.empty())
-      << page.Name() << " disagrees with the code:" << List(wrong);
+      << "the settings rows disagree with the code:" << List(wrong);
 }
 
 TEST(DocsCoverageTest, EveryCliOptionHasARow) {
@@ -305,7 +318,7 @@ TEST(DocsCoverageTest, EveryCliOptionHasARow) {
   ASSERT_TRUE(options.contains("--log-level")) << help;
   ASSERT_TRUE(options.contains("--output")) << help;
 
-  const ReferencePage page("cli-options.md");
+  const ReferencePage page(kCliPage);
   std::set<std::string> missing;
   for (const std::string& option : options) {
     if (page.RowFor(option).empty()) {
@@ -334,7 +347,7 @@ TEST(DocsCoverageTest, EveryCliCommandHasARow) {
   }
   ASSERT_TRUE(commands.contains("new")) << message;
 
-  const ReferencePage page("cli-options.md");
+  const ReferencePage page(kCliPage);
   std::set<std::string> missing;
   for (const std::string& command : commands) {
     if (page.RowFor(command).empty()) {
@@ -424,7 +437,8 @@ project::Project ProjectWithEverything(core::audio::IWavCodec& codec) {
 }
 
 // The mappings whose keys are option fields (EncoderOptionInfo::field),
-// documented in encoder-options.md, and the one whose keys are data.
+// documented on the Preprocess and Encode view pages, and the one whose
+// keys are data.
 constexpr std::array<std::string_view, 4> kOptionMappings = {
     "default_preprocess", "default_encoder", "preprocess", "encoder"};
 constexpr std::string_view kAsciiMap = "ascii_map";
@@ -487,7 +501,7 @@ TEST(DocsCoverageTest, EveryProjectFileKeyIsDocumented) {
     EXPECT_TRUE(keys.contains(key)) << "the project has no " << key;
   }
 
-  const ReferencePage project_file("project-file.md");
+  const ReferencePage project_file(kProjectFilePage);
   std::set<std::string> missing;
   for (const std::string& key : keys) {
     if (!project_file.Mentions(key)) {
@@ -497,22 +511,27 @@ TEST(DocsCoverageTest, EveryProjectFileKeyIsDocumented) {
   EXPECT_TRUE(missing.empty())
       << project_file.Name() << " does not mention the keys:" << List(missing);
 
-  const ReferencePage options("encoder-options.md");
+  const ReferencePage preprocess_page(kPreprocessPage);
+  const ReferencePage encode_page(kEncodePage);
   std::set<std::string> missing_options;
   for (const std::string& key : option_keys) {
-    if (encoder::FindEncoderOption(key) == nullptr ||
-        options.RowFor(key).empty()) {
+    const encoder::EncoderOptionInfo* info = encoder::FindEncoderOption(key);
+    const ReferencePage* page = nullptr;
+    if (info != nullptr) {
+      page = info->stage == encoder::OptionStage::kPreprocess ? &preprocess_page
+                                                              : &encode_page;
+    }
+    if (page == nullptr || page->RowFor(key).empty()) {
       missing_options.insert(key);
     }
   }
   EXPECT_TRUE(missing_options.empty())
-      << options.Name()
-      << " has no row for the option keys:" << List(missing_options);
+      << "no settings row for the option keys:" << List(missing_options);
 }
 
 TEST(DocsCoverageTest, EveryExportFormatAndPresetValueIsDocumented) {
-  const ReferencePage formats("export-formats.md");
-  const ReferencePage project_file("project-file.md");
+  const ReferencePage formats(kExportFormatsPage);
+  const ReferencePage project_file(kProjectFilePage);
   std::set<std::string> missing;
   for (const project::ExportFormatInfo& format : project::ExportFormats()) {
     if (formats.RowFor(format.key).empty()) {

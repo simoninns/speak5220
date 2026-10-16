@@ -15,8 +15,11 @@
 #include <QString>
 #include <QStringList>
 #include <functional>
+#include <string>
+#include <vector>
 
 #include "core/project/project.h"
+#include "core/util/status.h"
 
 class QComboBox;
 class QLabel;
@@ -42,6 +45,12 @@ struct ExportStart {
   // files are never replaced.
   std::function<bool(const QString& directory, const QStringList& names)>
       confirm_overwrite;
+  // Replaces the project's export presets with `presets`, as one undoable
+  // step named `text`, and says whether it could. Unset, presets can be
+  // loaded but not saved or deleted.
+  std::function<core::Status(std::vector<core::project::ExportPreset> presets,
+                             const QString& text)>
+      set_presets;
 };
 
 // What the user asked for.
@@ -55,8 +64,12 @@ struct ExportRequest {
                          const ExportRequest& b) = default;
 };
 
-// Chooses an export. The scope is every phrase or the selected
-// ones; the format's own options appear with it (the PHROM layout, the
+// Chooses an export. A preset of the project fills the fields; the
+// fields can be saved as a preset named after the Name field (replacing
+// one of that name), and the chosen preset deleted
+// (ExportStart::set_presets). The scope is every phrase or the selected
+// ones (a preset's own, once one is loaded); the format's own options
+// appear with it (the PHROM layout, the
 // header licence, the WAV audio). Below, the files it will write, or why it
 // cannot: a phrase not encoded with its current settings, one too large for a
 // PHROM, a name that cannot name files
@@ -83,6 +96,9 @@ class ExportDialog : public QDialog {
   void accept() override;
   bool CanExport() const;
 
+  QComboBox* PresetBox() const { return preset_box_; }
+  QPushButton* SavePresetButton() const { return save_preset_button_; }
+  QPushButton* DeletePresetButton() const { return delete_preset_button_; }
   QComboBox* FormatBox() const { return format_box_; }
   QRadioButton* AllButton() const { return all_button_; }
   QRadioButton* SelectedButton() const { return selected_button_; }
@@ -96,12 +112,30 @@ class ExportDialog : public QDialog {
  private:
   void Update();
   void Browse();
+  // Lists the project's presets, choosing the one called `chosen`.
+  void FillPresets(const QString& chosen);
+  // Fills the fields from the preset chosen.
+  void LoadPreset();
+  // Saves the fields as the preset named in the Name field.
+  void SavePreset();
+  // Deletes the preset chosen.
+  void DeletePreset();
+  // The index of the project's preset called `name`, or -1.
+  int PresetIndex(const std::string& name) const;
 
   const core::project::Project* project_;
   std::function<bool(const QString&, const QStringList&)> confirm_overwrite_;
-  // The phrases the "selected" scope exports.
-  const QStringList scope_phrases_;
+  std::function<core::Status(std::vector<core::project::ExportPreset>,
+                             const QString&)>
+      set_presets_;
+  // The phrases the "selected" scope exports: those selected in the list,
+  // or a loaded preset's.
+  QStringList scope_phrases_;
 
+  QComboBox* preset_box_ = nullptr;
+  QPushButton* save_preset_button_ = nullptr;
+  QPushButton* delete_preset_button_ = nullptr;
+  QLabel* preset_note_ = nullptr;
   QComboBox* format_box_ = nullptr;
   QRadioButton* all_button_ = nullptr;
   QRadioButton* selected_button_ = nullptr;
@@ -116,6 +150,7 @@ class ExportDialog : public QDialog {
   QLabel* summary_label_ = nullptr;
   QPushButton* export_button_ = nullptr;
   bool can_export_ = false;
+  bool can_save_ = false;
 };
 
 }  // namespace speak5220::app

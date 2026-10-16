@@ -1,5 +1,5 @@
 site_name: speak5220
-site_description: The Texas Instruments TMS5220 voice synthesis processor, measured on real hardware
+site_description: Speak5220, an application for making TMS5220 speech and building PHROMs, with an emulator and encoder written from measurements of the real chip
 site_url: https://simoninns.github.io/speak5220/
 repo_url: https://github.com/simoninns/speak5220
 repo_name: simoninns/speak5220
@@ -64,21 +64,26 @@ nav:
   - Home: index.md
   - Application:
       - application/index.md
-      - Getting started: application/getting-started.md
-      - User manual:
-          - Projects and phrases: application/user-manual/projects.md
+      - Installing: application/installing.md
+      - Making speech: application/making-speech.md
+      - In detail:
           - The main window: application/user-manual/main-window.md
+          - Phrases and PHROMs: application/user-manual/phrases.md
           - Waveforms and playback: application/user-manual/waveforms.md
-          - The encoder and Optimise: application/user-manual/encoder.md
+          - The Original view: application/user-manual/original.md
+          - The Preprocess view: application/user-manual/preprocess.md
+          - The Encode view: application/user-manual/encode.md
+          - Optimise: application/user-manual/optimise.md
           - Export: application/user-manual/export.md
           - BBC Micro disc: application/user-manual/bbc-disc.md
+          - Project Settings: application/user-manual/project-settings.md
+          - Preferences: application/user-manual/preferences.md
           - Command-line tool: application/user-manual/cli.md
           - Troubleshooting: application/user-manual/troubleshooting.md
       - Reference:
           - Project file: application/reference/project-file.md
-          - Command-line options: application/reference/cli-options.md
-          - Encoder options: application/reference/encoder-options.md
           - Export formats: application/reference/export-formats.md
+          - Encoder behaviour: application/reference/encoder-behaviour.md
   - Technical:
       - technical/index.md
       - Reference datasheet:

@@ -7,15 +7,15 @@ prints them on stderr, prefixed `speak5220-cli:`.
 
 | Message | Meaning |
 |---|---|
-| **Windows protected your PC** (Windows SmartScreen, opening the MSI) | The MSI is not signed with a paid certificate. Choose **More info**, then **Run anyway** (see [installing on Windows](../getting-started.md#windows-msi)) |
-| *"speak5220" Not Opened*, or *Apple could not verify "speak5220" is free of malware* (macOS) | The application is not notarised by Apple. Allow it in **System Settings > Privacy & Security** with **Open Anyway** (see [installing on macOS](../getting-started.md#macos-dmg)) |
+| **Windows protected your PC** (Windows SmartScreen, opening the MSI) | The MSI is not signed with a paid certificate. Choose **More info**, then **Run anyway** (see [installing on Windows](../installing.md#windows-msi)) |
+| *"speak5220" Not Opened*, or *Apple could not verify "speak5220" is free of malware* (macOS) | The application is not notarised by Apple. Allow it in **System Settings > Privacy & Security** with **Open Anyway** (see [installing on macOS](../installing.md#macos-dmg)) |
 | A file cannot be opened or saved from the Flatpak, or `speak5220-cli` in the Flatpak cannot find a file | The Flatpak can use files in your home directory only. Move the file into your home directory |
 
 ## Phrase names
 
 | Message | Meaning |
 |---|---|
-| `a phrase name cannot contain "!": use A-Z, 0-9, space and ' ( ) , - .` | Names use the Acorn PHROM's characters only (see [phrases and their names](projects.md#phrases-and-their-names)). Lower case is accepted and converted |
+| `a phrase name cannot contain "!": use A-Z, 0-9, space and ' ( ) , - .` | Names use the Acorn PHROM's characters only (see [phrases and their names](phrases.md#phrases-and-their-names)). Lower case is accepted and converted |
 | `"..." is 17 characters long; a phrase name has at most 16` | Shorten the name |
 | `a phrase name cannot be empty` | Give a name with at least one character other than spaces |
 | `there is already a phrase called HELLO` | Names are unique within a project; choose another, or rename the existing phrase |
@@ -24,7 +24,7 @@ prints them on stderr, prefixed `speak5220-cli:`.
 
 | Message | Meaning |
 |---|---|
-| `cannot add 1 phrase: the project would need 65 PHROMs, and its budget is 64` | The project already fills its 64 PHROMs; remove or shorten phrases first (see [the project budget](projects.md#phroms-and-the-project-budget)) |
+| `cannot add 1 phrase: the project would need 65 PHROMs, and its budget is 64` | The project already fills its 64 PHROMs; remove or shorten phrases first (see [the project budget](phrases.md#phroms-and-the-project-budget)) |
 | `the new settings for HELLO were not applied: ... It keeps its previous settings and encoding.` | Re-encoding the phrase with the new options would need a 65th PHROM. Choose options that give fewer bytes, or make room |
 | `HELLO: cannot re-encode HELLO: the project would need 65 PHROMs, ...` | From `speak5220-cli encode`: the phrase's new encoding does not fit. The phrase keeps its previous encoding (or stays unencoded); the other phrases are still encoded |
 | `HELLO needs 17000 bytes, more than an empty PHROM holds (16128): shorten or re-encode it` | A single phrase must fit in one PHROM. Shorten its audio, or encode it with options that give fewer bytes |
@@ -40,12 +40,26 @@ prints them on stderr, prefixed `speak5220-cli:`.
 | `export format "c-header" is not one of "acorn-phrom", "c-header-phrom", "c-header-speak-external", "wav", "bbc-dsd"` | The preset or `--format` names a format Speak5220 does not have; see [Export formats](../reference/export-formats.md) |
 | `the layout "concatenated" does not apply to the format "wav"` | A preset holds an option of another format (`layout` belongs to `acorn-phrom`, `licence` to the C headers, `audio` to `wav`). Remove it |
 | `export scope "selected" needs the phrases it exports` | A preset of scope `selected` must list its `phrases` |
-| `the export names a phrase the project does not have: HELLO` | A preset's `phrases`, or `--phrase`, names a phrase that was renamed or removed. Edit the preset |
+| `the export names a phrase the project does not have: HELLO` | A preset's `phrases`, or `--phrase`, names a phrase that was renamed or removed. Load the preset in the Export dialog, choose **All phrases** or select its phrases again, and **Update Preset** ([presets](export.md#presets)) |
+| `Cannot save the preset: ...` (Export dialog) | The project refused the presets, for the reason given |
 | `exported files cannot be named from "../out": use a name without / \ : * ? " < > \|` | The exported files are named after the preset (or the project file), so the name must be a plain file name |
 | `the licence "MIT */" is not an SPDX identifier (letters, digits, spaces and ". + - ( )")` | A C header's licence is written in its comment, so only an SPDX identifier or expression is accepted |
 | `HELLO needs 70000 bytes, more than a C header's stream holds (65535)` | A Speak External header gives each phrase's length as a 16-bit number. Shorten the phrase |
 | `the project has no export presets: give --format` | `speak5220-cli export` without `--preset` or `--format` runs the project's presets, and there are none |
 | `these phrases fill 9 PHROMs, and a BBC Micro disc holds at most 8: export fewer phrases` | A [BBC Micro disc](bbc-disc.md) holds 8 PHROMs. Export only some of the phrases (**Selected phrases**, or `--phrase`) |
+
+## Project settings
+
+What [Project Settings](project-settings.md) says under its tabs:
+
+| Message | Meaning |
+|---|---|
+| `Header strings: the header strings take 57 bytes with a null after each, and a PHROM header holds 54 (with PHROM 64's number after the second)` | The strings, with the longest number a PHROM can get, do not fit the header. Shorten them |
+| `PHROM 2's header strings: the header strings take 60 bytes ...` | A PHROM's own strings do not fit. Shorten them, or untick **Own header strings** |
+| `... a header string cannot be empty: a host stops reading the strings at an empty one` | An empty line between the strings. Remove it |
+| `... the header string "Café" holds a character that is not printable ASCII` | Header strings take letters, digits, space and punctuation only |
+| *A BBC Micro finds a PHROM only if its first string starts with (C).* | A note, not an error: a BBC Micro does not see a PHROM whose first header string starts otherwise. Keep it only for a PHROM meant for something else |
+| `cannot change the ASCII map: the project would need 65 PHROMs, ...` | Fewer ASCII entries can make a PHROM need its null word, one byte more, which takes the project past its budget. Keep the entries, or make room |
 
 ## The BBC Micro disc
 
@@ -67,8 +81,8 @@ What the [disc's player](bbc-disc.md) says on the BBC Micro:
 | `Quality not measured` (encoder panel) | The quality could not be measured: the encoding holds no sound, or the recording holds no speech the voice activity detector finds (with a noise gate, check it does not gate everything) |
 | `ESTOI too short` (encoder panel figures) | The phrase has under about 0.4 s of speech, too little for the intelligibility measure; the rating comes from the envelope and pitch alone |
 | A message titled **Encode HELLO** | The encoder refused the phrase's audio or settings, for the reason given; the phrase keeps its frames |
-| *Stale: made with other settings* on phrases whose settings did not change | They were encoded by an earlier version of the encoder, whose output differs: for example, before [quiet pauses](encoder.md#quiet-pauses). Their frames still work; re-encode them (**Phrase > Re-encode**) to get the current encoder's |
-| A faint buzz or whine in the pauses of the encoded audio | The window plays the emulator, which is not exact at this level: a pause it plays with a whine can be silent on a real chip, and the other way round (see [quiet pauses](encoder.md#quiet-pauses)). On the chip, a pause buzzes only when it is short: two silence frames or fewer, which the encoder leaves alone |
+| *Stale: made with other settings* on phrases whose settings did not change | They were encoded by an earlier version of the encoder, whose output differs: for example, before [quiet pauses](../reference/encoder-behaviour.md#quiet-pauses). Their frames still work; re-encode them (**Phrase > Re-encode**) to get the current encoder's |
+| A faint buzz or whine in the pauses of the encoded audio | The window plays the emulator, which is not exact at this level: a pause it plays with a whine can be silent on a real chip, and the other way round (see [quiet pauses](../reference/encoder-behaviour.md#quiet-pauses)). On the chip, a pause buzzes only when it is short: two silence frames or fewer, which the encoder leaves alone |
 
 ## Importing audio
 
@@ -105,9 +119,9 @@ What the [disc's player](bbc-disc.md) says on the BBC Micro:
 | `phrases/<id>/frames.yaml: frames[0] must be a mapping` | A phrase's stored frames are damaged; the message names the file and the entry |
 | `project.yaml: phrases[2].play_start must be a whole number` | A value in the project file has the wrong type; the message names the file and the key. See the [project file](../reference/project-file.md) reference |
 | `the project was saved by a newer version of Speak5220 (format version 2; this version reads up to 1)` | Open it with the newer version |
-| `project.yaml: project.default_encoder does not list ...: ... cannot be opened` | The project was saved by a development version of Speak5220 that did not list every encoder option, or before an option existed. A project lists every option, so it is not opened. Adding the missing options to `default_encoder` in `project.yaml` (in an unpacked project) with the values it was made with makes it open: `resonance_hold_db: null` (no hold, as before it existed). See the [project file](../reference/project-file.md) and [encoder options](../reference/encoder-options.md) references |
-| `project.yaml: project.default_preprocess does not list noise_gate_db, noise_gate_ms: ... cannot be opened` | The project was saved by a development version of Speak5220 that had a squelch (`squelch_db`) instead of the [noise gate](encoder.md#the-noise-gate). In `project.yaml` (in an unpacked project), replace `squelch_db: ...` under `default_preprocess` with `noise_gate_db: null` and `noise_gate_ms: 100`, and remove any `squelch_db` a phrase's `preprocess` sets. A project that used the squelch can turn the noise gate on at the same level instead, but it gates more softly, so those phrases encode differently |
-| `project.yaml: project.default_preprocess does not list de_ess_db: ... cannot be opened` | The project was saved by a development version of Speak5220 from before the [de-esser](encoder.md#the-de-esser). In `project.yaml` (in an unpacked project), add `de_ess_db: null` under `default_preprocess` (off, as before it existed). Its encodings are then redone, giving the same frames |
+| `project.yaml: project.default_encoder does not list ...: ... cannot be opened` | The project was saved by a development version of Speak5220 that did not list every encoder option, or before an option existed. A project lists every option, so it is not opened. Adding the missing options to `default_encoder` in `project.yaml` (in an unpacked project) with the values it was made with makes it open: `resonance_hold_db: null` (no hold, as before it existed). See the [project file](../reference/project-file.md) reference and [the Encode view](encode.md#the-settings) |
+| `project.yaml: project.default_preprocess does not list noise_gate_db, noise_gate_ms: ... cannot be opened` | The project was saved by a development version of Speak5220 that had a squelch (`squelch_db`) instead of the [noise gate](preprocess.md#noise-gate). In `project.yaml` (in an unpacked project), replace `squelch_db: ...` under `default_preprocess` with `noise_gate_db: null` and `noise_gate_ms: 100`, and remove any `squelch_db` a phrase's `preprocess` sets. A project that used the squelch can turn the noise gate on at the same level instead, but it gates more softly, so those phrases encode differently |
+| `project.yaml: project.default_preprocess does not list de_ess_db: ... cannot be opened` | The project was saved by a development version of Speak5220 from before the [de-esser](preprocess.md#de-esser). In `project.yaml` (in an unpacked project), add `de_ess_db: null` under `default_preprocess` (off, as before it existed). Its encodings are then redone, giving the same frames |
 | `... holds an unsafe path, "../evil.txt": refusing to open it` | The archive has a path that could write outside the project. It may have been made by another tool, or tampered with; it is not opened |
 | `... is not a Speak5220 project (it has no project.yaml): not replacing it` | Saving the unpacked form never replaces a directory that holds other files |
 | `phrases/<id>/source.wav is missing: phrase HELLO has no audio` | A file of the project has been deleted. The previous version, `NAME.s5proj~`, may still have it |

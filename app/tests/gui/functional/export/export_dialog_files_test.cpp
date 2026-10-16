@@ -51,17 +51,19 @@ class ExportDialogFilesTest : public ::testing::Test {
   // A dialog that answers the overwrite question with `answer`, counting
   // the questions and keeping the names asked about.
   ExportStart Start(bool answer) {
-    return {.project = &project_,
-            .selected = {},
-            .base = QStringLiteral("speech"),
-            .directory = directory_.path(),
-            .confirm_overwrite = [this, answer](const QString& directory,
-                                                const QStringList& names) {
+    return {
+        .project = &project_,
+        .selected = {},
+        .base = QStringLiteral("speech"),
+        .directory = directory_.path(),
+        .confirm_overwrite =
+            [this, answer](const QString& directory, const QStringList& names) {
               ++questions_;
               asked_directory_ = directory;
               asked_names_ = names;
               return answer;
-            }};
+            },
+        .set_presets = {}};
   }
 
   QTemporaryDir directory_;

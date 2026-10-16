@@ -242,13 +242,20 @@ Rules:
   (and `mkdocs build --strict` warns about it).
 - The application's documentation lives under `docs/application/`, as its own
   top-level navigation section:
-  - `getting-started.md` — installation and a quick-start walkthrough.
-  - `user-manual/` — one page per area (phrases and import, waveforms and
-    playback, the encoder and Optimise, PHROMs, export, BBC Micro disc, the
-    CLI); explains *what a feature does and how to use it*.
-  - `reference/` — the exact meaning, type, default and valid range of every
-    project-file YAML key, encoder option and CLI option, and the byte layout
-    of every export format.
+  - `installing.md` — the installers.
+  - `making-speech.md` — a walkthrough of the whole process, from a
+    recording to an exported PHROM, linking each step to its page.
+  - `user-manual/` — one page per part of the application, each listing
+    and describing **every** option and control it has, with its default,
+    range and what it actually does: the main window, phrases and PHROMs,
+    waveforms and playback, one page per view (`original.md`,
+    `preprocess.md`, `encode.md`), Optimise, export (with its presets), the
+    BBC Micro disc, Project Settings, Preferences, the command-line tool (every command and option), and
+    troubleshooting. The Preprocess and Encode pages hold the settings
+    tables (key, type, default, range, slider) of their options.
+  - `reference/` — what is not part of using the application: the
+    project-file format, the byte layout of every export format, and the
+    encoder's fixed behaviour.
 - Page conventions:
   - Start with a single `#` H1 title matching the navigation entry.
   - Link between pages with relative `.md` paths (e.g.
@@ -257,8 +264,9 @@ Rules:
     admonitions for caveats.
   - Cite the governing source inline where behaviour is spec-driven
     (e.g. `datasheet §12.8`), matching the format in §4.3.6.
-- New user-facing feature ⇒ a `user-manual/` page (or section) **and** the
-  corresponding `reference/` entries for any new keys or options.
+- New user-facing feature ⇒ a `user-manual/` page (or section) that lists
+  and describes each of its options, and the `reference/` entries for any
+  new project-file keys or file layouts.
 - Verify the site still builds before finishing:
   `nix develop --command mkdocs build --strict`.
   Preview with `nix develop --command mkdocs serve`.
@@ -271,9 +279,9 @@ same task:
 | Change | Update |
 |--------|--------|
 | New/renamed/removed project-file YAML key, or changed default or valid range | `docs/application/reference/project-file.md`; `docs/application/user-manual/` page if user-visible |
-| New or changed encoder option | `docs/application/reference/encoder-options.md`; `docs/application/user-manual/encoder.md` |
-| New or changed CLI option | `docs/application/reference/cli-options.md`, `docs/application/user-manual/cli.md` |
-| New or changed GUI workflow | The relevant `docs/application/user-manual/` page (and `getting-started.md` if the walkthrough steps change) |
+| New or changed preprocessing or encoder option | Its settings row and section in `docs/application/user-manual/preprocess.md` or `encode.md`; `docs/application/reference/encoder-behaviour.md` if fixed behaviour changes |
+| New or changed CLI option | `docs/application/user-manual/cli.md` |
+| New or changed GUI workflow | The relevant `docs/application/user-manual/` page (and `making-speech.md` if the walkthrough steps change) |
 | New or changed export format or layout | `docs/application/reference/export-formats.md`; `docs/application/user-manual/export.md` |
 | New validation rule or error message | `docs/application/user-manual/troubleshooting.md` |
 | New subsystem or pipeline stage | A `docs/application/user-manual/` page if user-visible; the comments of the code that introduces it |

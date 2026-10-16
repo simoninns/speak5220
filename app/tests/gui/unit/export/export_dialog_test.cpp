@@ -60,7 +60,26 @@ class ExportDialogTest : public ::testing::Test {
             .selected = std::move(selected),
             .base = QStringLiteral("speech"),
             .directory = QStringLiteral("/out"),
-            .confirm_overwrite = {}};
+            .confirm_overwrite = {},
+            .set_presets = {}};
+  }
+
+  // Start(), saving presets into project_ as the main window does, and
+  // keeping the names of the steps.
+  ExportStart SavingStart(QStringList selected = {}) {
+    ExportStart start = Start(std::move(selected));
+    start.set_presets = [this](std::vector<ExportPreset> presets,
+                               const QString& text) {
+      steps_ << text;
+      return project_.SetExports(std::move(presets)).GetStatus();
+    };
+    return start;
+  }
+
+  static void ChoosePreset(ExportDialog& dialog, const QString& name) {
+    const int index = dialog.PresetBox()->findData(name);
+    dialog.PresetBox()->setCurrentIndex(index);
+    emit dialog.PresetBox()->activated(index);
   }
 
   static void SelectFormat(ExportDialog& dialog, const QString& key) {
@@ -68,6 +87,7 @@ class ExportDialogTest : public ::testing::Test {
   }
 
   Project project_;
+  QStringList steps_;
 };
 
 TEST_F(ExportDialogTest, StartsAsAPhromExportOfEveryPhrase) {
@@ -180,6 +200,100 @@ TEST_F(ExportDialogTest, SaysWhyAnExportCannotRun) {
       stale.AudioBox()->findData(QStringLiteral("original")));
   EXPECT_TRUE(stale.CanExport());
   EXPECT_EQ(stale.Summary(), QStringLiteral("Writes 1 file: speech_NEW.wav"));
+}
+
+TEST_F(ExportDialogTest, PresetFillsTheFields) {
+  ASSERT_TRUE(project_
+                  .SetExports({{.name = "words",
+                                .format = "wav",
+                                .scope = "selected",
+                                .phrases = {"C"},
+                                .audio = "original"}})
+                  .IsOk());
+  ExportDialog dialog(Start());
+  ASSERT_EQ(dialog.PresetBox()->count(), 2);
+  ChoosePreset(dialog, QStringLiteral("words"));
+  const ExportPreset preset = dialog.Request().preset;
+  EXPECT_EQ(preset.name, "words");
+  EXPECT_EQ(preset.format, "wav");
+  EXPECT_EQ(preset.scope, "selected");
+  EXPECT_EQ(preset.phrases, std::vector<std::string>{"C"});
+  EXPECT_EQ(preset.audio, "original");
+  EXPECT_EQ(dialog.NameEdit()->text(), QStringLiteral("words"));
+  EXPECT_EQ(dialog.Summary(), QStringLiteral("Writes 1 file: words_C.wav"));
+}
+
+TEST_F(ExportDialogTest, WithoutSavingPresetsAreOnlyLoaded) {
+  ExportDialog dialog(Start());
+  EXPECT_FALSE(dialog.SavePresetButton()->isVisibleTo(&dialog));
+  EXPECT_FALSE(dialog.DeletePresetButton()->isVisibleTo(&dialog));
+  EXPECT_FALSE(dialog.PresetBox()->isEnabled());
+}
+
+TEST_F(ExportDialogTest, SavesTheFieldsAsAPresetNamedAfterTheName) {
+  ExportDialog dialog(SavingStart({QStringLiteral("A")}));
+  SelectFormat(dialog, QStringLiteral("acorn-phrom"));
+  dialog.SelectedButton()->setChecked(true);
+  dialog.LayoutBox()->setCurrentIndex(
+      dialog.LayoutBox()->findData(QStringLiteral("concatenated")));
+  dialog.NameEdit()->setText(QStringLiteral("rom"));
+  EXPECT_EQ(dialog.SavePresetButton()->text(),
+            QStringLiteral("&Save as Preset"));
+  dialog.SavePresetButton()->click();
+  ASSERT_EQ(project_.Contents().exports.size(), 1U);
+  const ExportPreset& saved = project_.Contents().exports.front();
+  EXPECT_EQ(saved.name, "rom");
+  EXPECT_EQ(saved.format, "acorn-phrom");
+  EXPECT_EQ(saved.scope, "selected");
+  EXPECT_EQ(saved.phrases, std::vector<std::string>{"A"});
+  EXPECT_EQ(saved.layout, "concatenated");
+  EXPECT_EQ(steps_, QStringList{QStringLiteral("Save Export Preset rom")});
+  EXPECT_EQ(dialog.PresetBox()->currentData().toString(),
+            QStringLiteral("rom"));
+  // Saving again under the same name replaces it.
+  EXPECT_EQ(dialog.SavePresetButton()->text(),
+            QStringLiteral("&Update Preset"));
+  dialog.AllButton()->setChecked(true);
+  dialog.SavePresetButton()->click();
+  ASSERT_EQ(project_.Contents().exports.size(), 1U);
+  EXPECT_EQ(project_.Contents().exports.front().scope, "all");
+  EXPECT_EQ(steps_.last(), QStringLiteral("Update Export Preset rom"));
+}
+
+TEST_F(ExportDialogTest, UpdatingAPresetKeepsItsUnknownKeys) {
+  ASSERT_TRUE(project_
+                  .SetExports({{.name = "rom",
+                                .format = "acorn-phrom",
+                                .unknown = {{"future", "\"yes\""}}}})
+                  .IsOk());
+  ExportDialog dialog(SavingStart());
+  ChoosePreset(dialog, QStringLiteral("rom"));
+  dialog.SavePresetButton()->click();
+  ASSERT_EQ(project_.Contents().exports.size(), 1U);
+  EXPECT_EQ(project_.Contents().exports.front().unknown.size(), 1U);
+}
+
+TEST_F(ExportDialogTest, APresetMustBeOneThatCanRun) {
+  ExportDialog dialog(SavingStart());
+  dialog.NameEdit()->setText(QStringLiteral("../up"));
+  EXPECT_FALSE(dialog.SavePresetButton()->isEnabled());
+}
+
+TEST_F(ExportDialogTest, DeletesTheChosenPreset) {
+  ASSERT_TRUE(project_
+                  .SetExports({{.name = "rom", .format = "acorn-phrom"},
+                               {.name = "words", .format = "wav"}})
+                  .IsOk());
+  ExportDialog dialog(SavingStart());
+  EXPECT_FALSE(dialog.DeletePresetButton()->isEnabled());
+  ChoosePreset(dialog, QStringLiteral("rom"));
+  ASSERT_TRUE(dialog.DeletePresetButton()->isEnabled());
+  dialog.DeletePresetButton()->click();
+  ASSERT_EQ(project_.Contents().exports.size(), 1U);
+  EXPECT_EQ(project_.Contents().exports.front().name, "words");
+  EXPECT_EQ(steps_, QStringList{QStringLiteral("Delete Export Preset rom")});
+  EXPECT_EQ(dialog.PresetBox()->count(), 2);
+  EXPECT_FALSE(dialog.DeletePresetButton()->isEnabled());
 }
 
 }  // namespace

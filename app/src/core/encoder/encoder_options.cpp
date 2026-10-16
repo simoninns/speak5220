@@ -30,8 +30,8 @@ namespace {
 using enum EncoderOptionType;
 using enum OptionStage;
 
-// speak5220 datasheet §12.6 and the encoder's documentation
-// (docs/application/reference/encoder-options.md).
+// speak5220 datasheet §12.6 and the settings tables of the Preprocess and
+// Encode view pages (docs/application/user-manual/preprocess.md, encode.md).
 constexpr std::array<EncoderOptionInfo, 15> kInfos = {{
     {.key = "noiseGateDb",
      .field = "noise_gate_db",

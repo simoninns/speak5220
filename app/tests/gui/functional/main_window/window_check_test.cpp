@@ -20,6 +20,7 @@
 #include <array>
 #include <cstdlib>
 
+#include "core/util/status.h"
 #include "core/util/task_runner.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -31,6 +32,7 @@
 #include "gui/optimise/optimise_dialog.h"
 #include "gui/phrase_list/phrase_list_panel.h"
 #include "gui/preferences/preferences_dialog.h"
+#include "gui/project_settings/project_settings_dialog.h"
 #include "gui/support/gui_mocks.h"
 #include "gui/waveform/phrase_tab.h"
 #include "gui/waveform/phrase_waveforms.h"
@@ -143,9 +145,18 @@ TEST(WindowCheck, DISABLED_RendersEveryWindowInLightAndDark) {
                                 .selected = {},
                                 .base = QStringLiteral("speech"),
                                 .directory = QDir::homePath(),
-                                .confirm_overwrite = {}});
+                                .confirm_overwrite = {},
+                                .set_presets = [](const auto&, const QString&) {
+                                  return core::OkStatus();
+                                }});
     export_dialog.show();
     Render(export_dialog, out, QStringLiteral("export"), scheme);
+
+    ProjectSettingsDialog settings_dialog(window.Document().Project());
+    settings_dialog.resize(560, 520);
+    settings_dialog.show();
+    RenderTabs(settings_dialog, *settings_dialog.Tabs(), out,
+               QStringLiteral("project-settings"), scheme);
 
     PreferencesDialog preferences_dialog(Preferences{}, {});
     preferences_dialog.resize(640, 620);

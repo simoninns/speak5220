@@ -6,7 +6,7 @@ This part of the site documents how the TMS5220 works, as measured, and the soft
 
 - **To emulate the chip or write speech data for it**, read the [reference datasheet](datasheet/index.md). It is self-contained: the emulator and the encoder were both written from it alone.
 - **To run the emulator**, see the [emulator](emulator/index.md) pages: the application's emulator, its API and its command line.
-- **To encode new speech**, use the application's [encoder](../application/user-manual/encoder.md). The [speech encoder](encoder/index.md) pages describe how it works.
+- **To encode new speech**, use the application's [encoder](../application/user-manual/encode.md). The [speech encoder](encoder/index.md) pages describe how it works.
 - **To check a statement in the datasheet**, follow its capture IDs to the evidence in the repository's history ([The research](#the-research), below).
 
 ## Contents

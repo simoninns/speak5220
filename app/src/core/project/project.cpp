@@ -27,6 +27,7 @@
 
 #include "core/encoder/encoder_options.h"
 #include "core/lpc/frame.h"
+#include "core/packaging/acorn_phrom.h"
 #include "core/project/phrase.h"
 #include "core/project/phrase_name.h"
 #include "core/project/phrom_allocator.h"
@@ -179,6 +180,24 @@ Status ValidateProjectSettings(const ProjectSettings& settings) {
   return OkStatus();
 }
 
+Status ValidateProjectHeaderStrings(std::span<const std::string> strings) {
+  if (Status status = packaging::ValidateHeaderStrings(strings);
+      !status.IsOk()) {
+    return status;
+  }
+  std::vector<std::string> longest(strings.begin(), strings.end());
+  if (longest.size() > 1) {
+    longest[1] += " " + std::to_string(kPhromBudget);
+  }
+  if (Status status = packaging::ValidateHeaderStrings(longest);
+      !status.IsOk()) {
+    return InvalidArgumentError(
+        fmt::format("{} (with PHROM {}'s number after the second)",
+                    status.Message(), kPhromBudget));
+  }
+  return OkStatus();
+}
+
 int AsciiEntriesFor(const ProjectSettings& settings, std::string_view name) {
   return static_cast<int>(std::ranges::count_if(
       settings.ascii_map,
@@ -221,7 +240,7 @@ StatusOr<Project> Project::FromContents(ProjectContents contents) {
     }
   }
   Project project(std::move(contents));
-  if (Status status = project.SetExports(project.contents_.exports);
+  if (Status status = project.SetExports(project.contents_.exports).GetStatus();
       !status.IsOk()) {
     return status;
   }
@@ -276,7 +295,8 @@ Status Project::SetSettings(ProjectSettings settings) {
   return OkStatus();
 }
 
-Status Project::SetExports(std::vector<ExportPreset> exports) {
+StatusOr<std::vector<ExportPreset>> Project::SetExports(
+    std::vector<ExportPreset> exports) {
   std::set<std::string> names;
   for (const ExportPreset& preset : exports) {
     if (preset.name.empty()) {
@@ -287,8 +307,9 @@ Status Project::SetExports(std::vector<ExportPreset> exports) {
                                   preset.name);
     }
   }
+  std::vector<ExportPreset> previous = std::move(contents_.exports);
   contents_.exports = std::move(exports);
-  return OkStatus();
+  return previous;
 }
 
 std::vector<PhraseCostInput> Project::Costs() const {
@@ -673,6 +694,13 @@ StatusOr<PhromSettings> Project::SetPhromSettings(PhromSettings settings) {
   if (Status status = ValidateProjectSettings(changed); !status.IsOk()) {
     return status;
   }
+  for (const PhromHeader& phrom : changed.phroms) {
+    if (Status status = packaging::ValidateHeaderStrings(phrom.header_strings);
+        !status.IsOk()) {
+      return InvalidArgumentError(
+          fmt::format("PHROM {}: {}", phrom.number, status.Message()));
+    }
+  }
   std::vector<PhraseCostInput> costs = Costs();
   for (std::size_t i = 0; i < costs.size(); ++i) {
     costs[i].ascii_entries =
@@ -687,6 +715,24 @@ StatusOr<PhromSettings> Project::SetPhromSettings(PhromSettings settings) {
       ->debug("changed the ASCII map ({} entries) and PHROM headers ({})",
               contents_.settings.ascii_map.size(),
               contents_.settings.phroms.size());
+  return previous;
+}
+
+StatusOr<ProjectIdentity> Project::SetIdentity(ProjectIdentity identity) {
+  if (!IsValidUtf8(identity.name)) {
+    return InvalidArgumentError("the project name is not UTF-8");
+  }
+  if (Status status = ValidateProjectHeaderStrings(identity.header_strings);
+      !status.IsOk()) {
+    return status;
+  }
+  ProjectIdentity previous{
+      .name = std::move(contents_.settings.name),
+      .header_strings = std::move(contents_.settings.header_strings)};
+  contents_.settings.name = std::move(identity.name);
+  contents_.settings.header_strings = std::move(identity.header_strings);
+  Logger(kLogModuleProject)
+      ->debug("changed the project name and header strings");
   return previous;
 }
 

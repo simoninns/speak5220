@@ -4,9 +4,9 @@ The encoder turns 8 kHz speech into TMS5220 frames, and the packagers pack the
 frames into the chip's bit stream, a Speak External stream, or an Acorn PHROM
 or TI indexed VSM image. It is the application's encoder, in
 `app/src/core/encoder/` (and `app/src/core/packaging/`); the
-[user manual](../../application/user-manual/encoder.md) covers using it, and
-the [option reference](../../application/reference/encoder-options.md) lists
-its options. These pages describe its method, its quality and the choices
+[Preprocess](../../application/user-manual/preprocess.md) and
+[Encode](../../application/user-manual/encode.md) view pages cover using it
+and describe its options. These pages describe its method, its quality and the choices
 behind it.
 
 ## Written from the datasheet only
@@ -22,7 +22,7 @@ refer to the reference datasheet.
 Some defaults were then tuned against Acorn's own PHROM phrases, so that the
 encoder's voicing, repeats and loudness come near theirs, and the rest for
 the best quality over a corpus of 243 test inputs
-([Encoder options](../../application/reference/encoder-options.md)).
+([Encoder behaviour](../../application/reference/encoder-behaviour.md#how-the-defaults-were-chosen)).
 
 TI's own encoder was studied afterwards for ideas to test. Its methods are
 hypotheses for the encoder, measured objectively, not a specification. What

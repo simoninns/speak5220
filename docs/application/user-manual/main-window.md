@@ -3,23 +3,35 @@
 `speak5220` opens a window with the project's phrases on the left, the
 selected phrase's name and description on the right with its three tabs
 below them, and the project's size in the status bar (with, on its left,
-what is under the pointer in a waveform). The tabs follow
-the stages of making a phrase, each with its [waveform](waveforms.md)
-and controls in the waveform area, and that stage's settings in the
-scrolling settings area below it:
+what is under the pointer in a waveform). The tabs follow the stages of
+making a phrase, each with its own page:
 
-- **Original**: the recording as imported.
-- **Preprocess**: the recording as preprocessed, with the
-  [preprocessing settings](encoder.md#preprocessing).
-- **Encode**: what the chip makes of the phrase's frames, with the
-  [encoder panel](encoder.md).
+- [**Original**](original.md): the recording as imported.
+- [**Preprocess**](preprocess.md): the recording as preprocessed, with the
+  preprocessing settings.
+- [**Encode**](encode.md): what the chip makes of the phrase's frames,
+  with the encoder panel and its settings.
 
-The two areas keep their sizes, and the play start, the zoom and the
-scroll position are shared by the tabs, so switching tabs shows the same
-place in the phrase at the same place on screen. To open a project at start-up, give it on the command line:
-`speak5220 greetings.s5proj`. The window follows the desktop's light or
-dark setting unless you choose one under **View > Theme** (see
-[light and dark](waveforms.md#light-and-dark)).
+What the three have in common, the waveform's controls, is described in
+[Waveforms and playback](waveforms.md).
+
+To open a project at start-up, give it on the command line:
+`speak5220 greetings.s5proj` (see [the GUI's options](cli.md#the-guis-options)).
+The window follows the desktop's light or dark setting unless you choose
+one under [**View > Theme**](#the-view-menu).
+
+This page describes the window's menus, the phrase list and the status
+bar. The menus:
+
+| Menu | Commands |
+|---|---|
+| **File** | [The project as a whole](#projects): opening, saving, importing PHROM images and its [settings](project-settings.md) |
+| **Edit** | [Undo and Redo](#undo-and-redo), and [Preferences](preferences.md) |
+| **View** | [The tabs, and the theme](#the-view-menu) |
+| **Phrase** | [Adding, removing, ordering, encoding and optimising phrases](#the-phrase-list) |
+| **Export** | [Exporting](#the-export-menu) |
+| **Audio** | [How the encoded audio is heard](#the-audio-menu) |
+| **Help** | [About Speak5220](#the-help-menu) |
 
 ## Projects
 
@@ -32,7 +44,8 @@ The **File** menu works on the project as a whole:
 | Open Recent | | The last eight projects opened or saved. A project that no longer exists is removed when chosen. Clear Menu empties the list |
 | Save | Ctrl+S | Saves the project where it came from, in the same form (file or directory). A new project asks where to save it |
 | Save As... | Ctrl+Shift+S | Saves the project as a new `.s5proj` file (the extension is added if missing). A project with no name takes the file's name |
-| Import PHROM Image... | Ctrl+I | Adds the words of Acorn PHROM images as locked phrases (see [importing PHROM images](projects.md#importing-phrom-images)) |
+| Import PHROM Image... | Ctrl+I | Adds the words of Acorn PHROM images as locked phrases (see [importing PHROM images](phrases.md#importing-phrom-images)) |
+| Project Settings... | | Sets the project's name, its PHROMs' header strings and its ASCII map (see [Project Settings](project-settings.md)) |
 | Quit | Ctrl+Q | Closes the window |
 
 A new project starts from the settings chosen under **New Projects** in
@@ -50,8 +63,9 @@ described in the [project file](../reference/project-file.md) reference.
 ## The phrase list
 
 The list shows the phrases in PHROM order: the first phrase is word 127 of
-PHROM 1, and so on (see [PHROMs and the project budget](projects.md#phroms-and-the-project-budget)).
-Each row shows:
+PHROM 1, and so on (see [PHROMs and the project budget](phrases.md#phroms-and-the-project-budget)).
+It is in the **Phrases** panel, on the left of the window; drag the
+panel's title to move it to the right. Each row shows:
 
 - the phrase's name;
 - its size in its PHROM, in bytes, once it has been encoded;
@@ -80,8 +94,8 @@ The buttons above the list, and the **Phrase** menu:
 | ↑ | Move Up | Ctrl+Up | Moves the selected phrases up one place |
 | ↓ | Move Down | Ctrl+Down | Moves the selected phrases down one place |
 | A-Z | Sort A-Z | | Sorts every phrase by name |
-| | Re-encode | Ctrl+E | Encodes the selected phrases that are not encoded or are stale, with their settings (see [re-encoding several phrases](encoder.md#re-encoding-several-phrases)) |
-| | Optimise... | Ctrl+Shift+O | Searches the selected phrases' settings for the best quality (see [Optimise](encoder.md#optimise)) |
+| | Re-encode | Ctrl+E | Encodes the selected phrases that are not encoded or are stale, with their settings (see [re-encoding](#re-encoding)) |
+| | Optimise... | Ctrl+Shift+O | Searches the selected phrases' settings for the best quality (see [Optimise](optimise.md)) |
 | | Revert to Saved | | Puts the selected phrases marked `*` back as they were when the project was last saved or opened: name, description, play start, settings and encoding. Each keeps its place in the list. One step, which Undo takes back |
 
 Select several phrases with Shift or Ctrl and a click. Moving several
@@ -101,9 +115,20 @@ are dropped.
 A change that would take the project past its budget of 64 PHROMs is
 refused, and a message says why (see [troubleshooting](troubleshooting.md#the-project-budget)).
 
+### Re-encoding
+
+**Phrase > Re-encode** (Ctrl+E) encodes, in the background, every selected
+phrase that is not encoded yet or is [stale](phrases.md#encoding), with its
+own settings, and stores them as one step to undo (**Undo Re-encode 5
+Phrases**). The status bar shows the progress (*Encoding 2 of 5*). It is
+available only when the selection holds at least one such phrase with
+audio that is not locked. Use it after changing the project's defaults,
+or after adding phrases, which are added unencoded. If the new encodings
+together would take the project past its budget, none is stored.
+
 ## Adding phrases
 
-Importing works as described in [importing audio](projects.md#importing-audio):
+Importing works as described in [importing audio](phrases.md#importing-audio):
 each file is resampled to 8 kHz and stored in the project, and is named
 after its file (`good_morning.wav` becomes `GOOD MORNING`). Files are read
 in the background, so the window stays responsive.
@@ -119,7 +144,7 @@ step to undo.
 With one phrase selected, its name and description can be edited on the
 right. A change is applied when you press Return or leave the field.
 
-The name follows the [phrase name rules](projects.md#phrases-and-their-names)
+The name follows the [phrase name rules](phrases.md#phrases-and-their-names)
 as you type:
 
 - lower case becomes upper case;
@@ -137,7 +162,7 @@ description is free text, kept only in the project.
 Acorn PHROM images to the project, after the last selected phrase or at
 the end. A file may hold several 16 KB images one after another, as the
 **All PHROMs in one file** export writes them. The words become
-[locked](projects.md#importing-phrom-images) phrases: their frames are
+[locked](phrases.md#importing-phrom-images) phrases: their frames are
 kept exactly as in the image and never re-encoded, so they have no
 recording, and the Encode tab shows their statistics only. A name already
 in the project gets a number added. All the words added at once are one
@@ -158,23 +183,8 @@ next time. See [light and dark](waveforms.md#light-and-dark).
 ## Preferences
 
 **Edit > Preferences...** (Ctrl+, ; on macOS, **Speak5220 > Settings...**,
-Cmd+,) sets what belongs to you rather than to a project. Nothing changes
-until you press **OK**; **Restore Defaults** puts every tab back as it
-was when Speak5220 was first run. The choices are kept for next time.
-
-| Tab | Setting | What it does |
-|---|---|---|
-| Appearance | Theme | **Follow the desktop** (the default), **Light** or **Dark**, as **View > Theme** |
-| Appearance | Waveforms | **Dark, in either theme** (the default): the waveforms are drawn on black, as in [light and dark](waveforms.md#light-and-dark). **As the theme**: drawn in the window's own colours |
-| Audio | Output device | Where phrases are played: **System default** (the default), or one of the devices connected now. If the chosen device is later disconnected, phrases play on the system's default, and the list shows it as *not connected* until another is chosen |
-| New Projects | (the settings form) | The [preprocessing and encoder settings](encoder.md) a new project starts from, in the same form as the Encode tab, with each setting that differs from the encoder's default in bold. A project keeps the settings it was made with: changing these does not change open or saved projects |
-| Logging | Log level | **Info** (the default), **Debug** or **Trace**, as `--log-level` (see [logging](cli.md#logging)) |
-| Logging | Log file | A file the log is also written to, replaced at each start; empty for none, as `--log-file` |
-
-The logging settings take effect the next time Speak5220 starts. A
-`--log-level` or `--log-file` given on the command line overrides them
-for that run. If the log file cannot be written, Speak5220 still starts,
-logging to the console, and says why in the log.
+Cmd+,) sets the theme, the audio device, the settings new projects start
+from, and logging. See [Preferences](preferences.md).
 
 ## The Help menu
 
@@ -190,7 +200,7 @@ the tabs, the waveform and its buttons, and the settings; the arrow keys
 move within the list, the tabs and a slider; Space presses the focused
 button, or plays and pauses the focused waveform. Each control has a name
 that a screen reader reads, including the buttons that show only a
-symbol (+, −, the arrows, play). The [getting started](../getting-started.md)
+symbol (+, −, the arrows, play). The [making speech](../making-speech.md)
 walkthrough lists the keys for each step.
 
 ## The Export menu
@@ -201,19 +211,15 @@ the project has a phrase.
 
 ## The Audio menu
 
-**Audio > Output Filter** chooses the computer's audio stage that the
-encoded audio is heard and shown through: **None** (the default) or
-**BBC Micro**. See [output filter](waveforms.md#output-filter).
+The Audio menu chooses how the encoded audio is heard and shown, on the
+Encode view and in the Optimise window. It changes nothing in the project
+or in what is exported. See [listening options](encode.md#listening-options).
 
-**Audio > Chip Output** chooses which of the chip's pins the encoded audio
-is taken from: **SPEAKER (8-bit DAC)** (the default), whose DAC clips
-loud samples and has the real DAC's uneven steps, or **I/O (10-bit
-codes)**, unclipped. See
-[chip output](waveforms.md#chip-output).
-
-**Audio > Chip Clock** chooses the clock the chip's output is played at:
-**640 kHz (nominal)** (the default), or a rate from 560 kHz to 720 kHz in
-20 kHz steps. See [chip clock](waveforms.md#chip-clock).
+| Command | Choices | Default |
+|---|---|---|
+| **Audio > Chip Output** | **SPEAKER (8-bit DAC)**, **I/O (10-bit codes)**: which of the chip's pins the audio is taken from | SPEAKER |
+| **Audio > Output Filter** | **None**, **BBC Micro**: the computer's audio stage the audio goes through | None |
+| **Audio > Chip Clock** | **560 kHz** to **720 kHz** in 20 kHz steps: the clock the chip's output is played at | 640 kHz (nominal) |
 
 The window remembers these choices for next time.
 
@@ -223,8 +229,10 @@ The window remembers these choices for next time.
 some platforms) step through every change to the phrases: adding,
 removing, moving, sorting, renaming, changing a description, moving
 the [play start](waveforms.md#the-play-start), changing a phrase's
-settings or the project's defaults, re-encoding, accepting
-[Optimise](encoder.md#optimise)'s results and reverting to saved. The menu
+settings or the project's defaults, changing the
+[project settings](project-settings.md), saving or deleting an
+[export preset](export.md#presets), re-encoding, accepting
+[Optimise](optimise.md)'s results and reverting to saved. The menu
 names the step, for example **Undo Rename to HELLO**. Undoing back to the
 last save clears the unsaved-changes mark. Opening or starting a project
 clears the history.
@@ -250,3 +258,8 @@ On its right it shows the project's size, for example:
 It adds **over budget** for a project that needs more than 64 PHROMs (one
 made elsewhere; edits never take a project past the budget), and the
 number of phrases too large for a PHROM or not yet encoded.
+
+While Speak5220 is busy, importing, encoding or exporting, the pointer
+shows that it is working, and a progress bar beside the project's size
+moves; while re-encoding several phrases it counts them (*Encoding 2 of
+5*).

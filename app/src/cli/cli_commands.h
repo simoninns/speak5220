@@ -17,7 +17,7 @@ class QCommandLineParser;
 
 namespace speak5220::cli {
 
-// Exit codes (docs/application/reference/cli-options.md).
+// Exit codes (docs/application/user-manual/cli.md).
 inline constexpr int kExitSuccess = 0;
 inline constexpr int kExitFailure = 1;
 inline constexpr int kExitUsage = 2;

@@ -266,6 +266,44 @@ class SetDefaultEncoderCommand : public ProjectCommand {
   core::encoder::EncoderOptions previous_;
 };
 
+// The project's name, header strings, ASCII map and per-PHROM header
+// strings, as one step (Change Project Settings): SetIdentity() and then
+// SetPhromSettings(); if the second fails, the identity is put back.
+// Reversed by both with the previous values, in the other order.
+class SetProjectSettingsCommand : public ProjectCommand {
+ public:
+  SetProjectSettingsCommand(core::project::IProjectEditor& editor,
+                            core::project::ProjectIdentity identity,
+                            core::project::PhromSettings settings);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  core::project::ProjectIdentity identity_;
+  core::project::PhromSettings settings_;
+  core::project::ProjectIdentity previous_identity_;
+  core::project::PhromSettings previous_settings_;
+};
+
+// SetExports(), as one step named `text` (Save Export Preset PHROM);
+// reversed by SetExports() with the previous presets.
+class SetExportsCommand : public ProjectCommand {
+ public:
+  SetExportsCommand(core::project::IProjectEditor& editor,
+                    std::vector<core::project::ExportPreset> exports,
+                    const QString& text);
+
+ protected:
+  core::Status Apply() override;
+  core::Status Revert() override;
+
+ private:
+  std::vector<core::project::ExportPreset> exports_;
+  std::vector<core::project::ExportPreset> previous_;
+};
+
 }  // namespace speak5220::app
 
 #endif  // SPEAK5220_GUI_UNDO_PROJECT_COMMANDS_H_

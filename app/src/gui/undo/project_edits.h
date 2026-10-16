@@ -57,6 +57,14 @@ class ProjectEdits {
   // `settings`, as one step (ImportPhromCommand).
   core::Status ImportPhrom(std::vector<core::project::PlacedPhrase> phrases,
                            core::project::PhromSettings settings);
+  // Sets the project's name, header strings, ASCII map and per-PHROM
+  // header strings, as one step (SetProjectSettingsCommand).
+  core::Status SetProjectSettings(core::project::ProjectIdentity identity,
+                                  core::project::PhromSettings settings);
+  // Replaces the export presets, as one step named `text`
+  // (SetExportsCommand).
+  core::Status SetExports(std::vector<core::project::ExportPreset> exports,
+                          const QString& text);
   // Replaces phrases with other versions of themselves, in place, as one
   // step named `text`; all or none (ReplacePhrasesCommand).
   core::Status ReplacePhrases(std::vector<core::project::Phrase> phrases,

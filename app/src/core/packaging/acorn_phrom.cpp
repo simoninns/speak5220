@@ -10,6 +10,8 @@
 
 #include "core/packaging/acorn_phrom.h"
 
+#include <spdlog/fmt/fmt.h>
+
 #include <algorithm>
 #include <array>
 #include <cstddef>
@@ -31,7 +33,6 @@ namespace {
 // speak5220 datasheet §12.8, the Acorn PHROM header (64 bytes).
 constexpr std::size_t kHeaderSize = 64;
 constexpr std::size_t kStringsStart = 2;
-constexpr std::size_t kStringsCapacity = 54;  // bytes 2-55, nulls included
 constexpr std::size_t kAsciiCountOffset = 56;
 constexpr std::size_t kPointerCountOffset = 58;
 constexpr std::size_t kTrailerOffset = 60;
@@ -86,6 +87,34 @@ std::optional<char> DecodeNameCharacter(std::uint8_t stored) {
 
 }  // namespace
 
+Status ValidateHeaderStrings(std::span<const std::string> strings) {
+  std::size_t bytes = 0;
+  for (const std::string& line : strings) {
+    if (line.empty()) {
+      return InvalidArgumentError(
+          "a header string cannot be empty: a host stops reading the "
+          "strings at an empty one");
+    }
+    if (!std::ranges::all_of(line, [](char c) {
+          return c >= static_cast<char>(kFirstAscii) &&
+                 c <= static_cast<char>(kLastAscii);
+        })) {
+      return InvalidArgumentError(fmt::format(
+          "the header string \"{}\" holds a character that is not printable "
+          "ASCII",
+          line));
+    }
+    bytes += line.size() + 1;
+  }
+  if (bytes > static_cast<std::size_t>(kHeaderStringsCapacity)) {
+    return InvalidArgumentError(fmt::format(
+        "the header strings take {} bytes with a null after each, and a "
+        "PHROM header holds {}",
+        bytes, kHeaderStringsCapacity));
+  }
+  return OkStatus();
+}
+
 StatusOr<PhromImage> AcornPhrom::Build(std::span<const Word> words,
                                        const AcornPhromOptions& options) {
   std::vector<std::uint8_t> image(kPhromSize, 0);
@@ -103,17 +132,13 @@ StatusOr<PhromImage> AcornPhrom::Build(std::span<const Word> words,
   std::array<std::uint8_t, kHeaderSize> header = {};
   header[0] = 0x00;
   header[1] = 0xFF;
+  if (Status status = ValidateHeaderStrings(options.strings); !status.IsOk()) {
+    return status;
+  }
   std::string text;
   for (const std::string& line : options.strings) {
-    if (!IsAscii(line)) {
-      return InvalidArgumentError("header string is not ASCII: " + line);
-    }
     text += line;
     text += '\0';
-  }
-  if (text.size() > kStringsCapacity) {
-    return InvalidArgumentError(
-        "header strings too long (54 bytes with their nulls)");
   }
   std::ranges::copy(text, std::span(header).subspan(kStringsStart).begin());
   PutLittleEndian16(header, kAsciiCountOffset, kAsciiCount);
@@ -308,8 +333,9 @@ StatusOr<ReadPhrom> AcornPhrom::ReadImage(std::span<const std::uint8_t> image) {
   ReadPhrom result;
   // §12.8: the header's strings, bit-reversed, each ending in a null.
   std::string text;
-  for (std::size_t i = kStringsStart; i < kStringsStart + kStringsCapacity;
-       ++i) {
+  constexpr auto kStringsEnd =
+      kStringsStart + static_cast<std::size_t>(kHeaderStringsCapacity);
+  for (std::size_t i = kStringsStart; i < kStringsEnd; ++i) {
     const auto character = static_cast<char>(lpc::BitReverse(image[i]));
     if (character != '\0') {
       if (character < ' ' || character > '~') {

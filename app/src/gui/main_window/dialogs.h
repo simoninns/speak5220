@@ -15,8 +15,10 @@
 #include <QStringList>
 #include <optional>
 
+#include "core/project/project.h"
 #include "gui/export/export_dialog.h"
 #include "gui/preferences/preferences_dialog.h"
+#include "gui/project_settings/project_settings_dialog.h"
 
 class QWidget;
 
@@ -55,6 +57,11 @@ class IDialogs {
   // Nothing if cancelled.
   virtual std::optional<ExportRequest> AskExport(const ExportStart& start) = 0;
 
+  // The project settings chosen in the Project Settings dialog
+  // (ProjectSettingsDialog) for `project`. Nothing if cancelled.
+  virtual std::optional<ProjectSettingsChoice> AskProjectSettings(
+      const core::project::Project& project) = 0;
+
   // The preferences chosen in the Preferences dialog (PreferencesDialog),
   // starting from `current`. Nothing if cancelled.
   virtual std::optional<Preferences> AskPreferences(
@@ -80,6 +87,8 @@ class QtDialogs : public IDialogs {
   bool ConfirmRemove(const QStringList& names) override;
   bool AskNormalise(const QStringList& files) override;
   std::optional<ExportRequest> AskExport(const ExportStart& start) override;
+  std::optional<ProjectSettingsChoice> AskProjectSettings(
+      const core::project::Project& project) override;
   std::optional<Preferences> AskPreferences(
       const Preferences& current) override;
   void ShowError(const QString& title, const QString& message) override;

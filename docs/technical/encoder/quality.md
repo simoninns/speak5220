@@ -14,7 +14,7 @@ application's emulator. It was removed with the research after commit
 `c537c1d` ([The research](../index.md#the-research)). Two sets of measures:
 
 - **The application's quality rating** (`speak5220-cli measure`; the
-  [user manual](../../application/user-manual/encoder.md#the-quality-rating)
+  [user manual](../../application/user-manual/encode.md#the-quality-rating)
   describes it). On the frames a voice activity detector marks as speech, it
   compares the encoding with the input: the log spectral distortion of the
   spectral envelope (LSD), the gross pitch error (GPE, more than 20 % out),

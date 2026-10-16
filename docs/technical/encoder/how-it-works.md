@@ -3,9 +3,9 @@
 The method is that of [§12.6](../datasheet/authoring.md), with the choices
 below. Where the datasheet leaves a point open, [Implementation choices](choices.md) gives
 the reasoning. The encoder is the application's, in `app/src/core/encoder/`;
-its options are in the [option reference](../../application/reference/encoder-options.md),
-and the [user manual](../../application/user-manual/encoder.md) says what each
-one does to the sound.
+its options, and what each one does to the sound, are described on the
+[Preprocess](../../application/user-manual/preprocess.md) and
+[Encode](../../application/user-manual/encode.md) view pages.
 
 ## The stages
 

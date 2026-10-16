@@ -14,6 +14,7 @@
 #include <utility>
 #include <vector>
 
+#include "core/packaging/acorn_phrom.h"
 #include "core/project/phrase.h"
 #include "core/project/phrom_allocator.h"
 #include "core/util/status.h"
@@ -523,6 +524,74 @@ TEST(ProjectTest, PhromWithEveryAsciiEntryHoldsOneByteMore) {
   // Renaming a phrase leaves the entries naming its old name.
   ASSERT_TRUE(project.RenamePhrase(TestId(2), "C").IsOk());
   EXPECT_EQ(project.Allocation().PhromsUsed(), 2);
+}
+
+TEST(ProjectTest, SetIdentityReplacesTheNameAndStringsAndGivesTheOld) {
+  Project project = FivePhrases();
+  const ProjectIdentity before{
+      .name = project.Settings().name,
+      .header_strings = project.Settings().header_strings};
+  const ProjectIdentity identity{
+      .name = "Numbers", .header_strings = {"(C)2026 Me", "Numbers", "2.00"}};
+  const StatusOr<ProjectIdentity> previous = project.SetIdentity(identity);
+  ASSERT_TRUE(previous.IsOk()) << previous.GetStatus().ToString();
+  EXPECT_EQ(*previous, before);
+  EXPECT_EQ(project.Settings().name, "Numbers");
+  EXPECT_EQ(project.Settings().header_strings, identity.header_strings);
+  const StatusOr<ProjectIdentity> undone = project.SetIdentity(before);
+  ASSERT_TRUE(undone.IsOk());
+  EXPECT_EQ(*undone, identity);
+}
+
+TEST(ProjectTest, SetIdentityRefusesStringsThatDoNotFitTheLastPhrom) {
+  Project project = FivePhrases();
+  // 53 bytes with their nulls, which fit one PHROM's header, but PHROM 64
+  // appends " 64" to the second.
+  const ProjectIdentity tight{
+      .name = "", .header_strings = {std::string(43, 'x'), "abc", "1.00"}};
+  ASSERT_TRUE(packaging::ValidateHeaderStrings(tight.header_strings).IsOk());
+  ASSERT_FALSE(ValidateProjectHeaderStrings(tight.header_strings).IsOk());
+  EXPECT_FALSE(project.SetIdentity(tight).IsOk());
+  EXPECT_FALSE(
+      project.SetIdentity({.name = "", .header_strings = {"(C)", ""}}).IsOk());
+  EXPECT_FALSE(
+      project.SetIdentity({.name = "\xff", .header_strings = {}}).IsOk());
+  EXPECT_EQ(project.Settings().header_strings,
+            ProjectSettings{}.header_strings);
+  // 3 bytes less fits.
+  EXPECT_TRUE(project
+                  .SetIdentity(
+                      {.name = "",
+                       .header_strings = {std::string(40, 'x'), "abc", "1.00"}})
+                  .IsOk());
+}
+
+TEST(ProjectTest, SetPhromSettingsRefusesHeaderStringsThatDoNotFit) {
+  Project project = FivePhrases();
+  EXPECT_FALSE(project
+                   .SetPhromSettings(
+                       {.phroms = {{.number = 2,
+                                    .header_strings = {std::string(60, 'x')},
+                                    .unknown = {}}}})
+                   .IsOk());
+  EXPECT_TRUE(project.Settings().phroms.empty());
+}
+
+TEST(ProjectTest, SetExportsReplacesThePresetsAndGivesTheOld) {
+  Project project = FivePhrases();
+  const std::vector<ExportPreset> first = {
+      {.name = "phrom", .format = "acorn-phrom"}};
+  const StatusOr<std::vector<ExportPreset>> previous =
+      project.SetExports(first);
+  ASSERT_TRUE(previous.IsOk());
+  EXPECT_TRUE(previous->empty());
+  EXPECT_EQ(project.Contents().exports, first);
+  EXPECT_FALSE(project.SetExports({{.name = "a"}, {.name = "a"}}).IsOk());
+  EXPECT_FALSE(project.SetExports({{.name = ""}}).IsOk());
+  EXPECT_EQ(project.Contents().exports, first);
+  const StatusOr<std::vector<ExportPreset>> undone = project.SetExports({});
+  ASSERT_TRUE(undone.IsOk());
+  EXPECT_EQ(*undone, first);
 }
 
 }  // namespace

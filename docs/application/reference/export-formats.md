@@ -30,7 +30,7 @@ an entry of the project's ASCII map points to its phrase if the phrase is
 in that PHROM, and every other entry to a one-byte null word after the
 last phrase (there is none when every entry points to a phrase). Phrases are
 words from 127, filling PHROM 1 in list order, then PHROM 2, as the
-[project budget](../user-manual/projects.md#phroms-and-the-project-budget)
+[project budget](../user-manual/phrases.md#phroms-and-the-project-budget)
 places them. Each PHROM has the project's header strings with its number
 appended to the second, unless the project sets that PHROM's own.
 
@@ -168,7 +168,7 @@ One mono WAV file per phrase, at 8000 Hz:
 |---|---|---|
 | `encoded` (the default) | The chip's output through the VSM path (a PHROM word spoken with Speak), from the sample in which the first frame is read until the output has been idle for 25 samples and a frame more. Each output code is clipped to the DAC's range (−128 to +127, the SPEAKER pin), converted with the DAC's measured steps ([datasheet §8.2](../../technical/datasheet/dac-and-audio.md#82-da-conversion), Table 8-2: −1 gives about −3.5 and 0 about +2.5) and scaled by 64, so full scale is a quarter of 16-bit full scale | 16-bit PCM |
 | `original` | The phrase's audio as the project holds it: its source, resampled to 8 kHz and mixed to mono when it was imported | 24-bit PCM |
-| `preprocessed` | The phrase's audio with its [preprocessing](../user-manual/encoder.md#preprocessing) applied, the project's defaults with the phrase's own settings: what the encoder aims at and the quality is measured against. Samples past full scale (a treble tilt can lift loud ones) are clipped | 24-bit PCM |
+| `preprocessed` | The phrase's audio with its [preprocessing](../user-manual/preprocess.md) applied, the project's defaults with the phrase's own settings: what the encoder aims at and the quality is measured against. Samples past full scale (a treble tilt can lift loud ones) are clipped | 24-bit PCM |
 
 ## BBC Micro disc
 

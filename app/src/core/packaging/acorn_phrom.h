@@ -34,6 +34,16 @@ struct AcornPhromOptions {
   std::map<int, std::string> ascii_map;
 };
 
+// The bytes a PHROM header holds for its strings, with a null after each
+// (bytes 2-55; speak5220 datasheet §12.8).
+inline constexpr int kHeaderStringsCapacity = 54;
+
+// Whether `strings` can be a PHROM header's: each non-empty printable
+// ASCII (a host reads the strings up to the first empty one), and together,
+// with a null after each, at most kHeaderStringsCapacity bytes. Pure;
+// O(total length).
+Status ValidateHeaderStrings(std::span<const std::string> strings);
+
 // The Acorn PHROM layout of speak5220 datasheet §12.8: a bit-reversed
 // 64-byte header, word number N's 14-bit pointer at byte 2N (numbers 32 to
 // 126 are the ASCII entries, words proper from 127), 0xFF after the last
@@ -44,9 +54,10 @@ class AcornPhrom {
   // The first word number after the 95 ASCII entries.
   static constexpr int kFirstWordNumber = 127;
 
-  // Builds the image. Fails if a name is not ASCII, the strings are too
-  // long, an ASCII entry is out of range or names no word, or the words do
-  // not fit. Re-implements tms5220enc.py acornPhrom(). O(total bytes).
+  // Builds the image. Fails if a name is not ASCII, the strings are not
+  // valid (ValidateHeaderStrings()), an ASCII entry is out of range or names no
+  // word, or the words do not fit. Re-implements tms5220enc.py acornPhrom().
+  // O(total bytes).
   static StatusOr<PhromImage> Build(std::span<const Word> words,
                                     const AcornPhromOptions& options);
 

@@ -32,7 +32,7 @@ speak5220-cli export words.s5proj --output out --format bbc-dsd
 ```
 
 The phrases are placed in PHROMs as the
-[project budget](projects.md#phroms-and-the-project-budget) places them,
+[project budget](phrases.md#phroms-and-the-project-budget) places them,
 and each PHROM is listed under the second of its header strings, such as
 `Speak5220 PHROM 1`. If the phrases fill more than 8 PHROMs, the export is
 refused; choose fewer phrases. The disc's title is the project's name, cut

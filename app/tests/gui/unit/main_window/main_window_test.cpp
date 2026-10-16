@@ -503,6 +503,45 @@ TEST_F(MainWindowTest, PreferencesAreAppliedAndStored) {
             24.0);
 }
 
+TEST_F(MainWindowTest, ProjectSettingsAreOneStepToUndo) {
+  ProjectSettingsChoice chosen;
+  chosen.identity = {.name = "Numbers",
+                     .header_strings = {"(C)2026 Me", "Numbers", "2.00"}};
+  chosen.phrom_settings.phroms = {
+      {.number = 2, .header_strings = {"(C)2026 Me", "More"}, .unknown = {}}};
+  EXPECT_CALL(dialogs_, AskProjectSettings(_)).WillOnce(Return(chosen));
+  const int steps = window_.Document().UndoStack().count();
+  window_.EditProjectSettings();
+  EXPECT_EQ(window_.Document().UndoStack().count(), steps + 1);
+  const core::project::ProjectSettings& settings =
+      window_.Document().Project().Settings();
+  EXPECT_EQ(settings.name, "Numbers");
+  EXPECT_EQ(settings.header_strings, chosen.identity.header_strings);
+  EXPECT_EQ(settings.phroms, chosen.phrom_settings.phroms);
+  EXPECT_EQ(window_.Document().UndoStack().undoText(),
+            QStringLiteral("Change Project Settings"));
+  window_.Document().UndoStack().undo();
+  EXPECT_EQ(window_.Document().Project().Settings().name, "");
+  EXPECT_TRUE(window_.Document().Project().Settings().phroms.empty());
+}
+
+TEST_F(MainWindowTest, UnchangedOrCancelledProjectSettingsAddNoStep) {
+  const core::project::ProjectSettings& settings =
+      window_.Document().Project().Settings();
+  const ProjectSettingsChoice same{
+      .identity = {.name = settings.name,
+                   .header_strings = settings.header_strings},
+      .phrom_settings = {.ascii_map = settings.ascii_map,
+                         .phroms = settings.phroms}};
+  EXPECT_CALL(dialogs_, AskProjectSettings(_))
+      .WillOnce(Return(same))
+      .WillOnce(Return(std::nullopt));
+  const int steps = window_.Document().UndoStack().count();
+  window_.EditProjectSettings();
+  window_.EditProjectSettings();
+  EXPECT_EQ(window_.Document().UndoStack().count(), steps);
+}
+
 TEST_F(MainWindowTest, CancelledPreferencesChangeNothing) {
   EXPECT_CALL(dialogs_, AskPreferences(_)).WillOnce(Return(std::nullopt));
   EXPECT_CALL(playback_.output, SetDevice(_)).Times(0);

@@ -378,4 +378,57 @@ core::Status SetDefaultEncoderCommand::Revert() {
   return Editor().SetDefaultEncoder(previous_).GetStatus();
 }
 
+SetProjectSettingsCommand::SetProjectSettingsCommand(
+    project::IProjectEditor& editor, project::ProjectIdentity identity,
+    project::PhromSettings settings)
+    : ProjectCommand(editor, QStringLiteral("Change Project Settings")),
+      identity_(std::move(identity)),
+      settings_(std::move(settings)) {}
+
+core::Status SetProjectSettingsCommand::Apply() {
+  core::StatusOr<project::ProjectIdentity> identity =
+      Editor().SetIdentity(identity_);
+  if (!identity.IsOk()) {
+    return identity.GetStatus();
+  }
+  core::StatusOr<project::PhromSettings> settings =
+      Editor().SetPhromSettings(settings_);
+  if (!settings.IsOk()) {
+    // Put back as it was; the second change's failure is what is reported.
+    static_cast<void>(Editor().SetIdentity(*identity));
+    return settings.GetStatus();
+  }
+  previous_identity_ = *std::move(identity);
+  previous_settings_ = *std::move(settings);
+  return core::OkStatus();
+}
+
+core::Status SetProjectSettingsCommand::Revert() {
+  if (core::Status status =
+          Editor().SetPhromSettings(previous_settings_).GetStatus();
+      !status.IsOk()) {
+    return status;
+  }
+  return Editor().SetIdentity(previous_identity_).GetStatus();
+}
+
+SetExportsCommand::SetExportsCommand(project::IProjectEditor& editor,
+                                     std::vector<project::ExportPreset> exports,
+                                     const QString& text)
+    : ProjectCommand(editor, text), exports_(std::move(exports)) {}
+
+core::Status SetExportsCommand::Apply() {
+  core::StatusOr<std::vector<project::ExportPreset>> previous =
+      Editor().SetExports(exports_);
+  if (!previous.IsOk()) {
+    return previous.GetStatus();
+  }
+  previous_ = *std::move(previous);
+  return core::OkStatus();
+}
+
+core::Status SetExportsCommand::Revert() {
+  return Editor().SetExports(previous_).GetStatus();
+}
+
 }  // namespace speak5220::app

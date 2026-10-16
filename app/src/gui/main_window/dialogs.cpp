@@ -19,6 +19,7 @@
 
 #include "gui/playback/qt_audio_output.h"
 #include "gui/preferences/preferences_dialog.h"
+#include "gui/project_settings/project_settings_dialog.h"
 
 namespace speak5220::app {
 
@@ -125,6 +126,15 @@ std::optional<ExportRequest> QtDialogs::AskExport(const ExportStart& start) {
     return std::nullopt;
   }
   return dialog.Request();
+}
+
+std::optional<ProjectSettingsChoice> QtDialogs::AskProjectSettings(
+    const core::project::Project& project) {
+  ProjectSettingsDialog dialog(project, parent_);
+  if (dialog.exec() != QDialog::Accepted) {
+    return std::nullopt;
+  }
+  return dialog.Chosen();
 }
 
 std::optional<Preferences> QtDialogs::AskPreferences(
