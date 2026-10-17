@@ -44,6 +44,8 @@ class MockWavReader : public core::audio::IWavReader {
  public:
   MOCK_METHOD(core::StatusOr<core::audio::DecodedWav>, Read,
               (const std::filesystem::path& path), (override));
+  MOCK_METHOD(core::StatusOr<core::audio::WavInfo>, ReadInfo,
+              (const std::filesystem::path& path), (override));
 };
 
 class MockWavCodec : public core::audio::IWavCodec {

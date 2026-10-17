@@ -30,6 +30,19 @@ struct DecodedWav {
   std::vector<float> samples;
 };
 
+// A WAV file's header: what Read() would give, without the samples.
+struct WavInfo {
+  int sample_rate = 0;
+  int channels = 0;
+  WavSampleFormat format = WavSampleFormat::kPcm16;
+  std::int64_t frames = 0;  // samples per channel
+
+  // Its length in seconds.
+  double Seconds() const {
+    return static_cast<double>(frames) / static_cast<double>(sample_rate);
+  }
+};
+
 // The formats the application writes.
 enum class WavOutputFormat { kPcm16, kPcm24 };
 
@@ -42,6 +55,10 @@ class IWavReader {
   // any rate and channel count, mixing the channels to mono by averaging.
   // Fails for a file that is missing, not WAV, empty or malformed.
   virtual StatusOr<DecodedWav> Read(const std::filesystem::path& path) = 0;
+
+  // Reads only the header of a file Read() would accept, so its length can
+  // be checked before its samples are read. Fails as Read() does.
+  virtual StatusOr<WavInfo> ReadInfo(const std::filesystem::path& path) = 0;
 };
 
 // Writes WAV files. Implementations are thread-safe.

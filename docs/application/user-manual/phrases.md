@@ -29,8 +29,8 @@ only in the project and never exported.
 ## Importing audio
 
 A phrase starts as a WAV file: any sample rate, any number of channels, 8-
-to 32-bit PCM or floating point. The encoder works at 8 kHz, so on import
-Speak5220:
+to 32-bit PCM or floating point, at most **60 seconds** long. The encoder
+works at 8 kHz, so on import Speak5220:
 
 1. mixes the channels to mono by averaging them;
 2. resamples to 8 kHz with a high-quality sinc converter, or copies the
@@ -46,6 +46,13 @@ Speak5220:
 
 The original file is not kept in the project. To resample a phrase again,
 import the original file again.
+
+A phrase must fit on one 16 KB PHROM. Its frames are 25 ms long and take
+at most 50 bits each, so a minute of speech needs at most 15,000 bytes,
+which leaves room for the PHROM's word table. A longer file is refused
+before it is read, with a message giving its length: split the recording
+into shorter phrases (one word or sentence each is usual) and import
+those.
 
 If no name is given, one is made from the file name: `good_morning.wav`
 becomes `GOOD MORNING`, cut to 16 characters, with ` 2`, ` 3`, ...

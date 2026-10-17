@@ -10,6 +10,7 @@
 
 #include "core/project/phrase_importer.h"
 
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <set>
@@ -47,10 +48,18 @@ audio::DecodedWav Wav(int rate, int channels, std::vector<float> samples) {
           .samples = std::move(samples)};
 }
 
+audio::WavInfo Info(int rate, std::int64_t frames) {
+  return {.sample_rate = rate,
+          .channels = 1,
+          .format = audio::WavSampleFormat::kPcm16,
+          .frames = frames};
+}
+
 class PhraseImporterTest : public ::testing::Test {
  protected:
   PhraseImporterTest() {
     ON_CALL(digest_, Sha256(_)).WillByDefault(Return(kDigest));
+    ON_CALL(reader_, ReadInfo(_)).WillByDefault(Return(Info(8000, 8000)));
   }
 
   StatusOr<ImportResult> Import(const ImportRequest& request,
@@ -58,7 +67,7 @@ class PhraseImporterTest : public ::testing::Test {
     return importer_.Import(request, TestId(1), taken);
   }
 
-  MockWavReader reader_;
+  ::testing::NiceMock<MockWavReader> reader_;
   MockResampler resampler_;
   ::testing::NiceMock<MockFileDigest> digest_;
   PhraseImporter importer_{reader_, resampler_, digest_};
@@ -180,6 +189,31 @@ TEST_F(PhraseImporterTest, PassesOnReadResampleAndDigestFailures) {
   EXPECT_CALL(digest_, Sha256(_))
       .WillOnce(Return(UnavailableError("cannot read")));
   EXPECT_EQ(Import({.path = "a.wav"}).GetStatus().Message(), "cannot read");
+}
+
+TEST_F(PhraseImporterTest, RefusesFilesLongerThanOnePhromHolds) {
+  EXPECT_CALL(reader_, ReadInfo(_))
+      .WillOnce(Return(Info(44100, std::int64_t{44100} * 60)))
+      .WillOnce(Return(Info(44100, std::int64_t{44100} * 60 + 1)))
+      .WillOnce(Return(Info(44100, std::int64_t{44100} * 15 * 60)));
+  // Exactly the limit is accepted.
+  EXPECT_CALL(reader_, Read(_)).WillOnce(Return(Wav(8000, 1, {0.5F})));
+  EXPECT_TRUE(Import({.path = "a.wav"}).IsOk());
+  // Longer is refused from the header: the samples are never read.
+  EXPECT_EQ(Import({.path = "a.wav"}).GetStatus().Code(),
+            StatusCode::kOutOfRange);
+  EXPECT_EQ(Import({.path = "dir/long.wav"}).GetStatus().Message(),
+            "dir/long.wav is 900.0 s long; a phrase can be at most 60 s, so "
+            "that it fits on one 16 KB PHROM. Split the recording into "
+            "shorter phrases");
+}
+
+TEST_F(PhraseImporterTest, PassesOnHeaderFailures) {
+  EXPECT_CALL(reader_, ReadInfo(_))
+      .WillOnce(Return(NotFoundError("cannot open a.wav")));
+  EXPECT_CALL(reader_, Read(_)).Times(0);
+  EXPECT_EQ(Import({.path = "a.wav"}).GetStatus().Message(),
+            "cannot open a.wav");
 }
 
 TEST_F(PhraseImporterTest, RunsAsABackgroundJob) {

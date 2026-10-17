@@ -33,7 +33,7 @@ prints its name and version.
 | Command | Arguments | Options | What it does |
 |---|---|---|---|
 | `new` | `PROJECT` | `--name`, `--option`, `--output` | Creates an empty project. Fails if `PROJECT` exists |
-| `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files as phrases at the end of the list, and saves |
+| `add` | `PROJECT FILE.wav...` | `--name`, `--description` (one file only), `--normalise`, `--output` | Imports WAV files, each at most 60 s long, as phrases at the end of the list, and saves |
 | `import-phrom` | `PROJECT IMAGE...` | `--output` | Adds the words of each Acorn PHROM image (16 KB, or several 16 KB PHROMs concatenated) to the end of the list as locked phrases with no source audio, in image then word order, and saves ([Importing PHROM images](phrases.md#importing-phrom-images)) |
 | `encode` | `PROJECT` | `--force`, `--output` | Encodes the phrases whose frames are out of date, and saves |
 | `export` | `PROJECT` | `--output` (required), `--preset`, or `--format` with `--phrase`, `--layout`, `--licence`, `--audio` | Writes exported files into the `--output` directory. Every phrase exported must be encoded with its current settings, except for the original or preprocessed audio |
@@ -65,7 +65,9 @@ speak5220-cli synth word.frames.yaml --output word.wav
   of the list (see [importing audio](phrases.md#importing-audio)). Each
   phrase is named from its file name, or by `--name` when one file is
   given; `--description` gives that one phrase a description. `--normalise` normalises a file that clips or is very quiet; without
-  it, such a file is imported unchanged with a warning.
+  it, such a file is imported unchanged with a warning. A file longer than
+  60 seconds, more than one PHROM can hold, is refused with an error
+  giving its length, and nothing is added.
 - **`import-phrom PROJECT IMAGE...`** adds the words of Acorn PHROM images
   at the end of the list, as locked phrases with no source audio (see
   [importing PHROM images](phrases.md#importing-phrom-images)). A file may

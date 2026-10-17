@@ -15,6 +15,7 @@
 #include <QTemporaryDir>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <numbers>
 #include <string>
@@ -159,6 +160,37 @@ TEST(WavWriterTest, ClipsOutOfRangeSamples) {
   ASSERT_TRUE(wav.IsOk());
   EXPECT_NEAR(wav->samples[0], 1.0F, 1e-4F);
   EXPECT_NEAR(wav->samples[1], -1.0F, 1e-4F);
+}
+
+TEST(WavReaderTest, ReadsTheHeaderAlone) {
+  QTemporaryDir dir;
+  ASSERT_TRUE(dir.isValid());
+  const std::filesystem::path path =
+      dir.filePath(QStringLiteral("in.wav")).toStdString();
+  WriteWithSndfile(path, SF_FORMAT_WAV | SF_FORMAT_PCM_24, 2);
+  const StatusOr<WavInfo> info = SndfileWavReader().ReadInfo(path);
+  ASSERT_TRUE(info.IsOk()) << info.GetStatus().ToString();
+  EXPECT_EQ(info->sample_rate, kRate);
+  EXPECT_EQ(info->channels, 2);
+  EXPECT_EQ(info->format, WavSampleFormat::kPcm24);
+  EXPECT_EQ(info->frames, static_cast<std::int64_t>(kFrames));
+  EXPECT_DOUBLE_EQ(info->Seconds(), static_cast<double>(kFrames) / kRate);
+}
+
+TEST(WavReaderTest, ReadsNoHeaderFromAFileItWouldNotRead) {
+  QTemporaryDir dir;
+  ASSERT_TRUE(dir.isValid());
+  const std::filesystem::path path =
+      dir.filePath(QStringLiteral("in.aiff")).toStdString();
+  WriteWithSndfile(path, SF_FORMAT_AIFF | SF_FORMAT_PCM_16, 1);
+  EXPECT_EQ(SndfileWavReader().ReadInfo(path).GetStatus().Code(),
+            StatusCode::kInvalidArgument);
+  EXPECT_EQ(
+      SndfileWavReader()
+          .ReadInfo(dir.filePath(QStringLiteral("none.wav")).toStdString())
+          .GetStatus()
+          .Code(),
+      StatusCode::kNotFound);
 }
 
 TEST(WavReaderTest, RefusesMissingFile) {

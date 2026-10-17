@@ -35,6 +35,12 @@ inline constexpr float kClippingPeak = 0.999F;
 inline constexpr float kQuietPeak = 0.0316F;
 inline constexpr float kNormalisedPeak = 0.891F;
 
+// The longest WAV file a phrase is made from. A phrase must fit one 16 KB
+// PHROM (packaging::kPhromSize): a frame is 25 ms and at most 50 bits (a
+// voiced frame, speak5220 datasheet §7), so a minute of speech takes at
+// most 15,000 bytes, leaving room for the bank's word table.
+inline constexpr double kMaxImportSeconds = 60.0;
+
 // What to import.
 struct ImportRequest {
   std::filesystem::path path = {};
@@ -70,7 +76,8 @@ class PhraseImporter {
   // Makes a phrase with `id` from the request. `taken` holds the names
   // already in the project: a requested name must not be one of them, and
   // a made-up name avoids them. Fails if the file cannot be read or
-  // resampled, or the name is invalid or taken.
+  // resampled, is longer than kMaxImportSeconds (checked from its header,
+  // before its samples are read), or the name is invalid or taken.
   StatusOr<ImportResult> Import(const ImportRequest& request,
                                 const PhraseId& id,
                                 const std::set<std::string>& taken);

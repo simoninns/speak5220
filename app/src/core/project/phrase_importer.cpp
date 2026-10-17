@@ -66,6 +66,18 @@ StatusOr<ImportResult> PhraseImporter::Import(
     phrase.name = SuggestPhraseName(request.path.stem().string(), taken);
   }
 
+  // Refused from the header, before a long file's samples are read.
+  StatusOr<audio::WavInfo> info = reader_->ReadInfo(request.path);
+  if (!info.IsOk()) {
+    return info.GetStatus();
+  }
+  if (info->Seconds() > kMaxImportSeconds) {
+    return OutOfRangeError(fmt::format(
+        "{} is {:.1f} s long; a phrase can be at most {:.0f} s, so that it "
+        "fits on one 16 KB PHROM. Split the recording into shorter phrases",
+        request.path.string(), info->Seconds(), kMaxImportSeconds));
+  }
+
   StatusOr<audio::DecodedWav> wav = reader_->Read(request.path);
   if (!wav.IsOk()) {
     return wav.GetStatus();

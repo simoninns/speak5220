@@ -30,6 +30,7 @@ class SndfileWavReader : public IWavReader {
   static constexpr int kMaxChannels = 64;
 
   StatusOr<DecodedWav> Read(const std::filesystem::path& path) override;
+  StatusOr<WavInfo> ReadInfo(const std::filesystem::path& path) override;
 };
 
 // IWavWriter over libsndfile. Stateless; thread-safe.

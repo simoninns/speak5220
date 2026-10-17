@@ -209,10 +209,10 @@ StatusOr<DecodedWav> ReadAll(SNDFILE* file, const SF_INFO& info,
   return wav;
 }
 
-}  // namespace
-
-StatusOr<DecodedWav> SndfileWavReader::Read(const std::filesystem::path& path) {
-  SF_INFO info = {};
+// Opens the file at `path` for reading, filling `info`.
+StatusOr<SndfileHandle> OpenInput(const std::filesystem::path& path,
+                                  SF_INFO& info) {
+  info = {};
   SndfileHandle file(sf_open(path.string().c_str(), SFM_READ, &info));
   if (!file) {
     std::error_code error;
@@ -223,17 +223,45 @@ StatusOr<DecodedWav> SndfileWavReader::Read(const std::filesystem::path& path) {
     return InvalidArgumentError("cannot read " + path.string() +
                                 " as a WAV file: " + sf_strerror(nullptr));
   }
+  return file;
+}
+
+}  // namespace
+
+StatusOr<DecodedWav> SndfileWavReader::Read(const std::filesystem::path& path) {
+  SF_INFO info = {};
+  StatusOr<SndfileHandle> file = OpenInput(path, info);
+  if (!file.IsOk()) {
+    return file.GetStatus();
+  }
   const StatusOr<WavSampleFormat> format = CheckInput(info, path.string());
   if (!format.IsOk()) {
     return format.GetStatus();
   }
-  StatusOr<DecodedWav> wav = ReadAll(file.get(), info, *format, path.string());
+  StatusOr<DecodedWav> wav = ReadAll(file->get(), info, *format, path.string());
   if (wav.IsOk()) {
     Logger(kLogModuleAudio)
         ->debug("read {}: {} Hz, {} channel(s), {} frames", path.string(),
                 wav->sample_rate, wav->channels, wav->samples.size());
   }
   return wav;
+}
+
+StatusOr<WavInfo> SndfileWavReader::ReadInfo(
+    const std::filesystem::path& path) {
+  SF_INFO info = {};
+  StatusOr<SndfileHandle> file = OpenInput(path, info);
+  if (!file.IsOk()) {
+    return file.GetStatus();
+  }
+  const StatusOr<WavSampleFormat> format = CheckInput(info, path.string());
+  if (!format.IsOk()) {
+    return format.GetStatus();
+  }
+  return WavInfo{.sample_rate = info.samplerate,
+                 .channels = info.channels,
+                 .format = *format,
+                 .frames = info.frames};
 }
 
 Status SndfileWavWriter::Write(const std::filesystem::path& path,
