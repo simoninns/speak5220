@@ -10,11 +10,13 @@
 #include "gui/waveform/waveform_pane.h"
 
 #include <QFont>
+#include <QFontMetrics>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QString>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <algorithm>
 
 #include "gui/waveform/waveform_view.h"
 
@@ -30,6 +32,12 @@ WaveformPane::WaveformPane(const QString& title, QWidget* parent)
   title_->setFont(bold);
   note_->setForegroundRole(QPalette::PlaceholderText);
   view_->setAccessibleName(title);
+  // One line high whatever the text, so the view does not move between
+  // panes with and without a note (on Windows the labels' size hints differ).
+  const int line =
+      std::max(QFontMetrics(bold).height(), note_->fontMetrics().height());
+  title_->setFixedHeight(line);
+  note_->setFixedHeight(line);
 
   auto* heading = new QHBoxLayout;
   heading->addWidget(title_);
