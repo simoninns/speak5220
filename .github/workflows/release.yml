@@ -4,8 +4,8 @@
 # A release. A tag vMAJOR.MINOR.PATCH, optionally with a suffix such as
 # -rc1, runs the Linux checks (app.yml) and the Windows and macOS tests
 # (app-platforms.yml); when they pass it builds the three installers, the
-# Flatpak, the MSI and the DMG, and drafts a GitHub Release with them, to be
-# published by hand. A tag with a suffix makes a pre-release. The installers
+# Flatpak, the MSI and the DMG, and publishes a GitHub Release with them. A
+# tag with a suffix makes a pre-release. The installers
 # are unsigned and the DMG is not notarised. Uses only free services:
 # GitHub's hosted runners and Flathub's runtimes.
 name: Release
@@ -105,12 +105,12 @@ jobs:
           pattern: installer-*
           merge-multiple: true
           path: installers
-      - name: Draft the release
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          options=(--draft --verify-tag --generate-notes --title "Speak5220 $GITHUB_REF_NAME")
+          options=(--verify-tag --generate-notes --title "Speak5220 $GITHUB_REF_NAME")
           if [[ $GITHUB_REF_NAME == *-* ]]; then
             options+=(--prerelease)
           fi

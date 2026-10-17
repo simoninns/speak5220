@@ -25,6 +25,11 @@ finish-args:
   # list reopens projects by path, a project can be a directory, and an
   # export writes several files beside one another
   - --filesystem=home
+  # Qt's built-in GNOME theme, the one platform theme in the runtime that
+  # changes the palette when View > Theme (or the desktop, through the
+  # portal) asks for light or dark: the gtk3 and kde plugins keep their own
+  # palette whatever is asked
+  - --env=QT_QPA_PLATFORMTHEME=gnome
 # Libraries in /app/lib, where the runtime looks for them: CMake's
 # GNUInstallDirs would put them in /app/lib64
 build-options:

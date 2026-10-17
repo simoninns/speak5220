@@ -530,7 +530,7 @@ that adds one without its entry fails.
 | Sanitisers | Both lanes under ASan and UBSan (Debug) | Every push in CI, on Linux |
 | By hand | `corpus-check.sh`, `output-hashes.sh`, `benchmark.sh`, `bbc-check.sh`; the BBC Micro hardware check ([BBC Micro disc](docs/application/user-manual/bbc-disc.md)) | Before a release, and for any change to the encoder, packaging or BBC export |
 | By hand | `window-check.sh` | Before a release, and for any change to a window's layout or colours |
-| By hand | The installers: install the release workflow's Flatpak on a Linux desktop, its MSI on a clean Windows 11 and its DMG on macOS; start the application and play a phrase | Before publishing a release, and for any change to `app/packaging/`, `app/cmake/Packaging.cmake` or the release workflow |
+| By hand | The installers: install the release workflow's Flatpak on a Linux desktop, its MSI on a clean Windows 11 and its DMG on macOS; start the application and play a phrase | On a pre-release (a tag such as `v1.0.0-rc1`) before tagging the release, and for any change to `app/packaging/`, `app/cmake/Packaging.cmake` or the release workflow |
 | By hand | `phrom-check.sh`, `option_sweep.py`, `phoneme-check.sh` | For a change meant to improve the encoder's output |
 
 The default CI unit lane must stay fast and mocked. Do **not** add

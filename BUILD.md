@@ -200,7 +200,7 @@ Nix builds from the files git tracks, so `git add` new files before running thes
 
 `.github/workflows/app-platforms.yml` builds and runs both lanes on Windows (MSVC) and macOS. It runs only for a release or when started by hand from the repository's Actions tab, not on every push.
 
-`.github/workflows/release.yml` runs for a tag `vMAJOR.MINOR.PATCH` (optionally with a suffix, such as `v1.0.0-rc1`, for a pre-release). It runs both of the above; once they pass, it builds the Flatpak, the MSI and the DMG (see [Installers](#installers)) and drafts a GitHub Release with them and their SHA-256 checksums. Publish the draft by hand.
+`.github/workflows/release.yml` runs for a tag `vMAJOR.MINOR.PATCH` (optionally with a suffix, such as `v1.0.0-rc1`, for a pre-release). It runs both of the above; once they pass, it builds the Flatpak, the MSI and the DMG (see [Installers](#installers)) and publishes a GitHub Release with them and their SHA-256 checksums.
 
 ## Emulator command line
 
