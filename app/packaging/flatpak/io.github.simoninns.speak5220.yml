@@ -25,6 +25,11 @@ finish-args:
   # list reopens projects by path, a project can be a directory, and an
   # export writes several files beside one another
   - --filesystem=home
+# Libraries in /app/lib, where the runtime looks for them: CMake's
+# GNUInstallDirs would put them in /app/lib64
+build-options:
+  config-opts:
+    - -DCMAKE_INSTALL_LIBDIR=lib
 cleanup:
   - /include
   - /lib/cmake

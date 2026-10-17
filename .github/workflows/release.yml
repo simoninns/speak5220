@@ -81,6 +81,13 @@ jobs:
           bundle="Speak5220-$VERSION-linux-x86_64.flatpak"
           flatpak build-bundle --runtime-repo="$FLATHUB" ../repo "$bundle" "$APP_ID"
           sha256sum "$bundle" >"$bundle.sha256"
+      # The bundle as a user installs it, so a library it cannot find fails
+      # the release
+      - name: Run the bundle
+        run: |
+          flatpak install --user -y --noninteractive \
+            build/flatpak/installer/Speak5220-*.flatpak
+          flatpak run --command=speak5220-cli "$APP_ID" --version
       - uses: actions/upload-artifact@v4
         with:
           name: installer-Linux
