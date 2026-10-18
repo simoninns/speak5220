@@ -19,6 +19,13 @@ build/
 # still hold its local-only captures, PROM images and builds
 /investigation/
 
+# KiCad's per-user settings, lock files, caches and backups (hardware/)
+*.kicad_prl
+*.lck
+fp-info-cache
+*-backups/
+.history/
+
 # The commit the Flatpak reports, written by the release workflow
 # (app/packaging/flatpak/io.github.simoninns.speak5220.yml)
 app/packaging/flatpak/version

@@ -9,12 +9,18 @@
 - The repository holds the Speak5220 application, a Qt/C++ tool for
   creating LPC speech data and building PHROMs, in **`app/`**, and its
   documentation in **`docs/`**.
+- **`hardware/`** holds the KiCad project for a USB speech device,
+  `hardware/tms5220_usb/`, started from the bench test circuit's
+  schematic as it was in commit `c537c1d`. The Raspberry Pi Pico
+  symbols and footprints come from the `ki-lime-pi-pico` submodule in
+  `hardware/libraries/`.
 - The research that produced the reference datasheet (hardware, firmware,
   capture and analysis tools, captures) was removed after commit
   `c537c1d`, the last commit that contains it. The C emulator and the
   Python encoder that the application's emulator and encoder re-implement
   (last changed in commit `6abe9ed`) are retired reference
-  implementations. Do not restore any of it unless the user asks.
+  implementations. Apart from the bench schematic now in `hardware/`, do
+  not restore any of it unless the user asks.
 - Follow these instructions **in addition to** any `AGENTS.md` files in the
   task directory or above.
 - For pull-request workflows, see the template in `.github/PULL_REQUEST_TEMPLATE/`; issues use the templates in `.github/ISSUE_TEMPLATE/`.
